@@ -318,12 +318,12 @@ MQTTClient.prototype.process = function(packet) {
 	    packet.unsubscriptions = unsubscriptions;
 
 	    packet.body = undefined;
-	    emit('subscribe', packet);
+	    this.emit('unsubscribe', packet);
 	    break;
 	case MQTTPacketType.Unsuback:
 	    break;
 	case MQTTPacketType.Pingreq:
-	    emit('pingreq', packet); 
+	    this.emit('pingreq', packet); 
 	    break;
 	case MQTTPacketType.Pingresp:
 	    break;
@@ -412,6 +412,14 @@ MQTTClient.prototype.publish = function(topic, payload) {
     this.socket.write(new Buffer(pkt));
 }
 
+MQTTClient.prototype.pingresp = function() {
+    sys.log('Pinging');
+
+    var pkt = [MQTTPacketType.Pingresp << 4, 0];
+    sys.log('Ping packet: ' + inspect(new Buffer(pkt)));
+
+    this.socket.write(new Buffer(pkt));
+}
 
 function MQTTServer() {
     this.server = net.createServer();
@@ -475,6 +483,10 @@ s.on('new_client', function(client) {
 	}
 
 	client.suback(packet.messageId, qos);
+    });
+
+    client.on('pingreq', function(packet) {
+	client.pingresp();
     });
 
     client.on('disconnect', function() {
