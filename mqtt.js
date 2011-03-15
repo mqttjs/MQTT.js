@@ -3,7 +3,26 @@ var net = require("net");
 var inspect = require("util").inspect;
 var EventEmitter = require("events").EventEmitter;
 
-MQTTClientState = {'New':0, 'Connected':1, 'Error':2}
+/* Major TODO:
+ * 1. Insert error checking code around clientID/topic name slices.
+ *    These are notorious for crashing the program if the length is too long
+ * 2. Ship MQTTClient and its helpers to an external module
+ * 3. Make client.packet a proper object (i.e. with a constructor and
+ *    well specified)
+ * 4. Figure out if one packet is OK for each client
+ * 5. Related: cut the cruft out of the packets that are returned
+ *    to the library users (fields like lenLen, length, body...).
+ *    They should only really contain the packet type and the
+ *    fields corresponding to the packet
+ * 6. Break client.accumulate (and client.process)
+ *    into a bunch of subroutines for
+ *    easier unit testing
+ * 7. Do up some manner of testing framework.
+ *    (but the lifeboats make the deck look crowded!)
+ * 8. Standardise packet construction i.e. make functions that
+ *    return packets rather than generating them in client.sendPacket
+ */
+
 MQTTPacketType = {'Connect':1, 'Connack':2, 
 		  'Publish':3, 'Puback':4, 'Pubrec':5, 'Pubrel':6, 'Pubcomp':7, 
 		  'Subscribe':8, 'Suback':9, 'Unsubscribe':10, 'Unsuback':11,
@@ -12,9 +31,9 @@ MQTTPacketType = {'Connect':1, 'Connack':2,
 
 function MQTTClient(socket) {
     this.clientID = '';
-    this.state = MQTTClientState.New;
     this.socket = socket;
     this.buffer = undefined;
+    this.subscriptions = [];
     this.packet = {
 	'command' : undefined,
 	'retain' : undefined,
@@ -70,12 +89,6 @@ MQTTClient.prototype.accumulate = function(data) {
 	    packet.retain = ((client.buffer[0] & 0x01) != 0);
 
 	    sys.log("Packet info: " + inspect(packet));
-
-	    if(client.state === MQTTClientState.New && packet.command !== MQTTPacketType.Connect) {
-		/* New clients need to send connect packets to start with */
-		sys.log("Error: new client didn't send a connect packet");
-		/* TODO: disconnect the client */
-	    }
 	}
 
 	if(packet.length === undefined) {
@@ -156,6 +169,7 @@ MQTTClient.prototype.process = function(packet) {
 	case MQTTPacketType.Connect:
 	    var count = 0;
 	    /* Skip the version field */
+	    /* TODO: might be a good idea to check it */
 	    count += "06MQisdp3".length;
 
 	    sys.log("Count after version string: " + count);
@@ -196,7 +210,7 @@ MQTTClient.prototype.process = function(packet) {
 		count += topicLen;
 
 		/* What remains in the body is will message */
-		packet.willMessage = packet.body.slice(count);
+		packet.willMessage = packet.body.slice(count, packet.body.length);
 	    }
 
 	    /* Clear the body as to not confuse the guy on the other end */
@@ -225,7 +239,7 @@ MQTTClient.prototype.process = function(packet) {
 	    }
 
 	    /* Whatever remains is the payload */
-	    packet.payload = packet.body.slice(count, packet.body.length);
+	    packet.payload = packet.body.slice(count, packet.body.length).toString('utf8');
 
 	    packet.body = undefined;
 
@@ -255,7 +269,7 @@ MQTTClient.prototype.process = function(packet) {
 	    packet.messageId = messageId;
 
 	    var subscriptions = [];
-	    for(var i = count; i < packet.length; i++) {
+	    while(count < packet.body.length) {
 		var tq = {};
 
 		/* Extract the topic name */
@@ -263,7 +277,7 @@ MQTTClient.prototype.process = function(packet) {
 		topicLen += packet.body[count++];
 
 		tq.topic = packet.body.slice(count, count+topicLen).toString('utf8');
-		count += topicLen + 2;
+		count += topicLen;
 
 		/* Get the QoS of the subscription */
 		tq.qos = packet.body[count++];
@@ -275,7 +289,7 @@ MQTTClient.prototype.process = function(packet) {
 	    packet.subscriptions = subscriptions;
 
 	    packet.body = undefined;
-	    emit('subscribe', packet);
+	    this.emit('subscribe', packet);
 	    break;
 	case MQTTPacketType.Suback:
 	    break;
@@ -323,12 +337,82 @@ MQTTClient.prototype.process = function(packet) {
 
 MQTTClient.prototype.connack = function(rc) {
     sys.log('Connacking');
-    var pkt = [MQTTPacketType.Connack<<4, 2, 0, 0];
+    var pkt = [MQTTPacketType.Connack<<4, 2, 0, rc];
     var b = new Buffer(pkt);
+
+    sys.log("Connack packet " + inspect(b));
 
     this.socket.write(b);
 }
-    
+
+MQTTClient.prototype.suback = function(messageId, qos) {
+    sys.log('Subacking');
+    var pkt = [MQTTPacketType.Suback<<4];
+    /* Message id + length of qos array */
+    var pktLen = 2 + qos.length;
+
+    /* Calculate the packet length and push it to the packet */
+    do {
+	var digit = pktLen % 128
+	pktLen = parseInt(pktLen / 128);
+	if(pktLen > 0) {
+	    digit = digit | 0x80;
+	}
+	pkt.push(digit);
+    } while(pktLen > 0);
+
+    /* Push the  message ID to the packet */
+    pkt.push(messageId >> 8);
+    pkt.push(messageId & 0xFF);
+
+    /* Push the granted QoS levels to the packet */
+    for(var i = 0; i < qos.length; i++) {
+	pkt.push(qos[i]);
+    }
+    sys.log("Suback packet " + inspect(new Buffer(pkt)));
+
+    this.socket.write(new Buffer(pkt));
+}
+
+MQTTClient.prototype.publish = function(topic, payload) {
+    // TODO: this probably only supports QoS 0
+    sys.log('Publishing topic: ' + topic + ' payload: ' + payload);
+
+    var pkt = [MQTTPacketType.Publish << 4];
+    /* Length of the topic + length of the length of the topic (2) + the length of the payload */
+    var pktLen = topic.length + 2 + payload.length;
+
+    /* Calculate the packet length and push it to the packet */
+    do {
+	var digit = pktLen % 128
+	pktLen = parseInt(pktLen / 128);
+	if(pktLen > 0) {
+	    digit = digit | 0x80;
+	}
+	pkt.push(digit);
+    } while(pktLen > 0);
+
+    /* Push the topic length to the packet */
+    pkt.push(topic.length >> 8);
+    pkt.push(topic.length & 0xFF);
+
+    /* Push the topic to the packet */
+    for(var i = 0; i < topic.length; i++) {
+	pkt.push(topic.charCodeAt(i));
+    }
+
+    /* Push the payload to the packet */
+    for(var i = 0; i < payload.length; i++) {
+	pkt.push(payload.charCodeAt(i));
+    }
+
+    sys.log("Publish packet " + inspect(new Buffer(pkt)));
+
+    /* Send the packet */
+    this.socket.write(new Buffer(pkt));
+}
+
+
 function MQTTServer() {
     this.server = net.createServer();
     var self = this;
@@ -347,7 +431,7 @@ function MQTTServer() {
 sys.inherits(MQTTServer, EventEmitter);
 
 s = new MQTTServer();
-s.server.listen(1883);
+s.server.listen(1883, "::1");
 
 list = [];
 
@@ -360,7 +444,37 @@ s.on('new_client', function(client) {
     });
 
     client.on('publish', function(packet) {
+	for(var i = 0; i < list.length; i++) {
+	    /* Don't publish to the publisher */
+	    if(list[i] !== client) {
+		/* For each client, get a list of sub topics, sans QoS */
+		var subs = list[i].subscriptions.reduce(function(a,b) {
+		    return a.concat(b.topic);
+		}, []);
+		/* If the packet's topic is in the list of sub topics, publish the message to the client */
+		/* Arghblblarhg */
+		if(subs.indexOf(packet.topic) != -1) {
+		    list[i].publish(packet.topic, packet.payload);
+		}
+	    }
+	}
+    });
+
+    client.on('subscribe', function(packet) {
 	sys.log(inspect(packet));
+	if(client.subscriptions === undefined) {
+	    client.subscriptions = packet.subscriptions;
+	} else {
+	    client.subscriptions = client.subscriptions.concat(packet.subscriptions);
+	}
+
+	/* Give 'em whatever they want */
+	var qos = [];
+	for(var i = 0; i < packet.subscriptions; i++) {
+	    qos.push(packet.subscriptions[i].qos);
+	}
+
+	client.suback(packet.messageId, qos);
     });
 
     client.on('disconnect', function() {
