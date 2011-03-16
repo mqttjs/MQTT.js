@@ -408,7 +408,7 @@ MQTTClient.prototype.publish = function(topic, payload) {
 	pkt.push(payload.charCodeAt(i));
     }
 
-    sys.log("Publish packet " + inspect(new Buffer(pkt)));
+    sys.log("Publishing packet " + inspect(new Buffer(pkt)));
 
     /* Send the packet */
     this.socket.write(new Buffer(pkt));
@@ -454,45 +454,54 @@ s.on('new_client', function(client) {
     });
 
     client.on('publish', function(packet) {
-	/* Filter the publisher */
-	/* This is kind of dumb. There has to be a better way */
-	var fList = list.filter(function(x) {
+	sys.log("Publish packet: " + inspect(packet));
+	var f = list.filter(function(x) {
 	    if(x === client) {
 		return false;
-	    } else { 
+	    } else {
 		return true;
 	    }
 	});
-	for(var i = 0; i < fList.length; i++) {
-	    var curClient = fList[i];
-	    /* For each of our subscription regexes */
-	    for(var j = 0; j < curClient.subscriptions.length; j++) {
-		/* If the regex matches the published topic */
-		var sub = curClient.subscriptions[j];
-		if(sub.test(packet.topic)) {
-		    /* Publish the message */
-		    curClient.publish(packet.topic, packet.payload);
+
+	for(var i = 0; i < f.length; i++) {
+	    var c = f[i];
+	    for(var j = 0; j < c.subscriptions.length; j++) {
+		var sub = c.subscriptions[j];
+		var msg = undefined;
+
+		try {
+		    msg = JSON.parse(packet.payload);
+		} catch(exception) {
+		    sys.log("Bad JSON in payload");
+		}
+
+		for(var k in sub) {
+		    if(msg[k] !== undefined && msg[k] == sub[k]) {
+			sys.log("Matched! Publishing!");
+			client.publish(packet.topic,packet.payload);
+		    }
 		}
 	    }
 	}
+
     });
 
     client.on('subscribe', function(packet) {
-	sys.log(inspect(packet));
-	/*
-	if(client.subscriptions === undefined) {
-	    client.subscriptions = packet.subscriptions;
-	} else {
-	    client.subscriptions = client.subscriptions.concat(packet.subscriptions);
-	}
-	*/
+	sys.log("Subscribe packet: " + inspect(packet));
+	var subscriptions = packet.subscriptions;
 
-	for(var i = 0; i < packet.subscriptions.length; i++) {
-	    client.subscriptions.push(new RegExp(packet.subscriptions[i].topic));
-	}
+	for(var i = 0; i < subscriptions.length; i++) {
+	    var json = undefined;
+	    try {
+		json = JSON.parse(subscriptions[i].topic);
+	    } catch(exception) {
+		sys.log("Bad JSON subscription");
+	    }
 
-	/* Give 'em whatever they want */
-	/* Hello flaw in the protocol! */
+	    client.subscriptions.push(json);
+	}
+	
+
 	var qos = [];
 	for(var i = 0; i < packet.subscriptions; i++) {
 	    qos.push(packet.subscriptions[i].qos);
