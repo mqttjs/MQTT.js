@@ -21,8 +21,10 @@ var EventEmitter = require("events").EventEmitter;
  *    (but the lifeboats make the deck look crowded!)
  * 8. Standardise packet construction i.e. make functions that
  *    return packets rather than generating them in client.sendPacket
- * 9. Catch error events from sockets and process them rather than
+ * 9. Catch error or disconnect events from sockets and process them rather than
  *    letting them bubble up to the reactor
+ * 10.Disconnect clients after a timeout period equal to their keepalive
+ *    if they have one or 10 seconds if they don't
  */
 
 MQTTPacketType = {'Connect':1, 'Connack':2, 
@@ -43,6 +45,20 @@ function MQTTClient(socket) {
 	'dup' : undefined,
 	'length' : undefined
     };
+
+    var self = this;
+
+    this.socket.on('data', function(data) {
+	self.accumulate(data);
+    });
+
+    this.socket.on('error', function(exception) {
+	self.emit('error', exception);
+    });
+
+    this.socket.on('close', function(had_error) {
+	self.emit('close');
+    });
 }
 
 sys.inherits(MQTTClient, EventEmitter);
@@ -440,6 +456,7 @@ function MQTTServer() {
 
 sys.inherits(MQTTServer, EventEmitter);
 
+/*
 s = new MQTTServer();
 s.server.listen(1883, "::1");
 
@@ -525,3 +542,4 @@ s.on('new_client', function(client) {
 	});
     });
 });
+*/
