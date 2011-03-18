@@ -21,8 +21,12 @@ var EventEmitter = require("events").EventEmitter;
  *    (but the lifeboats make the deck look crowded!)
  * 8. Standardise packet construction i.e. make functions that
  *    return packets rather than generating them in client.sendPacket
- * 9. Catch error events from sockets and process them rather than
+ * 9. Catch error or disconnect events from sockets and process them rather than
  *    letting them bubble up to the reactor
+ * 10.Disconnect clients after a timeout period equal to their keepalive
+ *    if they have one or 10 seconds if they don't
+ * 11.Consider tying MQTTClient.process to an event emitted by 
+ *    MQTTClient.accumulate, rather than having accumulate directly call it
  */
 
 MQTTPacketType = {'Connect':1, 'Connack':2, 
@@ -34,70 +38,104 @@ MQTTPacketType = {'Connect':1, 'Connack':2,
 function MQTTClient(socket) {
     this.clientID = '';
     this.socket = socket;
-    this.buffer = undefined;
+    this.buffer = new Buffer(0);
     this.subscriptions = [];
-    this.packet = {
-	'command' : undefined,
-	'retain' : undefined,
-	'qos' : undefined,
-	'dup' : undefined,
-	'length' : undefined
-    };
+    this.packet = undefined;
+
+    var self = this;
+
+    this.socket.on('data', function(data) {
+	self.accumulate(data);
+    });
+
+    this.on('packet_received', function(packet) {
+	this.process(packet);
+    });
+
+    /* TODO: consider catching the socket timeout event */
+
+    this.socket.on('error', function(exception) {
+	self.emit('error', exception);
+    });
+
+    /* Arguably this is an error if it doesn't come
+     * after a disconnect packet */
+    /* YEAH, I CLOSED THE CONNECTION WITHOUT SENDING A DISCONNECT
+     * WHAT ARE YOU GONNA DO ABOUT IT?
+     * DISCONNECT ME?
+     */
+    this.socket.on('close', function(had_error) {
+	self.emit('close');
+    });
 }
 
 sys.inherits(MQTTClient, EventEmitter);
 
 MQTTClient.prototype.accumulate = function(data) {
-    //var client = this.owner;
+    /* Hurr hurr hurr, thanks javascript! */
+    /* Also, refactoring is for losers */
+    /* Being in javascript means never having to admit that you're wrong */
     var client = this;
 
     sys.log("Data received from client at " + client.socket.remoteAddress);
     sys.log(inspect(data));
 
-    /* Are we starting a new packet? */
-    if(client.packet.length === undefined) {
-	/* Yep, init the packet structure */
-	/* TODO: make this a proper object */
-	/* TODO: perhaps have MQTTClient store a list of packets, rather than work of a single one */
-	client.packet = {
-	    'command' : undefined,
-	    'retain' : undefined,
-	    'qos' : undefined,
-	    'dup' : undefined,
-	    'length' : undefined
-	};
-	client.buffer = data;
-	sys.log("Starting a new packet");
-    } else {
-	/* Nope, add the new data to the packet buffer */
-	var newSize = client.buffer.length + data.length;
-	var newBuf = new Buffer(newSize);
-	client.buffer.copy(newBuf);
-	data.copy(newBuf, client.buffer.length);
-	client.buffer = newBuf;
+    /* Add the incoming data to the client's data buffer */
+    var newSize = client.buffer.length + data.length;
+    var newBuf = new Buffer(newSize);
+    client.buffer.copy(newBuf);
+    data.copy(newBuf, client.buffer.length);
+    client.buffer = newBuf;
 
-	sys.log("Appending to existing packet:\n" + inspect(client.buffer));
-    }
+    sys.log("Adding data to buffer:\n" + inspect(client.buffer));
 
-    var packet = client.packet;
-
-
+    /* Process all the data in the buffer */
     while(client.buffer.length) {
 
-	if(packet.command === undefined) {
-	    packet.command = (client.buffer[0] & 0xF0) >> 4;
-	    packet.dup = ((client.buffer[0] & 0x08) == 0x08);
-	    packet.qos = (client.buffer[0] & 0x06) >> 2;
-	    packet.retain = ((client.buffer[0] & 0x01) != 0);
-
-	    sys.log("Packet info: " + inspect(packet));
-	}
-
-	if(packet.length === undefined) {
+	var packet;
+	
+	/* Throw away the packet after, let's say, 5 seconds */
+	/* Consider emitting an error here, this suggests that
+	 * the client is either defective or is having 
+	 * network troubles of some kind.
+	 *
+	 * Either way, we don't like your type around here.
+	 */
+	/* Oh, and consider moving this to a proper function. */
+	client.packetTimer = setTimeout(function(client) {
+	    client.packet = undefined;
+	    sys.log('Discarding incomplete packet');
+	}, 5000, this);
+	    
+	if(client.packet === undefined) {
 	    /* Starting a new packet */
 
-	    /* See if we have enough data for the header and the longest
-	     * possible remaining length fields
+	    /* Fill the new packet with crap */
+	    client.packet = {
+		'command':undefined,
+		'dup':undefined,
+		'qos':undefined,
+		'retain':undefined,
+		'length':undefined
+	    };
+
+	    /* Fill out the header fields */
+	    /* TODO: AND HOPE TO GOD THAT WE GOT AT LEAST ONE BYTE */
+	    if(client.packet.command === undefined) {
+		client.packet.command = (client.buffer[0] & 0xF0) >> 4;
+		client.packet.dup = ((client.buffer[0] & 0x08) == 0x08);
+		client.packet.qos = (client.buffer[0] & 0x06) >> 2;
+		client.packet.retain = ((client.buffer[0] & 0x01) != 0);
+
+		sys.log("Packet info: " + inspect(client.packet));
+	    }
+
+	    /* Because refactoring is for losers */
+	    /* For convenience, set packet to client.packet */
+	    packet = client.packet;
+
+	    /* See if we have enough data for the header and the
+	     * shortest possible remaining length field
 	     */
 	    if(client.buffer.length < 2) {
 		/* Haven't got enough data for a new packet */
@@ -111,6 +149,9 @@ MQTTClient.prototype.accumulate = function(data) {
 	    var mul = 1;
 	    var gotAll = false;
 
+	    /* TODO: a lot of this crap should be in utility functions.
+	     * TODO: learn to modularise, dolt!
+	     */
 	    for(var i = 1; i < client.buffer.length; i++) {
 		length += (client.buffer[i] & 0x7F) * mul;
 		mul *= 0x80;
@@ -119,6 +160,7 @@ MQTTClient.prototype.accumulate = function(data) {
 		    /* Length field too long */
 		    sys.log("Error: length field too long");
 		    /* TODO: disconnect the client */
+		    /* TODO: or, better yet, emit an error! */
 		    return;
 		}
 
@@ -142,24 +184,42 @@ MQTTClient.prototype.accumulate = function(data) {
 	    sys.log("Length calculated: " + packet.length);
 	}
 
-	if(client.buffer.length >= packet.length) {
+	/* Ok, we have enough data to get the length of the packet
+	 * Now see if we have all the data to complete the packet
+	 */
+	if(client.buffer.length >= client.packet.length) {
 	    /* Cut the current packet out of the buffer */
-	    var chunk = client.buffer.slice(0, packet.length);
+	    var chunk = client.buffer.slice(0, client.packet.length);
 
 	    /* Do something with it */
 	    sys.log("Packet complete\n" + inspect(chunk));
-	    packet.body = chunk.slice((packet.lengthLength + 1), chunk.length);
-	    packet.lengthLength = undefined;
-	    client.process(packet);
+	    /* Cut the body of the packet out of the buffer */
+	    packet.body = chunk.slice((client.packet.lengthLength + 1), chunk.length);
+	    /* TODO */
+	    /* This doesn't quite do what I want it to, perhaps consider creating
+	     * a sanitised packet before handing it off to process
+	     */
+	    /* By that I mean that it doesn't 'undefine' lengthLength. It remains
+	     * in the object with the value 'undefined'
+	     */
+	    client.packet.lengthLength = undefined;
+
+	    /* Drive client.process() off the packet_received event */
+	    /* More events can't hurt, right? */
+	    client.emit('packet_received', packet);
+	    //
+	    //client.process(packet);
+
+	    /* We've got a complete packet, stop the incomplete packet timer */
+	    clearTimeout(client.packetTimer);
 
 	    /* Cut the old packet out of the buffer */
-	    client.buffer = client.buffer.slice(packet.length, client.buffer.length);
-	    /* We don't know the length of the new packet, so set packet.length to undefined */
-	    client.packet.length = undefined;
-	    client.packet.command = undefined;
+	    client.buffer = client.buffer.slice(client.packet.length, client.buffer.length);
+	    /* Throw away the old packet */
+	    client.packet = undefined;
 	} else {
 	    /* Haven't got the whole packet yet, wait for more data */
-	    sys.log("Incomplete packet, bytes needed to complete: " + (packet.length - client.buffer.length));
+	    sys.log("Incomplete packet, bytes needed to complete: " + (client.packet.length - client.buffer.length));
 	    break;
 	}
     }
@@ -170,9 +230,16 @@ MQTTClient.prototype.process = function(packet) {
     switch(packet.command) {
 	case MQTTPacketType.Connect:
 	    var count = 0;
+
+	    var version = "\00\06MQIsdp\03";
+	    if(packet.body.slice(count, count+version.length).toString('utf8') !== version) {
+		sys.log('Invalid version');
+		emit('error', 'Invalid version string');
+	    }
+
 	    /* Skip the version field */
-	    /* TODO: might be a good idea to check it */
-	    count += "06MQisdp3".length;
+	    count += version.length;
+
 
 	    sys.log("Count after version string: " + count);
 
@@ -208,7 +275,7 @@ MQTTClient.prototype.process = function(packet) {
 		topicLen += packet.body[count++];
 		/* Cut the topic string out of the buffer */
 		packet.willTopic = packet.body.slice(count, count+topicLen).toString('utf8');
-		/* Move the pointer to the length of the topic + the length of the length of the topic (2) */
+		/* Move the pointer to after the topic string */
 		count += topicLen;
 
 		/* What remains in the body is will message */
@@ -428,15 +495,11 @@ function MQTTServer() {
     var self = this;
     this.server.on('connection', function(socket) {
 	sys.log("Connection from " + socket.remoteAddress);
-	
-	var client = new MQTTClient(socket);
-	socket.on('data', function(data) {
-	    client.accumulate(data);
-	});
+
+	client = new MQTTClient(socket);
 
 	self.emit('new_client', client);
     });
 }
 
 sys.inherits(MQTTServer, EventEmitter);
-
