@@ -503,3 +503,5 @@ function MQTTServer() {
 }
 
 sys.inherits(MQTTServer, EventEmitter);
+var exports = module.exports;
+exports.MQTTServer = MQTTServer;

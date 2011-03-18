@@ -1,3 +1,6 @@
+MQTTServer = require("./mqtt").MQTTServer;
+sys = require('sys');
+inspect = require('util').inspect;
 s = new MQTTServer();
 s.server.listen(1883, "::1");
 
