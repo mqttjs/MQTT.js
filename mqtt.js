@@ -6,14 +6,15 @@ var EventEmitter = require("events").EventEmitter;
 /* Major TODO:
  * 1. Insert error checking code around clientID/topic name slices.
  *    These are notorious for crashing the program if the length is too long
- * 2. Ship MQTTClient and its helpers to an external module
+ * 2. Addendum to 1: Overhaul the packet checking stuff. We need a more
+ *    standard method of handling it rather than just throwing if too long
+ *    then don't slice around every slice call.
  * 3. Make client.packet a proper object (i.e. with a constructor and
  *    well specified)
- * 4. Figure out if one packet is OK for each client
- * 5. Related: cut the cruft out of the packets that are returned
- *    to the library users (fields like lenLen, length, body...).
- *    They should only really contain the packet type and the
- *    fields corresponding to the packet
+ * 4. Standardise error emits rather than just putting out arbitrary strings.
+ *    It makes doing sane error recovery a little difficult.
+ * 5. Tidy up client.process. There is a lot of stuff that could be shared
+ *    between packet types.
  * 6. Break client.accumulate (and client.process)
  *    into a bunch of subroutines for
  *    easier unit testing
@@ -21,12 +22,6 @@ var EventEmitter = require("events").EventEmitter;
  *    (but the lifeboats make the deck look crowded!)
  * 8. Standardise packet construction i.e. make functions that
  *    return packets rather than generating them in client.sendPacket
- * 9. Catch error or disconnect events from sockets and process them rather than
- *    letting them bubble up to the reactor
- * 10.Disconnect clients after a timeout period equal to their keepalive
- *    if they have one or 10 seconds if they don't
- * 11.Consider tying MQTTClient.process to an event emitted by 
- *    MQTTClient.accumulate, rather than having accumulate directly call it
  */
 
 MQTTPacketType = {'Connect':1, 'Connack':2, 
@@ -49,7 +44,7 @@ function MQTTClient(socket) {
     });
 
     this.on('packet_received', function(packet) {
-	this.process(packet);
+	self.process(packet);
     });
 
     /* TODO: consider catching the socket timeout event */
@@ -60,10 +55,6 @@ function MQTTClient(socket) {
 
     /* Arguably this is an error if it doesn't come
      * after a disconnect packet */
-    /* YEAH, I CLOSED THE CONNECTION WITHOUT SENDING A DISCONNECT
-     * WHAT ARE YOU GONNA DO ABOUT IT?
-     * DISCONNECT ME?
-     */
     this.socket.on('close', function(had_error) {
 	self.emit('close');
     });
@@ -72,9 +63,7 @@ function MQTTClient(socket) {
 sys.inherits(MQTTClient, EventEmitter);
 
 MQTTClient.prototype.accumulate = function(data) {
-    /* Hurr hurr hurr, thanks javascript! */
-    /* Also, refactoring is for losers */
-    /* Being in javascript means never having to admit that you're wrong */
+    /* TODO: consider refactoring this */
     var client = this;
 
     sys.log("Data received from client at " + client.socket.remoteAddress);
@@ -98,19 +87,18 @@ MQTTClient.prototype.accumulate = function(data) {
 	/* Consider emitting an error here, this suggests that
 	 * the client is either defective or is having 
 	 * network troubles of some kind.
-	 *
-	 * Either way, we don't like your type around here.
 	 */
-	/* Oh, and consider moving this to a proper function. */
 	client.packetTimer = setTimeout(function(client) {
 	    client.packet = undefined;
 	    sys.log('Discarding incomplete packet');
+	    client.emit('error', "Discarding incomplete packet");
 	}, 5000, this);
 	    
 	if(client.packet === undefined) {
 	    /* Starting a new packet */
 
-	    /* Fill the new packet with crap */
+	    /* Set up a packet template */
+	    /*
 	    client.packet = {
 		'command':undefined,
 		'dup':undefined,
@@ -118,9 +106,11 @@ MQTTClient.prototype.accumulate = function(data) {
 		'retain':undefined,
 		'length':undefined
 	    };
+	    */
+
+	    client.packet = {};
 
 	    /* Fill out the header fields */
-	    /* TODO: AND HOPE TO GOD THAT WE GOT AT LEAST ONE BYTE */
 	    if(client.packet.command === undefined) {
 		client.packet.command = (client.buffer[0] & 0xF0) >> 4;
 		client.packet.dup = ((client.buffer[0] & 0x08) == 0x08);
@@ -130,7 +120,6 @@ MQTTClient.prototype.accumulate = function(data) {
 		sys.log("Packet info: " + inspect(client.packet));
 	    }
 
-	    /* Because refactoring is for losers */
 	    /* For convenience, set packet to client.packet */
 	    packet = client.packet;
 
@@ -149,9 +138,8 @@ MQTTClient.prototype.accumulate = function(data) {
 	    var mul = 1;
 	    var gotAll = false;
 
-	    /* TODO: a lot of this crap should be in utility functions.
-	     * TODO: learn to modularise, dolt!
-	     */
+
+	    /* TODO: move calculating the length into a utility function */
 	    for(var i = 1; i < client.buffer.length; i++) {
 		length += (client.buffer[i] & 0x7F) * mul;
 		mul *= 0x80;
@@ -159,8 +147,7 @@ MQTTClient.prototype.accumulate = function(data) {
 		if(i > 5) {
 		    /* Length field too long */
 		    sys.log("Error: length field too long");
-		    /* TODO: disconnect the client */
-		    /* TODO: or, better yet, emit an error! */
+		    client.emit('error', "Length field too long");
 		    return;
 		}
 
@@ -195,19 +182,18 @@ MQTTClient.prototype.accumulate = function(data) {
 	    sys.log("Packet complete\n" + inspect(chunk));
 	    /* Cut the body of the packet out of the buffer */
 	    packet.body = chunk.slice((client.packet.lengthLength + 1), chunk.length);
-	    /* TODO */
-	    /* This doesn't quite do what I want it to, perhaps consider creating
-	     * a sanitised packet before handing it off to process
-	     */
-	    /* By that I mean that it doesn't 'undefine' lengthLength. It remains
-	     * in the object with the value 'undefined'
-	     */
-	    client.packet.lengthLength = undefined;
+
+	    /* Cut the lengthLength field out of the packet, we don't need it anymore */
+	    delete client.packet.lengthLength;
 
 	    /* Drive client.process() off the packet_received event */
-	    /* More events can't hurt, right? */
+	    /* TODO: figure out if this is the best thing to do */
+	    /* Pros: 1. Less time spent out of the event loop
+	     *       2. Implementors can see when raw packets arrive, not just processed ones
+	     * Cons: 1. Debugging will be a bit of a pain
+	     *       2. Following flow of control will be worse
+	     */
 	    client.emit('packet_received', packet);
-	    //
 	    //client.process(packet);
 
 	    /* We've got a complete packet, stop the incomplete packet timer */
@@ -231,17 +217,18 @@ MQTTClient.prototype.process = function(packet) {
 	case MQTTPacketType.Connect:
 	    var count = 0;
 
+	    /* TODO: what would be interesting would be to change this based on what
+	     * variant of MQTT we're implementing. MQIsdp is just the original
+	     * hierachical version, but we could have all kinds of different breeds!
+	     */
 	    var version = "\00\06MQIsdp\03";
 	    if(packet.body.slice(count, count+version.length).toString('utf8') !== version) {
 		sys.log('Invalid version');
-		emit('error', 'Invalid version string');
+		this.emit('error', 'Invalid version string');
 	    }
 
 	    /* Skip the version field */
 	    count += version.length;
-
-
-	    sys.log("Count after version string: " + count);
 
 	    /* Extract the connect header */
 	    packet.willRetain = (packet.body[count] & 0x20 != 0);
@@ -249,22 +236,27 @@ MQTTClient.prototype.process = function(packet) {
 	    packet.willFlag = (packet.body[count] & 0x04 != 0);
 	    packet.cleanStart = (packet.body[count] & 0x02 != 0);
 	    // TODO: add some error detection here e.g. qos = 1 when flag = false isn't allowed
+	    // Maybe. This is, after all, a protocol library, not an actual usage library
 	    count++;
-
-	    sys.log("Count after connect header "+ count);
 
 	    /* Extract the keepalive */
 	    packet.keepalive = packet.body[count++] << 8;
 	    packet.keepalive += packet.body[count++];
 
-	    sys.log("Count after keepalive "+ count);
-	    
-	    /* Extract the client ID */
+	    /* Extract the client ID length */
 	    var clientLen = packet.body[count++] * 256;
 	    clientLen += packet.body[count++];
-	    sys.log("Count after client length " + count);
-	    sys.log("Client ID length: " + clientLen);
-	    sys.log("Body length: " + packet.body.length);
+	    
+	    /* Is our client ID length reasonable? */
+	    if(clientLen > packet.body.length) {
+		/* Just in case our client ID length is too long */
+		/* TODO: make some proper error objects or messages */
+		/* TODO: and handle this better rather than just dropping everything */
+		this.emit('error', "Protocol error - client ID length");
+		return;
+	    }
+
+	    /* Yep, extract the client ID */
 	    packet.clientId = packet.body.slice(count, count+clientLen).toString('utf8');
 	    count += clientLen + 2;
 
@@ -283,9 +275,8 @@ MQTTClient.prototype.process = function(packet) {
 	    }
 
 	    /* Clear the body as to not confuse the guy on the other end */
-	    packet.body = undefined;
+	    delete packet.body;
 
-	    // TODO: consider hiding this in the library and only exposing publish/subscribes
 	    this.emit('connect', packet);
 	    break;
 	case MQTTPacketType.Connack:
@@ -310,7 +301,7 @@ MQTTClient.prototype.process = function(packet) {
 	    /* Whatever remains is the payload */
 	    packet.payload = packet.body.slice(count, packet.body.length).toString('utf8');
 
-	    packet.body = undefined;
+	    delete packet.body;
 
 	    this.emit('publish', packet);
 	    break;
@@ -325,8 +316,8 @@ MQTTClient.prototype.process = function(packet) {
 	    messageId += packet.body[count++];
 	    packet.messageId = messageId;
 
-	    packet.body = undefined;
-	    emit('pubrel', packet);
+	    delete packet.body;
+	    this.emit('pubrel', packet);
 	    break;
 	case MQTTPacketType.Pubcomp:
 	    break;
@@ -357,7 +348,7 @@ MQTTClient.prototype.process = function(packet) {
 
 	    packet.subscriptions = subscriptions;
 
-	    packet.body = undefined;
+	    delete packet.body;
 	    this.emit('subscribe', packet);
 	    break;
 	case MQTTPacketType.Suback:
@@ -386,7 +377,7 @@ MQTTClient.prototype.process = function(packet) {
 
 	    packet.unsubscriptions = unsubscriptions;
 
-	    packet.body = undefined;
+	    delete packet.body;
 	    this.emit('unsubscribe', packet);
 	    break;
 	case MQTTPacketType.Unsuback:
@@ -400,6 +391,7 @@ MQTTClient.prototype.process = function(packet) {
 	    this.emit('disconnect', packet);
 	    break;
 	default:
+	    this.emit('error', "Invalid packet type");
 	    sys.log("Invalid packet type");
     }
 }
