@@ -1,3 +1,5 @@
+/* Copyright (c) 2011 Adam Rudd. See LICENSE for more information */
+
 var sys = require("sys");
 var net = require("net");
 var inspect = require("util").inspect;
