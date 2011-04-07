@@ -30,8 +30,22 @@ Some (less sane) examples:
     and receive the audio if the published audio is in that
     key.
 
-Usage
------
+How to get something useful up and running
+------------------------------------------
+
+1. Install [node](http://github.com/joyent/node.js)
+2. Get MQTT.js
+
+	`git clone http://github.com/adamvr/mqtt.js.git`
+
+3. `cd examples/`
+4. Run an example server using
+
+	`node <server>.js`
+    
+Library usage example
+---------------------
+
     MQTTServer = require("./mqtt").MQTTServer
     s = new MQTTServer();
     s.on('new_client', function(client) {
@@ -69,5 +83,5 @@ Some known ones are:
 *	Poor handling of socket errors.
 *	Lack of documentation. 
 *	Not quite as nice an API as you might like.
-*       Not nearly as catchy a name as mosquitto.
+*	Not nearly as catchy a name as mosquitto.
 
