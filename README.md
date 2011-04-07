@@ -69,4 +69,5 @@ Some known ones are:
 *	Poor handling of socket errors.
 *	Lack of documentation. 
 *	Not quite as nice an API as you might like.
+*       Not nearly as catchy a name as mosquitto.
 
