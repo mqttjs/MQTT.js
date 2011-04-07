@@ -36,9 +36,9 @@ How to get something useful up and running
 1. Install [node](http://github.com/joyent/node.js)
 2. Get MQTT.js
 
-	`git clone http://github.com/adamvr/mqtt.js.git`
+	`git clone http://github.com/adamvr/MQTT.js.git`
 
-3. `cd examples/`
+3. `cd MQTT.js/examples`
 4. Run an example server using
 
 	`node <server>.js`
