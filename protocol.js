@@ -1,5 +1,7 @@
 /* Generic */
 
+var protocol = module.exports;
+
 module.exports.types = {
 	0: 'reserved',
 	1: 'connect',
@@ -22,7 +24,7 @@ module.exports.types = {
 module.exports.codes = {}
 for(var k in module.exports.types) {
 	var v = module.exports.types[k];
-	module.exports.codes[v] = k
+	module.exports.codes[v] = k;
 }
 
 /* Header */
@@ -45,8 +47,18 @@ module.exports.WILL_QOS_MASK = 0x18;
 module.exports.WILL_QOS_SHIFT = 3;
 module.exports.WILL_FLAG_MASK = 0x04;
 module.exports.CLEAN_SESSION_MASK = 0x02;
-	
 
+module.exports.parse_header = function(buf) {
+	var packet = {};
+
+	packet.cmd = protocol.types[buf[0] >> protocol.CMD_SHIFT];
+	packet.retain = (buf[0] & protocol.RETAIN_MASK) !== 0;
+	packet.qos = (buf[0] & protocol.QOS_MASK) >> protocol.QOS_SHIFT;
+	packet.dup = (buf[0] & protocol.DUP_MASK) !== 0;
+
+	return packet;
+};
+	
 module.exports.parse_connect = function(buf) {
 	var pos = 0,
 		len = buf.length,
@@ -54,6 +66,8 @@ module.exports.parse_connect = function(buf) {
 		flags = {};
 	
 	/* Parse version string */
+	debugger;
+
 	packet.version = parse_string(buf, len, pos);
 	if(packet.version === null) return null;
 	pos += packet.version.length + 2;
@@ -64,17 +78,17 @@ module.exports.parse_connect = function(buf) {
 	pos += 1;
 	
 	/* Parse connect flags */
-	flags.username = (buf[pos] & USERNAME_MASK);
-	flags.password = (buf[pos] & PASSWORD_MASK);
-	flags.will = (buf[pos] & WILL_FLAG_MASK);
+	flags.username = (buf[pos] & protocol.USERNAME_MASK);
+	flags.password = (buf[pos] & protocol.PASSWORD_MASK);
+	flags.will = (buf[pos] & protocol.WILL_FLAG_MASK);
 	
 	if(flags.will) {
 		packet.will = {}
-		packet.will.retain = (buf[pos] & WILL_RETAIN_MASK) !== 0;
-		packet.will.qos = (buf[pos] & WILL_QOS_MASK) >> WILL_QOS_SHIFT;
+		packet.will.retain = (buf[pos] & protocol.WILL_RETAIN_MASK) !== 0;
+		packet.will.qos = (buf[pos] & protocol.WILL_QOS_MASK) >> protocol.WILL_QOS_SHIFT;
 	}
 	
-	packet.clean = (buf[pos] & CLEAN_SESSION_MASK) !== 0;
+	packet.clean = (buf[pos] & protocol.CLEAN_SESSION_MASK) !== 0;
 	pos += 1;
 	
 	/* Parse keepalive */

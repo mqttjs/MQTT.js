@@ -8,112 +8,92 @@ var Connection = module.exports = function Connection(stream, server) {
 	this.server = server;
 	this.stream = stream;
 	this.buffer = new Buffer(1024);
-	this.buffer.pos = 0;
-	this.state = 'fresh';
+	this.buffer.written = this.buffer.read = 0;
+	this.packet = {};
 	this.stream.on('data', this.parse.bind(this));
+	/*
 	this.stream.on('error', this.error.bind(this));
 	this.stream.on('close', this.end.bind(this));
+	*/
 	events.EventEmitter.call(this);
 };
 
 util.inherits(Connection, events.EventEmitter);
 
 Connection.prototype.parse = function(buf) {
-	var pos = 0,
-		len = buf.length;
-		
-	while(pos < len) {
-		switch(this.state) {
-			/* Empty buffer */
-			case 'fresh':
-				this.reset();
-				this.state = 'header';
-				break;
-			
-			/* Parse header */
-			case 'header':
-				this.packet.cmd = protocol.types[buf[pos] >> protocol.CMD_SHIFT];
-				this.packet.retain = (buf[pos] & protocol.RETAIN_MASK) !== 0;
-				this.packet.qos = (buf[pos] & protocol.QOS_MASK) >> protocol.QOS_SHIFT;
-				this.packet.dup = (buf[pos] & protocol.DUP_MASK) !== 0;
-				
-				pos++;
-				this.state = 'length';
-				break;
-				
-			/* Accumulate remaining length field */
-			case 'length':
-				if(this.tmp.lenlen > 4) {
-					this.state = 'error'
-					this.tmp.error = 'length field too long';
+	/* Copy incoming data into the internal buffer */
+	/* TODO: grow it */
+
+	buf.copy(this.buffer, this.buffer.written);
+	this.buffer.written += buf.length;
+
+	var pos = this.buffer.read,
+		len = this.buffer.written,
+		buf = this.buffer,
+		error = '';
+
+	while (pos < len) {
+		/* Fresh packet - parse the header */
+		if (!this.packet.cmd) {
+			var header = protocol.parse_header(buf.slice(pos, pos + 1));
+			for (var k in header) {
+				this.packet[k] = header[k];
+			}
+			pos++;
+		}
+
+		/* Parse the remaining length field */
+		if (!this.packet.length) {
+			this.tmp = {mul: 1, length: 0, lenlen: 0};
+
+			do {
+				if (pos > len) {
+					return;
+				}
+				if (this.tmp.lenlen) {
+					error = 'remaining length field too long'
 					break;
 				}
-				
-				this.packet.length += this.tmp.mul * (buf[pos] & protocol.LENGTH_MASK);
-				this.tmp.mul *= 0x80;
-				if((buf[pos++] & protocol.LENGTH_FIN_MASK) === 0) this.state = 'accumulate';
-				break;
 
-			/* Accumulate data until we've got enough to satisfy the remaining length field */
-			case 'accumulate':
-				var accumulated = this.buffer.written - this.buffer.read,
-					available = len - pos,
-					remaining = this.packet.length - accumulated,
-					toCopy = 0;
-				
-				/* If the amount of available data is greater than that needed to
-				 * complete the packet, copy only the data that is required to complete the packet.
-				 * Otherwise, copy all of the available data.
-			     */
-				if(available > remaining) {
-					toCopy = remaining;
-				} else {
-					toCopy = available;
-				}
-				
-				
-				buf.copy(this.buffer, this.buffer.written, pos, pos + toCopy);
-				this.buffer.written += toCopy;
-				
-				/* Have we got enough to complete the packet? */
-				if(this.buffer.written - this.buffer.read >= this.packet.length)  {
-					/* Parse the packet */
-					this.state = 'packet';
-				} else {
-					/* Wait for more */
-					pos += toCopy;
-				}
-				break;
+				this.tmp.length += this.tmp.mul * (buf[pos] & protocol.LENGTH_MASK);
+				this.tmp.mul *= 0x80;
+			} while ((buf[pos++] & protocol.LENGTH_FIN_MASK) !== 0);
 			
-			
-			case 'packet':
-				var parsed = protocol['parse_' + this.packet.cmd](this.buffer.slice(this.buffer.read, this.buffer.written));
-				if(parsed === null) {
-					this.state = 'error'
-					this.tmp.error = 'error parsing packet body';
-				} else {
-					for(var k in parsed) {
-						this.packet[k] = parsed[k];
-					}
-					this.state = 'complete';
-				}	
-				break;
-				
-			case 'complete':
-				this.emit(this.packet.cmd, this.packet);
-				this.state = 'fresh';
-				
-				this.buffer.read += this.packet.length;
-				pos += this.packet.length;
-				
-				break;
-			
-			case 'error':
-				this.error(this.tmp.error);
-				pos = len;
-				break;
-				
+			if (!error) {
+			   this.packet.length = this.tmp.length;
+			}
 		}
+
+		/* Do we have enough data to complete the payload? */
+		if (len - pos < this.packet.length) {
+		    /* Nope, wait for more data */
+			break;
+		} else {
+			/* We've either got enough for >= 1 packet */
+			var parsed = protocol['parse_' + this.packet.cmd](
+				this.buffer.slice(pos, this.packet.length + pos));
+
+			for (var k in parsed) {
+				this.packet[k] = parsed[k];
+			}
+
+			/* Indicate that we've read all the data */
+			pos += this.packet.length;
+
+			/* Emit packet and reset connection state */
+			this.emit(this.packet.cmd, this.packet);
+			this.packet = {};
+			this.tmp = {};
+
+		}
+	}
+
+	this.buffer.read = pos;
+	this.buffer.written = len;
+
+	/* Processed all the data in the buffer, reset pointers */
+	if (this.buffer.written === this.buffer.read) {
+		this.buffer.written = this.buffer.read = 0;
 	}
 };
 
@@ -175,78 +155,49 @@ Connection.prototype.end = function() {
 	this.stream.end();
 };
 
+/*
 var EventEmitter = require('events').EventEmitter,
 	e = new EventEmitter(),
 	c = new Connection(e),
-	packets = [packet.gen_connect({version: 'mqisdp', versionNum: 3, client: 'test', keepalive: 60})];
-	
-for(var i = 0; i < packets.length; i++) {
-	e.emit('data', packets[i]);
-}
+	o = { version: 'mqisdp',
+		  versionNum: 3,
+		  client: 'test',
+		  keepalive: 60
+		},
+	buffer = new Buffer(1024),
+	packet = packet.gen_connect(o);
 
+console.dir(packet);
+buffer.write(packet.toString('utf8'), 0);
+buffer.write(packet.toString('utf8'), packet.length);
+console.dir(buffer);
 
-/*
-var redis = require('redis');
-var server = net.createServer(function(conn) {
-	var client = new Connection(conn, server);
-	client.redis = redis.createClient();
-	
-	var events = ['connect', 'publish', 'subscribe', 'pingreq', 'disconnect'];
-	for (var i=0; i < events.length; i++) {
-		client.on(events[i], console.dir);
-	};
-	
-	client.stream.on('close', function() { console.log('dc');});
-	
-	client.on('connect', function(p) {
-		client.connack(0);
-	});
-	
-	client.on('publish', function(p) {
-		client.redis.publish(p.topic, p.payload);
-	});
-	
-	client.on('subscribe', function(p) {
-		var granted = [];
-		for(var i = 0; i < p.subscriptions.length; i++) {
-			var qos = p.subscriptions[i][1],
-				topic = p.subscriptions[i][0];
-				
-			granted.push(qos);
-			client.redis.psubscribe(topic
-				.replace('+', '[^/]')
-				.replace('#', '*'));
-		}
-		
-		client.suback(p.messageID, granted);
-	});
-	
-	client.on('pingreq', function(p) {
-		client.pingresp();
-	});
-	
-	client.redis.on('pmessage', function(pattern, channel, message) {
-		client.publish(channel, message);
-	});
-	
-	client.on('disconnect', function() {
-		client.cleanup.call(this);
-	});
-	
-	client.on('error', function() {
-		client.cleanup.call(this);
-	});
-	
-	client.cleanup = function() {
-		client.stream.end();
-		client.redis.end();
-		client = null;
-	}
+c.on('connect', function(packet) {
+	console.dir(packet);
 });
 
-server.conns = [];
 
-server.listen(1883);
-
+e.emit('data', buffer.slice(0, packet.length * 2 - 8));
+e.emit('data', buffer.slice(packet.length * 2 - 8, packet.length * 2));
 */
 
+net.createServer(function(socket) {
+	var conn = new Connection(socket),
+		events = ['connect', 'publish', 'subscribe', 'pingreq', 'disconnect'],
+		socks = ['connect', 'data', 'end', 'timeout', 'drain', 'error'];
+
+	for (var i = 0; i < events.length; i++) {
+		conn.on(events[i], function(packet) {
+			console.dir(packet);
+		});
+	}
+
+	conn.on('connect', function(packet) {
+		conn.connack(0);
+	});
+
+	conn.on('disconnect', function(packet) {
+		conn.stream.end();
+	});
+
+}).listen(1883);
