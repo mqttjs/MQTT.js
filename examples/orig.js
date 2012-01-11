@@ -1,69 +1,59 @@
-MQTTServer = require("../mqtt").MQTTServer;
-sys = require("sys");
+var mqtt = require('../mqtt'),
+	util = require('util');
+	
+mqtt.createServer(function(client) {
+	var self = this;
 
-s = new MQTTServer();
+	if (!self.clients) self.clients = {};
+	client.on('connect', function(packet) {
+		self.clients[packet.client] = client;
+		client.id = packet.client;
+		client.subscriptions = [];
+		client.connack({returnCode: 0});
+	});
 
-s.server.listen(1883, "::1");
+	client.on('subscribe', function(packet) {
+		var granted = [];
 
-list = [];
+		for (var i = 0; i < packet.subscriptions.length; i++) {
+			var qos = packet.subscriptions[i].qos,
+				topic = packet.subscriptions[i].topic,
+				reg = new RegExp(topic.replace('+', '[^\/]+').replace('#', '.+$'));
 
-s.on('new_client', function(client) {
-    sys.log("New client emitted");
-
-    client.on('connect', function(packet)  {
-	this.clientId = packet.clientId;
-	list[this.clientId] = this;
-	this.connack(0);
-    });
-
-    client.on('subscribe', function(packet) {
-	for(var i = 0; i < packet.subscriptions.length; i++) {
-	    var subStr = packet.subscriptions[i].topic;
-	    /* # is 'match anything to the end of the string' */
-	    /* + is 'match anything but a / until you hit a /' */
-	    var reg = new RegExp(subStr.replace('+', '[^\/]+').replace('#', '.+$'));
-
-	    sys.log(reg);
-
-	    client.subscriptions.push(reg);
-	}
-    });
-
-    client.on('publish', function(packet) {
-	/* Iterate over our list of clients */
-	for(var k in list) {
-	    var c = list[k];
-	    var publishTo = false;
-	    /* Iterate over the client's subscriptions */
-	    for(var i = 0; i < c.subscriptions.length; i++) {
-		/* If the client has a subscription matching
-		 * the packet...
-		 */
-		var s = c.subscriptions[i];
-		if(s.test(packet.topic)) {
-		    publishTo = true;
+			granted.push(qos);
+			client.subscriptions.push(reg);
 		}
-	    }
-	    if(publishTo) {
-		c.publish(packet.topic, packet.payload);
-	    }
-	}
-    });
 
+		client.suback({messageId: packet.messageId, granted: granted});
+	});
 
-    client.on('pingreq', function(packet) {
-	client.pingresp();
-    });
+	client.on('publish', function(packet) {
+		for (var k in self.clients) {
+			var c = self.clients[k],
+				publish = false;
 
-    client.on('disconnect', function() {
-	this.socket.end();
+			for (var i = 0; i < c.subscriptions.length; i++) {
+				var s = c.subscriptions[i];
 
-	delete list[this];
-    });
+				if (s.test(packet.topic)) {
+					publish = true;
+				}
+			}
 
-    client.on('error', function(error) {
-	this.socket.end();
-	delete list[this];
-    });
+			if (publish) {
+			    c.publish({topic: packet.topic, payload: packet.payload});
+			}
+		}
+	});
 
-});
+	client.on('pingreq', function(packet) {
+		client.pingresp();
+	});
+
+	client.on('disconnect', function(packet) {
+	});
+
+	client.on('close', function(packet) {
+		delete self.clients[client.id];
+	});
+}).listen(1883);

@@ -1,48 +1,46 @@
-MQTTServer = require("../mqtt").MQTTServer;
-s = new MQTTServer();
+/* broadcast.js - all published messages are relayed to all connected clients */
 
-s.server.listen(1883, "::1");
+var mqtt = require('../mqtt');
 
-list = [];
+mqtt.createServer(function(client) {
+	var self = this;
 
-s.on('new_client', function(client) {
+	if (!self.clients) self.clients = {};
 
-    client.on('connect', function(packet)  {
-	this.clientId = packet.clientId;
-	list[this.clientId] = this;
-	this.connack(0);
-    });
+	client.on('connect', function(packet) {
+		client.connack({returnCode: 0});
+		client.id = packet.client;
+		self.clients[client.id] = client;
+	});
 
-    client.on('subscribe', function(packet) {
-	var qos = []
-	for(var i = 0; i < packet.subscriptions.length; i++) {
-	    qos.push(packet.subscriptions[i].qos);
-	}
+	client.on('publish', function(packet) {
+		for (var k in self.clients) {
+			self.clients[k].publish({topic: packet.topic, payload: packet.payload});
+		}
+	});
 
-	client.suback(packet.messageId, qos);
-    });
+	client.on('subscribe', function(packet) {
+		var granted = [];
+		for (var i = 0; i < packet.subscriptions.length; i++) {
+			granted.push(packet.subscriptions[i].qos);
+		}
 
-    client.on('publish', function(packet) {
-	/* Publish to everybody */
-	for(var k in list) {
-	    var c = list[k];
-	    c.publish(packet.topic, packet.payload);
-	}
-    });
+		client.suback({granted: granted});
+	});
 
+	client.on('pingreq', function(packet) {
+		client.pingresp();
+	});
 
-    client.on('pingreq', function(packet) {
-	client.pingresp();
-    });
+	client.on('disconnect', function(packet) {
 
-    client.on('disconnect', function() {
-	this.socket.end();
-	delete list[this];
-    });
+	});
 
-    client.on('error', function(error) {
-	this.socket.end();
-	delete list[this];
-    });
+	client.on('close', function(err) {
+		delete self.clients[client.id];
+	});
 
-});
+	client.on('error', function(err) {
+		util.log('error!');
+	});
+}).listen(1883);

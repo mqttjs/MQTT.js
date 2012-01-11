@@ -200,7 +200,7 @@ module.exports.parse_subscribe = function(buf) {
 		qos = buf[pos++];
 		
 		/* Push pair to subscriptions */
-		packet.subscriptions.push([topic, qos]);
+		packet.subscriptions.push({topic: topic, qos: qos});
 	}
 	
 	return packet;

@@ -11,13 +11,24 @@ var Connection = module.exports = function Connection(stream, server) {
 	this.buffer.written = this.buffer.read = 0;
 	this.packet = {};
 	this.stream.on('data', this.parse.bind(this));
-	/*
-	this.stream.on('error', this.error.bind(this));
-	this.stream.on('close', this.end.bind(this));
-	*/
+
+	this.on('disconnect', function(packet) {
+		this.stream.end();
+	});
+
+	var evs = ['close', 'error'];
+
+	for (var i = 0; i < evs.length; i++) {
+		this.stream.on(evs[i], function(conn, event) {
+			return function(e) {
+				conn.stream.end();
+				conn.emit(event, e);
+			}
+		}(this, evs[i]));
+	}
+	
 	events.EventEmitter.call(this);
 };
-
 util.inherits(Connection, events.EventEmitter);
 
 Connection.prototype.parse = function(buf) {
@@ -97,107 +108,45 @@ Connection.prototype.parse = function(buf) {
 	}
 };
 
-Connection.prototype.connack = function(code) {
-	this.stream.write(new Buffer([2 << 4, 2, 0, code]));
+for (var k in protocol.types) {
+	var v = protocol.types[k];
+
+	Connection.prototype[v] = function(type) {
+		return function(opts) {
+			var p = packet['gen_'+type](opts);
+
+			return p ? this.stream.write(p) : null;
+		}
+	}(v);
 }
-
-Connection.prototype.pingresp = function() {
-	this.stream.write(new Buffer([13 << 4, 0]))
-}
-
-Connection.prototype.publish = function(topic, payload, messageID) {
-	var packet = [3 << 4, topic.length + payload.length + 2];
-	
-
-	packet.push(topic.length >> 8);
-	packet.push(topic.length & 0x0F);
-	for(var i = 0; i < topic.length; i++) {
-		packet.push(topic[i]);
-	}
-	
-	if(messageID) {
-		packet.push(messageID >> 8);
-		packet.push(messageID & 0x0F);
-	}
-	
-	for(var i = 0; i < payload.length; i++) {
-		packet.push(payload[i]);
-	}
-	
-	this.stream.write(new Buffer(packet));
-}
-
-Connection.prototype.suback = function(messageID, granted) {
-	var packet = [9 << 4, granted.length + 2, messageID >> 8, messageID & 0x0F];
-	for(var i = 0; i < granted.length; i++) {
-		packet.push(granted[i]);
-	}
-	
-	this.stream.write(new Buffer(packet));
-}
-
-Connection.prototype.error = function(err) {
-	this.reset();
-	this.emit('error', err);
-	this.state = 'fresh';
-};
-
-Connection.prototype.reset = function() {
-	this.tmp = {};
-	this.tmp.mul = 1;
-	this.buffer.read = 0;
-	this.buffer.written = 0;
-	this.packet = {};
-	this.packet.length = 0;
-};
-
-Connection.prototype.end = function() {
-	this.stream.end();
-};
 
 /*
-var EventEmitter = require('events').EventEmitter,
-	e = new EventEmitter(),
-	c = new Connection(e),
-	o = { version: 'mqisdp',
-		  versionNum: 3,
-		  client: 'test',
-		  keepalive: 60
-		},
-	buffer = new Buffer(1024),
-	packet = packet.gen_connect(o);
+Connection.prototype.connack = function(returnCode) {
+	var p = packet.gen_connack({returnCode: returnCode});
 
-console.dir(packet);
-buffer.write(packet.toString('utf8'), 0);
-buffer.write(packet.toString('utf8'), packet.length);
-console.dir(buffer);
+	return p ? this.stream.write(p) : null;
+};
 
-c.on('connect', function(packet) {
-	console.dir(packet);
-});
+Connection.prototype.pingresp = function() {
+	var p = packet.gen_pingresp();
 
+	return p ? this.stream.write(p) : null;
+};
 
-e.emit('data', buffer.slice(0, packet.length * 2 - 8));
-e.emit('data', buffer.slice(packet.length * 2 - 8, packet.length * 2));
+Connection.prototype.publish = function(topic, payload, messageId) {
+	var p = packet.gen_publish({topic: topic,
+							   payload: payload,
+							   messageId: messageId}); 
+
+	return p ? this.stream.write(p) : null;
+
+};
+
+Connection.prototype.suback = function(messageId, granted) {
+	var p = packet.gen_suback({granted: granted,
+							   messageId: messageId}); 
+
+	return p ? this.stream.write(p) : null;
+}
 */
 
-net.createServer(function(socket) {
-	var conn = new Connection(socket),
-		events = ['connect', 'publish', 'subscribe', 'pingreq', 'disconnect'],
-		socks = ['connect', 'data', 'end', 'timeout', 'drain', 'error'];
-
-	for (var i = 0; i < events.length; i++) {
-		conn.on(events[i], function(packet) {
-			console.dir(packet);
-		});
-	}
-
-	conn.on('connect', function(packet) {
-		conn.connack(0);
-	});
-
-	conn.on('disconnect', function(packet) {
-		conn.stream.end();
-	});
-
-}).listen(1883);
