@@ -33,7 +33,7 @@ mqtt.createServer(function(client) {
 	});
 
 	client.on('disconnect', function(packet) {
-
+		client.stream.end();
 	});
 
 	client.on('close', function(err) {
@@ -41,6 +41,7 @@ mqtt.createServer(function(client) {
 	});
 
 	client.on('error', function(err) {
+		client.stream.end();
 		util.log('error!');
 	});
 }).listen(1883);

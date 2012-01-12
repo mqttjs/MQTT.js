@@ -35,5 +35,12 @@ mqtt.createServer(function(client) {
 	client.s.on('pmessage', function(pattern, channel, message) {
 		client.publish({topic: channel, payload: message});
 	});
+	client.on('disconnect', function(packet) {
+		client.stream.end();
+	});
+	client.on('error', function(e) {
+		client.stream.end();
+		console.log(e);
+	});
 }).listen(1883);
 

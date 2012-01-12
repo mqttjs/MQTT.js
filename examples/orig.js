@@ -51,9 +51,15 @@ mqtt.createServer(function(client) {
 	});
 
 	client.on('disconnect', function(packet) {
+		client.stream.end();
 	});
 
 	client.on('close', function(packet) {
 		delete self.clients[client.id];
+	});
+
+	client.on('error', function(e) {
+		client.stream.end();
+		console.log(e);
 	});
 }).listen(1883);
