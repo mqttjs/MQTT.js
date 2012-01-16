@@ -4,7 +4,7 @@ var fs = require('fs'),
 	EventEmitter = require('events').EventEmitter,
 	Connection = require('../lib/connection');
 	
-var cases = JSON.parse(fs.readFileSync('./cases.js', 'utf8'));
+var cases = JSON.parse(fs.readFileSync('./transmit.json', 'utf8'));
 
 var bufferToString = function(buf) {
 	var s = ['['];
@@ -49,12 +49,6 @@ for(var type in cases) {
 
 		console.log('\tTesting %s', desc);
 
-		timeout = setTimeout(function(desc) {
-			return function() {
-				console.log('Test %s failed - no data event emitted', desc);
-			}
-		}(desc), 100);
-
 		tester.once('data', function(fixture, timeout) {
 			return function(data, error) {
 				var wasError = false;
@@ -71,7 +65,7 @@ for(var type in cases) {
 			}
 		}(fixture, timeout));
 
-		uut[type](input);
+		if(uut[type](input) === false) console.log('\t\tTest failed - invalid parameters');
 	}
 
 	console.log('Testing %s invalid parameters', type);
@@ -88,7 +82,7 @@ for(var type in cases) {
 			assert.equal(uut[type](input), false);
 		} catch(e) {
 			wasError = false;
-			console.log('Connection#%s did not return false', type);
+			console.log('\t\tConnection#%s did not return false', type);
 		}
 
 		if(wasError) console.log('\t\tTest passed');
