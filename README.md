@@ -1,87 +1,381 @@
-MQTT.js
+mqtt.js
 =======
 
 Introduction
 ------------
-MQTT.js is a server library for the MQTT protocol, written in node.js.
+mqtt.js library for the MQTT protocol, written in javascript.
+It allows the creation of both MQTT clients and MQTT brokers
+through the `createClient` and `createServer` API methods.
 
-The idea of this project is to allow many different
-breeds of publish/subscribe, rather than the straight
-topic hierarchies that basic MQTT provides.
+Much of this document requires an understand of the MQTT protocol,
+so consult the [MQTT documentation](http://mqtt.org/documentation)
+for more information.
 
-Some (sane) examples:
+Server API usage
+------------
+A broadcast server example, included in `examples/broadcast.js`:
 
-* Subscribing to regular expressions and receiving
-messages on topics matching that regular expression
-* CouchDB query style subscriptions
-* Content based publish/subscribe using regular
-expressions
-* Subscriptions using AWK scripts
+	var mqtt = require('../mqtt');
 
-Some (less sane) examples:
+	mqtt.createServer(function(client) {
+		var self = this;
 
-*   Publishers publish image data which is processed for
-    face detection. Subscribers subscribe to a face and
-    get delivered the published image data if their face
-    appears in the image
-*   Publishers publish MP3s. The published message is
-    processed to determine the musical key of the published
-    audio. Subscribers subscribe to a given musical key
-    and receive the audio if the published audio is in that
-    key.
+		if (!self.clients) self.clients = {};
 
-How to get something useful up and running
-------------------------------------------
+		client.on('connect', function(packet) {
+			client.connack({returnCode: 0});
+			client.id = packet.client;
+			self.clients[client.id] = client;
+		});
 
-1. Install [node](http://github.com/joyent/node.js)
-2. Get MQTT.js
+		client.on('publish', function(packet) {
+			for (var k in self.clients) {
+				self.clients[k].publish({topic: packet.topic, payload: packet.payload});
+			}
+		});
 
-	`git clone http://github.com/adamvr/MQTT.js.git`
+		client.on('subscribe', function(packet) {
+			var granted = [];
+			for (var i = 0; i < packet.subscriptions.length; i++) {
+				granted.push(packet.subscriptions[i].qos);
+			}
 
-3. `cd MQTT.js/examples`
-4. Run an example server using
+			client.suback({granted: granted});
+		});
 
-	`node <server>.js`
+		client.on('pingreq', function(packet) {
+			client.pingresp();
+		});
+
+		client.on('disconnect', function(packet) {
+			client.stream.end();
+		});
+
+		client.on('close', function(err) {
+			delete self.clients[client.id];
+		});
+
+		client.on('error', function(err) {
+			client.stream.end();
+			util.log('error!');
+		});
+	}).listen(1883);
+
+Client API usage
+----------------
+
+A basic publish client, the basis for `bin/mqtt_pub`:
+
+	var mqtt = require('../lib/mqtt');
+
+	var argv = process.argv;
+
+	for (var i = 2; i <= 5; i++) {
+		if(!argv[i]) process.exit(-1);
+	}
+
+	var port = argv[2],
+		host = argv[3],
+		topic = argv[4],
+		payload = argv[5];
+
+	mqtt.createClient(port, host, function(client) {
+		client.connect({keepalive: 3000});
+
+		client.on('connack', function(packet) {
+			if (packet.returnCode === 0) {
+				client.publish({topic: topic, payload: payload});
+				client.disconnect();
+			} else {
+				console.log('connack error %d', packet.returnCode);
+				process.exit(-1);
+			}
+		});
+
+		client.on('close', function() {
+			process.exit(0);
+		});
+
+		client.on('error', function(e) {
+			console.log('error %s', e);
+			process.exit(-1);
+		});
+	});
+
+# API
+The `mqtt` module provides two methods for creating MQTT servers and clients
+as specified below:
+
+## mqtt.createServer(listener)
+Creates a new `mqtt.Server`. The listener argument is set as a listener for
+the `client` event. 
+
+## mqtt.createClient([port], [host], [callback])
+Creates a new `mqtt.Client` and connects it to the specified `port` and `host`.
+If `port` and `host` are omitted `1883` and `localhost` will be assumed for 
+each respectively.
+
+When the client is connected, the `connected` event will be fired and `callback`
+will be called, if supplied.
+
+
+##mqtt.Server
+The `mqtt.Server` class represents an MQTT server.
+
+`mqtt.Server` extends `net.Server` and so shares all of its methods with the
+distinction that the `net.Server#connected` event is caught and the `client`
+event is fired.
+
+### Event: 'client'
+`function(client) {}`
+Emitted when a new TCP connection is received. `client` is an instance of
+`mqtt.Client`.
+
+##mqtt.Client
+The `mqtt.Client` class represents a connected MQTT client, be it on the server
+or client side.
+
+It is preferred that `mqtt.Client`s be constructed using the `mqtt.createClient`
+factory method.
+
+For all methods below invalid `options` will cause the method to return `false`.
+
+For all events below `packet` will also contain all of the information contained
+in the MQTT static header. This includes `cmd`, `dup`, `qos` and `retain` even
+when they do not apply to the packet. It will also contain the `length` of the packet.
+
+###client.connect([options])
+Send an MQTT connect packet.
+
+`options` is an object with the following defaults:
     
-Library usage example
----------------------
+	{ "version": "MQIsdp",
+	  "versionNum": 3,
+	  "keepalive": 60,
+	  "client": "mqtt\_" + process.pid,
+	}
 
-    MQTTServer = require("./mqtt").MQTTServer
-    s = new MQTTServer();
-    s.on('new_client', function(client) {
-	client.on('connect', function(packet) {
-	    client.connack(0);
-	});
+`options` supports the following properties:
 
-	client.on('publish', function(packet) {
-	    client.publish(packet.topic, packet.payload);
-	});
+* `version`: version string, defaults to `MQIsdp`. Must be a `string`
+* `versionNum`: version number, defaults to `3`. Must be a `number`
+* `keepalive`: keepalive period, defaults to `60`. Must be a `number` between `0` and `65535`
+* `client`: the client ID supplied for the session, defaults to `mqtt_<pid>`. `string`
+* `willTopic`: the topic to publish will messages on. `string`
+* `willPayload`: the message to publish in case of failure. `string`
+* `willRetain`: whether or not the will message should be retained. `boolean`
+* `willQos`: the QoS level to publish the will message on. `number` between `0` and `2` 
+* `clean`: the 'clean start' flag. `boolean`
+* `username`: username for protocol v3.1. `string`
+* `password`: password for protocol v3.1. `string`
 
-	client.on('subscribe', function(packet) {
-	    // See examples
-	    client.suback(packet.messageId, []);
-	});
+###client.connack([options])
+Send an MQTT connack packet.
 
-	client.on('disconnect', function(packet) {
-	    // Goodbye!
-	});
+`options` is an object with the following defaults:
 
-	client.on('error', function(error) {
-	    // Error!
-	});
-    });
+	{ "returnCode": 0 }
 
-    s.server.listen(1883);
+`options` supports the following properties:
 
-Caveats
--------
+* `returnCode`: the return code of the connack, defaults to `0`. Must be a `number` between `0` and `5`
 
-At this point, MQTT.js is fairly flakey and still has some unresolved problems.
-Some known ones are:
+###client.publish([options])
+Send an MQTT publish packet.
 
-*	Poor handling (i.e. crashing) if partial packets are received.
-*	Poor handling of socket errors.
-*	Lack of documentation. 
-*	Not quite as nice an API as you might like.
-*	Not nearly as catchy a name as mosquitto.
+`options` is an object with the following defaults:
 
+	{ "messageId": Math.floor(65535 * Math.random()),
+	  "payload": "",
+	  "qos": 0,
+	  "retain": false
+	}
+
+`options` supports the following properties:
+
+* `topic`: the topic to publish to. `string`
+* `payload`: the payload to publish, defaults to `""`. `string`
+* `qos`: the quality of service level to publish on. `number` between `0` and `2`
+* `messageId`: the message ID of the packet, defaults to a random integer between `0` and `65535`. `number`
+* `retain`: whether or not to retain the published message. `boolean`
+
+###client.\['puback', 'pubrec', 'pubcomp', 'unsuback'\]([options])
+Send an MQTT `[puback, pubrec, pubcomp, unsuback]` packet.
+
+`options` supports the following properties:
+
+* `messageId`: the ID of the packet
+
+###client.pubrel([options])
+Send an MQTT pubrel packet.
+
+`options` is an object with the following defaults:
+
+	{ "dup": false }
+
+`options` supports the following properties:
+
+* `dup`: duplicate message flag
+* `messageId`: the ID of the packet
+
+###client.subscribe([options])
+Send an MQTT subscribe packet.
+
+`options` is an object with the following defaults:
+
+	{ "dup": false,
+	  "messageId": Math.floor(65535 * Math.random())
+	}
+
+`options` supports the following properties:
+
+* `dup`: duplicate message flag
+* `messageId`: the ID of the packet
+
+And either:
+
+* `topic`: the topic to subscribe to
+* `qos`: the requested QoS subscription level
+
+Or:
+
+* `subscriptions`: a list of subscriptions of the form `[{topic: a, qos: 0}, {topic: b, qos: 1}]`
+
+###client.suback([options])
+Send an MQTT suback packet.
+
+`options` is an object with the following defaults:
+
+	{ "granted": [0],
+	  "messageId": Math.floor(65535 * Math.random())
+	}
+
+`options` supports the following properties:
+
+* `granted`: a vector of granted QoS levels, of the form `[0, 1, 2]`
+* `messageId`: the ID of the packet
+
+###client.unsubscribe([options])
+Send an MQTT unsubscribe packet.
+
+`options` is an object with the following defaults:
+
+	{ "messageId": Math.floor(65535 * Math.random()) }
+
+`options` supports the following properties:
+
+* `messageId`: the ID of the packet
+* `dup`: duplicate message flag
+
+And either:
+
+* `topic`: the topic to unsubscribe from
+
+Or:
+
+* `unsubscriptions`: a list of topics to unsubscribe from, of the form `["topic1", "topic2"]`
+
+###client.\['pingreq', 'pingresp', 'disconnect'\]()
+Send an MQTT `[pingreq, pingresp, disconnect]` packet.
+
+###Event: 'connected'
+`function() {}`
+
+Emitted when the socket underlying the `mqtt.Client` is connected.
+
+Note: only emitted by clients created using `mqtt.createClient()`.
+
+###Event: 'connect'
+`function(packet) {}`
+
+Emitted when an MQTT connect packet is received by the client.
+
+`packet` is an object that may have the following properties:
+
+* `version`: the protocol version string
+* `versionNum`: the protocol version number
+* `keepalive`: the client's keepalive period
+* `client`: the client's ID
+* `will`: an object of the form:
+	
+	`{ "topic": "topic",
+	  "payload": "payload",
+	  "retain": false,
+	  "qos": 0
+	}`
+
+	where `topic` is the client's will topic, `payload` is its will message,
+	`retain` is whether or not to retain the will message and `qos` is the
+	QoS of the will message.
+
+* `clean`: clean start flag
+* `username`: v3.1 username
+* `password`: v3.1 password
+
+###Event: 'connack'
+`function(packet) {}`
+
+Emitted when an MQTT connack packet is received by the client.
+
+`packet` is an object that may have the following properties:
+
+* `returnCode`: the return code of the connack packet
+
+###Event: 'publish'
+`function(packet) {}`
+
+Emitted when an MQTT publish packet is received by the client.
+
+`packet` is an object that may have the following properties:
+
+* `topic`: the topic the message is published on
+* `payload`: the payload of the message
+* `messageId`: the ID of the packet
+* `qos`: the QoS level to publish at
+
+###Events: \['puback', 'pubrec', 'pubrel', 'pubcomp', 'unsuback'\]
+`function(packet) {}`
+
+Emitted when an MQTT `[puback, pubrec, pubrel, pubcomp, unsuback]` packet
+is received by the client.
+
+`packet` is an object that may contain the property:
+
+* `messageId`: the ID of the packet
+
+###Event: 'subscribe'
+`function(packet) {}`
+
+Emitted when an MQTT subscribe packet is received.
+
+`packet` is an object that may contain the properties:
+
+* `messageId`: the ID of the packet
+* `subscriptions`: a list of topics and their requested QoS level, of the form `[{topic: 'a', qos: 0},...]`
+
+###Event: 'suback'
+`function(packet) {}`
+
+Emitted when an MQTT suback packet is received.
+
+`packet` is an object that may contain the properties:
+
+* `messageId`: the ID of the packet
+* `granted`: a vector of granted QoS levels
+
+###Event: 'unsubscribe'
+`function(packet) {}`
+
+Emitted when an MQTT unsubscribe packet is received.
+
+`packet` is an object that may contain the properties:
+
+* `messageId`: the ID of the packet
+* `unsubscriptions`: a list of topics to unsubscribe from
+
+###Events: \['pingreq', 'pingresp', 'disconnect'\]
+`function(packet){}`
+
+Emitted when an MQTT `[pingreq, pingresp, disconnect]` packet is received.
+
+`packet` is an empty object and can be ignored.
