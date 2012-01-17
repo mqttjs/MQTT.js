@@ -11,6 +11,22 @@ Much of this document requires an understand of the MQTT protocol,
 so consult the [MQTT documentation](http://mqtt.org/documentation)
 for more information.
 
+Clients
+-------
+This project also contains two extremely simple MQTT clients `bin/mqtt_pub`
+and `bin/mqtt_sub` can be executed from the command line in the following ways:
+
+	mqtt_pub <port> <host> <topic> <payload>
+	mqtt_sub <port> <host> <topic>
+
+where
+* `port` is the port the MQTT server is listening on
+* `host` is the MQTT server's host
+* `topic` is the topic to publish/subscribe to
+* `payload` is the payload to publish
+
+These are expected to improve as the project goes on.
+
 Server API usage
 ------------
 A broadcast server example, included in `examples/broadcast.js`:
