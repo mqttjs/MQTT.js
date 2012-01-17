@@ -20,6 +20,7 @@ and `bin/mqtt_sub` can be executed from the command line in the following ways:
 	mqtt_sub <port> <host> <topic>
 
 where
+
 * `port` is the port the MQTT server is listening on
 * `host` is the MQTT server's host
 * `topic` is the topic to publish/subscribe to
@@ -134,6 +135,7 @@ each respectively.
 When the client is connected, the `connected` event will be fired and `callback`
 will be called, if supplied.
 
+* * *
 
 ##mqtt.Server
 The `mqtt.Server` class represents an MQTT server.
@@ -146,6 +148,8 @@ event is fired.
 `function(client) {}`
 Emitted when a new TCP connection is received. `client` is an instance of
 `mqtt.Client`.
+
+* * *
 
 ##mqtt.Client
 The `mqtt.Client` class represents a connected MQTT client, be it on the server
