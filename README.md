@@ -11,6 +11,11 @@ Much of this document requires an understanding of the MQTT protocol,
 so consult the [MQTT documentation](http://mqtt.org/documentation)
 for more information.
 
+Installation
+------------
+
+	npm install mqttjs
+
 Clients
 -------
 This project also contains two extremely simple MQTT clients `bin/mqtt_pub`

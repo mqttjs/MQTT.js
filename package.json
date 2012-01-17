@@ -1,6 +1,6 @@
 {
   "author": "Adam Rudd <adam.rudd@uqconnect.edu.au>",
-  "name": "mqtt",
+  "name": "mqttjs",
   "description": "A library for the MQTT protocol",
   "version": "0.1.0",
   "repository": {
