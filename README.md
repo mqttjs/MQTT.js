@@ -7,7 +7,7 @@ mqtt.js library for the MQTT protocol, written in javascript.
 It allows the creation of both MQTT clients and MQTT brokers
 through the `createClient` and `createServer` API methods.
 
-Much of this document requires an understand of the MQTT protocol,
+Much of this document requires an understanding of the MQTT protocol,
 so consult the [MQTT documentation](http://mqtt.org/documentation)
 for more information.
 
