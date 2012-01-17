@@ -1,0 +1,6 @@
+Consider allowing objects and arrays as payloads to publish
+Line up inconsistent connect APIs - incoming connects have their wills parsed into a will object but outgoing connects require that each component of the will be entered into a separate key
+Emit a single topic if only one is requested during a subscribe
+Finish testing parsing
+Do tests for top level API
+
