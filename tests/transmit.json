@@ -22,10 +22,12 @@
 				"versionNum": 3,
 				"client": "test",
 				"keepalive": 30,
-				"willTopic": "topic",
-				"willPayload": "payload",
-				"willQos": 2,
-				"willRetain": true,
+				"will": {
+					"topic": "topic",
+					"payload": "payload",
+					"qos": 2,
+					"retain": true
+				},
 				"clean": true,
 				"username": "username",
 				"password": "password"
