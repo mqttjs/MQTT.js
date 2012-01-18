@@ -177,7 +177,7 @@ Send an MQTT connect packet.
 	{ "version": "MQIsdp",
 	  "versionNum": 3,
 	  "keepalive": 60,
-	  "client": "mqtt\_" + process.pid,
+	  "client": "mqtt_" + process.pid,
 	}
 
 `options` supports the following properties:
@@ -186,10 +186,11 @@ Send an MQTT connect packet.
 * `versionNum`: version number, defaults to `3`. Must be a `number`
 * `keepalive`: keepalive period, defaults to `60`. Must be a `number` between `0` and `65535`
 * `client`: the client ID supplied for the session, defaults to `mqtt_<pid>`. `string`
-* `willTopic`: the topic to publish will messages on. `string`
-* `willPayload`: the message to publish in case of failure. `string`
-* `willRetain`: whether or not the will message should be retained. `boolean`
-* `willQos`: the QoS level to publish the will message on. `number` between `0` and `2` 
+* `will`: the client's will message options. `object` that supports the following properties:
+	* `topic`: the will topic
+	* `payload`: the will payload
+	* `qos`: the qos level to publish the will message with
+	* `retain`: whether or not to retain the will message
 * `clean`: the 'clean start' flag. `boolean`
 * `username`: username for protocol v3.1. `string`
 * `password`: password for protocol v3.1. `string`
