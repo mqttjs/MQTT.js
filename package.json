@@ -2,7 +2,8 @@
   "author": "Adam Rudd <adam.rudd@uqconnect.edu.au>",
   "name": "mqttjs",
   "description": "A library for the MQTT protocol",
-  "version": "0.1.0",
+  "version": "0.1.1",
+  "keywords": ["mqtt", "publish/subscribe", "publish", "subscribe"],
   "repository": {
     "type": "git",
     "url": "git://github.com/adamvr/MQTT.js.git"
