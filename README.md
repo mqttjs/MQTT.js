@@ -265,7 +265,7 @@ And either:
 
 Or:
 
-* `subscriptions`: a list of subscriptions of the form `[{topic: a, qos: 0}, {topic: b, qos: 1}]`
+* `subscriptions`: a list of subscriptions of the form `[{topic: a, qos: 0}, {topic: b, qos: 1}]` or of the form ['a', 'b']
 
 ###client.suback([options])
 Send an MQTT suback packet.

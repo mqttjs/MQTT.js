@@ -272,6 +272,10 @@
 			"description": "Duplicate packet flag set",
 			"fixture": [138, 9, 0, 30, 0, 4, 116, 101, 115, 116, 0],
 			"input": { "topic": "test", "dup": true, "messageId": 30 }
+		},{
+			"description": "Subscribe to an array of topics",
+			"fixture": [130, 16, 0, 30, 0, 4, 116, 101, 115, 116, 0, 0, 4, 116, 115, 101, 116, 0],
+			"input": { "subscriptions": ["test", "tset"], "messageId": 30 }
 		}
 		],
 		"failure": [
