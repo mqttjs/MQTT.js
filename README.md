@@ -397,7 +397,7 @@ Emitted when an MQTT unsubscribe packet is received.
 `packet` is an object that may contain the properties:
 
 * `messageId`: the ID of the packet
-* `unsubscriptions`: a list of topics to unsubscribe from
+* `unsubscriptions`: a list of topics the client is unsubscribing from, of the form `[topic1, topic2, ...]`
 
 ###Events: \['pingreq', 'pingresp', 'disconnect'\]
 `function(packet){}`
