@@ -14,15 +14,15 @@ for more information.
 Installation
 ------------
 
-	npm install mqttjs
+    npm install mqttjs
 
 Clients
 -------
 This project also contains two extremely simple MQTT clients `bin/mqtt_pub`
 and `bin/mqtt_sub` can be executed from the command line in the following ways:
 
-	mqtt_pub <port> <host> <topic> <payload>
-	mqtt_sub <port> <host> <topic>
+    mqtt_pub <port> <host> <topic> <payload>
+    mqtt_sub <port> <host> <topic>
 
 where
 
@@ -37,92 +37,92 @@ Server API usage
 ------------
 A broadcast server example, included in `examples/broadcast.js`:
 
-	var mqtt = require('../mqtt');
+    var mqtt = require('../mqtt');
 
-	mqtt.createServer(function(client) {
-		var self = this;
+    mqtt.createServer(function(client) {
+      var self = this;
 
-		if (!self.clients) self.clients = {};
+      if (!self.clients) self.clients = {};
 
-		client.on('connect', function(packet) {
-			client.connack({returnCode: 0});
-			client.id = packet.client;
-			self.clients[client.id] = client;
-		});
+      client.on('connect', function(packet) {
+        client.connack({returnCode: 0});
+        client.id = packet.client;
+        self.clients[client.id] = client;
+      });
 
-		client.on('publish', function(packet) {
-			for (var k in self.clients) {
-				self.clients[k].publish({topic: packet.topic, payload: packet.payload});
-			}
-		});
+      client.on('publish', function(packet) {
+        for (var k in self.clients) {
+          self.clients[k].publish({topic: packet.topic, payload: packet.payload});
+        }
+      });
 
-		client.on('subscribe', function(packet) {
-			var granted = [];
-			for (var i = 0; i < packet.subscriptions.length; i++) {
-				granted.push(packet.subscriptions[i].qos);
-			}
+      client.on('subscribe', function(packet) {
+        var granted = [];
+        for (var i = 0; i < packet.subscriptions.length; i++) {
+          granted.push(packet.subscriptions[i].qos);
+        }
 
-			client.suback({granted: granted});
-		});
+        client.suback({granted: granted});
+      });
 
-		client.on('pingreq', function(packet) {
-			client.pingresp();
-		});
+      client.on('pingreq', function(packet) {
+        client.pingresp();
+      });
 
-		client.on('disconnect', function(packet) {
-			client.stream.end();
-		});
+      client.on('disconnect', function(packet) {
+        client.stream.end();
+      });
 
-		client.on('close', function(err) {
-			delete self.clients[client.id];
-		});
+      client.on('close', function(err) {
+        delete self.clients[client.id];
+      });
 
-		client.on('error', function(err) {
-			client.stream.end();
-			util.log('error!');
-		});
-	}).listen(1883);
+      client.on('error', function(err) {
+        client.stream.end();
+        util.log('error!');
+      });
+    }).listen(1883);
 
 Client API usage
 ----------------
 
 A basic publish client, the basis for `bin/mqtt_pub`:
 
-	var mqtt = require('../lib/mqtt');
+    var mqtt = require('../lib/mqtt');
 
-	var argv = process.argv;
+    var argv = process.argv;
 
-	for (var i = 2; i <= 5; i++) {
-		if(!argv[i]) process.exit(-1);
-	}
+    for (var i = 2; i <= 5; i++) {
+      if(!argv[i]) process.exit(-1);
+    }
 
-	var port = argv[2],
-		host = argv[3],
-		topic = argv[4],
-		payload = argv[5];
+    var port = argv[2],
+      host = argv[3],
+      topic = argv[4],
+      payload = argv[5];
 
-	mqtt.createClient(port, host, function(client) {
-		client.connect({keepalive: 3000});
+    mqtt.createClient(port, host, function(client) {
+      client.connect({keepalive: 3000});
 
-		client.on('connack', function(packet) {
-			if (packet.returnCode === 0) {
-				client.publish({topic: topic, payload: payload});
-				client.disconnect();
-			} else {
-				console.log('connack error %d', packet.returnCode);
-				process.exit(-1);
-			}
-		});
+      client.on('connack', function(packet) {
+        if (packet.returnCode === 0) {
+          client.publish({topic: topic, payload: payload});
+          client.disconnect();
+        } else {
+          console.log('connack error %d', packet.returnCode);
+          process.exit(-1);
+        }
+      });
 
-		client.on('close', function() {
-			process.exit(0);
-		});
+      client.on('close', function() {
+        process.exit(0);
+      });
 
-		client.on('error', function(e) {
-			console.log('error %s', e);
-			process.exit(-1);
-		});
-	});
+      client.on('error', function(e) {
+        console.log('error %s', e);
+        process.exit(-1);
+      });
+    });
 
 # API
 The `mqtt` module provides two methods for creating MQTT servers and clients
@@ -174,11 +174,11 @@ Send an MQTT connect packet.
 
 `options` is an object with the following defaults:
     
-	{ "version": "MQIsdp",
-	  "versionNum": 3,
-	  "keepalive": 60,
-	  "client": "mqtt_" + process.pid,
-	}
+    { "version": "MQIsdp",
+      "versionNum": 3,
+      "keepalive": 60,
+      "client": "mqtt_" + process.pid,
+    }
 
 `options` supports the following properties:
 
@@ -187,10 +187,10 @@ Send an MQTT connect packet.
 * `keepalive`: keepalive period, defaults to `60`. Must be a `number` between `0` and `65535`
 * `client`: the client ID supplied for the session, defaults to `mqtt_<pid>`. `string`
 * `will`: the client's will message options. `object` that supports the following properties:
-	* `topic`: the will topic
-	* `payload`: the will payload
-	* `qos`: the qos level to publish the will message with
-	* `retain`: whether or not to retain the will message
+  * `topic`: the will topic
+  * `payload`: the will payload
+  * `qos`: the qos level to publish the will message with
+  * `retain`: whether or not to retain the will message
 * `clean`: the 'clean start' flag. `boolean`
 * `username`: username for protocol v3.1. `string`
 * `password`: password for protocol v3.1. `string`
@@ -200,7 +200,7 @@ Send an MQTT connack packet.
 
 `options` is an object with the following defaults:
 
-	{ "returnCode": 0 }
+    { "returnCode": 0 }
 
 `options` supports the following properties:
 
@@ -211,11 +211,11 @@ Send an MQTT publish packet.
 
 `options` is an object with the following defaults:
 
-	{ "messageId": Math.floor(65535 * Math.random()),
-	  "payload": "",
-	  "qos": 0,
-	  "retain": false
-	}
+    { "messageId": Math.floor(65535 * Math.random()),
+      "payload": "",
+      "qos": 0,
+      "retain": false
+    }
 
 `options` supports the following properties:
 
@@ -237,7 +237,7 @@ Send an MQTT pubrel packet.
 
 `options` is an object with the following defaults:
 
-	{ "dup": false }
+    { "dup": false }
 
 `options` supports the following properties:
 
@@ -249,9 +249,9 @@ Send an MQTT subscribe packet.
 
 `options` is an object with the following defaults:
 
-	{ "dup": false,
-	  "messageId": Math.floor(65535 * Math.random())
-	}
+    { "dup": false,
+      "messageId": Math.floor(65535 * Math.random())
+    }
 
 `options` supports the following properties:
 
@@ -272,9 +272,9 @@ Send an MQTT suback packet.
 
 `options` is an object with the following defaults:
 
-	{ "granted": [0],
-	  "messageId": Math.floor(65535 * Math.random())
-	}
+    { "granted": [0],
+      "messageId": Math.floor(65535 * Math.random())
+    }
 
 `options` supports the following properties:
 
@@ -286,7 +286,7 @@ Send an MQTT unsubscribe packet.
 
 `options` is an object with the following defaults:
 
-	{ "messageId": Math.floor(65535 * Math.random()) }
+    { "messageId": Math.floor(65535 * Math.random()) }
 
 `options` supports the following properties:
 
@@ -323,16 +323,16 @@ Emitted when an MQTT connect packet is received by the client.
 * `keepalive`: the client's keepalive period
 * `client`: the client's ID
 * `will`: an object of the form:
-	
-	`{ "topic": "topic",
-	  "payload": "payload",
-	  "retain": false,
-	  "qos": 0
-	}`
+  
+    `{ "topic": "topic",
+      "payload": "payload",
+      "retain": false,
+      "qos": 0
+    }`
 
-	where `topic` is the client's will topic, `payload` is its will message,
-	`retain` is whether or not to retain the will message and `qos` is the
-	QoS of the will message.
+  where `topic` is the client's will topic, `payload` is its will message,
+  `retain` is whether or not to retain the will message and `qos` is the
+  QoS of the will message.
 
 * `clean`: clean start flag
 * `username`: v3.1 username
