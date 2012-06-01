@@ -1,7 +1,7 @@
-var mqtt = require('../mqtt'),
-	redis = require('redis');
+var mqtt = require('../mqtt')
+	, redis = require('redis');
 
-mqtt.createServer(function(client) {
+mqtt.createServer(function(err, client) {
 	client.p = redis.createClient(null, null, {no_ready_check: true});
 	client.s = redis.createClient(null, null, {no_ready_check: true});
 
@@ -15,9 +15,11 @@ mqtt.createServer(function(client) {
 			var sub = packet.subscriptions[i]
 			granted.push(sub.qos);
 
-			client.s.psubscribe(sub.topic
-								  .replace(/\+/g, '[^/]')
-								  .replace(/\#/g, '*'));
+			client.s.psubscribe(
+        sub.topic
+          .replace(/\+/g, '[^/]')
+          .replace(/\#/g, '*')
+      );
 		}
 
 		client.suback({messageId: packet.messageId, granted: granted});
