@@ -14,7 +14,7 @@
   },
   "bin": {
     "mqtt_pub":"./bin/mqtt_pub",
-	"mqtt_sub":"./bin/mqtt_sub"
+    "mqtt_sub":"./bin/mqtt_sub"
   },
   "engines": {
     "node": "~0.6.5"
