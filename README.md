@@ -101,7 +101,8 @@ A basic publish client, the basis for `bin/mqtt_pub`:
       topic = argv[4],
       payload = argv[5];
 
-    mqtt.createClient(port, host, function(client) {
+    mqtt.createClient(port, host, function(err, client) {
+      if (err) process.exit(1);
       client.connect({keepalive: 3000});
 
       client.on('connack', function(packet) {
@@ -132,13 +133,15 @@ as specified below:
 Creates a new `mqtt.Server`. The listener argument is set as a listener for
 the `client` event. 
 
-## mqtt.createClient([port], [host], [callback])
+## mqtt.createClient([port], [host], [callback(error, client)])
 Creates a new `mqtt.Client` and connects it to the specified `port` and `host`.
 If `port` and `host` are omitted `1883` and `localhost` will be assumed for 
 each respectively.
 
 When the client is connected, the `connected` event will be fired and `callback`
-will be called, if supplied.
+will be called, if supplied. If connection fails for any reason, the error
+parameter of callback will bet set to the error. Otherwise it will be null
+and the client parameter will be the newly created client.
 
 * * *
 
