@@ -13,7 +13,12 @@ var port = argv[2]
   , topic = argv[4]
   , payload = argv[5];
 
-mqtt.createClient(port, host, function(client) {
+mqtt.createClient(port, host, function(err, client) {
+  if (err) {
+    console.log("Unable to connect to broker");
+    process.exit(1);
+  }
+
   client.connect({keepalive: 3000});
 
   client.on('connack', function(packet) {
