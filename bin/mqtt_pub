@@ -4,17 +4,35 @@ var mqtt = require('../lib/mqtt');
 
 var argv = process.argv;
 
-for (var i = 2; i <= 5; i++) {
+var port, host, username, password, topic, payload;
+for (var i = 2; i < argv.length; i++) {
 	if(!argv[i]) process.exit(-1);
 }
-
-var port = argv[2],
-	host = argv[3],
-	topic = argv[4],
-	payload = argv[5];
+if (argv.length == 6) {
+    port = argv[2];
+    host = argv[3];
+    username = "";
+    password = "";
+    topic = argv[4];
+    payload = argv[5];
+} else if (argv.length == 8) {
+    port = argv[2];
+    host = argv[3];
+    username = argv[4];
+    password = argv[5];
+    topic = argv[6];
+    payload = argv[7];
+} else {
+    process.exit(-1);
+}
 
 mqtt.createClient(port, host, function(client) {
-	client.connect({keepalive: 3000});
+    var opts = {keepalive: 3000};
+    if (username != "")
+        opts.username = username;
+    if (password != "")
+        opts.password = password;
+    client.connect(opts);
 
 	client.on('connack', function(packet) {
 		if (packet.returnCode === 0) {
