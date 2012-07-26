@@ -1,6 +1,7 @@
 /* broadcast.js - all published messages are relayed to all connected clients */
 
-var mqtt = require('../mqtt');
+var mqtt = require('../lib/mqtt')
+        , util = require('util');
 
 mqtt.createServer(function(client) {
 	var self = this;
