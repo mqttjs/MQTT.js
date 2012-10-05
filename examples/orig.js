@@ -63,4 +63,9 @@ mqtt.createServer(function(client) {
 		client.stream.end();
 		console.log(e);
 	});
+	
+	client.on("evict", function() {
+		client.stream.end();
+	});
+	
 }).listen(1883);
