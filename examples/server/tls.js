@@ -1,6 +1,6 @@
 /* broadcast.js - all published messages are relayed to all connected clients */
 
-var mqtt = require('../lib/mqtt');
+var mqtt = require('../..');
 
 mqtt.createSecureServer("private-key.pem", "public-cert.pem", function(client) {
   var self = this;

@@ -1,4 +1,4 @@
-var mqtt = require('../lib/mqtt');
+var mqtt = require('../..');
 
 mqtt.createClient(1883, "127.0.0.1", function(err,client) {
 	if ( client ) {
