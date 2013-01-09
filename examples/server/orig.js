@@ -42,12 +42,13 @@ mqtt.createServer(function(client) {
       }
 
       if (publish) {
-          c.publish({topic: packet.topic, payload: packet.payload});
+        c.publish({topic: packet.topic, payload: packet.payload});
       }
     }
   });
 
   client.on('pingreq', function(packet) {
+    console.log('Ping from client ' + client.id);
     client.pingresp();
   });
 
@@ -63,4 +64,4 @@ mqtt.createServer(function(client) {
     client.stream.end();
     console.log(e);
   });
-}).listen(1883);
+}).listen(process.argv[2] || 1883);

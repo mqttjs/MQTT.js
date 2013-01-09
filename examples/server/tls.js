@@ -44,4 +44,4 @@ mqtt.createSecureServer("private-key.pem", "public-cert.pem", function(client) {
     client.stream.end();
     util.log('error!');
   });
-}).listen(process.argv[2]);
+}).listen(process.argv[2] || 1883);

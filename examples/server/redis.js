@@ -44,5 +44,5 @@ mqtt.createServer(function(err, client) {
     client.stream.end();
     console.log(e);
   });
-}).listen(1883);
+}).listen(process.argv[2] || 1883);
 
