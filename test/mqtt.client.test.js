@@ -24,7 +24,7 @@ describe("Mqtt.createClient", function () {
 
   it("should callback with client if success", function (done) {
     var client = mqtt.createClient(function (err, c) {
-      should.not.exist(err);
+      should.not.exist(err, "make sure you have a running server on the defaultPort");
       should.exist(c);
       c.should.be.instanceOf(Connection);
       done();

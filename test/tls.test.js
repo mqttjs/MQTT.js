@@ -10,7 +10,7 @@ var servers = require('./helpers/server'),
 var KEY = __dirname + '/helpers/private-key.pem';
 var CERT = __dirname + '/helpers/public-cert.pem';
 
-var PORT = process.env.PORT || 1883;
+var PORT = (process.env.PORT || 1883) + 1; //port collides with other tests so +1
 
 describe("SecureClient", function () {
   before(function () {

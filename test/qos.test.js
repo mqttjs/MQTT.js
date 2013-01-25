@@ -7,7 +7,8 @@ var servers = require('./helpers/server');
 
 var mqtt = require('../lib/mqtt'),
   HOST = 'localhost',
-  PORT = '1883'; //if there is a local server running then change this
+  PORT = (process.env.PORT || 1883) + 2;
+
 
 
 
