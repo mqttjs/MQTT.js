@@ -10,7 +10,7 @@
   },
   "main": "index.js",
   "scripts": {
-    "test": "test.js"
+    "test": "mocha"
   },
   "bin": {
     "mqtt_pub":"./bin/mqtt_pub",
@@ -20,5 +20,8 @@
     "node": ">=0.6.5"
   },
   "dependencies": {},
-  "devDependencies": {}
+  "devDependencies": {
+    "mocha": "*",
+    "should": "*"
+  }
 }
