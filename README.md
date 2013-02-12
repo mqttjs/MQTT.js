@@ -14,7 +14,7 @@ for more information.
 Installation
 ------------
 
-    npm install mqttjs
+    npm install mqtt
 
 Clients
 -------
