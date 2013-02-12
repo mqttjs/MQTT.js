@@ -37,7 +37,7 @@ Server API usage
 ------------
 A broadcast server example, included in `examples/broadcast.js`:
 
-    var mqtt = require('../mqtt');
+    var mqtt = require('mqtt');
 
     mqtt.createServer(function(client) {
       var self = this;
@@ -88,7 +88,7 @@ Client API usage
 
 A basic publish client, the basis for `bin/mqtt_pub`:
 
-    var mqtt = require('../lib/mqtt');
+    var mqtt = require('mqtt');
 
     var argv = process.argv;
 
