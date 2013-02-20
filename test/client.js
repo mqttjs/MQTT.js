@@ -23,185 +23,208 @@ describe('MqttClient', function () {
     this.server = mqtt.createServer();
     this.server.listen(port);
   });
-  it('should connect to the broker', function (done) {
-    var client = new MqttClient(port);
 
-    this.server.once('client', function(client) {
-      done();
-    });
+  describe('connecting', function() {
 
-  }); 
+    it('should connect to the broker', function (done) {
+      var client = new MqttClient(port);
 
-  it('should send a default client id', function (done) {
-    var client = new MqttClient(port);
-
-    this.server.once('client', function (client) {
-      client.once('connect', function(packet) {
-        packet.client.should.match(/mqttjs.*/);
+      this.server.once('client', function(client) {
         done();
       });
+
+    }); 
+
+    it('should send a default client id', function (done) {
+      var client = new MqttClient(port);
+
+      this.server.once('client', function (client) {
+        client.once('connect', function(packet) {
+          packet.client.should.match(/mqttjs.*/);
+          done();
+        });
+      });
+
     });
 
-  });
+    it('should connect with the given client id', function (done) {
+      var client = 
+        new MqttClient(port, 'localhost', {client: 'testclient'});
 
-  it('should connect with the given client id', function (done) {
-    var client = 
-      new MqttClient(port, 'localhost', {client: 'testclient'});
+      this.server.once('client', function (client) {
+        client.once('connect', function(packet) {
+          packet.client.should.match(/testclient/);
+          done();
+        });
+      });
+    });
 
-    this.server.once('client', function (client) {
-      client.once('connect', function(packet) {
-        packet.client.should.match(/testclient/);
+    it('should default to localhost', function (done) {
+      var client = new MqttClient(port, {client: 'testclient'});
+
+      this.server.once('client', function (client) {
+        client.once('connect', function(packet) {
+          packet.client.should.match(/testclient/);
+          done();
+        });
+      });
+    });
+
+    it('should emit connect', function (done) {
+      var client = new MqttClient(port);
+      client.once('connect', done);
+      client.once('error', done);
+
+      this.server.once('client', function(client) {
+        client.once('connect', function(packet) {
+          client.connack({returnCode: 0});
+        });
+      });
+    });
+
+    it('should emit error', function (done) {
+      var client = new MqttClient(port);
+      client.once('connect', function () {
+        done(new Error('Should not emit connect'));
+      });
+      client.once('error', function(error) {
         done();
       });
+
+      this.server.once('client', function(client) {
+        client.once('connect', function(packet) {
+          client.connack({returnCode: 2});
+        });
+      });
+
     });
   });
 
-  it('should default to localhost', function (done) {
-    var client = new MqttClient(port, {client: 'testclient'});
+  describe('publishing', function() {
+    it('should publish a message', function (done) {
+      var client = new MqttClient(port)
+        , payload = 'test'
+        , topic = 'test';
 
-    this.server.once('client', function (client) {
-      client.once('connect', function(packet) {
-        packet.client.should.match(/testclient/);
-        done();
+      client.once('connect', function() {
+        client.publish(topic, payload);
+      });
+
+      this.server.once('client', function(client) {
+        client.once('connect', function(packet) {
+          client.connack({returnCode: 0});
+        });
+
+        client.once('publish', function (packet) {
+          packet.topic.should.equal(topic);
+          packet.payload.should.equal(payload);
+          packet.qos.should.equal(0);
+          packet.retain.should.equal(false);
+          done();
+        });
+      });
+    });
+
+    it('should accept options', function (done) {
+      var client = new MqttClient(port)
+        , payload = 'test'
+        , topic = 'test';
+      
+      var opts = {
+        retain: true,
+        qos: 1
+      }
+
+      client.once('connect', function() {
+        client.publish(topic, payload, opts);
+      });
+
+      this.server.once('client', function(client) {
+        client.once('connect', function(packet) {
+          client.connack({returnCode: 0});
+        });
+
+        client.once('publish', function (packet) {
+          packet.topic.should.equal(topic);
+          packet.payload.should.equal(payload);
+          packet.qos.should.equal(opts.qos, 'incorrect qos');
+          packet.retain.should.equal(opts.retain, 'incorrect ret');
+          done();
+        });
+      });
+    });
+
+    it('should fire a callback (qos 0)', function (done) {
+      var client = new MqttClient(port);
+      
+      client.once('connect', function() {
+        client.publish('a', 'b', function (err, success) {
+          done(err);
+        });
+      });
+
+      this.server.once('client', function(client) {
+        client.once('connect', function(packet) {
+          client.connack({returnCode: 0});
+        });
+      });
+      
+    });
+
+    it('should fire a callback (qos 1)', function (done) {
+      var client = new MqttClient(port);
+
+      var opts = {qos: 1};
+
+      client.once('connect', function() {
+        client.publish('a', 'b', opts, function (err, success) {
+          done(err);
+        });
+      });
+
+      this.server.once('client', function(client) {
+        client.once('connect', function(packet) {
+          client.connack({returnCode: 0});
+        });
+        client.once('publish', client.puback.bind(client));
+      });
+    });
+
+    it('should fire a callback (qos 2)', function (done) {
+      var client = new MqttClient(port);
+
+      var opts = {qos: 2};
+
+      client.once('connect', function() {
+        client.publish('a', 'b', opts, function (err, success) {
+          done(err);
+        });
+      });
+
+      this.server.once('client', function(client) {
+        client.once('connect', function(packet) {
+          client.connack({returnCode: 0});
+        });
+        client.once('publish', client.pubrec.bind(client));
+        client.once('pubrel', client.pubcomp.bind(client));
       });
     });
   });
 
-  it('should emit connect', function (done) {
-    var client = new MqttClient(port);
-    client.once('connect', done);
-    client.once('error', done);
+  describe('pinging', function () {
+    it('should ping every half keep alive time', function (done) {
+      var keepalive = 1000;
+      this.timeout(keepalive / 2);
 
-    this.server.once('client', function(client) {
-      client.once('connect', function(packet) {
-        client.connack({returnCode: 0});
+      var client = new MqttClient(port, {keepalive: keepalive/2});
+      console.dir(client.options);
+
+      this.server.once('client', function(client) {
+        client.once('pingreq', function(packet) {
+          client.pingresp();
+          done();
+        });
       });
-    });
-  });
-
-  it('should emit error', function (done) {
-    var client = new MqttClient(port);
-    client.once('connect', function () {
-      done(new Error('Should not emit connect'));
-    });
-    client.once('error', function(error) {
-      done();
-    });
-
-    this.server.once('client', function(client) {
-      client.once('connect', function(packet) {
-        client.connack({returnCode: 2});
-      });
-    });
-
-  });
-
-  it('should publish a message', function (done) {
-    var client = new MqttClient(port)
-      , payload = 'test'
-      , topic = 'test';
-
-    client.once('connect', function() {
-      client.publish(topic, payload);
-    });
-
-    this.server.once('client', function(client) {
-      client.once('connect', function(packet) {
-        client.connack({returnCode: 0});
-      });
-
-      client.once('publish', function (packet) {
-        packet.topic.should.equal(topic);
-        packet.payload.should.equal(payload);
-        packet.qos.should.equal(0);
-        packet.retain.should.equal(false);
-        done();
-      });
-    });
-  });
-
-  it('should accept options', function (done) {
-    var client = new MqttClient(port)
-      , payload = 'test'
-      , topic = 'test';
-    
-    var opts = {
-      retain: true,
-      qos: 1
-    }
-
-    client.once('connect', function() {
-      client.publish(topic, payload, opts);
-    });
-
-    this.server.once('client', function(client) {
-      client.once('connect', function(packet) {
-        client.connack({returnCode: 0});
-      });
-
-      client.once('publish', function (packet) {
-        packet.topic.should.equal(topic);
-        packet.payload.should.equal(payload);
-        packet.qos.should.equal(opts.qos, 'incorrect qos');
-        packet.retain.should.equal(opts.retain, 'incorrect ret');
-        done();
-      });
-    });
-  });
-
-  it('should fire a callback (qos 0)', function (done) {
-    var client = new MqttClient(port);
-    
-    client.once('connect', function() {
-      client.publish('a', 'b', function (err, success) {
-        done(err);
-      });
-    });
-
-    this.server.once('client', function(client) {
-      client.once('connect', function(packet) {
-        client.connack({returnCode: 0});
-      });
-    });
-    
-  });
-
-  it('should fire a callback (qos 1)', function (done) {
-    var client = new MqttClient(port);
-
-    var opts = {qos: 1};
-
-    client.once('connect', function() {
-      client.publish('a', 'b', opts, function (err, success) {
-        done(err);
-      });
-    });
-
-    this.server.once('client', function(client) {
-      client.once('connect', function(packet) {
-        client.connack({returnCode: 0});
-      });
-      client.once('publish', client.puback.bind(client));
-    });
-  });
-
-  it('should fire a callback (qos 2)', function (done) {
-    var client = new MqttClient(port);
-
-    var opts = {qos: 2};
-
-    client.once('connect', function() {
-      client.publish('a', 'b', opts, function (err, success) {
-        done(err);
-      });
-    });
-
-    this.server.once('client', function(client) {
-      client.once('connect', function(packet) {
-        client.connack({returnCode: 0});
-      });
-      client.once('publish', client.pubrec.bind(client));
-      client.once('pubrel', client.pubcomp.bind(client));
     });
   });
 
