@@ -265,35 +265,62 @@ describe('MqttClient', function () {
         });
       });
     });
-  });
 
-  it('should accept an options parameter', function(done) {
-    var client = new MqttClient(port);
+    it('should accept an options parameter', function(done) {
+      var client = new MqttClient(port);
 
-    var topic = 'test'
-      , opts = {qos: 1};
+      var topic = 'test'
+        , opts = {qos: 1};
 
-    client.subscribe(topic, opts);
+      client.subscribe(topic, opts);
 
-    this.server.once('client', function(client) {
-      client.once('subscribe', function(packet) {
-        var expected = [{topic: topic, qos: 1}]
+      this.server.once('client', function(client) {
+        client.once('subscribe', function(packet) {
+          var expected = [{topic: topic, qos: 1}]
 
-        packet.subscriptions.should.eql(expected);
-        done();
+          packet.subscriptions.should.eql(expected);
+          done();
+        });
+      });
+    });
+
+    it('should fire a callback on suback', function(done) {
+      var client = new MqttClient(port);
+
+      var topic = 'test';
+
+      client.subscribe(topic, done);
+
+      this.server.once('client', function(client) {
+        client.once('subscribe', client.suback.bind(client));
       });
     });
   });
 
-  it('should fire a callback on suback', function(done) {
-    var client = new MqttClient(port);
+  describe('receiving messages', function() {
+    it('should fire the message event', function(done) {
+      var client = new MqttClient(port)
+        , test_topic = 'test'
+        , test_message = 'message';
 
-    var topic = 'test';
+      client.subscribe(test_topic);
+      client.on('message', function(topic, message) {
+        topic.should.equal(test_topic);
+        message.should.equal(test_message);
+        done();
+      });
 
-    client.subscribe(topic, done);
+      this.server.once('client', function(client) {
+        client.once('subscribe', function (packet) {
+          client.publish({
+            topic: test_topic,
+            payload: test_message,
+            qos: 0,
+            retain: false
+          });
+        });
+      });
 
-    this.server.once('client', function(client) {
-      client.once('subscribe', client.suback.bind(client));
     });
   });
 
