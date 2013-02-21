@@ -267,6 +267,24 @@ describe('MqttClient', function () {
     });
   });
 
+  it('should accept an options parameter', function(done) {
+    var client = new MqttClient(port);
+
+    var topic = 'test'
+      , opts = {qos: 1};
+
+    client.subscribe(topic, opts);
+
+    this.server.once('client', function(client) {
+      client.once('subscribe', function(packet) {
+        var expected = [{topic: topic, qos: 1}]
+
+        packet.subscriptions.should.eql(expected);
+        done();
+      });
+    });
+  });
+
   after(function () {
     this.server.close();
   });
