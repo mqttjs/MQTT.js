@@ -217,7 +217,6 @@ describe('MqttClient', function () {
       this.timeout(keepalive / 2);
 
       var client = new MqttClient(port, {keepalive: keepalive/2});
-      console.dir(client.options);
 
       this.server.once('client', function(client) {
         client.once('pingreq', function(packet) {
