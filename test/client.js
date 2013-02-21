@@ -25,7 +25,6 @@ describe('MqttClient', function () {
   });
 
   describe('connecting', function() {
-
     it('should connect to the broker', function (done) {
       var client = new MqttClient(port);
 
@@ -158,9 +157,7 @@ describe('MqttClient', function () {
       var client = new MqttClient(port);
       
       client.once('connect', function() {
-        client.publish('a', 'b', function (err, success) {
-          done(err);
-        });
+        client.publish('a', 'b', done);
       });
 
       this.server.once('client', function(client) {
@@ -177,9 +174,7 @@ describe('MqttClient', function () {
       var opts = {qos: 1};
 
       client.once('connect', function() {
-        client.publish('a', 'b', opts, function (err, success) {
-          done(err);
-        });
+        client.publish('a', 'b', done);
       });
 
       this.server.once('client', function(client) {
@@ -196,9 +191,7 @@ describe('MqttClient', function () {
       var opts = {qos: 2};
 
       client.once('connect', function() {
-        client.publish('a', 'b', opts, function (err, success) {
-          done(err);
-        });
+        client.publish('a', 'b', opts, done);
       });
 
       this.server.once('client', function(client) {
