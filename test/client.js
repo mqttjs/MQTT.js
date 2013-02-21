@@ -285,6 +285,18 @@ describe('MqttClient', function () {
     });
   });
 
+  it('should fire a callback on suback', function(done) {
+    var client = new MqttClient(port);
+
+    var topic = 'test';
+
+    client.subscribe(topic, done);
+
+    this.server.once('client', function(client) {
+      client.once('subscribe', client.suback.bind(client));
+    });
+  });
+
   after(function () {
     this.server.close();
   });
