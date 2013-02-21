@@ -298,7 +298,7 @@ describe('MqttClient', function () {
   });
 
   describe('receiving messages', function() {
-    it('should fire the message event', function(done) {
+    it('should fire the message event ', function(done) {
       var client = new MqttClient(port)
         , test_topic = 'test'
         , test_message = 'message';
@@ -320,7 +320,82 @@ describe('MqttClient', function () {
           });
         });
       });
+    });
+  });
+  describe('qos handling', function() {
 
+    it('should follow qos 0 semantics (trivial)', function(done) {
+      var client = new MqttClient(port)
+        , test_topic = 'test'
+        , test_message = 'message';
+
+      client.subscribe(test_topic, {qos: 0});
+
+      this.server.once('client', function(client) {
+        client.once('subscribe', function (packet) {
+          client.publish({
+            topic: test_topic,
+            payload: test_message,
+            qos: 0,
+            retain: false
+          });
+          done();
+        });
+      });
+    });
+
+    it('should follow qos 1 semantics', function(done) {
+      var client = new MqttClient(port)
+        , test_topic = 'test'
+        , test_message = 'message'
+        , mid = 50;
+
+      client.subscribe(test_topic, {qos: 1});
+
+      this.server.once('client', function(client) {
+        client.once('subscribe', function (packet) {
+          client.publish({
+            topic: test_topic,
+            payload: test_message,
+            messageId: mid,
+            qos: 1
+          });
+        });
+
+        client.once('puback', function(packet) {
+          packet.messageId.should.equal(mid);
+          done();
+        });
+      });
+    });
+
+    it('should follow qos 2 semantics', function(done) {
+      var client = new MqttClient(port)
+        , test_topic = 'test'
+        , test_message = 'message'
+        , mid = 253;
+
+      client.subscribe(test_topic, {qos: 2});
+
+      this.server.once('client', function(client) {
+        client.once('subscribe', function (packet) {
+          client.publish({
+            topic: test_topic,
+            payload: test_message,
+            qos: 2,
+            messageId: mid
+          });
+        });
+
+        client.once('pubrec', function (packet) {
+          packet.messageId.should.equal(mid);
+          client.pubrel({messageId: packet.messageId});
+        });
+        client.once('pubcomp', function(packet) {
+          packet.messageId.should.equal(mid);
+          done();
+        });
+      });
     });
   });
 
