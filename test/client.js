@@ -227,6 +227,46 @@ describe('MqttClient', function () {
     });
   });
 
+  describe('subscribing', function () {
+    it('should send a subscribe message', function(done) {
+      var client = new MqttClient(port);
+
+      var topic = 'test';
+
+      client.subscribe(topic);
+
+      this.server.once('client', function(client) {
+        client.once('subscribe', function(packet) {
+          packet.subscriptions.should.includeEql({
+            topic: topic,
+            qos: 0
+          });
+          done();
+        });
+      });
+    });
+
+    it('should accept an array of subscriptions', function(done) {
+      var client = new MqttClient(port);
+
+      var subs = ['test1', 'test2'];
+
+      client.subscribe(subs);
+
+      this.server.once('client', function(client) {
+        client.once('subscribe', function(packet) {
+          // i.e. [{topic: 'a', qos: 0}, {topic: 'b', qos: 0}]
+          var expected = subs.map(function (i) {
+            return {topic: i, qos: 0};
+          });
+
+          packet.subscriptions.should.eql(expected);
+          done();
+        });
+      });
+    });
+  });
+
   after(function () {
     this.server.close();
   });
