@@ -32,7 +32,7 @@ describe('Connection', function() {
       var fixture = {
 				protocolId: 'MQIsdp',
 				protocolVersion: 3,
-				client: 'test',
+				clientId: 'test',
 				keepalive: 30
       };
 
@@ -65,7 +65,7 @@ describe('Connection', function() {
       var fixture = {
 				protocolId: 'MQIsdp',
 				protocolVersion: 3,
-				client: 'test',
+				clientId: 'test',
 				keepalive: 30,
         will: {
           topic: 'topic',

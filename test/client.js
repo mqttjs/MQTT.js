@@ -39,7 +39,7 @@ describe('MqttClient', function () {
 
       this.server.once('client', function (client) {
         client.once('connect', function(packet) {
-          packet.client.should.match(/mqttjs.*/);
+          packet.clientId.should.match(/mqttjs.*/);
           done();
         });
       });
@@ -48,22 +48,22 @@ describe('MqttClient', function () {
 
     it('should connect with the given client id', function (done) {
       var client = 
-        new MqttClient(port, 'localhost', {client: 'testclient'});
+        new MqttClient(port, 'localhost', {clientId: 'testclient'});
 
       this.server.once('client', function (client) {
         client.once('connect', function(packet) {
-          packet.client.should.match(/testclient/);
+          packet.clientId.should.match(/testclient/);
           done();
         });
       });
     });
 
     it('should default to localhost', function (done) {
-      var client = new MqttClient(port, {client: 'testclient'});
+      var client = new MqttClient(port, {clientId: 'testclient'});
 
       this.server.once('client', function (client) {
         client.once('connect', function(packet) {
-          packet.client.should.match(/testclient/);
+          packet.clientId.should.match(/testclient/);
           done();
         });
       });

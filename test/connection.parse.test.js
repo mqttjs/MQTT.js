@@ -26,7 +26,7 @@ describe('Connection', function() {
         protocolVersion: 3,
         clean: false,
         keepalive: 30,
-        client: "test"
+        clientId: "test"
       };
 
       var fixture = [
@@ -66,7 +66,7 @@ describe('Connection', function() {
         },
         clean: true,
         keepalive: 30,
-        client: "test",
+        clientId: "test",
         username: "username",
         password: "password"
       };
