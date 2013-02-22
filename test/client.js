@@ -171,17 +171,19 @@ describe('MqttClient', function () {
     it('should fire a callback (qos 1)', function (done) {
       var client = new MqttClient(port);
 
-      var opts = {qos: 1};
+      var opts = {qos: 1, messageId: 10};
 
       client.once('connect', function() {
-        client.publish('a', 'b', done);
+        client.publish('a', 'b', opts, done);
       });
 
       this.server.once('client', function(client) {
         client.once('connect', function(packet) {
           client.connack({returnCode: 0});
         });
-        client.once('publish', client.puback.bind(client));
+        client.on('publish', function(packet) {
+          client.puback({messageId: packet.messageId});
+        });
       });
     });
 
