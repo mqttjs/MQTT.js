@@ -11,8 +11,8 @@ var should = require('should')
 
 var Connection = require('../lib/connection');
 
-describe('Connection', function() {
-  before(function () {
+module.exports = function() {
+  beforeEach(function () {
     var stream = this.stream = new Stream();
     var conn = this.conn = new Connection(stream);
   });
@@ -872,4 +872,4 @@ describe('Connection', function() {
       });
     });
   });
-});
+};
