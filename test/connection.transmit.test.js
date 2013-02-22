@@ -1,129 +1,485 @@
-/*global describe, it */
-var assert = require('assert'),
-  should = require('should'),
-  util = require('util');
-
-var make_tester = require('./tester'),
-  Connection = require('../lib/connection');
-
-var cases = require('./transmit.json');
-
-
-var bufferToString = function (buf) {
-  var i, s = ['['];
-  for (i = 0; i < buf.length - 1; i++) {
-    s.push(buf[i]);
-    s.push(',');
-  }
-  s.push(buf[i]);
-  s.push(']');
-  return s.join('');
-};
-
-var errString = function (fixture, packet, index) {
-  var error = util.format(
-    'Generated packet and fixtures differ at %d:\n\t\t\tFixture: %j\n\t\t\tPacket:  %j',
-    index,
-    bufferToString(fixture),
-    bufferToString(packet)
-  );
-  return error;
-};
-
-/*
- * Test for success
+/**
+ * Testing requires
  */
-function testSuccess(test, index, done) {
-  var desc = test.description,
-    input = test.input,
-    fixture = new Buffer(test.fixture),
-    type = this.type,
-    timeout;
-  this.tester.once('data', (function (fixture, timeout) {
-    return function (data, error) {
-      var j;
-      clearTimeout(timeout);
-      for (j = 0; j < fixture.length && j < data.length; j++) {
-        assert.equal(data[j], fixture[j], errString(fixture, data, j));
-      }
-      done();
-    };
-  }(fixture, timeout)));
 
-  assert.notEqual(this.uut[type](input), false);
-}
+var should = require('should')
+  , Stream = require('./util').TestStream;
 
-
-/*
- * Test for failure
+/**
+ * Unit under test
  */
-function testFailure(test, index, done) {
-  var desc = test.description,
-    input = test.input;
-  assert.equal(this.uut[this.type](input),
-    false,
-    util.format("Connection#%s did not return false", this.type));
-  done();
-}
 
+var Connection = require('../lib/connection');
 
-
-/*
- * Create a success testcase
- */
-function make_transmit_success_test(type, test, index) {
-  return it("should be successfull for '" + test.description + "'", function (done) {
-    this.tester = make_tester();
-    this.type = type;
-    this.uut = new Connection(this.tester);
-    testSuccess.call(this, test, index, done);
+describe('Connection', function() {
+  before(function () {
+    var stream = this.stream = new Stream();
+    var conn = this.conn = new Connection(stream);
   });
-}
 
+  describe('#connect', function() {
+    it('should send a connect packet (minimal)', function(done) {
+      var expected = new Buffer([
+        16, 18, // Header 
+        0, 6, 77, 81, 73, 115, 100, 112, // Protocol Id 
+        3, // Protocol version
+        0, // Connect flags
+        0, 30, // Keepalive
+        0, 4, // Client id length
+        116, 101, 115, 116 // Client Id
+      ]);
 
+      var fixture = {
+				protocolId: 'MQIsdp',
+				protocolVersion: 3,
+				client: 'test',
+				keepalive: 30
+      };
 
-/*
- * Create a failure testcase
- */
-function make_transmit_fail_test(type, test, index) {
-  it("should fail for '" + test.description + "'", function (done) {
-    this.tester = make_tester();
-    this.type = type;
-    this.uut = new Connection(this.tester);
-    testFailure.call(this, test, index, done);
+      this.conn.connect(fixture);
+      this.stream.once('data', function(data) {
+        data.should.eql(expected);
+        done();
+      });
+    });
+
+    it('should send a connect packet (maximal)', function(done) {
+      var expected = new Buffer([
+        16, 54, // Header 
+        0, 6, 77, 81, 73, 115, 100, 112, // Protocol Id 
+        3, // Protocol version
+        246, // Connect flags (u=1,p=1,wr=1,wq=2,wf=1,c=1)
+        0, 30, // Keepalive (30)
+        0, 4, // Client id length
+        116, 101, 115, 116, // Client Id
+        0, 5, // Will topic length
+        116, 111, 112, 105, 99, // Will topic ('topic')
+        0, 7, // Will payload length
+        112, 97, 121, 108, 111, 97, 100, // ('payload')
+        0, 8, // Username length
+        117, 115, 101, 114, 110, 97, 109, 101, // ('username')
+        0, 8, // Password length
+        112, 97, 115, 115, 119, 111, 114, 100 // ('password')
+      ]);
+
+      var fixture = {
+				protocolId: 'MQIsdp',
+				protocolVersion: 3,
+				client: 'test',
+				keepalive: 30,
+        will: {
+          topic: 'topic',
+          payload: 'payload',
+          qos: 2,
+          retain: true
+        },
+        clean: true,
+        username: 'username',
+        password: 'password'
+      };
+
+      this.conn.connect(fixture);
+      this.stream.once('data', function(data) {
+        data.should.eql(expected);
+        done();
+      });
+    });
+
+    it('should reject invalid protocol ID');
+    it('should reject invalid protocol version');
+    it('should reject invalid client ID');
+    it('should reject invalid keepalive');
+    it('should reject invalid will object');
+    it('should reject invalid username'); 
+    it('should reject invalid password');
   });
-}
 
+  describe('#connack', function() {
+    it('should send a connack packet (rc = 0)', function(done) {
+      var expected = new Buffer([
+        32, 2, // Header
+        0, 0 // rc=0
+      ]);
 
-/*
- * Create the test suite
- */
-function make_transmit_suite(type, successes, failures) {
-  return function () {
-    var i;
-    for (i = 0; i < successes.length; i++) {
-      make_transmit_success_test.call(this, type, successes[i], i);
-    }//end for i in successes
+      var fixture = {
+        returnCode: 0
+      };
 
-    for (i = 0; i < failures.length; i++) {
-      make_transmit_fail_test.call(this, type, failures[i], i);
-    }//end for i in failures
-  };
-}
+      this.conn.connack(fixture);
+      this.stream.once('data', function(data) {
+        data.should.eql(expected);
+        done();
+      });
+    });
 
+    it('should send a connack packet (rc = 4)', function(done) {
+      var expected = new Buffer([
+        32, 2, // Header
+        0, 4 // rc=0
+      ]);
 
+      var fixture = {
+        returnCode: 4
+      };
 
-/*
- * Tests start here
- */
-describe("Connection Transmit", function () {
-  var type, successes, failures;
-  for (type in cases) {
-    if (cases.hasOwnProperty(type)) {
-      successes = cases[type].success;
-      failures = cases[type].failure;
-      describe("with type '" + type + "'", make_transmit_suite(type, successes, failures));
-    }
-  }
+      this.conn.connack(fixture);
+      this.stream.once('data', function(data) {
+        data.should.eql(expected);
+        done();
+      });
+    });
+
+    it('should reject invalid rc');
+  });
+
+  describe('#publish', function() {
+    it('should send a publish packet (minimal)', function(done) {
+      var expected = new Buffer([
+        48, 10, // Header
+        0, 4, // topic length
+        116, 101, 115, 116, // topic ('test')
+        116, 101, 115, 116, // payload ('test')
+      ]);
+
+      var fixture = {
+        topic: 'test',
+        payload: 'test'
+      };
+
+      this.conn.publish(fixture);
+      this.stream.once('data', function(data) {
+        data.should.eql(expected);
+        done();
+      });
+    });
+
+    it('should send a publish packet (maximal)', function (done) {
+      var expected = new Buffer([
+        61, 12, // Header
+        0, 4, // topic length
+        116, 101, 115, 116, // topic ('test')
+        0, 7, // message id (7)
+        116, 101, 115, 116, // payload ('test')
+      ]);
+
+      var fixture = {
+        topic: 'test',
+        payload: 'test',
+        qos: 2,
+        retain: true,
+        dup: true,
+        messageId: 7
+      };
+
+      this.conn.publish(fixture);
+      this.stream.once('data', function(data) {
+        data.should.eql(expected);
+        done();
+      });
+    });
+
+    it('should send a publish packet (empty)', function(done) {
+      var expected = new Buffer([
+        48, 6, // Header
+        0, 4, // topic length
+        116, 101, 115, 116 // topic ('test')
+        // empty payload
+      ]);
+
+      var fixture = {
+        topic: 'test'
+      };
+
+      this.conn.publish(fixture);
+      this.stream.once('data', function(data) {
+        data.should.eql(expected);
+        done();
+      });
+    });
+
+    it('should reject invalid topic');
+    it('should reject invalid payload');
+    it('should reject invalid qos and flags');
+  });
+
+  describe('#puback', function() {
+    it('should send a puback packet', function(done) {
+      var expected = new Buffer([
+        64, 2, // header
+        0, 30 // mid=30
+      ]);
+
+      var fixture = {
+        messageId: 30
+      };
+
+      this.conn.puback(fixture);
+      this.stream.once('data', function(data) {
+        data.should.eql(expected);
+        done();
+      });
+    });
+
+    it('should reject invalid mid');
+  });
+
+  describe('#pubrec', function() {
+    it('should send a pubrec packet', function(done) {
+      var expected = new Buffer([
+        80, 2, // header
+        0, 3 // mid=3
+      ]);
+
+      var fixture = {
+        messageId: 3
+      };
+
+      this.conn.pubrec(fixture);
+      this.stream.once('data', function(data) {
+        data.should.eql(expected);
+        done();
+      });
+    });
+
+    it('should reject invalid mid');
+  });
+
+  describe('#pubrel', function() {
+    it('should send a pubrel packet', function(done) {
+      var expected = new Buffer([
+        98, 2, // header
+        0, 6 // mid=6
+      ]);
+
+      var fixture = {
+        messageId: 6
+      };
+
+      this.conn.pubrel(fixture);
+      this.stream.once('data', function(data) {
+        data.should.eql(expected);
+        done();
+      });
+    });
+
+    it('should reject invalid mid');
+  });
+
+  describe('#pubcomp', function() {
+    it('should send a pubcomp packet', function(done) {
+      var expected = new Buffer([
+        112, 2, // header
+        0, 9 // mid=9
+      ]);
+
+      var fixture = {
+        messageId: 9
+      };
+
+      this.conn.pubcomp(fixture);
+      this.stream.once('data', function(data) {
+        data.should.eql(expected);
+        done();
+      });
+    });
+
+    it('should reject invalid mid');
+  });
+
+  describe('#subscribe', function() {
+    it('should send a subscribe packet (single)', function(done) {
+      var expected = new Buffer([
+        130, 9, // header
+        0, 7, // message id
+        0, 4, // topic length
+        116, 101, 115, 116, // topic
+        0 // qos=0
+      ]);
+
+      var fixture = {
+        messageId: 7,
+        subscriptions: [
+          {
+            topic: 'test',
+            qos: 0
+          }
+        ]
+      };
+
+      this.conn.subscribe(fixture);
+      this.stream.once('data', function(data) {
+        data.should.eql(expected);
+        done();
+      });
+    });
+
+    it('should send subscribe packet (multiple)', function(done) {
+      var expected = new Buffer([
+        130, 23, // header
+        0, 8, // message id
+        0, 4, // topic length
+        116, 101, 115, 116, // topic ('test')
+        0, // qos=0
+        0, 4, //topic length
+        117, 101, 115, 116, // topic ('uest')
+        1, // qos=1
+        0, 4, //topic length
+        116, 101, 115, 115, // topic ('tess')
+        2 // qos=2
+      ]);
+
+      var fixture = {
+        messageId: 8,
+        subscriptions: [
+          {
+            topic: 'test',
+            qos: 0
+          },{
+            topic: 'uest',
+            qos: 1
+          },{
+            topic: 'tess',
+            qos: 2
+          }
+        ]
+      };
+
+      this.conn.subscribe(fixture);
+      this.stream.once('data', function(data) {
+        data.should.eql(expected);
+        done();
+      });
+    });
+
+    it('should reject invalid subscriptions');
+    it('should reject invalid mid');
+  });
+
+  describe('#suback', function() {
+    it('should send a suback packet', function(done) {
+      var expected = new Buffer([
+        144, 5, // length
+        0, 4, //mid=4
+        0, // qos=0
+        1, // qos=1
+        2, // qos=2
+      ]);
+
+      var fixture = {
+        granted: [0, 1, 2],
+        messageId: 4
+      };
+
+      this.conn.suback(fixture);
+      this.stream.once('data', function(data) {
+        data.should.eql(expected);
+        done();
+      });
+    });
+
+    it('should reject invalid mid');
+    it('should reject invalid qos vector');
+    it('should reject invalid flags');
+  });
+
+  describe('#unsubscribe', function() {
+    it('should send an unsubscribe packet', function(done) {
+      var expected = new Buffer([
+        162, 14, // header
+        0, 6, // mid=6
+        0, 4, // topic length
+        116, 101, 115, 116, // topic ('test')
+        0, 4, // topic length
+        116, 115, 101, 116 // topic ('tset')
+      ]);
+
+      var fixture = {
+        messageId: 6,
+        unsubscriptions: [
+          'test', 'tset'
+        ]
+      };
+
+      this.conn.unsubscribe(fixture);
+      this.stream.once('data', function(data) {
+        data.should.eql(expected);
+        done();
+      });
+    });
+
+    it('should reject invalid unsubs');
+    it('should reject invalid mids');
+  });
+
+  describe('#unsuback', function() {
+    it('should send a unsuback packet', function(done) {
+      var expected = new Buffer([
+        176, 2, // header
+        0, 8 // mid=8
+      ]);
+
+      var fixture = {
+        messageId: 8
+      };
+
+      this.conn.unsuback(fixture);
+      this.stream.once('data', function(data) {
+        data.should.eql(expected);
+        done();
+      });
+    });
+
+    it('should reject invalid mid');
+  });
+
+  describe('#pingreq', function() {
+    it('should send a pingreq packet', function(done) {
+      var expected = new Buffer([
+        192, 0 // header
+      ]);
+
+      var fixture = {
+      };
+
+      this.conn.pingreq(fixture);
+      this.stream.once('data', function(data) {
+        data.should.eql(expected);
+        done();
+      });
+    });
+  });
+
+  describe('#pingresp', function() {
+    it('should send a pingresp packet', function(done) {
+      var expected = new Buffer([
+        208, 0 // header
+      ]);
+
+      var fixture = {
+      };
+
+      this.conn.pingresp(fixture);
+      this.stream.once('data', function(data) {
+        data.should.eql(expected);
+        done();
+      });
+    });
+  });
+
+  describe('#disconnect', function() {
+    it('should send a disconnect packet', function(done) {
+      var expected = new Buffer([
+        224, 0 // header
+      ]);
+
+      var fixture = {
+      };
+
+      this.conn.disconnect(fixture);
+      this.stream.once('data', function(data) {
+        data.should.eql(expected);
+        done();
+      });
+    });
+  });
 });
-

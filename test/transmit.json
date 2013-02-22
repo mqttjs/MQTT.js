@@ -1,43 +1,5 @@
 {
 	"connect": {
-		"success": [
-		{
-			"description": "Bare minimum connect packet",
-			"fixture": [16, 18, 0, 6, 77, 81, 73, 115, 100, 112, 3, 0, 0, 30, 0, 4, 116, 101, 115, 116],
-			"input": {
-				"cmd": "connect",
-				"length": "18",
-				"version": "MQIsdp",
-				"versionNum": 3,
-				"client": "test",
-				"keepalive": 30
-			}
-		},{
-			"description": "Christmas tree connect packet",
-			"fixture": [16, 54, 0, 6, 77, 81, 73, 115, 100, 112, 3, 246, 0, 30, 0, 4, 116, 101, 115, 116, 0, 5, 116, 111, 112, 105, 99, 0, 7, 112, 97, 121, 108, 111, 97, 100, 0, 8, 117, 115, 101, 114, 110, 97, 109, 101, 0, 8, 112, 97, 115, 115, 119, 111, 114, 100],
-			"input": {
-				"cmd": "connect",
-				"length": 54,
-				"version": "MQIsdp",
-				"versionNum": 3,
-				"client": "test",
-				"keepalive": 30,
-				"will": {
-					"topic": "topic",
-					"payload": "payload",
-					"qos": 2,
-					"retain": true
-				},
-				"clean": true,
-				"username": "username",
-				"password": "password"
-			}
-		},{
-			"description": "Default parameters (except for client ID since getting the pid is hard)",
-			"fixture": [16, 18, 0, 6, 77, 81, 73, 115, 100, 112, 3, 0, 0, 60, 0, 4, 116, 101, 115, 116],
-			"input": {"client": "test"}
-		}
-	],
 	"failure": [
 		{
 			"description": "Invalid version string - not a string",
@@ -62,16 +24,6 @@
 	},
 	"connack": {
 		"success": [
-		{
-			"description": "Default parameters",
-			"fixture": [32, 2, 0, 0],
-			"input": {  }
-		},{
-			"description": "Return code 3",
-			"fixture": [32, 2, 0, 3],
-			"input": { "returnCode": 3 }
-		}
-		],
 		"failure": [
 		{
 			"description": "Invalid return code - < 0",
@@ -83,49 +35,6 @@
 		]
 	},
 	"publish": {
-		"success": [
-		{
-			"description": "Bare minimum publish packet",
-			"fixture": [48, 10, 0, 4, 116, 101, 115, 116, 116, 101, 115, 116],
-			"input": {
-				"topic": "test",
-				"payload": "test"
-			}
-		},{
-			"description": "Christmas tree publish packet",
-			"fixture": [61, 12, 0, 4, 116, 101, 115, 116, 0, 10, 116, 101, 115, 116],
-			"input": {
-				"topic": "test",
-				"payload": "test",
-				"qos": 2,
-				"messageId": 10,
-				"dup": true,
-				"retain": true
-			}
-		},{
-			"description": "Empty payload",
-			"fixture": [48, 6, 0, 4, 116, 101, 115, 116],
-			"input": {
-				"topic":"test",
-				"payload": ""
-			}
-		},{
-			"description": "Default payload",
-			"fixture": [48, 6, 0, 4, 116, 101, 115, 116],
-			"input": {
-				"topic":"test"
-			}
-		},{
-			"description": "QoS == 1 inserts a message ID",
-			"fixture": [50, 12, 0, 4, 116, 101, 115, 116, 0, 42, 116, 101, 115, 116],
-			"input": {
-				"topic":"test",
-				"payload": "test",
-				"messageId": 42,
-				"qos": 1
-			}
-		}
-		],
 		"failure":[
 		{
 			"description": "Invalid topic - not a string",
@@ -156,12 +65,6 @@
 	},
 	"puback": {
 		"success": [
-		{
-			"description": "Puback with message id",
-			"fixture": [64, 2, 0, 30],
-			"input": { "messageId": 30 }
-		}
-		],
 		"failure": [
 		{
 			"description": "Invalid message ID - < 0",
@@ -177,13 +80,6 @@
 		]
 	},
 	"pubrec": {
-		"success": [
-		{
-			"description": "Pubrec with message id",
-			"fixture": [80, 2, 0, 30],
-			"input": { "messageId": 30 }
-		}
-		],
 		"failure": [
 		{
 			"description": "Invalid message ID - < 0",
@@ -199,17 +95,6 @@
 		]
 	},
 	"pubrel": {
-		"success": [
-		{
-			"description": "Pubrel with message id",
-			"fixture": [98, 2, 0, 30],
-			"input": { "messageId": 30 }
-		},{
-			"description": "Pubrel with dup flag set",
-			"fixture": [106, 2, 0, 30],
-			"input": { "messageId": 30, "dup": true }
-		}
-		],
 		"failure": [
 		{
 			"description": "Invalid message ID - < 0",
@@ -225,13 +110,6 @@
 		]
 	},
 	"pubcomp": {
-		"success": [
-		{
-			"description": "Pubcomp with message id",
-			"fixture": [112, 2, 0, 30],
-			"input": { "messageId": 30 }
-		}
-		],
 		"failure": [
 		{
 			"description": "Invalid message ID - < 0",
@@ -420,32 +298,4 @@
 		}
 		]
 	},
-	"pingreq": {
-		"success": [
-		{
-			"description": "Standard pingreq",
-			"fixture": [192, 0],
-			"input": {}
-		}
-		],
-		"failure": []
-	},
-	"pingresp": {
-		"success": [
-		{
-			"description": "Standard pingresp",
-			"fixture": [208, 0]
-		}
-		],
-		"failure": []
-	},
-	"disconnect": {
-		"success": [
-		{
-			"description": "Standard disconnect",
-			"fixture": [224, 0]
-		}
-		],
-		"failure": []
-	}
 }
