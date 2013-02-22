@@ -85,13 +85,403 @@ describe('Connection', function() {
       });
     });
 
-    it('should reject invalid protocol ID');
-    it('should reject invalid protocol version');
-    it('should reject invalid client ID');
-    it('should reject invalid keepalive');
-    it('should reject invalid will object');
-    it('should reject invalid username'); 
-    it('should reject invalid password');
+    describe('invalid options', function () {
+      describe('protocol id', function () {
+        it('should reject non-present', function (done) {
+          var fixture = {
+            protocolVersion: 3,
+            clientId: 'test',
+            keepalive: 30
+          };
+
+          var expectedErr = 'Invalid protocol id';
+
+          this.conn.once('error', function(error) {
+            error.message.should.equal(expectedErr);
+            done();
+          });
+
+          this.conn.connect(fixture);
+        });
+          
+        it('should reject falsy', function (done) {
+          var fixture = {
+            protocolId: '',
+            protocolVersion: 3,
+            clientId: 'test',
+            keepalive: 30
+          }
+
+          var expectedErr = 'Invalid protocol id';
+
+          this.conn.once('error', function(error) {
+            error.message.should.equal(expectedErr);
+            done();
+          });
+
+          this.conn.connect(fixture);
+        });
+      });
+
+      it('should reject non-string', function(done) {
+        var fixture = {
+          protocolId: new Buffer(0),
+          protocolVersion: 3,
+          clientId: 'test',
+          keepalive: 30
+        }
+
+        var expectedErr = 'Invalid protocol id';
+
+        this.conn.once('error', function(error) {
+          error.message.should.equal(expectedErr);
+          done();
+        });
+
+        this.conn.connect(fixture);
+      });
+
+      describe('protocol version', function() {
+        it('should reject non-present', function(done) {
+          var fixture = {
+            protocolId: 'MQIsdp',
+            clientId: 'test',
+            keepalive: 30
+          };
+
+          var expectedErr = 'Invalid protocol version';
+
+          this.conn.once('error', function(error) {
+            error.message.should.equal(expectedErr);
+            done();
+          });
+
+          this.conn.connect(fixture);
+        });
+
+        it('should reject non-number', function(done) {
+          var fixture = {
+            protocolId: 'MQIsdp',
+            protocolVersion: [],
+            clientId: 'test',
+            keepalive: 30
+          };
+
+          var expectedErr = 'Invalid protocol version';
+
+          this.conn.once('error', function(error) {
+            error.message.should.equal(expectedErr);
+            done();
+          });
+
+          this.conn.connect(fixture);
+        });
+
+        it('should reject >255', function(done) {
+          var fixture = {
+            protocolId: 'MQIsdp',
+            protocolVersion: 300,
+            clientId: 'test',
+            keepalive: 30
+          };
+
+          var expectedErr = 'Invalid protocol version';
+
+          this.conn.once('error', function(error) {
+            error.message.should.equal(expectedErr);
+            done();
+          });
+
+          this.conn.connect(fixture);
+        });
+
+        it('should reject <0', function(done) {
+          var fixture = {
+            protocolId: 'MQIsdp',
+            protocolVersion: -20,
+            clientId: 'test',
+            keepalive: 30
+          };
+
+          var expectedErr = 'Invalid protocol version';
+
+          this.conn.once('error', function(error) {
+            error.message.should.equal(expectedErr);
+            done();
+          });
+
+          this.conn.connect(fixture);
+        });
+      });
+
+      describe('client id', function() {
+        it('should reject non-present', function(done) {
+          var fixture = {
+            protocolId: 'MQIsdp',
+            protocolVersion: 3,
+            keepalive: 30
+          };
+
+          var expectedErr = 'Invalid client id';
+
+          this.conn.once('error', function(error) {
+            error.message.should.equal(expectedErr);
+            done();
+          });
+
+          this.conn.connect(fixture);
+        });
+
+        it('should reject empty', function(done) {
+          var fixture = {
+            protocolId: 'MQIsdp',
+            protocolVersion: 3,
+            clientId: '',
+            keepalive: 30
+          };
+
+          var expectedErr = 'Invalid client id';
+
+          this.conn.once('error', function(error) {
+            error.message.should.equal(expectedErr);
+            done();
+          });
+
+          this.conn.connect(fixture);
+        });
+
+        it('should reject non-string', function(done) {
+          var fixture = {
+            protocolId: 'MQIsdp',
+            protocolVersion: 3,
+            clientId: {},
+            keepalive: 30
+          };
+
+          var expectedErr = 'Invalid client id';
+
+          this.conn.once('error', function(error) {
+            error.message.should.equal(expectedErr);
+            done();
+          });
+
+          this.conn.connect(fixture);
+        });
+      });
+
+      describe('keepalive', function() {
+        it('should reject non-present', function(done) {
+          var fixture = {
+            protocolId: 'MQIsdp',
+            protocolVersion: 3,
+            clientId: 'test'
+          };
+
+          var expectedErr = 'Invalid keepalive';
+
+          this.conn.once('error', function(error) {
+            error.message.should.equal(expectedErr);
+            done();
+          });
+
+          this.conn.connect(fixture);
+        });
+
+        it('should reject non-number', function(done) {
+          var fixture = {
+            protocolId: 'MQIsdp',
+            protocolVersion: 3,
+            clientId: 'test',
+            keepalive: 'blah'
+          };
+
+          var expectedErr = 'Invalid keepalive';
+
+          this.conn.once('error', function(error) {
+            error.message.should.equal(expectedErr);
+            done();
+          });
+
+          this.conn.connect(fixture);
+        });
+
+        it('should reject < 0', function(done) {
+          var fixture = {
+            protocolId: 'MQIsdp',
+            protocolVersion: 3,
+            clientId: 'test',
+            keepalive: -2
+          };
+
+          var expectedErr = 'Invalid keepalive';
+
+          this.conn.once('error', function(error) {
+            error.message.should.equal(expectedErr);
+            done();
+          });
+
+          this.conn.connect(fixture);
+
+        });
+
+        it('should reject > 65535', function(done) {
+          var fixture = {
+            protocolId: 'MQIsdp',
+            protocolVersion: 3,
+            clientId: 'test',
+            keepalive: 65536
+          };
+
+          var expectedErr = 'Invalid keepalive';
+
+          this.conn.once('error', function(error) {
+            error.message.should.equal(expectedErr);
+            done();
+          });
+
+          this.conn.connect(fixture);
+
+        });
+      });
+
+      describe('will', function() {
+        it('should reject non-object', function(done) {
+          var fixture = {
+            protocolId: 'MQIsdp',
+            protocolVersion: 3,
+            clientId: 'test',
+            keepalive: 30,
+            will: 'test'
+          };
+
+          var expectedErr = 'Invalid will';
+
+          this.conn.once('error', function(error) {
+            error.message.should.equal(expectedErr);
+            done();
+          });
+
+          this.conn.connect(fixture);
+
+        });
+
+        it('should reject will without valid topic',
+            function(done) {
+          var fixture = {
+            protocolId: 'MQIsdp',
+            protocolVersion: 3,
+            clientId: 'test',
+            keepalive: 30,
+            will: {
+              topic: 0,
+              payload: 'test',
+              qos: 0,
+              retain: false
+            }
+          };
+
+          var expectedErr = 'Invalid will - invalid topic';
+
+          this.conn.once('error', function(error) {
+            error.message.should.equal(expectedErr);
+            done();
+          });
+
+          this.conn.connect(fixture);
+        });
+
+        it('should reject will without valid payload',
+            function(done) {
+          var fixture = {
+            protocolId: 'MQIsdp',
+            protocolVersion: 3,
+            clientId: 'test',
+            keepalive: 30,
+            will: {
+              topic: 'test',
+              payload: [],
+              qos: 0,
+              retain: false
+            }
+          };
+
+          var expectedErr = 'Invalid will - invalid payload';
+
+          this.conn.once('error', function(error) {
+            error.message.should.equal(expectedErr);
+            done();
+          });
+
+          this.conn.connect(fixture);
+        });
+
+        it('should reject will with invalid qos', function(done) {
+          var fixture = {
+            protocolId: 'MQIsdp',
+            protocolVersion: 3,
+            clientId: 'test',
+            keepalive: 30,
+            will: {
+              topic: 'test',
+              payload: 'test',
+              qos: '',
+              retain: false
+            }
+          };
+
+          var expectedErr = 'Invalid will - invalid qos';
+
+          this.conn.once('error', function(error) {
+            error.message.should.equal(expectedErr);
+            done();
+          });
+
+          this.conn.connect(fixture);
+        });
+      });
+
+      describe('username', function() {
+        it('should reject invalid username', function(done) {
+          var fixture = {
+            protocolId: 'MQIsdp',
+            protocolVersion: 3,
+            clientId: 'test',
+            keepalive: 30,
+            username: 30
+          };
+
+          var expectedErr = 'Invalid username';
+
+          this.conn.once('error', function(error) {
+            error.message.should.equal(expectedErr);
+            done();
+          });
+
+          this.conn.connect(fixture);
+        });
+      });
+
+      describe('password', function() {
+        it('should reject invalid password', function(done) {
+          var fixture = {
+            protocolId: 'MQIsdp',
+            protocolVersion: 3,
+            clientId: 'test',
+            keepalive: 30,
+            password: 30
+          };
+
+          var expectedErr = 'Invalid password';
+
+          this.conn.once('error', function(error) {
+            error.message.should.equal(expectedErr);
+            done();
+          });
+
+          this.conn.connect(fixture);
+        });
+      });
+    });
   });
 
   describe('#connack', function() {
