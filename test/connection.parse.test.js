@@ -22,8 +22,8 @@ describe('Connection', function() {
         qos: 0,
         dup: false,
         length: 18,
-        version: "MQIsdp",
-        versionNum: 3,
+        protocolId: "MQIsdp",
+        protocolVersion: 3,
         clean: false,
         keepalive: 30,
         client: "test"
@@ -56,8 +56,8 @@ describe('Connection', function() {
         qos: 0,
         dup: false,
         length: 54,
-        version: "MQIsdp",
-        versionNum: 3,
+        protocolId: "MQIsdp",
+        protocolVersion: 3,
         will: {
           retain: true,
           qos: 2,
