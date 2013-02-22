@@ -12,7 +12,7 @@ var mqtt = require('../lib/mqtt'),
 
 
 
-describe("Client-Server QOS Test", function () {
+describe.skip("Client-Server QOS Test", function () {
   before(function (done) {
     var self = this;
     this.server = servers.init_server(PORT);
