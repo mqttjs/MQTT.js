@@ -519,7 +519,13 @@ module.exports = function() {
       });
     });
 
-    it('should reject invalid rc');
+    it('should reject invalid rc', function (done) {
+      this.conn.once('error', function(error) {
+        error.message.should.equal('Invalid return code');
+        done();
+      });
+      this.conn.connack({returnCode: 'asdf'});
+    });
   });
 
   describe('#publish', function() {
