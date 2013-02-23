@@ -206,6 +206,69 @@ describe('MqttClient', function () {
     });
   });
 
+  describe('unsubscribing', function() {
+    it('should send an unsubscribe packet', function(done) {
+      var client = new MqttClient(port);
+
+      var topic = 'topic';
+
+      client.once('connect', function() {
+        client.unsubscribe(topic);
+      });
+
+      this.server.once('client', function(client) {
+        client.once('connect', function(packet) {
+          client.connack({returnCode: 0});
+        });
+
+        client.once('unsubscribe', function(packet) {
+          packet.unsubscriptions.should.include(topic);
+          done();
+        });
+      });
+    });
+
+    it('should accept an array of unsubs', function(done) {
+      var client = new MqttClient(port);
+
+      var topics = ['topic1', 'topic2'];
+
+      client.once('connect', function() {
+        client.unsubscribe(topics);
+      });
+
+      this.server.once('client', function(client) {
+        client.once('connect', function(packet) {
+          client.connack({returnCode: 0});
+        });
+
+        client.once('unsubscribe', function(packet) {
+          packet.unsubscriptions.should.eql(topics);
+          done();
+        });
+      });
+    });
+
+    it('should fire a callback on unsuback', function(done) {
+      var client = new MqttClient(port);
+
+      var topic = 'topic';
+
+      client.once('connect', function() {
+        client.unsubscribe(topic, done);
+      });
+
+      this.server.once('client', function(client) {
+        client.once('connect', function(packet) {
+          client.connack({returnCode: 0});
+        });
+        client.once('unsubscribe', function(packet) {
+          client.unsuback(packet);
+        });
+      });
+    });
+  });
+
   describe('pinging', function () {
     it('should ping every half keep alive time', function (done) {
       var keepalive = 1000;
