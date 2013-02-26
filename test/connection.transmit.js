@@ -652,7 +652,13 @@ module.exports = function() {
       });
     });
 
-    it('should reject invalid mid');
+    it('should reject invalid mid', function (done) {
+      this.conn.once('error', function(error) {
+        error.message.should.equal('Invalid message id');
+        done();
+      });
+      this.conn.puback({messageId: ''});
+    });
   });
 
   describe('#pubrec', function() {
