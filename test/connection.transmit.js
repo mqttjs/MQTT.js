@@ -867,7 +867,16 @@ module.exports = function() {
       });
     });
 
-    it('should reject invalid unsubs');
+    it('should reject invalid unsubs', function (done) {
+      this.conn.once('error', function(error) {
+        error.message.should.equal('Invalid unsubscriptions');
+        done();
+      });
+      this.conn.unsubscribe({
+        messageId: 1,
+        unsubscriptions: ''
+      });
+    });
     it('should reject invalid mids');
   });
 
