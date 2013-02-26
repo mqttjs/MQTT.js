@@ -797,13 +797,15 @@ module.exports = function() {
         messageId: 1, subscriptions: ''
       });
     });
+
+    it('should reject invalid subscription objects');
     it('should reject invalid mid', function (done) {
       this.conn.once('error', function(error) {
         error.message.should.equal('Invalid message id');
         done();
       });
       this.conn.subscribe({
-        messageId: '', subscriptions:[{topic: 'test', qos: 1}] 
+        messageId: '', subscriptions:[{topic: 'test', qos: 1}]
       });
     });
   });
