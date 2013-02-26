@@ -831,8 +831,13 @@ module.exports = function() {
     });
 
     it('should reject invalid mid');
-    it('should reject invalid qos vector');
-    it('should reject invalid flags');
+    it('should reject invalid qos vector', function (done) {
+      this.conn.on('error', function(error) {
+        error.message.should.equal('Invalid qos vector');
+        done();
+      });
+      this.conn.suback({granted: '', messageId: 1});
+    });
   });
 
   describe('#unsubscribe', function() {

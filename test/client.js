@@ -350,7 +350,14 @@ describe('MqttClient', function () {
       client.subscribe(topic, done);
 
       this.server.once('client', function(client) {
-        client.once('subscribe', client.suback.bind(client));
+        client.once('subscribe', function (packet) {
+          client.suback({
+            messageId: packet.messageId,
+            granted: packet.subscriptions.map(function (e) {
+              return e.qos
+            })
+          });
+        });
       });
     });
   });
