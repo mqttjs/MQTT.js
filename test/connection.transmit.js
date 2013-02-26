@@ -593,9 +593,45 @@ module.exports = function() {
       });
     });
 
-    it('should reject invalid topic');
-    it('should reject invalid payload');
-    it('should reject invalid qos and flags');
+    it('should send a publish packet (buffer)', function(done) {
+      var expected = new Buffer([
+        48, 10, // Header
+        0, 4, // topic length
+        116, 101, 115, 116, // topic ('test')
+        0, 0, 0, 0 // payload
+      ]);
+      var buf = new Buffer(4);
+      buf.fill(0);
+
+      var fixture = {
+        topic: 'test',
+        payload: buf
+      }
+
+      this.conn.publish(fixture);
+      this.stream.once('data', function(data) {
+        data.should.eql(expected);
+        done();
+      });
+    });
+
+    it('should reject invalid topic', function (done) {
+      var error = "Invalid topic";
+
+      this.conn.once('error', function(err) {
+        err.message.should.equal(error);
+        done();
+      });
+      this.conn.publish({topic: 0});
+    });
+    it('should reject invalid payloads, maybe');
+    it('should reject invalid mid', function(done) {
+      this.conn.once('error', function(err) {
+        err.message.should.equal('Invalid message id');
+        done();
+      });
+      this.conn.publish({topic: 'test', messageId: '', qos:1});
+    });
   });
 
   describe('#puback', function() {
