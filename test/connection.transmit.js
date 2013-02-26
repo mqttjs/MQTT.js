@@ -788,9 +788,24 @@ module.exports = function() {
         done();
       });
     });
-
-    it('should reject invalid subscriptions');
-    it('should reject invalid mid');
+    it('should reject invalid subscriptions', function (done) {
+      this.conn.once('error', function(error) {
+        error.message.should.equal('Invalid subscriptions');
+        done();
+      });
+      this.conn.subscribe({
+        messageId: 1, subscriptions: ''
+      });
+    });
+    it('should reject invalid mid', function (done) {
+      this.conn.once('error', function(error) {
+        error.message.should.equal('Invalid message id');
+        done();
+      });
+      this.conn.subscribe({
+        messageId: '', subscriptions:[{topic: 'test', qos: 1}] 
+      });
+    });
   });
 
   describe('#suback', function() {
