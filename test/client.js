@@ -9,8 +9,7 @@ var should = require('should')
 /**
  * Modules to be tested
  */
-
-var MqttClient = require('../lib/client');
+var createClient = require('../lib/client').createClient;
 
 /**
  * Testing options
@@ -24,18 +23,27 @@ describe('MqttClient', function () {
     this.server.listen(port);
   });
 
+  describe('errors', function() {
+    it('should emit an error if unable to connect', function() {
+      var client = createClient(9767);
+
+      client.on('error', function(error) {
+        done();
+      });
+    });
+  });
+
   describe('connecting', function() {
     it('should connect to the broker', function (done) {
-      var client = new MqttClient(port);
+      var client = createClient(port);
 
       this.server.once('client', function(client) {
         done();
       });
-
     }); 
 
     it('should send a default client id', function (done) {
-      var client = new MqttClient(port);
+      var client = createClient(port);
 
       this.server.once('client', function (client) {
         client.once('connect', function(packet) {
@@ -47,8 +55,8 @@ describe('MqttClient', function () {
     });
 
     it('should connect with the given client id', function (done) {
-      var client = 
-        new MqttClient(port, 'localhost', {clientId: 'testclient'});
+      var client = createClient(port, 'localhost',
+        {clientId: 'testclient'});
 
       this.server.once('client', function (client) {
         client.once('connect', function(packet) {
@@ -59,7 +67,7 @@ describe('MqttClient', function () {
     });
 
     it('should default to localhost', function (done) {
-      var client = new MqttClient(port, {clientId: 'testclient'});
+      var client = createClient(port, {clientId: 'testclient'});
 
       this.server.once('client', function (client) {
         client.once('connect', function(packet) {
@@ -70,7 +78,7 @@ describe('MqttClient', function () {
     });
 
     it('should emit connect', function (done) {
-      var client = new MqttClient(port);
+      var client = createClient(port);
       client.once('connect', done);
       client.once('error', done);
 
@@ -82,7 +90,7 @@ describe('MqttClient', function () {
     });
 
     it('should emit error', function (done) {
-      var client = new MqttClient(port);
+      var client = createClient(port);
       client.once('connect', function () {
         done(new Error('Should not emit connect'));
       });
@@ -101,7 +109,7 @@ describe('MqttClient', function () {
 
   describe('publishing', function() {
     it('should publish a message', function (done) {
-      var client = new MqttClient(port)
+      var client = createClient(port)
         , payload = 'test'
         , topic = 'test';
 
@@ -125,7 +133,7 @@ describe('MqttClient', function () {
     });
 
     it('should accept options', function (done) {
-      var client = new MqttClient(port)
+      var client = createClient(port)
         , payload = 'test'
         , topic = 'test';
       
@@ -154,7 +162,7 @@ describe('MqttClient', function () {
     });
 
     it('should fire a callback (qos 0)', function (done) {
-      var client = new MqttClient(port);
+      var client = createClient(port);
       
       client.once('connect', function() {
         client.publish('a', 'b', done);
@@ -169,9 +177,9 @@ describe('MqttClient', function () {
     });
 
     it('should fire a callback (qos 1)', function (done) {
-      var client = new MqttClient(port);
+      var client = createClient(port);
 
-      var opts = {qos: 1, messageId: 10};
+      var opts = {qos: 1};
 
       client.once('connect', function() {
         client.publish('a', 'b', opts, done);
@@ -188,7 +196,7 @@ describe('MqttClient', function () {
     });
 
     it('should fire a callback (qos 2)', function (done) {
-      var client = new MqttClient(port);
+      var client = createClient(port);
 
       var opts = {qos: 2};
 
@@ -208,8 +216,7 @@ describe('MqttClient', function () {
 
   describe('unsubscribing', function() {
     it('should send an unsubscribe packet', function(done) {
-      var client = new MqttClient(port);
-
+      var client = createClient(port);
       var topic = 'topic';
 
       client.once('connect', function() {
@@ -229,7 +236,7 @@ describe('MqttClient', function () {
     });
 
     it('should accept an array of unsubs', function(done) {
-      var client = new MqttClient(port);
+      var client = createClient(port);
 
       var topics = ['topic1', 'topic2'];
 
@@ -250,7 +257,7 @@ describe('MqttClient', function () {
     });
 
     it('should fire a callback on unsuback', function(done) {
-      var client = new MqttClient(port);
+      var client = createClient(port);
 
       var topic = 'topic';
 
@@ -270,11 +277,11 @@ describe('MqttClient', function () {
   });
 
   describe('pinging', function () {
-    it('should ping every half keep alive time', function (done) {
+    it('should ping before keepalive * 1.5', function (done) {
       var keepalive = 1000;
-      this.timeout(keepalive / 2);
+      this.timeout(keepalive * 1.5);
 
-      var client = new MqttClient(port, {keepalive: keepalive/2});
+      var client = createClient(port, {keepalive: keepalive});
 
       this.server.once('client', function(client) {
         client.once('pingreq', function(packet) {
@@ -287,7 +294,7 @@ describe('MqttClient', function () {
 
   describe('subscribing', function () {
     it('should send a subscribe message', function(done) {
-      var client = new MqttClient(port);
+      var client = createClient(port);
 
       var topic = 'test';
 
@@ -305,7 +312,7 @@ describe('MqttClient', function () {
     });
 
     it('should accept an array of subscriptions', function(done) {
-      var client = new MqttClient(port);
+      var client = createClient(port);
 
       var subs = ['test1', 'test2'];
 
@@ -325,7 +332,7 @@ describe('MqttClient', function () {
     });
 
     it('should accept an options parameter', function(done) {
-      var client = new MqttClient(port);
+      var client = createClient(port);
 
       var topic = 'test'
         , opts = {qos: 1};
@@ -343,7 +350,7 @@ describe('MqttClient', function () {
     });
 
     it('should fire a callback on suback', function(done) {
-      var client = new MqttClient(port);
+      var client = createClient(port);
 
       var topic = 'test';
 
@@ -364,7 +371,7 @@ describe('MqttClient', function () {
 
   describe('receiving messages', function() {
     it('should fire the message event ', function(done) {
-      var client = new MqttClient(port)
+      var client = createClient(port)
         , test_topic = 'test'
         , test_message = 'message';
 
@@ -390,7 +397,7 @@ describe('MqttClient', function () {
   describe('qos handling', function() {
 
     it('should follow qos 0 semantics (trivial)', function(done) {
-      var client = new MqttClient(port)
+      var client = createClient(port)
         , test_topic = 'test'
         , test_message = 'message';
 
@@ -410,7 +417,7 @@ describe('MqttClient', function () {
     });
 
     it('should follow qos 1 semantics', function(done) {
-      var client = new MqttClient(port)
+      var client = createClient(port)
         , test_topic = 'test'
         , test_message = 'message'
         , mid = 50;
@@ -435,7 +442,7 @@ describe('MqttClient', function () {
     });
 
     it('should follow qos 2 semantics', function(done) {
-      var client = new MqttClient(port)
+      var client = createClient(port)
         , test_topic = 'test'
         , test_message = 'message'
         , mid = 253;
