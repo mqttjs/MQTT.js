@@ -12,32 +12,11 @@ var port = argv[2]
 	, host = argv[3]
 	, topic = argv[4];
 
-mqtt.createClient(port, host, function(err, client) {
-  if (err) {
-    console.log("Unable to connect to broker");
-    process.exit(1);
-  }
-	client.connect({keepalive: 3000});
+var c = mqtt.createClient(port, host);
 
-	client.on('connack', function(packet) {
-		if (packet.returnCode === 0) {
-		    client.subscribe({topic: topic});
-		} else {
-			console.log('connack error %d', packet.returnCode);
-			process.exit(-1);
-		}
-	});
-
-	client.on('publish', function(packet) {
-		console.log('%s\t%s', packet.topic, packet.payload);
-	});
-
-	client.on('close', function() {
-		process.exit(0);
-	});
-
-	client.on('error', function(e) {
-		console.log('error %s', e);
-		process.exit(-1);
-	});
+c.on('connect', function() {
+  c.subscribe(topic);
+  c.on('message', function(topic, message) {
+    console.log(topic + ' ' + message);
+  });
 });
