@@ -3,8 +3,8 @@
 var assert = require('assert'),
   should = require('should');
 
-var protocol = require('../lib/protocol'),
-  Connection = require('../lib/connection'),
+var protocol = require('../../lib/protocol'),
+  Connection = require('../../lib/connection'),
   make_tester = require('./tester');
 
 var tester = make_tester();
@@ -18,7 +18,7 @@ function make_protocol_type_case(type) {
 }
 
 
-describe("Connection", function () {
+describe.skip("Connection", function () {
 
   describe("should have functions for", function () {
     var typenum;
