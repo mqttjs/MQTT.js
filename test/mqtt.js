@@ -45,4 +45,12 @@ describe('mqtt', function() {
       s.should.be.instanceOf(mqtt.MqttSecureServer);
     });
   });
+
+  describe('#createConnection', function() {
+    it('should return an MqttConnection', function() {
+      var c = mqtt.createConnection();
+
+      c.should.be.instanceOf(mqtt.MqttConnection);
+    });
+  });
 });
