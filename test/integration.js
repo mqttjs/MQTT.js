@@ -59,7 +59,7 @@ describe('MqttClient', function() {
 
       c.on('connect', function() {
         c.publish('topic', 'test');
-
+        c.end();
       });
     });
   });
