@@ -9,7 +9,7 @@ var should = require('should')
 /**
  * Modules to be tested
  */
-var createClient = require('../lib/client').createClient;
+var createClient = require('../lib/mqtt').createClient;
 
 /**
  * Testing options
