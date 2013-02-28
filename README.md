@@ -3,7 +3,7 @@
 ## Important note for existing users
 
 v0.2.0 has brough some API breaking changes to mqtt.js. Please
-consult the [migration guide](wiki/migration) for information
+consult the [migration guide](http://github.com/adamvr/MQTT.js/wiki/migration) for information
 or open an issue if you need any help.
 
 ## Introduction
@@ -17,7 +17,7 @@ mqtt.js is a library for the MQTT protocol, written in javascript.
 
 ## Documentation
 
-Detailed documentation can be found in [the wiki](wiki)
+Detailed documentation can be found in [the wiki](http://github.com/adamvr/MQTT.js/wiki)
 
 ## Client API usage
 
