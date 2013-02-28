@@ -30,10 +30,10 @@ module.exports = function() {
       ]);
 
       var fixture = {
-				protocolId: 'MQIsdp',
-				protocolVersion: 3,
-				clientId: 'test',
-				keepalive: 30
+        protocolId: 'MQIsdp',
+        protocolVersion: 3,
+        clientId: 'test',
+        keepalive: 30
       };
 
       this.conn.connect(fixture);
