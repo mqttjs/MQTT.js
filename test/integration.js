@@ -27,7 +27,7 @@ exec('mosquitto_sub', function (err) {
  * Tests
  */
 
-describe('MqttClient', function() {
+describe.skip('MqttClient', function() {
   describe('subscribing', function() {
     it('should receive a message event', function(done) {
       var c = mqtt.createClient();
