@@ -1,34 +1,45 @@
 # mqtt.js
 
-## Introduction
-mqtt.js library for the MQTT protocol, written in javascript.
-It allows the creation of both MQTT clients and MQTT brokers
-through the `createClient` and `createServer` API methods.
+## Important note for existing users
 
-Much of this document requires an understanding of the MQTT protocol,
-so consult the [MQTT documentation](http://mqtt.org/documentation)
-for more information.
+v0.2.0 has brough some API breaking changes to mqtt.js. Please
+consult the [migration guide](wiki/migration) for information
+or open an issue if you need any help.
+
+## Introduction
+
+mqtt.js is a library for the MQTT protocol, written in javascript.
+
 
 ## Installation
 
     npm install mqtt
 
-## Clients
+## Documentation
 
-This project also contains two extremely simple MQTT clients `bin/mqtt_pub`
-and `bin/mqtt_sub` can be executed from the command line in the following ways:
+Detailed documentation can be found in [the wiki](wiki)
 
-    mqtt_pub <port> <host> <topic> <payload>
-    mqtt_sub <port> <host> <topic>
+## Client API usage
 
-where
+A basic publish client, the basis for `bin/mqtt_pub`:
 
-* `port` is the port the MQTT server is listening on
-* `host` is the MQTT server's host
-* `topic` is the topic to publish/subscribe to
-* `payload` is the payload to publish
+    var mqtt = require('mqtt');
+    var argv = process.argv;
 
-These are expected to improve as the project goes on.
+    for (var i = 2; i <= 5; i++) {
+      if(!argv[i]) process.exit(-1);
+    }
+
+    var port = argv[2],
+      host = argv[3],
+      topic = argv[4],
+      payload = argv[5];
+
+    var client = mqtt.createClient(port, host)
+    client.on('connect', function() {
+      client.publish(topic, payload);
+      client.end();
+    });
 
 ## Server API usage
 
@@ -76,33 +87,8 @@ A broadcast server example, included in `examples/broadcast.js`:
 
       client.on('error', function(err) {
         client.stream.end();
-        util.log('error!');
+        console.log('error!');
       });
     }).listen(1883);
 
-Client API usage
-----------------
 
-A basic publish client, the basis for `bin/mqtt_pub`:
-
-    var mqtt = require('mqtt');
-    var argv = process.argv;
-
-    for (var i = 2; i <= 5; i++) {
-      if(!argv[i]) process.exit(-1);
-    }
-
-    var port = argv[2],
-      host = argv[3],
-      topic = argv[4],
-      payload = argv[5];
-
-    var client = mqtt.createClient(port, host)
-    client.on('connect', function() {
-      client.publish(topic, payload);
-      client.end();
-    });
-
-## Documentation
-
-Detailed documentation can be found in [the wiki](wiki)
