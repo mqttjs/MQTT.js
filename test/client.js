@@ -3,8 +3,7 @@
  */
 
 var should = require('should')
-  , mqtt = require('..')
-  , spawn = require('child_process').spawn;
+  , mqtt = require('..');
 
 /**
  * Modules to be tested
