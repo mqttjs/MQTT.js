@@ -24,10 +24,35 @@ describe('MqttClient', function () {
   });
 
   describe('errors', function() {
-    it('should emit an error if unable to connect', function() {
+    it('should emit an error if unable to connect', 
+        function(done) {
       var client = createClient(9767);
 
-      client.on('error', function(error) {
+      client.once('error', function(error) {
+        if (/ECONNREFUSED/.test(error.message)) {
+          done()
+        } else {
+          done(error);
+        }
+      });
+    });
+  });
+
+  describe('closing', function() {
+    it('should emit close if stream closes', function(done) {
+      var client = createClient(port);
+
+      client.stream.end();
+      client.on('close', function() {
+        done();
+      });
+    });
+
+    it('should emit close after end called', function(done) {
+      var client = createClient(port);
+
+      client.end();
+      client.on('close', function() {
         done();
       });
     });
