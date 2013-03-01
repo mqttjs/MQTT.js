@@ -2,7 +2,8 @@
  * Testing includes
  */
 
-var should = require('should');
+var should = require('should')
+  , net = require('net');
 
 /**
  * Unit under test
@@ -51,6 +52,23 @@ describe('mqtt', function() {
       var c = mqtt.createConnection();
 
       c.should.be.instanceOf(mqtt.MqttConnection);
+    });
+
+    it('should fire callback on net connect', function(done) {
+      var server = new net.Server();
+
+      // Setup dummy server
+      
+      // If there's an error it's probably EADDRINUSE
+      // Just use whatever's there already (likely mosquitto)
+      server.once('error', function(){})
+      server.listen(1883);
+
+      mqtt.createConnection(done);
+    });
+
+    it('should accept just a callback', function(done) {
+      done();
     });
   });
 });
