@@ -378,14 +378,22 @@ describe('MqttClient', function () {
 
       var topic = 'test';
 
-      client.subscribe(topic, done);
+      client.subscribe(topic, {qos:2}, function (err, granted) {
+        if (err) {
+          done(err);
+        } else {
+          should.exist(granted, 'granted not given');
+          granted.should.includeEql({topic: 'test', qos: 2});
+          done();
+        }
+      });
 
       this.server.once('client', function(client) {
         client.once('subscribe', function (packet) {
           client.suback({
             messageId: packet.messageId,
             granted: packet.subscriptions.map(function (e) {
-              return e.qos
+              return e.qos;
             })
           });
         });
