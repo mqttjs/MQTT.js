@@ -301,9 +301,9 @@ describe('MqttClient', function () {
   });
 
   describe('pinging', function () {
-    it('should ping before keepalive * 1.5', function (done) {
-      var keepalive = 1000;
-      this.timeout(keepalive * 1.5);
+    it('should ping before <keepalive> sec', function (done) {
+      var keepalive = 3;
+      this.timeout(keepalive * 1000);
 
       var client = createClient(port, {keepalive: keepalive});
 
