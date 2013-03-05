@@ -29,3 +29,7 @@ TestStream.prototype.write = function(buffer) {
 TestStream.prototype.setEncoding = function(encoding) {
   this.encoding = encoding;
 };
+
+TestStream.prototype.end = function() {
+  this.emit('close');
+};
