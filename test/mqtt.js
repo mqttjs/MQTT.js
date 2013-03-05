@@ -48,6 +48,15 @@ describe('mqtt', function() {
   });
 
   describe('#createConnection', function() {
+    before(function () {
+      // Setup dummy server
+      
+      // If there's an error it's probably EADDRINUSE
+      // Just use whatever's there already (likely mosquitto)
+      this.server = new net.Server();
+      this.server.listen(1883);
+      this.server.on('error', function(){});
+    });
     it('should return an MqttConnection', function() {
       var c = mqtt.createConnection();
 
@@ -55,20 +64,18 @@ describe('mqtt', function() {
     });
 
     it('should fire callback on net connect', function(done) {
-      var server = new net.Server();
-
-      // Setup dummy server
-      
-      // If there's an error it's probably EADDRINUSE
-      // Just use whatever's there already (likely mosquitto)
-      server.once('error', function(){})
-      server.listen(1883);
-
       mqtt.createConnection(done);
     });
+    it('should bind stream close to connection', function(done) {
+      var c = mqtt.createConnection();
 
-    it('should accept just a callback', function(done) {
-      done();
+      c.once('close', function() { done() });
+      c.stream.end();
+    });
+    it('should bind stream error to conn', function(done) {
+      var c = mqtt.createConnection();
+      c.once('error', function() { done() });
+      c.stream.emit('error', new Error('Bad idea!'));
     });
   });
 });
