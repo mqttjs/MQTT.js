@@ -314,6 +314,10 @@ describe('MqttClient', function () {
         });
       });
     });
+    it('should not set a ping timer keepalive=0', function() {
+      var client = createClient(port, {keepalive:0});
+      should.not.exist(client.pingTimer);
+    });
   });
 
   describe('subscribing', function () {
