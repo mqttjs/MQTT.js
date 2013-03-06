@@ -308,6 +308,9 @@ describe('MqttClient', function () {
       var client = createClient(port, {keepalive: keepalive});
 
       this.server.once('client', function(client) {
+        client.once('connect', function(packet) {
+          client.connack({returnCode: 0});
+        });
         client.once('pingreq', function(packet) {
           client.pingresp();
           done();
