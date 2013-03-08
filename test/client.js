@@ -127,7 +127,13 @@ describe('MqttClient', function () {
           client.connack({returnCode: 2});
         });
       });
+    });
 
+    it('should have different client ids', function() {
+      var client1 = createClient(port).options.clientId
+        , client2 = createClient(port).options.clientId;
+
+      client1.should.not.equal(client2);
     });
   });
 
