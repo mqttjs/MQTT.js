@@ -418,12 +418,19 @@ describe('MqttClient', function () {
     it('should fire the message event ', function(done) {
       var client = createClient(port)
         , test_topic = 'test'
-        , test_message = 'message';
+        , test_message = 'message'
+        , test_retain = true
+        , test_qos = 1
+        , test_mid = 5;
 
       client.subscribe(test_topic);
-      client.on('message', function(topic, message) {
+      client.on('message', 
+          function(topic, message, qos, mid, retain) {
         topic.should.equal(test_topic);
         message.should.equal(test_message);
+        qos.should.equal(test_qos);
+        mid.should.equal(test_mid);
+        retain.should.equal(test_retain);
         done();
       });
 
@@ -432,8 +439,9 @@ describe('MqttClient', function () {
           client.publish({
             topic: test_topic,
             payload: test_message,
-            qos: 0,
-            retain: false
+            qos: test_qos,
+            retain: test_retain,
+            messageId: test_mid
           });
         });
       });
