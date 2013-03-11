@@ -417,63 +417,51 @@ describe('MqttClient', function () {
   describe('receiving messages', function() {
     it('should fire the message event ', function(done) {
       var client = createClient(port)
-        , test_topic = 'test'
-        , test_message = 'message'
-        , test_retain = true
-        , test_qos = 1
-        , test_mid = 5;
+        , test_packet = {
+          topic: 'test',
+          payload: 'message',
+          retain: true,
+          qos: 1,
+          messageId: 5
+        }
 
-      client.subscribe(test_topic);
+      client.subscribe(test_packet.topic);
       client.on('message', 
-          function(topic, message, qos, mid, retain) {
-        topic.should.equal(test_topic);
-        message.should.equal(test_message);
-        qos.should.equal(test_qos);
-        mid.should.equal(test_mid);
-        retain.should.equal(test_retain);
+          function(topic, message, packet) {
+        topic.should.equal(test_packet.topic);
+        message.should.equal(test_packet.payload);
+        packet.should.equal(packet);
         done();
       });
 
       this.server.once('client', function(client) {
         client.once('subscribe', function (packet) {
-          client.publish({
-            topic: test_topic,
-            payload: test_message,
-            qos: test_qos,
-            retain: test_retain,
-            messageId: test_mid
-          });
+          client.publish(test_packet);
         });
       });
     });
     it('should emit a message event (qos=2)', function(done) {
       var client = createClient(port)
-        , test_topic = 'test'
-        , test_message = 'message'
-        , test_retain = true
-        , test_qos = 2
-        , test_mid = 5;
+        , test_packet = {
+          topic: 'test',
+          payload: 'message',
+          retain: true,
+          qos: 2,
+          messageId: 5
+        }
 
-      client.subscribe(test_topic);
+      client.subscribe(test_packet.topic);
       client.on('message', 
-          function(topic, message, qos, mid, retain) {
-        topic.should.equal(test_topic);
-        message.should.equal(test_message);
-        qos.should.equal(test_qos);
-        mid.should.equal(test_mid);
-        retain.should.equal(test_retain);
+          function(topic, message, packet) {
+        topic.should.equal(test_packet.topic);
+        message.should.equal(test_packet.payload);
+        packet.should.equal(packet);
         done();
       });
 
       this.server.once('client', function(client) {
         client.once('subscribe', function (packet) {
-          client.publish({
-            topic: test_topic,
-            payload: test_message,
-            qos: test_qos,
-            retain: test_retain,
-            messageId: test_mid
-          });
+          client.publish(test_packet);
         });
         client.once('pubrec', function(packet) {
           client.pubrel(packet);
