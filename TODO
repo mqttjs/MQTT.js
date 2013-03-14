@@ -1,7 +1,0 @@
-Consider allowing objects and arrays as payloads to publish
-Emit a single topic if only one is requested during a subscribe
-Finish testing parsing
-Do tests for top level API
-Consider rewriting packet generation using buffers, not sure about performance of endless array concats
-Consider creating shortcut methods to client.*. E.g. so we can call publish as client.publish(topic, payload) rather than client.publish({topic: topic, payload: payload})
-Do a test case for internal buffer expansion
