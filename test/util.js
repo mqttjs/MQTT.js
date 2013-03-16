@@ -3,7 +3,7 @@
  */
 
 var util = require('util')
-  , Stream = require('stream');
+  , Stream = require('stream').Transform;
 
 /**
  * Export TestStream
@@ -13,23 +13,15 @@ var TestStream = module.exports.TestStream =
 function TestStream() {
   if (!this instanceof TestStream) return new TestStream();
 
-  this.encoding = null;
-
-  Stream.apply(this);
+  Stream.call(this);
 };
 util.inherits(TestStream, Stream);
 
-TestStream.prototype.write = function(buffer) {
-  if (this.encoding) {
-    buffer = buffer.toString(this.encoding);
+TestStream.prototype._transform = function(buffer, encoding, callback) {
+  if (!Buffer.isBuffer(buffer)) {
+    buffer = new Buffer(buffer, encoding);
   }
-  process.nextTick(this.emit.bind(this, 'data', buffer));
-};
-
-TestStream.prototype.setEncoding = function(encoding) {
-  this.encoding = encoding;
-};
-
-TestStream.prototype.end = function() {
-  this.emit('close');
+  setTimeout(function () {
+    callback(null, buffer);
+  }, 10);
 };
