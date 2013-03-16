@@ -68,9 +68,10 @@ describe('mqtt', function() {
     });
     it('should bind stream close to connection', function(done) {
       var c = mqtt.createConnection();
-
-      c.once('close', function() { done() });
-      c.stream.end();
+      c.once('connected', function() {
+        c.once('close', function() { done() });
+        c.stream.end();
+      });
     });
     it('should bind stream error to conn', function(done) {
       var c = mqtt.createConnection();
