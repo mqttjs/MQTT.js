@@ -5,6 +5,10 @@
 var util = require('util')
   , Stream = require('stream').Transform;
 
+if (!Stream) {
+  Stream = require("readable-stream").Transform;
+}
+
 /**
  * Export TestStream
  */
