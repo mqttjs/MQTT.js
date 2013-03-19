@@ -15,6 +15,8 @@ module.exports = function() {
   beforeEach(function () {
     var stream = this.stream = new Stream();
     var conn = this.conn = new Connection(stream);
+    // the connection must not listen to itself
+    stream.removeAllListeners();
   });
 
   describe('#connect', function() {
@@ -37,8 +39,11 @@ module.exports = function() {
       };
 
       this.conn.connect(fixture);
-      this.stream.once('data', function(data) {
-        data.should.eql(expected);
+
+      var that = this;
+      this.stream.on('readable', function() {
+        var packet = that.stream.read();
+        packet.should.eql(expected);
         done();
       });
     });
@@ -79,8 +84,9 @@ module.exports = function() {
       };
 
       this.conn.connect(fixture);
-      this.stream.once('data', function(data) {
-        data.should.eql(expected);
+      var that = this;
+      this.stream.once('readable', function() {
+        that.stream.read(expected.length).should.eql(expected);
         done();
       });
     });
@@ -496,8 +502,9 @@ module.exports = function() {
       };
 
       this.conn.connack(fixture);
-      this.stream.once('data', function(data) {
-        data.should.eql(expected);
+      var that = this;
+      this.stream.once('readable', function() {
+        that.stream.read(expected.length).should.eql(expected);
         done();
       });
     });
@@ -513,8 +520,9 @@ module.exports = function() {
       };
 
       this.conn.connack(fixture);
-      this.stream.once('data', function(data) {
-        data.should.eql(expected);
+      var that = this;
+      this.stream.once('readable', function() {
+        that.stream.read(expected.length).should.eql(expected);
         done();
       });
     });
@@ -543,8 +551,9 @@ module.exports = function() {
       };
 
       this.conn.publish(fixture);
-      this.stream.once('data', function(data) {
-        data.should.eql(expected);
+      var that = this;
+      this.stream.once('readable', function() {
+        that.stream.read(expected.length).should.eql(expected);
         done();
       });
     });
@@ -568,8 +577,9 @@ module.exports = function() {
       };
 
       this.conn.publish(fixture);
-      this.stream.once('data', function(data) {
-        data.should.eql(expected);
+      var that = this;
+      this.stream.once('readable', function() {
+        that.stream.read(expected.length).should.eql(expected);
         done();
       });
     });
@@ -587,8 +597,9 @@ module.exports = function() {
       };
 
       this.conn.publish(fixture);
-      this.stream.once('data', function(data) {
-        data.should.eql(expected);
+      var that = this;
+      this.stream.once('readable', function() {
+        that.stream.read(expected.length).should.eql(expected);
         done();
       });
     });
@@ -609,8 +620,9 @@ module.exports = function() {
       }
 
       this.conn.publish(fixture);
-      this.stream.once('data', function(data) {
-        data.should.eql(expected);
+      var that = this;
+      this.stream.once('readable', function() {
+        that.stream.read(expected.length).should.eql(expected);
         done();
       });
     });
@@ -646,8 +658,9 @@ module.exports = function() {
       };
 
       this.conn.puback(fixture);
-      this.stream.once('data', function(data) {
-        data.should.eql(expected);
+      var that = this;
+      this.stream.once('readable', function() {
+        that.stream.read(expected.length).should.eql(expected);
         done();
       });
     });
@@ -673,8 +686,9 @@ module.exports = function() {
       };
 
       this.conn.pubrec(fixture);
-      this.stream.once('data', function(data) {
-        data.should.eql(expected);
+      var that = this;
+      this.stream.once('readable', function() {
+        that.stream.read(expected.length).should.eql(expected);
         done();
       });
     });
@@ -694,8 +708,9 @@ module.exports = function() {
       };
 
       this.conn.pubrel(fixture);
-      this.stream.once('data', function(data) {
-        data.should.eql(expected);
+      var that = this;
+      this.stream.once('readable', function() {
+        that.stream.read(expected.length).should.eql(expected);
         done();
       });
     });
@@ -715,8 +730,9 @@ module.exports = function() {
       };
 
       this.conn.pubcomp(fixture);
-      this.stream.once('data', function(data) {
-        data.should.eql(expected);
+      var that = this;
+      this.stream.once('readable', function() {
+        that.stream.read(expected.length).should.eql(expected);
         done();
       });
     });
@@ -745,8 +761,9 @@ module.exports = function() {
       };
 
       this.conn.subscribe(fixture);
-      this.stream.once('data', function(data) {
-        data.should.eql(expected);
+      var that = this;
+      this.stream.once('readable', function() {
+        that.stream.read(expected.length).should.eql(expected);
         done();
       });
     });
@@ -783,8 +800,9 @@ module.exports = function() {
       };
 
       this.conn.subscribe(fixture);
-      this.stream.once('data', function(data) {
-        data.should.eql(expected);
+      var that = this;
+      this.stream.once('readable', function() {
+        that.stream.read(expected.length).should.eql(expected);
         done();
       });
     });
@@ -826,8 +844,9 @@ module.exports = function() {
       };
 
       this.conn.suback(fixture);
-      this.stream.once('data', function(data) {
-        data.should.eql(expected);
+      var that = this;
+      this.stream.once('readable', function() {
+        that.stream.read(expected.length).should.eql(expected);
         done();
       });
     });
@@ -861,8 +880,9 @@ module.exports = function() {
       };
 
       this.conn.unsubscribe(fixture);
-      this.stream.once('data', function(data) {
-        data.should.eql(expected);
+      var that = this;
+      this.stream.once('readable', function() {
+        that.stream.read(expected.length).should.eql(expected);
         done();
       });
     });
@@ -892,8 +912,9 @@ module.exports = function() {
       };
 
       this.conn.unsuback(fixture);
-      this.stream.once('data', function(data) {
-        data.should.eql(expected);
+      var that = this;
+      this.stream.once('readable', function() {
+        that.stream.read(expected.length).should.eql(expected);
         done();
       });
     });
@@ -911,8 +932,9 @@ module.exports = function() {
       };
 
       this.conn.pingreq(fixture);
-      this.stream.once('data', function(data) {
-        data.should.eql(expected);
+      var that = this;
+      this.stream.once('readable', function() {
+        that.stream.read(expected.length).should.eql(expected);
         done();
       });
     });
@@ -928,8 +950,9 @@ module.exports = function() {
       };
 
       this.conn.pingresp(fixture);
-      this.stream.once('data', function(data) {
-        data.should.eql(expected);
+      var that = this;
+      this.stream.once('readable', function() {
+        that.stream.read(expected.length).should.eql(expected);
         done();
       });
     });
@@ -945,8 +968,9 @@ module.exports = function() {
       };
 
       this.conn.disconnect(fixture);
-      this.stream.once('data', function(data) {
-        data.should.eql(expected);
+      var that = this;
+      this.stream.once('readable', function() {
+        that.stream.read(expected.length).should.eql(expected);
         done();
       });
     });
