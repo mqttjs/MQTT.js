@@ -50,10 +50,11 @@ describe('MqttClient', function () {
     it('should emit close after end called', function(done) {
       var client = createClient(port);
 
-      client.end();
       client.on('close', function() {
         done();
       });
+
+      client.end();
     });
   });
 
@@ -75,7 +76,6 @@ describe('MqttClient', function () {
           done();
         });
       });
-
     });
 
     it('should connect with the given client id', function (done) {

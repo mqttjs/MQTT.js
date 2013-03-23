@@ -24,7 +24,9 @@
   "engines": {
     "node": ">=0.6.5"
   },
-  "dependencies": {},
+  "dependencies": {
+    "readable-stream": "~1.0.2"
+  },
   "devDependencies": {
     "mocha": "*",
     "should": "*"
