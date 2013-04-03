@@ -9,7 +9,8 @@ mqtt.createSecureServer("private-key.pem", "public-cert.pem", function(client) {
 
   client.on('connect', function(packet) {
     client.connack({returnCode: 0});
-    client.id = packet.client;
+    client.id = packet.clientId;
+    console.log("CONNECT: client id: " + client.id);
     self.clients[client.id] = client;
   });
 
