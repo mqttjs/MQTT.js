@@ -23,4 +23,16 @@ describe('MqttServer', function() {
 
     mqtt.createClient(9877);
   });
+
+  it("should bind the stream's error in the clients", function (done) {
+    var s = new server.MqttServer();
+    s.listen(9878);
+
+    s.on('client', function(client) {
+      client.on("error", function () { done(); });
+      client.stream.emit("error", new Error("bad idea!"));
+    });
+
+    mqtt.createClient(9878);
+  });
 });
