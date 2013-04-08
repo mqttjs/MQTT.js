@@ -22,7 +22,7 @@
     "mqtt_sub": "./bin/mqtt_sub"
   },
   "engines": {
-    "node": ">=0.6.5"
+    "node": ">=0.8.6"
   },
   "dependencies": {
     "readable-stream": "~1.0.2"
