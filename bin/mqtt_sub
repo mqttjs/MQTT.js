@@ -9,8 +9,8 @@ for (var i = 2; i <= 4; i++) {
 }
 
 var port = argv[2]
-	, host = argv[3]
-	, topic = argv[4];
+  , host = argv[3]
+  , topic = argv[4];
 
 var c = mqtt.createClient(port, host);
 
