@@ -20,7 +20,7 @@ mqtt.createServer(function(client) {
     for (var i = 0; i < packet.subscriptions.length; i++) {
       var qos = packet.subscriptions[i].qos
         , topic = packet.subscriptions[i].topic
-        , reg = new RegExp(topic.replace('+', '[^\/]+').replace('#', '.+$'));
+        , reg = new RegExp(topic.replace('+', '[^\/]+').replace('#', '.+') + '$');
 
       granted.push(qos);
       client.subscriptions.push(reg);
