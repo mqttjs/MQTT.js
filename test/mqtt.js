@@ -22,10 +22,20 @@ describe('mqtt', function() {
 
   describe('#createSecureClient', function() {
     it('should return an MqttClient', function() {
-      var c = mqtt.createClient();
+      var c = mqtt.createSecureClient();
 
       c.should.be.instanceOf(mqtt.MqttClient);
     });
+
+    it('should support passing the key and cert', function() {
+      var c = mqtt.createSecureClient({
+        keyPath: __dirname + '/helpers/private-key.pem',
+        certPath: __dirname + '/helpers/public-cert.pem'
+      });
+
+      c.should.be.instanceOf(mqtt.MqttClient);
+    });
+
     it('should throw on incorrect args');
   });
 
