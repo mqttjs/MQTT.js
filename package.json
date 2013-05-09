@@ -3,6 +3,9 @@
   "name": "mqtt",
   "description": "A library for the MQTT protocol",
   "version": "0.2.6",
+  "contributors": [
+    "Matteo Collina <matteo.collina@gmail.com> (https://github.com/mcollina)"
+  ],
   "keywords": [
     "mqtt",
     "publish/subscribe",
