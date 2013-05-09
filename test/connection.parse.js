@@ -552,4 +552,32 @@ module.exports = function() {
       });
     });
   });
+
+  describe('reserverd (15)', function() {
+    it('should emit an error', function(done) {
+      var fixture = [
+        240, 0 // Header
+      ];
+
+      this.stream.write(new Buffer(fixture));
+
+      this.conn.once('error', function(err) {
+        done();
+      });
+    });
+  });
+
+  describe('reserverd (0)', function() {
+    it('should emit an error', function(done) {
+      var fixture = [
+        0, 0 // Header
+      ];
+
+      this.stream.write(new Buffer(fixture));
+
+      this.conn.once('error', function(err) {
+        done();
+      });
+    });
+  });
 };
