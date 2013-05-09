@@ -1,4 +1,4 @@
-# mqtt.js
+# mqtt.js [![Build Status](https://travis-ci.org/adamvr/MQTT.js.png)](https://travis-ci.org/adamvr/MQTT.js)
 
 ## Important note for existing users
 
