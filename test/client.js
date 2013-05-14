@@ -47,6 +47,26 @@ describe('MqttClient', function () {
       });
     });
 
+    it('should stop ping timer if stream closes', function(done) {
+      var client = createClient(port);
+      
+      client.on('close', function() {
+        should.not.exist(client.pingTimer);
+        done();
+      });
+
+      client.once('connect', function() {
+        should.exist(client.pingTimer);
+        client.stream.end();
+      });
+
+      this.server.once('client', function(client) {
+        client.once('connect', function(packet) {
+          client.connack({returnCode: 0});
+        });
+      });
+    });
+
     it('should emit close after end called', function(done) {
       var client = createClient(port);
 
@@ -55,6 +75,23 @@ describe('MqttClient', function () {
       });
 
       client.end();
+    });
+
+    it('should stop ping timer after end called', function(done) {
+      var client = createClient(port);
+      
+      client.once('connect', function() {
+        should.exist(client.pingTimer);
+        client.end();
+        should.not.exist(client.pingTimer);
+        done();
+      });
+
+      this.server.once('client', function(client) {
+        client.once('connect', function(packet) {
+          client.connack({returnCode: 0});
+        });
+      });
     });
   });
 
