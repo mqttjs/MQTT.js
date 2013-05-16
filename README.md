@@ -54,7 +54,7 @@ A broadcast server example, included in `examples/broadcast.js`:
 
       client.on('connect', function(packet) {
         client.connack({returnCode: 0});
-        client.id = packet.client;
+        client.id = packet.clientId;
         self.clients[client.id] = client;
       });
 
