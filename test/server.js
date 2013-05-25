@@ -35,4 +35,16 @@ describe('MqttServer', function() {
 
     mqtt.createClient(9878);
   });
+
+  it("should bind the stream's close in the clients", function (done) {
+    var s = new server.MqttServer();
+    s.listen(9879);
+
+    s.on('client', function(client) {
+      client.on("close", function () { done(); });
+      client.stream.emit("close", new Error("bad idea!"));
+    });
+
+    mqtt.createClient(9879);
+  });
 });
