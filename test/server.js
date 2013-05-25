@@ -41,8 +41,8 @@ describe('MqttServer', function() {
     s.listen(9879);
 
     s.on('client', function(client) {
-      client.on("close", function () { done(); });
-      client.stream.emit("close", new Error("bad idea!"));
+      client.on("close", done);
+      client.stream.emit("close");
     });
 
     mqtt.createClient(9879);
