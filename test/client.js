@@ -228,11 +228,34 @@ describe('MqttClient', function () {
         });
       });
     });
+    it('should publish a message (offline)', function (done) {
       var client = createClient(port)
         , payload = 'test'
         , topic = 'test';
 
-      client.once('connect', function() {
+      client.publish(topic, payload);
+
+      this.server.once('client', function(client) {
+        client.once('connect', function(packet) {
+          client.connack({returnCode: 0});
+        });
+
+        client.once('publish', function (packet) {
+          packet.topic.should.equal(topic);
+          packet.payload.should.equal(payload);
+          packet.qos.should.equal(0);
+          packet.retain.should.equal(false);
+          done();
+        });
+      });
+    });
+
+    it('should publish a message (online)', function (done) {
+      var client = createClient(port)
+        , payload = 'test'
+        , topic = 'test';
+
+      client.on('connect', function() {
         client.publish(topic, payload);
       });
 
