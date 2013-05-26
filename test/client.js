@@ -211,7 +211,23 @@ describe('MqttClient', function () {
   });
 
   describe('publishing', function() {
-    it('should publish a message', function (done) {
+    it('should queue message until connected', function(done) {
+      var client = createClient(port);
+
+      client.publish('test', 'test');
+      client.queue.length.should.equal(1);
+
+      client.once('connect', function() {
+        client.queue.length.should.equal(0);
+        done();
+      });
+
+      this.server.once('client', function(client) {
+        client.once('connect', function(packet) {
+          client.connack({returnCode: 0});
+        });
+      });
+    });
       var client = createClient(port)
         , payload = 'test'
         , topic = 'test';
