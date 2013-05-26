@@ -21,6 +21,8 @@ Detailed documentation can be found in [the wiki](http://github.com/adamvr/MQTT.
 
 ## Client API usage
 
+See: `examples/client`
+
 Simple publish client:
 
     var mqtt = require('mqtt')
