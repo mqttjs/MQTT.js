@@ -210,12 +210,13 @@ describe('MqttClient', function () {
     });
   });
 
-  describe('publishing', function() {
+  describe('offline messages', function() {
     it('should queue message until connected', function(done) {
       var client = createClient(port);
 
       client.publish('test', 'test');
-      client.queue.length.should.equal(1);
+      client.subscribe('test');
+      client.queue.length.should.equal(2);
 
       client.once('connect', function() {
         client.queue.length.should.equal(0);
@@ -228,6 +229,9 @@ describe('MqttClient', function () {
         });
       });
     });
+  });
+
+  describe('publishing', function() {
     it('should publish a message (offline)', function (done) {
       var client = createClient(port)
         , payload = 'test'
@@ -441,6 +445,21 @@ describe('MqttClient', function () {
   });
 
   describe('subscribing', function () {
+    it('should send a subscribe message (offline)', function(done) {
+      var client = createClient(port);
+
+      client.subscribe('test');
+
+      this.server.once('client', function(client) {
+        client.once('connect', function(packet) {
+          client.connack({returnCode: 0});
+        });
+
+        client.once('subscribe', function(packet) {
+          done();
+        });
+      });
+    });
     it('should send a subscribe message', function(done) {
       var client = createClient(port);
 
