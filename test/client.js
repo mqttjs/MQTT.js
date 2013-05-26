@@ -47,6 +47,26 @@ describe('MqttClient', function () {
       });
     });
 
+    it('should mark the client as disconnected', function(done) {
+      var client = createClient(port);
+
+      client.stream.on('close', function() {
+        if (!client.connected) {
+          done();
+        } else {
+          done(new Error('Not marked as disconnected'));
+        }
+      });
+      client.on('connect', function() {
+        client.stream.end();
+      });
+      this.server.once('client', function(client) {
+        client.once('connect', function(packet) {
+          client.connack({returnCode: 0});
+        });
+      });
+    });
+
     it('should stop ping timer if stream closes', function(done) {
       var client = createClient(port);
       
@@ -143,6 +163,22 @@ describe('MqttClient', function () {
       client.once('connect', done);
       client.once('error', done);
 
+      this.server.once('client', function(client) {
+        client.once('connect', function(packet) {
+          client.connack({returnCode: 0});
+        });
+      });
+    });
+
+    it('should mark the client as connected', function(done) {
+      var client = createClient(port);
+      client.once('connect', function() {
+        if (client.connected) {
+          done();
+        } else {
+          done(new Error('Not marked as connected'));
+        }
+      });
       this.server.once('client', function(client) {
         client.once('connect', function(packet) {
           client.connack({returnCode: 0});
