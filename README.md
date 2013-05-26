@@ -21,25 +21,38 @@ Detailed documentation can be found in [the wiki](http://github.com/adamvr/MQTT.
 
 ## Client API usage
 
-A basic publish client, the basis for `bin/mqtt_pub`:
+Simple publish client:
 
-    var mqtt = require('mqtt');
-    var argv = process.argv;
+    var mqtt = require('mqtt')
+      , client = mqtt.createClient();
 
-    for (var i = 2; i <= 5; i++) {
-      if(!argv[i]) process.exit(-1);
-    }
+    client.publish('messages', 'mqtt');
+    client.publish('messages', 'is pretty cool');
+    client.publish('messages', 'remember that!', {retain: true});
+    client.end();
 
-    var port = argv[2],
-      host = argv[3],
-      topic = argv[4],
-      payload = argv[5];
+Simple subscribe client:
 
-    var client = mqtt.createClient(port, host)
-    client.on('connect', function() {
-      client.publish(topic, payload);
-      client.end();
+    var mqtt = require('mqtt')
+      , client = mqtt.createClient();
+
+    client.subscribe('messages');
+    client.publish('messages', 'hello me!');
+    client.on('message', function(topic, message) {
+      console.log(message);
     });
+
+Chainable API!:
+
+    var mqtt = require('mqtt')
+      , client = mqtt.createClient();
+
+    client
+      .subscribe('messages')
+      .publish('presence', 'bin hier')
+      .on('message', function(topic, message) {
+        console.log(topic);
+      });
 
 ## Server API usage
 
