@@ -216,7 +216,8 @@ describe('MqttClient', function () {
 
       client.publish('test', 'test');
       client.subscribe('test');
-      client.queue.length.should.equal(2);
+      client.unsubscribe('test');
+      client.queue.length.should.equal(3);
 
       client.once('connect', function() {
         client.queue.length.should.equal(0);
@@ -360,6 +361,22 @@ describe('MqttClient', function () {
   });
 
   describe('unsubscribing', function() {
+    it('should send an unsubscribe packet (offline)', function(done) {
+      var client = createClient(port);
+
+      client.unsubscribe('test');
+
+      this.server.once('client', function(client) {
+        client.once('connect', function(packet) {
+          client.connack({returnCode: 0});
+        });
+
+        client.once('unsubscribe', function(packet) {
+          packet.unsubscriptions.should.include('test');
+          done();
+        });
+      });
+    });
     it('should send an unsubscribe packet', function(done) {
       var client = createClient(port);
       var topic = 'topic';
