@@ -94,7 +94,15 @@ describe('MqttClient', function () {
         done();
       });
 
-      client.end();
+      client.on('connect', function() {
+        client.end();
+      });
+
+      this.server.once('client', function(client) {
+        client.once('connect', function(packet) {
+          client.connack({returnCode: 0});
+        });
+      });
     });
 
     it('should stop ping timer after end called', function(done) {
