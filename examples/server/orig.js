@@ -17,6 +17,8 @@ mqtt.createServer(function(client) {
   client.on('subscribe', function(packet) {
     var granted = [];
 
+    console.log("SUBSCRIBE(%s): %j", client.id, packet);
+
     for (var i = 0; i < packet.subscriptions.length; i++) {
       var qos = packet.subscriptions[i].qos
         , topic = packet.subscriptions[i].topic
@@ -30,6 +32,7 @@ mqtt.createServer(function(client) {
   });
 
   client.on('publish', function(packet) {
+    console.log("PUBLISH(%s): %j", client.id, packet);
     for (var k in self.clients) {
       var c = self.clients[k]
         , publish = false;
@@ -49,7 +52,7 @@ mqtt.createServer(function(client) {
   });
 
   client.on('pingreq', function(packet) {
-    console.log('Ping from client ' + client.id);
+    console.log('PINGREQ(%s)', client.id);
     client.pingresp();
   });
 
