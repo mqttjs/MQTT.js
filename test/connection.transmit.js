@@ -421,7 +421,7 @@ module.exports = function() {
           this.conn.connect(fixture);
         });
 
-        it('should reject will with invalid qos', function(done) {
+        it.skip('should reject will with invalid qos', function(done) {
           var fixture = {
             protocolId: 'MQIsdp',
             protocolVersion: 3,
