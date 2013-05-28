@@ -96,6 +96,22 @@ module.exports = function() {
         done();
       });
     });
+
+    describe('parse errors', function() {
+      it('should say protocol not parseable', function(done) {
+        var fixture = [
+          16, 4,
+          0, 6,
+          77, 81
+        ];
+
+        this.stream.write(new Buffer(fixture));
+        this.conn.once('error', function(err) {
+          err.message.should.match(/cannot parse protocol id/);
+          done();
+        });
+      });
+    });
   });
 
   describe('connack', function() {
