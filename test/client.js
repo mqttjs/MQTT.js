@@ -113,11 +113,6 @@ describe('MqttClient', function () {
       client.on('connect', function() {
         client.stream.end();
       });
-      this.server.once('client', function(client) {
-        client.once('connect', function(packet) {
-          client.connack({returnCode: 0});
-        });
-      });
     });
 
     it('should stop ping timer if stream closes', function(done) {
@@ -132,12 +127,6 @@ describe('MqttClient', function () {
         should.exist(client.pingTimer);
         client.stream.end();
       });
-
-      this.server.once('client', function(client) {
-        client.once('connect', function(packet) {
-          client.connack({returnCode: 0});
-        });
-      });
     });
 
     it('should emit close after end called', function(done) {
@@ -151,11 +140,6 @@ describe('MqttClient', function () {
         client.end();
       });
 
-      this.server.once('client', function(client) {
-        client.once('connect', function(packet) {
-          client.connack({returnCode: 0});
-        });
-      });
     });
 
     it('should stop ping timer after end called', function(done) {
@@ -168,11 +152,6 @@ describe('MqttClient', function () {
         done();
       });
 
-      this.server.once('client', function(client) {
-        client.once('connect', function(packet) {
-          client.connack({returnCode: 0});
-        });
-      });
     });
   });
 
@@ -223,12 +202,6 @@ describe('MqttClient', function () {
       var client = createClient(port);
       client.once('connect', done);
       client.once('error', done);
-
-      this.server.once('client', function(client) {
-        client.once('connect', function(packet) {
-          client.connack({returnCode: 0});
-        });
-      });
     });
 
     it('should mark the client as connected', function(done) {
@@ -240,26 +213,15 @@ describe('MqttClient', function () {
           done(new Error('Not marked as connected'));
         }
       });
-      this.server.once('client', function(client) {
-        client.once('connect', function(packet) {
-          client.connack({returnCode: 0});
-        });
-      });
     });
 
     it('should emit error', function (done) {
-      var client = createClient(port);
+      var client = createClient(port, {clientId: 'invalid'});
       client.once('connect', function () {
         done(new Error('Should not emit connect'));
       });
       client.once('error', function(error) {
         done();
-      });
-
-      this.server.once('client', function(client) {
-        client.once('connect', function(packet) {
-          client.connack({returnCode: 2});
-        });
       });
     });
 
@@ -284,12 +246,6 @@ describe('MqttClient', function () {
         client.queue.length.should.equal(0);
         done();
       });
-
-      this.server.once('client', function(client) {
-        client.once('connect', function(packet) {
-          client.connack({returnCode: 0});
-        });
-      });
     });
   });
 
@@ -302,10 +258,6 @@ describe('MqttClient', function () {
       client.publish(topic, payload);
 
       this.server.once('client', function(client) {
-        client.once('connect', function(packet) {
-          client.connack({returnCode: 0});
-        });
-
         client.once('publish', function (packet) {
           packet.topic.should.equal(topic);
           packet.payload.should.equal(payload);
@@ -326,10 +278,6 @@ describe('MqttClient', function () {
       });
 
       this.server.once('client', function(client) {
-        client.once('connect', function(packet) {
-          client.connack({returnCode: 0});
-        });
-
         client.once('publish', function (packet) {
           packet.topic.should.equal(topic);
           packet.payload.should.equal(payload);
@@ -355,10 +303,6 @@ describe('MqttClient', function () {
       });
 
       this.server.once('client', function(client) {
-        client.once('connect', function(packet) {
-          client.connack({returnCode: 0});
-        });
-
         client.once('publish', function (packet) {
           packet.topic.should.equal(topic);
           packet.payload.should.equal(payload);
@@ -375,12 +319,6 @@ describe('MqttClient', function () {
       client.once('connect', function() {
         client.publish('a', 'b', done);
       });
-
-      this.server.once('client', function(client) {
-        client.once('connect', function(packet) {
-          client.connack({returnCode: 0});
-        });
-      });
     });
 
     it('should fire a callback (qos 1)', function (done) {
@@ -390,15 +328,6 @@ describe('MqttClient', function () {
 
       client.once('connect', function() {
         client.publish('a', 'b', opts, done);
-      });
-
-      this.server.once('client', function(client) {
-        client.once('connect', function(packet) {
-          client.connack({returnCode: 0});
-        });
-        client.on('publish', function(packet) {
-          client.puback({messageId: packet.messageId});
-        });
       });
     });
 
@@ -410,14 +339,6 @@ describe('MqttClient', function () {
       client.once('connect', function() {
         client.publish('a', 'b', opts, done);
       });
-
-      this.server.once('client', function(client) {
-        client.once('connect', function(packet) {
-          client.connack({returnCode: 0});
-        });
-        client.once('publish', client.pubrec.bind(client));
-        client.once('pubrel', client.pubcomp.bind(client));
-      });
     });
   });
 
@@ -428,16 +349,13 @@ describe('MqttClient', function () {
       client.unsubscribe('test');
 
       this.server.once('client', function(client) {
-        client.once('connect', function(packet) {
-          client.connack({returnCode: 0});
-        });
-
         client.once('unsubscribe', function(packet) {
           packet.unsubscriptions.should.include('test');
           done();
         });
       });
     });
+
     it('should send an unsubscribe packet', function(done) {
       var client = createClient(port);
       var topic = 'topic';
@@ -447,10 +365,6 @@ describe('MqttClient', function () {
       });
 
       this.server.once('client', function(client) {
-        client.once('connect', function(packet) {
-          client.connack({returnCode: 0});
-        });
-
         client.once('unsubscribe', function(packet) {
           packet.unsubscriptions.should.include(topic);
           done();
@@ -468,10 +382,6 @@ describe('MqttClient', function () {
       });
 
       this.server.once('client', function(client) {
-        client.once('connect', function(packet) {
-          client.connack({returnCode: 0});
-        });
-
         client.once('unsubscribe', function(packet) {
           packet.unsubscriptions.should.eql(topics);
           done();
@@ -489,9 +399,6 @@ describe('MqttClient', function () {
       });
 
       this.server.once('client', function(client) {
-        client.once('connect', function(packet) {
-          client.connack({returnCode: 0});
-        });
         client.once('unsubscribe', function(packet) {
           client.unsuback(packet);
         });
@@ -529,10 +436,6 @@ describe('MqttClient', function () {
       client.subscribe('test');
 
       this.server.once('client', function(client) {
-        client.once('connect', function(packet) {
-          client.connack({returnCode: 0});
-        });
-
         client.once('subscribe', function(packet) {
           done();
         });
@@ -548,9 +451,6 @@ describe('MqttClient', function () {
       });
 
       this.server.once('client', function(client) {
-        client.once('connect', function() {
-          client.connack({returnCode: 0});
-        });
         client.once('subscribe', function(packet) {
           packet.subscriptions.should.includeEql({
             topic: topic,
@@ -571,9 +471,6 @@ describe('MqttClient', function () {
       });
 
       this.server.once('client', function(client) {
-        client.once('connect', function() {
-          client.connack({returnCode: 0});
-        });
         client.once('subscribe', function(packet) {
           // i.e. [{topic: 'a', qos: 0}, {topic: 'b', qos: 0}]
           var expected = subs.map(function (i) {
@@ -597,10 +494,6 @@ describe('MqttClient', function () {
       });
 
       this.server.once('client', function(client) {
-        client.once('connect', function() {
-          client.connack({returnCode: 0});
-        });
-
         client.once('subscribe', function(packet) {
           var expected = [{topic: topic, qos: 1}]
 
@@ -626,87 +519,65 @@ describe('MqttClient', function () {
           }
         });
       });
-
-      this.server.once('client', function(client) {
-        client.once('connect', function() {
-          client.connack({returnCode: 0});
-        });
-
-        client.once('subscribe', function (packet) {
-          client.suback({
-            messageId: packet.messageId,
-            granted: packet.subscriptions.map(function (e) {
-              return e.qos;
-            })
-          });
-        });
-      });
     });
   });
 
   describe('receiving messages', function() {
     it('should fire the message event ', function(done) {
       var client = createClient(port)
-        , test_packet = {
+        , testPacket = {
           topic: 'test',
           payload: 'message',
           retain: true,
           qos: 1,
           messageId: 5
-        }
+        };
 
-      client.subscribe(test_packet.topic);
-      client.on('message', 
+      client.subscribe(testPacket.topic);
+      client.once('message', 
           function(topic, message, packet) {
-        topic.should.equal(test_packet.topic);
-        message.should.equal(test_packet.payload);
+        topic.should.equal(testPacket.topic);
+        message.should.equal(testPacket.payload);
         packet.should.equal(packet);
         done();
       });
 
       this.server.once('client', function(client) {
-        client.once('connect', function() {
-          client.connack({returnCode: 0});
-        });
-
-        client.once('subscribe', function (packet) {
-          client.publish(test_packet);
+        client.on('subscribe', function(packet) {
+          client.publish(testPacket);
         });
       });
     });
+
     it('should emit a message event (qos=2)', function(done) {
       var client = createClient(port)
-        , test_packet = {
+        , testPacket = {
           topic: 'test',
           payload: 'message',
           retain: true,
           qos: 2,
           messageId: 5
-        }
+        };
 
-      client.subscribe(test_packet.topic);
-      client.on('message', 
+      this.server.testPublish = testPacket;
+
+      client.subscribe(testPacket.topic);
+      client.once('message', 
           function(topic, message, packet) {
-        topic.should.equal(test_packet.topic);
-        message.should.equal(test_packet.payload);
+        topic.should.equal(testPacket.topic);
+        message.should.equal(testPacket.payload);
         packet.should.equal(packet);
         done();
       });
 
       this.server.once('client', function(client) {
-        client.once('connect', function() {
-          client.connack({returnCode: 0});
-        });
-
-        client.once('subscribe', function (packet) {
-          client.publish(test_packet);
-        });
-        client.once('pubrec', function(packet) {
-          client.pubrel(packet);
+        client.on('subscribe', function(packet) {
+          client.publish(testPacket);
         });
       });
     });
   });
+
   describe('qos handling', function() {
 
     it('should follow qos 0 semantics (trivial)', function(done) {
@@ -719,9 +590,6 @@ describe('MqttClient', function () {
       });
 
       this.server.once('client', function(client) {
-        client.once('connect', function (packet) {
-          client.connack({returnCode: 0});
-        });
         client.once('subscribe', function (packet) {
           client.publish({
             topic: test_topic,
@@ -745,9 +613,6 @@ describe('MqttClient', function () {
       });
 
       this.server.once('client', function(client) {
-        client.once('connect', function() {
-          client.connack({returnCode: 0});
-        });
         client.once('subscribe', function (packet) {
           client.publish({
             topic: test_topic,
@@ -775,9 +640,6 @@ describe('MqttClient', function () {
       });
 
       this.server.once('client', function(client) {
-        client.once('connect', function() {
-          client.connack({returnCode: 0});
-        });
         client.once('subscribe', function (packet) {
           client.publish({
             topic: test_topic,
@@ -787,12 +649,7 @@ describe('MqttClient', function () {
           });
         });
 
-        client.once('pubrec', function (packet) {
-          packet.messageId.should.equal(mid);
-          client.pubrel({messageId: packet.messageId});
-        });
         client.once('pubcomp', function(packet) {
-          packet.messageId.should.equal(mid);
           done();
         });
       });
