@@ -657,6 +657,20 @@ describe('MqttClient', function () {
       client.end();
       client.disconnecting.should.eql(true);
     });
+
+    it('should reconnect after stream disconnect', function(done) {
+      var client = createClient(port)
+        , tryReconnect = true;
+
+      client.on('connect', function() {
+        if (tryReconnect) {
+          client.stream.end();
+          tryReconnect = false;
+        } else {
+          done();
+        }
+      });
+    });
   });
 
   after(function () {
