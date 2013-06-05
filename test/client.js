@@ -407,25 +407,19 @@ describe('MqttClient', function () {
   });
 
   describe('pinging', function () {
-    it('should ping before <keepalive> sec', function (done) {
-      var keepalive = 3;
-      this.timeout(keepalive * 1000);
-
-      var client = createClient(port, {keepalive: keepalive});
-
-      this.server.once('client', function(client) {
-        client.once('connect', function(packet) {
-          client.connack({returnCode: 0});
-        });
-        client.once('pingreq', function(packet) {
-          client.pingresp();
-          done();
-        });
+    it('should set a ping timer', function (done) {
+      var client = createClient(port, {keepalive: 3});
+      client.on('connect', function() {
+        should.exist(client.pingTimer);
+        done();
       });
     });
-    it('should not set a ping timer keepalive=0', function() {
+    it('should not set a ping timer keepalive=0', function(done) {
       var client = createClient(port, {keepalive:0});
-      should.not.exist(client.pingTimer);
+      client.on('connect', function() {
+        should.not.exist(client.pingTimer);
+        done();
+      });
     });
   });
 
