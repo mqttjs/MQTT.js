@@ -103,7 +103,7 @@ describe('MqttClient', function () {
     it('should mark the client as disconnected', function(done) {
       var client = createClient(port);
 
-      client.stream.on('close', function() {
+      client.stream.once('close', function() {
         if (!client.connected) {
           done();
         } else {
