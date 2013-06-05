@@ -746,6 +746,15 @@ describe('MqttClient', function () {
     });
   });
 
+  describe('auto reconnect', function() {
+    it('should mark the client disconnecting if #end called', function() {
+      var client = createClient(port);
+
+      client.end();
+      client.disconnecting.should.eql(true);
+    });
+  });
+
   after(function () {
     this.server.close();
   });
