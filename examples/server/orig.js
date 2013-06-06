@@ -7,7 +7,7 @@ mqtt.createServer(function(client) {
   if (!self.clients) self.clients = {};
 
   client.on('connect', function(packet) {
-    self.clients[packet.client] = client;
+    self.clients[packet.clientId] = client;
     client.id = packet.clientId;
     console.log("CONNECT: client id: " + client.id);
     client.subscriptions = [];
