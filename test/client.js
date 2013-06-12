@@ -667,5 +667,29 @@ describe('MqttClient', function () {
         done();
       });
     });
+
+    it('should allow specification of a reconnect period', function(done) {
+      this.timeout(2200);
+      var client = createClient(port, {reconnectPeriod: 2000})
+        , reconnect = false;
+
+      var start = process.hrtime()
+        , end;
+
+      client.on('connect', function () {
+        if (!reconnect) {
+          client.stream.end();
+          reconnect = true;
+        } else {
+          end = process.hrtime(start);
+          if (end[0] === 2) {
+            // Connected in about 2 seconds, that's good enough
+            done();
+          } else {
+            done(new Error('Strange reconnect period'));
+          }
+        }
+      });
+    });
   });
 });
