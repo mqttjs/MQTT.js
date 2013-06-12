@@ -653,5 +653,19 @@ describe('MqttClient', function () {
         }
       });
     });
+
+    it('should setup a reconnect timer on disconnect', function(done) {
+      var client = createClient(port);
+
+      client.once('connect', function() {
+        should.not.exist(client.reconnectTimer);
+        client.stream.end();
+      });
+
+      client.once('close', function () {
+        should.exist(client.reconnectTimer);
+        done();
+      });
+    });
   });
 });
