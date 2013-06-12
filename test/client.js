@@ -114,11 +114,11 @@ describe('MqttClient', function () {
     it('should emit close after end called', function(done) {
       var client = createClient(port);
 
-      client.on('close', function() {
+      client.once('close', function() {
         done();
       });
 
-      client.on('connect', function() {
+      client.once('connect', function() {
         client.end();
       });
 
