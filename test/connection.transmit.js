@@ -13,7 +13,11 @@ var Connection = require('../lib/connection');
 
 module.exports = function() {
   beforeEach(function () {
-    this.stream.removeAllListeners();
+    var stream = this.stream = new Stream();
+    var conn = this.conn = new Connection(stream);
+
+    // the connection must not listen to itself
+    stream.removeAllListeners();
   });
 
   describe('#connect', function() {

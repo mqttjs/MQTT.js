@@ -10,6 +10,11 @@ var should = require('should')
 var Connection = require('../lib/connection');
 
 module.exports = function() {
+  beforeEach(function () {
+    this.stream = new Stream();
+    this.conn = new Connection(this.stream);
+  });
+
   describe('connect', function() {
     it('should fire a connect event (minimal)', function(done) {
       var expected =  {
