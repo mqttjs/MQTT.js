@@ -13,6 +13,7 @@ module.exports = function() {
   beforeEach(function () {
     this.stream = new Stream();
     this.conn = new Connection(this.stream);
+    this.conn.setEncoding('utf8');
   });
   describe('connect', function() {
     it('should fire a connect event (minimal)', function(done) {

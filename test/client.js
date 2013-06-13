@@ -18,7 +18,8 @@ var port = 9876;
 /**
  * Test server
  */
-var server = mqtt.createServer(function (client ) {
+var server = mqtt.createServer(function (client) {
+  client.setEncoding('utf8');
   client.on('connect', function(packet) {
     if (packet.clientId === 'invalid') {
       client.connack({returnCode: 2});
