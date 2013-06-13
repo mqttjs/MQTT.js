@@ -654,6 +654,15 @@ describe('MqttClient', function () {
       });
     });
 
+    it('should not reconnect if it was ended by the user', function(done) {
+      var client = createClient(port);
+
+      client.on('connect', function() {
+        client.end();
+        done(); // it will raise an exception if called two times
+      });
+    });
+
     it('should setup a reconnect timer on disconnect', function(done) {
       var client = createClient(port);
 
