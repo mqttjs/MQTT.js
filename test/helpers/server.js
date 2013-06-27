@@ -51,8 +51,10 @@ module.exports.init_server = function (PORT) {
 
 module.exports.init_secure_server = function (PORT) {
   var server = mqtt.createSecureServer(KEY, CERT, function (client) {
+    console.log("server: on client");
     client.on('connect', function (packet) {
-      client.connack(0);
+      console.log("server:  client connected");
+      client.connack({returnCode: 0});
     });
   });
   server.listen(PORT);
