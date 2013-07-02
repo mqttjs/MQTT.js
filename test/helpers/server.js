@@ -1,8 +1,5 @@
 var mqtt = require('../../lib/mqtt');
 
-var KEY = __dirname + '/private-key.pem';
-var CERT = __dirname + '/public-cert.pem';
-
 module.exports.init_server = function (PORT) {
   var server = mqtt.createServer(function (client) {
     /*var i, events = ['connect', 'publish', 'pubrel', 'subscribe', 'disconnect'];
@@ -49,11 +46,9 @@ module.exports.init_server = function (PORT) {
   return server;
 };
 
-module.exports.init_secure_server = function (PORT) {
+module.exports.init_secure_server = function (PORT, KEY, CERT) {
   var server = mqtt.createSecureServer(KEY, CERT, function (client) {
-    console.log("server: on client");
     client.on('connect', function (packet) {
-      console.log("server:  client connected");
       client.connack({returnCode: 0});
     });
   });

@@ -7,7 +7,7 @@ var PORT = 8443;
 
 console.log("-- Starting secure server on " + PORT + " --");
 
-var server = mqtt.createSecureServer(KEY, CERT, function (client) {	
+var server = mqtt.createSecureServer(KEY, CERT, function (client) { 
   var self = this;
 
   if (!self.clients) self.clients = {};

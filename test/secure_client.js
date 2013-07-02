@@ -8,17 +8,20 @@ var should = require('should')
 /**
  * Modules to be tested
  */
-var createClient = require('../lib/mqtt').createClient;
+var createClient = require('../lib/mqtt').createSecureClient;
 
 /**
  * Testing options
  */
-var port = 9876;
+var port = 9899;
+
+var KEY = __dirname + '/helpers/tls-key.pem';
+var CERT = __dirname + '/helpers/tls-cert.pem';
 
 /**
  * Test server
  */
-var server = mqtt.createServer(function (client) {
+var server = mqtt.createSecureServer(KEY, CERT, function (client) {
   client.on('connect', function(packet) {
     if (packet.clientId === 'invalid') {
       client.connack({returnCode: 2});
@@ -71,7 +74,7 @@ var server = mqtt.createServer(function (client) {
 }).listen(port);
 
 
-describe('MqttClient', function () {
+describe('MqttSecureClient', function () {
   describe('closing', function() {
     it('should emit close if stream closes', function(done) {
       var client = createClient(port);
