@@ -1,8 +1,8 @@
 
 var mqtt = require('../..');
+var KEY = __dirname + '/../../test/helpers/tls-key.pem';
+var CERT = __dirname + '/../../test/helpers/tls-cert.pem';
 
-var KEY = __dirname + '/../../test/helpers/private-key.pem';
-var CERT = __dirname + '/../../test/helpers/public-cert.pem';
 var PORT = 8443;
 
 console.log("-- Starting secure server on " + PORT + " --");
