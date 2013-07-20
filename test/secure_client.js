@@ -8,17 +8,20 @@ var should = require('should')
 /**
  * Modules to be tested
  */
-var createClient = require('../lib/mqtt').createClient;
+var createClient = require('../lib/mqtt').createSecureClient;
 
 /**
  * Testing options
  */
-var port = 9876;
+var port = 9899;
+
+var KEY = __dirname + '/helpers/tls-key.pem';
+var CERT = __dirname + '/helpers/tls-cert.pem';
 
 /**
  * Test server
  */
-var server = mqtt.createServer(function (client) {
+var server = mqtt.createSecureServer(KEY, CERT, function (client) {
   client.on('connect', function(packet) {
     if (packet.clientId === 'invalid') {
       client.connack({returnCode: 2});
@@ -71,7 +74,7 @@ var server = mqtt.createServer(function (client) {
 }).listen(port);
 
 
-describe('MqttClient', function() {
+describe('MqttSecureClient', function () {
   describe('closing', function() {
     it('should emit close if stream closes', function(done) {
       var client = createClient(port);
@@ -138,7 +141,6 @@ describe('MqttClient', function() {
   });
 
   describe('connecting', function() {
-
     it('should connect to the broker', function (done) {
       var client = createClient(port);
 
@@ -158,17 +160,6 @@ describe('MqttClient', function() {
       });
     });
 
-    it('should send be clean by default', function (done) {
-      var client = createClient(port);
-
-      server.once('client', function (client) {
-        client.once('connect', function(packet) {
-          packet.clean.should.be.true;
-          done();
-        });
-      });
-    });
-
     it('should connect with the given client id', function (done) {
       var client = createClient(port, 'localhost',
         {clientId: 'testclient'});
@@ -179,30 +170,6 @@ describe('MqttClient', function() {
           done();
         });
       });
-    });
-
-    it('should connect with the client id and unclean state', function (done) {
-      var client = createClient(port, 'localhost',
-        {clientId: 'testclient', clean: false});
-
-      server.once('client', function (client) {
-        client.once('connect', function(packet) {
-          packet.clientId.should.match(/testclient/);
-          packet.clean.should.be.false;
-          done();
-        });
-      });
-    });
-
-    it('should require a clientId with clean=false', function (done) {
-      try {
-        var client = createClient(port, 'localhost', {
-          clean: false
-        });
-        done(new Error('should have thrown'));
-      } catch(err) {
-        process.nextTick(done);
-      }
     });
 
     it('should default to localhost', function (done) {
