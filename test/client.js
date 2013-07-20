@@ -77,7 +77,7 @@ describe('MqttClient', function() {
       var client = createClient(port);
 
       client.stream.end();
-      client.on('close', function() {
+      client.once('close', function() {
         done();
       });
     });
@@ -92,7 +92,7 @@ describe('MqttClient', function() {
           done(new Error('Not marked as disconnected'));
         }
       });
-      client.on('connect', function() {
+      client.once('connect', function() {
         client.stream.end();
       });
     });
@@ -100,7 +100,7 @@ describe('MqttClient', function() {
     it('should stop ping timer if stream closes', function(done) {
       var client = createClient(port);
       
-      client.on('close', function() {
+      client.once('close', function() {
         should.not.exist(client.pingTimer);
         done();
       });

@@ -11,13 +11,15 @@ var Connection = require('../lib/connection');
 
 
 describe('Connection', function() {
+  beforeEach(function () {
+    var that = this;
+    this.stream = new Stream();
+    this.conn = new Connection(this.stream);
+  });
+
   describe('parsing', require('./connection.parse.js'));
   describe('transmission', require('./connection.transmit.js'));
   describe('miscellaneous', function() {
-    beforeEach(function () {
-      this.stream = new Stream();
-      this.conn = new Connection(this.stream);
-    });
     it('should reset packet state before firing callbacks', function(done) {
       var fixture = [
         16, 18, // Header 
@@ -32,7 +34,7 @@ describe('Connection', function() {
 
       this.stream.write(new Buffer(fixture));
       this.conn.on('connect', function(packet) {
-        this.packet.should.eql({});
+        this.parser.packet.should.eql({});
         done();
       });
     });

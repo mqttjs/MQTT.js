@@ -10,10 +10,6 @@ var should = require('should')
 var Connection = require('../lib/connection');
 
 module.exports = function() {
-  beforeEach(function () {
-    this.stream = new Stream();
-    this.conn = new Connection(this.stream);
-  });
   describe('connect', function() {
     it('should fire a connect event (minimal)', function(done) {
       var expected =  {
@@ -230,6 +226,36 @@ module.exports = function() {
       ];
 
       this.stream.write(new Buffer(fixture));
+
+      this.conn.once('publish', function(packet) {
+        packet.should.eql(expected);
+        done();
+      });
+    });
+
+    it('should parse a splitted publish', function(done) {
+      var expected = {
+        cmd: "publish",
+        retain: false,
+        qos: 0,
+        dup: false,
+        length: 10,
+        topic: "test",
+        payload: "test"
+      };
+
+      var fixture1 = [
+        48, 10, // Header 
+        0, 4, // Topic length
+        116, 101, 115, 116 // Topic (test)
+      ];
+
+      var fixture2 = [
+        116, 101, 115, 116 // Payload (test)
+      ];
+
+      this.stream.write(new Buffer(fixture1));
+      this.stream.write(new Buffer(fixture2));
 
       this.conn.once('publish', function(packet) {
         packet.should.eql(expected);
