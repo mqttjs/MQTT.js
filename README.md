@@ -80,12 +80,12 @@ A broadcast server example, included in `examples/broadcast.js`:
       });
 
       client.on('subscribe', function(packet) {
-        var granted = [];
-        for (var i = 0; i < packet.subscriptions.length; i++) {
-          granted.push(packet.subscriptions[i].qos);
-        }
-
-        client.suback({granted: granted});
+        client.suback({
+          messageId: packet.messageId,
+          granted: packet.subscriptions.map(function (e) {
+            return e.qos;
+          })
+        });
       });
 
       client.on('pingreq', function(packet) {
