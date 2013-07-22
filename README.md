@@ -94,7 +94,7 @@ mqtt.createServer(function(client) {
       granted.push(packet.subscriptions[i].qos);
     }
 
-    client.suback({granted: granted});
+    client.suback({granted: granted, messageId: packet.messageId});
   });
 
   client.on('pingreq', function(packet) {
