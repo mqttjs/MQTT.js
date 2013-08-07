@@ -47,4 +47,16 @@ describe('MqttServer', function() {
 
     mqtt.createClient(9879);
   });
+  describe('setConfig', function(){
+    it('should set parseProxyProtocol config data', function (){
+      var s = new server.MqttServer();
+      s.setConfig({
+        parseProxyProtocol : true
+      });
+
+      s.config.should.eql({
+        parseProxyProtocol : true
+      });
+    });
+  });
 });
