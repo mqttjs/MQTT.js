@@ -58,6 +58,8 @@ describe('Connection', function() {
           116, 101, 115, 116 // Payload (test)
         ];
 
+        this.conn.setEncoding(null);
+
         this.stream.write(new Buffer(fixture));
 
         this.conn.once('publish', function(packet) {
