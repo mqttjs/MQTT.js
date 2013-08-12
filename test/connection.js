@@ -58,7 +58,7 @@ describe('Connection', function() {
           116, 101, 115, 116 // Payload (test)
         ];
 
-        this.conn.setEncoding(null);
+        this.conn.setEncoding('binary');
 
         this.stream.write(new Buffer(fixture));
 
