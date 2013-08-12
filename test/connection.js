@@ -38,5 +38,61 @@ describe('Connection', function() {
         done();
       });
     });
+
+    describe('set encoding', function () {
+      it('should emit a buffer as payload', function(done) {
+        var expected = {
+          cmd: "publish",
+          retain: false,
+          qos: 0,
+          dup: false,
+          length: 10,
+          topic: "test",
+          payload: "test"
+        };
+
+        var fixture = [
+          48, 10, // Header 
+          0, 4, // Topic length
+          116, 101, 115, 116, // Topic (test)
+          116, 101, 115, 116 // Payload (test)
+        ];
+
+        this.conn.setEncoding('binary');
+
+        this.stream.write(new Buffer(fixture));
+
+        this.conn.once('publish', function(packet) {
+          Buffer.isBuffer(packet.payload).should.be.ok
+          done();
+        });
+      });
+    });
+    it('should emit a string as payload', function(done) {
+      this.conn.setEncoding('utf8');
+      var expected = {
+        cmd: "publish",
+        retain: false,
+        qos: 0,
+        dup: false,
+        length: 10,
+        topic: "test",
+        payload: "test"
+      };
+
+      var fixture = [
+        48, 10, // Header
+        0, 4, // Topic length
+        116, 101, 115, 116, // Topic (test)
+        116, 101, 115, 116 // Payload (test)
+      ];
+
+      this.stream.write(new Buffer(fixture));
+
+      this.conn.once('publish', function(packet) {
+        packet.payload.should.equal('test');
+        done();
+      });
+    });
   });
 });
