@@ -14,7 +14,7 @@ describe('Connection', function() {
   beforeEach(function () {
     var that = this;
     this.stream = new Stream();
-    this.conn = new Connection(this.stream);
+    this.conn = this.stream.pipe(new Connection());
   });
 
   describe('parsing', require('./connection.parse.js'));
@@ -34,7 +34,7 @@ describe('Connection', function() {
 
       this.stream.write(new Buffer(fixture));
       this.conn.on('connect', function(packet) {
-        this.parser.packet.should.eql({});
+        this.packet.should.eql({});
         done();
       });
     });
