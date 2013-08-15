@@ -10,6 +10,7 @@ var should = require('should')
 var Connection = require('../lib/connection');
 
 module.exports = function() {
+
   describe('connect', function() {
     it('should fire a connect event (minimal)', function(done) {
       var expected =  {
