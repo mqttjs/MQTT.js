@@ -8,7 +8,7 @@ or open an issue if you need any help.
 
 ## Introduction
 
-mqtt.js is a library for the MQTT protocol, written in javascript.
+mqtt.js is a library for the [MQTT](http://mqtt.org/) protocol, written in JavaScript.
 
 
 ## Installation
@@ -21,89 +21,97 @@ Detailed documentation can be found in [the wiki](http://github.com/adamvr/MQTT.
 
 ## Client API usage
 
-See: `examples/client`
+See: [examples/client](https://github.com/adamvr/MQTT.js/tree/master/examples/client)
 
-Simple publish client:
+### Simple publish client
 
-    var mqtt = require('mqtt')
-      , client = mqtt.createClient();
+```js
+var mqtt = require('mqtt')
+  , client = mqtt.createClient();
 
-    client.publish('messages', 'mqtt');
-    client.publish('messages', 'is pretty cool');
-    client.publish('messages', 'remember that!', {retain: true});
-    client.end();
+client.publish('messages', 'mqtt');
+client.publish('messages', 'is pretty cool');
+client.publish('messages', 'remember that!', {retain: true});
+client.end();
+```
 
-Simple subscribe client:
+### Simple subscribe client
 
-    var mqtt = require('mqtt')
-      , client = mqtt.createClient();
+```js
+var mqtt = require('mqtt')
+  , client = mqtt.createClient();
 
-    client.subscribe('messages');
-    client.publish('messages', 'hello me!');
-    client.on('message', function(topic, message) {
-      console.log(message);
-    });
+client.subscribe('messages');
+client.publish('messages', 'hello me!');
+client.on('message', function(topic, message) {
+  console.log(message);
+});
+```
 
-Chainable API!:
+### Chainable API!
 
-    var mqtt = require('mqtt')
-      , client = mqtt.createClient();
+```js
+var mqtt = require('mqtt')
+  , client = mqtt.createClient();
 
-    client
-      .subscribe('messages')
-      .publish('presence', 'bin hier')
-      .on('message', function(topic, message) {
-        console.log(topic);
-      });
+client
+  .subscribe('messages')
+  .publish('presence', 'bin hier')
+  .on('message', function(topic, message) {
+    console.log(topic);
+  });
+```
 
 ## Server API usage
 
-A broadcast server example, included in `examples/broadcast.js`:
+### Broadcast server example
 
-    var mqtt = require('mqtt');
+Included in [examples/broadcast.js](https://github.com/adamvr/MQTT.js/blob/master/examples/server/broadcast.js):
 
-    mqtt.createServer(function(client) {
-      var self = this;
+```js
+var mqtt = require('mqtt');
 
-      if (!self.clients) self.clients = {};
+mqtt.createServer(function(client) {
+  var self = this;
 
-      client.on('connect', function(packet) {
-        client.connack({returnCode: 0});
-        client.id = packet.clientId;
-        self.clients[client.id] = client;
-      });
+  if (!self.clients) self.clients = {};
 
-      client.on('publish', function(packet) {
-        for (var k in self.clients) {
-          self.clients[k].publish({topic: packet.topic, payload: packet.payload});
-        }
-      });
+  client.on('connect', function(packet) {
+    client.connack({returnCode: 0});
+    client.id = packet.clientId;
+    self.clients[client.id] = client;
+  });
 
-      client.on('subscribe', function(packet) {
-        client.suback({
-          messageId: packet.messageId,
-          granted: packet.subscriptions.map(function (e) {
-            return e.qos;
-          })
-        });
-      });
+  client.on('publish', function(packet) {
+    for (var k in self.clients) {
+      self.clients[k].publish({topic: packet.topic, payload: packet.payload});
+    }
+  });
 
-      client.on('pingreq', function(packet) {
-        client.pingresp();
-      });
+  client.on('subscribe', function(packet) {
+    var granted = [];
+    for (var i = 0; i < packet.subscriptions.length; i++) {
+      granted.push(packet.subscriptions[i].qos);
+    }
 
-      client.on('disconnect', function(packet) {
-        client.stream.end();
-      });
+    client.suback({granted: granted, messageId: packet.messageId});
+  });
 
-      client.on('close', function(err) {
-        delete self.clients[client.id];
-      });
+  client.on('pingreq', function(packet) {
+    client.pingresp();
+  });
 
-      client.on('error', function(err) {
-        client.stream.end();
-        console.log('error!');
-      });
-    }).listen(1883);
+  client.on('disconnect', function(packet) {
+    client.stream.end();
+  });
 
+  client.on('close', function(err) {
+    delete self.clients[client.id];
+  });
 
+  client.on('error', function(err) {
+    client.stream.end();
+    console.log('error!');
+  });
+}).listen(1883);
+```
