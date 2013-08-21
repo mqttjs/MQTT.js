@@ -32,6 +32,8 @@
   },
   "devDependencies": {
     "mocha": "*",
-    "should": "*"
+    "should": "*",
+    "websocket-stream": "~0.3.1",
+    "ws": "~0.4.28"
   }
 }
