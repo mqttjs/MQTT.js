@@ -1,15 +1,20 @@
 # mqtt.js [![Build Status](https://travis-ci.org/adamvr/MQTT.js.png)](https://travis-ci.org/adamvr/MQTT.js)
 
-## Important note for existing users
-
-v0.2.0 has brough some API breaking changes to mqtt.js. Please
-consult the [migration guide](http://github.com/adamvr/MQTT.js/wiki/migration) for information
-or open an issue if you need any help.
-
 ## Introduction
 
-mqtt.js is a library for the [MQTT](http://mqtt.org/) protocol, written in JavaScript.
+mqtt.js is a library for the [MQTT](http://mqtt.org/) protocol, written
+in JavaScript to be used in node.js.
 
+## Important notes for existing users
+
+* v0.3.0 improves connection stability, performance and the reconnection
+  logic. See [#118](https://github.com/adamvr/MQTT.js/pull/118) for
+  details. Also, an Connection is a Writable stream, so you can run
+  MQTT.js over any kind of Stream (doc needed).
+
+* v0.2.0 has brough some API breaking changes to mqtt.js. 
+  Please consult the [migration guide](http://github.com/adamvr/MQTT.js/wiki/migration) for information
+  or open an issue if you need any help.
 
 ## Installation
 
