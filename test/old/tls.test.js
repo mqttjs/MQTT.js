@@ -7,27 +7,32 @@ var assert = require('assert'),
 var servers = require('./helpers/server'),
   mqtt = require('..');
 
-var KEY = __dirname + '/helpers/private-key.pem';
-var CERT = __dirname + '/helpers/public-cert.pem';
+var KEY = __dirname + '/helpers/tls-key.pem';
+var CERT = __dirname + '/helpers/tls-cert.pem';
+
+var options = {
+  keyPath: KEY,
+  certPath: CERT,
+  rejectUnauthorized : false
+};
 
 var PORT = (process.env.PORT || 1883) + 1; //port collides with other tests so +1
 
-describe.skip("SecureClient", function () {
+describe("SecureClient", function () {
   before(function () {
-    this.server = servers.init_secure_server(PORT);
+    this.server = servers.init_secure_server(PORT, KEY, CERT);
   });
 
   it("should connect", function (done) {
-    mqtt.createSecureClient(PORT, 'localhost', KEY, CERT, function (err, client) {
-      should.not.exist(err);
-      client.connect({keepalive: 1000});
-      client.on('connack', function (packet) {
-        done();
-      });
-      client.on('error', function (err) {
-        should.not.exist(err);
-        done();
-      });
+    var client = mqtt.createSecureClient(PORT, 'localhost', options);
+
+    client.on('connect', function (packet) {
+      done();
     });
+    client.on('error', function (err) {
+      should.not.exist(err);
+      done();
+    });
+
   });
 });
