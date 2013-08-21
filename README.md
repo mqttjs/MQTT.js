@@ -7,10 +7,12 @@ in JavaScript to be used in node.js.
 
 ## Important notes for existing users
 
-* v0.3.0 improves connection stability, performance and the reconnection
-  logic. See [#118](https://github.com/adamvr/MQTT.js/pull/118) for
-  details. Also, an Connection is a Writable stream, so you can run
-  MQTT.js over any kind of Stream (doc needed).
+* v0.3.0 improves connection stability, performance, the reconnection
+  logic and SSL support. See [#118](https://github.com/adamvr/MQTT.js/pull/118) for
+  details. A Connection is a Writable stream, so you can run
+  MQTT.js over any kind of Stream (doc needed). Both the constructors of
+  MqttClient and MqttConnection changed, but not the factory method
+  `mqtt.createClient` and `mqtt.createConnection`.
 
 * v0.2.0 has brough some API breaking changes to mqtt.js. 
   Please consult the [migration guide](http://github.com/adamvr/MQTT.js/wiki/migration) for information
