@@ -33,7 +33,7 @@
   "devDependencies": {
     "mocha": "*",
     "should": "*",
-    "websocket-stream": "~0.3.1",
+    "websocket-stream": "git://github.com/mcollina/websocket-stream.git#node-support",
     "ws": "~0.4.28"
   }
 }

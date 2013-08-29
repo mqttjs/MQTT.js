@@ -8,7 +8,7 @@ var mqtt = require('..')
 /**
  * Testing options
  */
-var port = 9876;
+var serverPort = 9876;
 
 /**
  * Test server
@@ -19,7 +19,7 @@ var websocket = require('websocket-stream')
 var http = require("http");
 
 var server = http.createServer();
-server.listen(port);
+server.listen(serverPort);
 
 var clientHandler = function (client) {
 
@@ -79,16 +79,37 @@ var wss = new WebSocketServer({server: server})
 wss.on('connection', function(ws) {
   var connection = websocket(ws).pipe(new mqtt.MqttConnection());
   clientHandler(connection);
+  server.emit("client", connection);
 })
 
-var createClient = function(port) {
+var createClient = function(port, host, opts) {
+  if ('object' === typeof port) {
+    opts = port;
+    port = serverPort;
+    host = 'localhost';
+  } else if ('object' === typeof host) {
+    opts = host;
+    host = 'localhost';
+  } else if ('object' !== typeof opts) {
+    opts = {};
+  }
+
+  if (!host) {
+    host = 'localhost'
+  }
+
+  if (opts && opts.clean === false && !opts.clientId) {
+    throw new Error("Missing clientId for unclean clients");
+  }
+
   var build = function() {
-    return websocket('ws://localhost:' + port)
+    var url = 'ws://' + host + ':' + port;
+    return websocket(url);
   };
 
-  return new mqtt.MqttClient(build);
+  return new mqtt.MqttClient(build, opts);
 };
 
 describe('MqttClient', function() {
-  abstractClientTests(server, createClient, port);
+  abstractClientTests(server, createClient, serverPort);
 });
