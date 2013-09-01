@@ -27,6 +27,7 @@
   "engines": {
     "node": ">=0.8.6"
   },
+  "browser": "./lib/browser.js",
   "dependencies": {
     "readable-stream": "~1.0.2"
   },
