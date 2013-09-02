@@ -2,6 +2,9 @@
 
 ## Introduction
 
+[![NPM](https://nodei.co/npm/mqtt.png)](https://nodei.co/npm/mqtt/)
+[![NPM](https://nodei.co/npm-dl/mqtt.png)](https://nodei.co/npm/mqtt/)
+
 mqtt.js is a library for the [MQTT](http://mqtt.org/) protocol, written
 in JavaScript to be used in node.js.
 
