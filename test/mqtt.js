@@ -50,7 +50,7 @@ describe('mqtt', function() {
       var c = mqtt.createSecureClient({
         keyPath: __dirname + '/helpers/private-key.pem',
         certPath: __dirname + '/helpers/public-cert.pem',
-        ca: __dirname + '/helpers/public-cert.pem'
+        ca: [__dirname + '/helpers/public-cert.pem']
       });
 
       c.should.be.instanceOf(mqtt.MqttClient);
