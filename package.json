@@ -29,7 +29,7 @@
   },
   "browser": "./lib/browser.js",
   "dependencies": {
-    "readable-stream": "~1.0.2",
+    "readable-stream": "> 1.0.2 < 2.0.0",
     "bops": "0.0.6"
   },
   "devDependencies": {
