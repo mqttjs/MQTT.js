@@ -2,7 +2,7 @@
 
 var mqtt = require('../');
 
-var client = mqtt.createClient(1883);
+var client = mqtt.createClient(1883, { encoding: 'binary' });
 var counter = 0;
 var interval = 15000;
 
