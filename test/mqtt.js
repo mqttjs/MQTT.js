@@ -39,6 +39,26 @@ describe('mqtt', function() {
     it('should throw on incorrect args');
   });
 
+  describe('#createSecureClientWithListCA', function() {
+    it('should return an MqttClient', function() {
+      var c = mqtt.createSecureClient();
+
+      c.should.be.instanceOf(mqtt.MqttClient);
+    });
+
+    it('should support passing the key, cert and CA list', function() {
+      var c = mqtt.createSecureClient({
+        keyPath: __dirname + '/helpers/private-key.pem',
+        certPath: __dirname + '/helpers/public-cert.pem',
+        ca: [__dirname + '/helpers/public-cert.pem']
+      });
+
+      c.should.be.instanceOf(mqtt.MqttClient);
+    });
+
+    it('should throw on incorrect args');
+  });
+
   describe('#createServer', function() {
     it('should return an MqttServer', function() {
       var s = mqtt.createServer();
