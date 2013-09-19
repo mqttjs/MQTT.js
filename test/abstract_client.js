@@ -494,6 +494,33 @@ module.exports = function(server, createClient, port) {
       });
     });
 
+    it('should support binary data', function(done) {
+      var client = createClient(port, { encoding: 'binary' })
+        , testPacket = {
+            topic: 'test',
+            payload: 'message',
+            retain: true,
+            qos: 1,
+            messageId: 5
+          };
+
+      client.subscribe(testPacket.topic);
+      client.once('message', 
+          function(topic, message, packet) {
+        topic.should.equal(testPacket.topic);
+        message.should.be.an.instanceOf(Buffer);
+        message.toString().should.equal(testPacket.payload);
+        packet.should.equal(packet);
+        done();
+      });
+
+      server.once('client', function(client) {
+        client.on('subscribe', function(packet) {
+          client.publish(testPacket);
+        });
+      });
+    });
+
     it('should emit a message event (qos=2)', function(done) {
       var client = createClient(port)
         , testPacket = {
