@@ -1,5 +1,5 @@
 var mqtt = require('../..')
   , client = mqtt.createClient();
 
-client.publish('messages', 'hello!');
+client.publish('presence', 'hello!');
 client.end();
