@@ -27,8 +27,13 @@
   "engines": {
     "node": ">=0.8.6"
   },
+  "browser": {
+    "./lib/mqtt.js": "./lib/browser.js",
+    "./lib/parsing_utils.js": "./lib/parsing_utils_browser.js"
+  },
   "dependencies": {
-    "readable-stream": "~1.0.2"
+    "readable-stream": "~1.0.2",
+    "bops": "0.0.6"
   },
   "devDependencies": {
     "mocha": "*",
