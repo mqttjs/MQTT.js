@@ -10,14 +10,18 @@ in JavaScript to be used in node.js.
 
 ## Example
 
+First you'll need to run [Mosca](http://mcollina.github.io/mosca/) - a MQTT broker written in node.js
 ```
 npm install mosca -g
 mosca -v
 ```
-([mosca](http://mcollina.github.io/mosca/) is an MQTT broker written in node.js)
 
-index.js
+Install mqtt
+```
+npm install mqtt -g
+```
 
+For the sake of simplicity, let's put the subscriber and the publisher in the same file:
 ```js
 var mqtt = require('mqtt')
 
@@ -33,9 +37,9 @@ client.on('message', function (topic, message) {
 client.end();
 ```
 
+output:
 ```
-node index.js
-// => Hello mqtt
+Hello mqtt
 ```
 
 ## Important notes for existing users
