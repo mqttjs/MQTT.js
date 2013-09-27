@@ -21,6 +21,36 @@ in JavaScript to be used in node.js.
   Please consult the [migration guide](http://github.com/adamvr/MQTT.js/wiki/migration) for information
   or open an issue if you need any help.
 
+## Example
+
+```
+npm install mosca -g
+mosca -v
+```
+([mosca](http://mcollina.github.io/mosca/) is an MQTT broker written in node.js)
+
+index.js
+
+```js
+var mqtt = require('mqtt')
+
+client = mqtt.createClient(1883, 'localhost');
+
+client.subscribe('presence');
+client.publish('presence', 'Hello mqtt');
+
+client.on('message', function (topic, message) {
+  console.log(message);
+});
+
+client.end();
+```
+
+```
+node index.js
+// => Hello mqtt
+```
+
 ## Installation
 
     npm install mqtt
