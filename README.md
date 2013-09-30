@@ -8,6 +8,40 @@
 mqtt.js is a library for the [MQTT](http://mqtt.org/) protocol, written
 in JavaScript to be used in node.js.
 
+## Example
+
+First you'll need to run [Mosca](http://mcollina.github.io/mosca/) - a MQTT broker written in node.js
+```
+npm install mosca -g
+mosca -v
+```
+
+Install mqtt
+```
+npm install mqtt -g
+```
+
+For the sake of simplicity, let's put the subscriber and the publisher in the same file:
+```js
+var mqtt = require('mqtt')
+
+client = mqtt.createClient(1883, 'localhost');
+
+client.subscribe('presence');
+client.publish('presence', 'Hello mqtt');
+
+client.on('message', function (topic, message) {
+  console.log(message);
+});
+
+client.end();
+```
+
+output:
+```
+Hello mqtt
+```
+
 ## Important notes for existing users
 
 * v0.3.0 improves connection stability, performance, the reconnection
