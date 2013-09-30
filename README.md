@@ -8,16 +8,28 @@
 mqtt.js is a library for the [MQTT](http://mqtt.org/) protocol, written
 in JavaScript to be used in node.js.
 
+## Important notes for existing users
+
+* v0.3.0 improves connection stability, performance, the reconnection
+  logic and SSL support. See [#118](https://github.com/adamvr/MQTT.js/pull/118) for
+  details. A Connection is a Writable stream, so you can run
+  MQTT.js over any kind of Stream (doc needed). Both the constructors of
+  MqttClient and MqttConnection changed, but not the factory method
+  `mqtt.createClient` and `mqtt.createConnection`.
+
+* v0.2.0 has brough some API breaking changes to mqtt.js. 
+  Please consult the [migration guide](http://github.com/adamvr/MQTT.js/wiki/migration) for information
+  or open an issue if you need any help.
+
+## Installation
+
+    npm install mqtt
+
 ## Example
 
 First you will need to install and run a broker, such as
 [Mosquitto](http://mosquitto.org) or
 [Mosca](http://mcollina.github.io/mosca/), and launch it.
-
-Install mqtt
-```
-npm install mqtt -g
-```
 
 For the sake of simplicity, let's put the subscriber and the publisher in the same file:
 ```js
@@ -45,23 +57,6 @@ If you do not want to install a separate broker, you can try using the
 example.
 It implements enough of the semantics of the MQTT protocol to
 run the example.
-
-## Important notes for existing users
-
-* v0.3.0 improves connection stability, performance, the reconnection
-  logic and SSL support. See [#118](https://github.com/adamvr/MQTT.js/pull/118) for
-  details. A Connection is a Writable stream, so you can run
-  MQTT.js over any kind of Stream (doc needed). Both the constructors of
-  MqttClient and MqttConnection changed, but not the factory method
-  `mqtt.createClient` and `mqtt.createConnection`.
-
-* v0.2.0 has brough some API breaking changes to mqtt.js. 
-  Please consult the [migration guide](http://github.com/adamvr/MQTT.js/wiki/migration) for information
-  or open an issue if you need any help.
-
-## Installation
-
-    npm install mqtt
 
 ## Documentation
 
