@@ -10,11 +10,9 @@ in JavaScript to be used in node.js.
 
 ## Example
 
-First you'll need to run [Mosca](http://mcollina.github.io/mosca/) - a MQTT broker written in node.js
-```
-npm install mosca -g
-mosca -v
-```
+First you will need to install and run a broker, such as
+[Mosquitto](http://mosquitto.org) or
+[Mosca](http://mcollina.github.io/mosca/), and launch it.
 
 Install mqtt
 ```
@@ -41,6 +39,12 @@ output:
 ```
 Hello mqtt
 ```
+
+If you do not want to install a separate broker, you can try using the
+[server/orig](https://github.com/adamvr/MQTT.js/blob/master/examples/server/orig.js)
+example.
+It implements enough of the semantics of the MQTT protocol to
+run the example.
 
 ## Important notes for existing users
 
