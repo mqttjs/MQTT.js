@@ -158,3 +158,7 @@ mqtt.createServer(function(client) {
   });
 }).listen(1883);
 ```
+
+## License
+
+MIT
