@@ -75,19 +75,13 @@ var server = mqtt.createServer(function (client) {
 describe('MqttClient', function() {
   abstractClientTests(server, createClient, port);
 
-  describe('_nextId', function() {
+  describe('message ids', function() {
 
-    it('should return 1 on first call', function() {
+    it('should increment the message id', function() {
       var client = createClient();
+      var currentId = client._nextId();
 
-      client._nextId().should.equal(1);
-    }),
-
-    it('should return 2 on second call', function() {
-      var client = createClient();
-      client._nextId();
-
-      client._nextId().should.equal(2);
+      client._nextId().should.equal(currentId + 1);
     }),
 
     it('should return 1 once the interal counter reached limit', function() {
