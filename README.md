@@ -89,6 +89,7 @@ client.publish('messages', 'hello me!');
 client.on('message', function(topic, message) {
   console.log(message);
 });
+client.options.reconnectPeriod = 0;  // disable automatic reconnect
 ```
 
 ### Chainable API!
@@ -158,3 +159,7 @@ mqtt.createServer(function(client) {
   });
 }).listen(1883);
 ```
+
+## License
+
+MIT
