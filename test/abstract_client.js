@@ -32,7 +32,7 @@ module.exports = function(server, createClient, port) {
 
     it('should stop ping timer if stream closes', function(done) {
       var client = createClient(port);
-      
+
       client.once('close', function() {
         should.not.exist(client.pingTimer);
         done();
@@ -59,7 +59,7 @@ module.exports = function(server, createClient, port) {
 
     it('should stop ping timer after end called', function(done) {
       var client = createClient(port);
-      
+
       client.once('connect', function() {
         should.exist(client.pingTimer);
         client.end();
@@ -78,7 +78,7 @@ module.exports = function(server, createClient, port) {
       server.once('client', function(client) {
         done();
       });
-    }); 
+    });
 
     it('should send a default client id', function (done) {
       var client = createClient(port);
@@ -243,7 +243,7 @@ module.exports = function(server, createClient, port) {
       var client = createClient(port)
         , payload = 'test'
         , topic = 'test';
-      
+
       var opts = {
         retain: true,
         qos: 1
@@ -266,7 +266,7 @@ module.exports = function(server, createClient, port) {
 
     it('should fire a callback (qos 0)', function (done) {
       var client = createClient(port);
-      
+
       client.once('connect', function() {
         client.publish('a', 'b', done);
       });
@@ -360,7 +360,7 @@ module.exports = function(server, createClient, port) {
   describe('pinging', function () {
     it('should set a ping timer', function (done) {
       var client = createClient(port, {keepalive: 3});
-      client.on('connect', function() {
+      client.once('connect', function() {
         should.exist(client.pingTimer);
         done();
       });
@@ -371,6 +371,24 @@ module.exports = function(server, createClient, port) {
         should.not.exist(client.pingTimer);
         done();
       });
+    });
+    it('should reconnect if pingresp is not sent', function(done) {
+      var client = createClient(port, {keepalive:1});
+      // Fake no pingresp being send by stubbing the _handlePingresp function
+      client._handlePingresp = function () {};
+      client.once('close', function() {
+        client.once('connect', function() {
+            true.should.equal(true);
+            done();
+        });
+      });
+    });
+    it('should not reconnect if pingresp is successful', function(done) {
+      var client = createClient(port, {keepalive:1});
+      client.once('close', function() {
+        done(new Error('Client closed connection'));
+      });
+      setTimeout(done, 1000);
     });
   });
 
@@ -479,7 +497,7 @@ module.exports = function(server, createClient, port) {
         };
 
       client.subscribe(testPacket.topic);
-      client.once('message', 
+      client.once('message',
           function(topic, message, packet) {
         topic.should.equal(testPacket.topic);
         message.should.equal(testPacket.payload);
@@ -505,7 +523,7 @@ module.exports = function(server, createClient, port) {
           };
 
       client.subscribe(testPacket.topic);
-      client.once('message', 
+      client.once('message',
           function(topic, message, packet) {
         topic.should.equal(testPacket.topic);
         message.should.be.an.instanceOf(Buffer);
@@ -534,7 +552,7 @@ module.exports = function(server, createClient, port) {
       server.testPublish = testPacket;
 
       client.subscribe(testPacket.topic);
-      client.once('message', 
+      client.once('message',
           function(topic, message, packet) {
         topic.should.equal(testPacket.topic);
         message.should.equal(testPacket.payload);
