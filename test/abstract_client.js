@@ -373,7 +373,7 @@ module.exports = function(server, createClient, port) {
       });
     });
     it('should reconnect if pingresp is not sent', function(done) {
-      var client = createClient(port, {keepalive:1});
+      var client = createClient(port, {keepalive:1, reconnectPeriod: 200});
       // Fake no pingresp being send by stubbing the _handlePingresp function
       client._handlePingresp = function () {};
       client.once('close', function() {
