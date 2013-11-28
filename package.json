@@ -33,7 +33,7 @@
   },
   "dependencies": {
     "readable-stream": "~1.0.2",
-    "bops": "~0.0.7"
+    "bops": "~0.1.1"
   },
   "devDependencies": {
     "mocha": "*",
