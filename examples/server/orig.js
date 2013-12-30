@@ -34,19 +34,15 @@ mqtt.createServer(function(client) {
   client.on('publish', function(packet) {
     console.log("PUBLISH(%s): %j", client.id, packet);
     for (var k in self.clients) {
-      var c = self.clients[k]
-        , publish = false;
+      var c = self.clients[k];
 
       for (var i = 0; i < c.subscriptions.length; i++) {
         var s = c.subscriptions[i];
 
         if (s.test(packet.topic)) {
-          publish = true;
+          c.publish({topic: packet.topic, payload: packet.payload});
+          break;
         }
-      }
-
-      if (publish) {
-        c.publish({topic: packet.topic, payload: packet.payload});
       }
     }
   });
