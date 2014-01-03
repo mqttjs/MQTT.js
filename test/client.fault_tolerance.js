@@ -1,5 +1,5 @@
-var should = require('should'),
-  mqtt   = require('../lib/mqtt');
+var should = require('should')
+  , mqtt   = require('../lib/mqtt');
 
 describe('Fault tolerance', function () {
 
