@@ -180,6 +180,62 @@ module.exports = function() {
       });
     });
 
+    it('should fire a publish event with 2KB payload', function(done) {
+      var expected = {
+        cmd: "publish",
+        retain: false,
+        qos: 0,
+        dup: false,
+        length: 2054,
+        topic: "test",
+        payload: new Buffer(2048)
+      };
+
+      var fixture = new Buffer([
+        48, 134, 16, // Header
+        0, 4, // Topic length
+        116, 101, 115, 116, // Topic (test)
+      ]);
+
+      fixture = Buffer.concat([fixture, expected.payload]);
+
+      this.conn.setPacketEncoding('binary');
+      this.stream.write(fixture);
+
+      this.conn.once('publish', function(packet) {
+        packet.should.eql(expected);
+        done();
+      });
+    });
+
+    it('should fire a publish event with 2MB payload', function(done) {
+      var expected = {
+        cmd: "publish",
+        retain: false,
+        qos: 0,
+        dup: false,
+        length: 6 + 2 * 1024 * 1024,
+        topic: "test",
+        payload: new Buffer(2 * 1024 * 1024)
+      };
+
+      var fixture = new Buffer([
+        48, 134, 128, 128, 1, // Header
+        0, 4, // Topic length
+        116, 101, 115, 116, // Topic (test)
+      ]);
+
+      fixture = Buffer.concat([fixture, expected.payload]);
+
+      this.conn.setPacketEncoding('binary');
+      this.stream.write(fixture);
+
+      this.conn.once('publish', function(packet) {
+        packet.should.eql(expected);
+        done();
+      });
+    });
+
     it('should fire a publish event (maximal)', function (done) {
       var expected = {
         cmd:"publish",

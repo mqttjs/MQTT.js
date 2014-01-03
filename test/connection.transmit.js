@@ -624,6 +624,58 @@ module.exports = function() {
       });
     });
 
+    it('should send a publish packet of 2 KB', function(done) {
+      var expected = new Buffer([
+        48, 134, 16, // Header
+        0, 4, // topic length
+        116, 101, 115, 116 // topic ('test')
+      ]);
+      var payload = new Buffer(2048);
+
+      expected = Buffer.concat([expected, payload]);
+
+      var fixture = {
+        topic: 'test',
+        payload: payload
+      };
+
+      this.conn.publish(fixture);
+      this.conn.end();
+
+      var buffers = []
+
+      this.stream.on('data', function(data) {
+        data.toString('hex').should.eql(expected.toString('hex'));
+        done();
+      });
+    });
+
+    it('should send a publish packet of 2 MB', function(done) {
+      var expected = new Buffer([
+        48, 134, 128, 128, 1, // Header
+        0, 4, // topic length
+        116, 101, 115, 116 // topic ('test')
+      ]);
+      var payload = new Buffer(2 * 1024 * 1024);
+
+      expected = Buffer.concat([expected, payload]);
+
+      var fixture = {
+        topic: 'test',
+        payload: payload
+      };
+
+      this.conn.publish(fixture);
+      this.conn.end();
+
+      var buffers = []
+
+      this.stream.on('data', function(data) {
+        data.toString('hex').should.eql(expected.toString('hex'));
+        done();
+      });
+    });
+
     it('should reject invalid topic', function (done) {
       var error = "Invalid topic";
 
