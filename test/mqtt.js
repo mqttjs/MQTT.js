@@ -12,6 +12,60 @@ var should = require('should')
 var mqtt = require('../lib/mqtt');
 
 describe('mqtt', function() {
+
+  describe('#connect', function () {
+    it('should return an MqttClient when connect is called with mqtt:/ url', function () {
+      var c = mqtt.connect('mqtt://localhost:1883');
+
+      c.should.be.instanceOf(mqtt.MqttClient);
+    });
+
+    it('should return an MqttClient with username option set', function () {
+      var c = mqtt.connect('mqtt://user:pass@localhost:1883');
+
+      c.should.be.instanceOf(mqtt.MqttClient);
+      c.options.should.have.property('username', 'user');
+      c.options.should.have.property('password', 'pass');
+    });
+
+    it('should return an MqttClient with username and password options set', function () {
+      var c = mqtt.connect('mqtt://user@localhost:1883');
+
+      c.should.be.instanceOf(mqtt.MqttClient);
+      c.options.should.have.property('username', 'user');
+    });
+
+    it('should return an MqttClient when connect is called with tcp:/ url', function () {
+      var c = mqtt.connect('tcp://localhost');
+
+      c.should.be.instanceOf(mqtt.MqttClient);
+    });
+
+    var sslOpts = {
+      keyPath: __dirname + '/helpers/private-key.pem',
+      certPath: __dirname + '/helpers/public-cert.pem',
+      ca: [__dirname + '/helpers/public-cert.pem']
+    };
+
+    it('should return an MqttClient when connect is called with mqtts:/ url', function () {
+      var c = mqtt.connect('mqtts://localhost', sslOpts);
+
+      c.should.be.instanceOf(mqtt.MqttClient);
+    });
+
+    it('should return an MqttClient when connect is called with ssl:/ url', function () {
+      var c = mqtt.connect('ssl://localhost', sslOpts);
+
+      c.should.be.instanceOf(mqtt.MqttClient);
+    });
+
+    it('should throw an error when an unknown protocol is supplied', function () {
+      (function(){
+        mqtt.connect('http://localhost')
+      }).should.throwError(/^Unknown protocol/);
+    });
+  });
+
   describe('#createClient', function() {
     it('should return an MqttClient', function() {
       var c = mqtt.createClient();
