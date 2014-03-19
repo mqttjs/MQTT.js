@@ -35,6 +35,13 @@ describe('mqtt', function() {
       c.options.should.have.property('username', 'user');
     });
 
+    it('should return an MqttClient with the clientid option set', function () {
+      var c = mqtt.connect('mqtt://user@localhost:1883?clientId=123');
+
+      c.should.be.instanceOf(mqtt.MqttClient);
+      c.options.should.have.property('clientId', '123');
+    });
+
     it('should return an MqttClient when connect is called with tcp:/ url', function () {
       var c = mqtt.connect('tcp://localhost');
 
