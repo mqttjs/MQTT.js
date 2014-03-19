@@ -48,6 +48,12 @@ describe('mqtt', function() {
       c.should.be.instanceOf(mqtt.MqttClient);
     });
 
+    it('should throw an error when connect is called without a brokerUrl', function () {
+      (function(){
+        mqtt.connect()
+      }).should.throwError(/^Missing brokerUrl/);
+    });
+
     var sslOpts = {
       keyPath: __dirname + '/helpers/private-key.pem',
       certPath: __dirname + '/helpers/public-cert.pem',
