@@ -505,15 +505,15 @@ module.exports = function() {
         retain: false,
         qos: 0,
         dup: false,
-        length: 5,
-        granted: [0, 1, 2],
+        length: 6,
+        granted: [0, 1, 2, 128],
         messageId: 6
       };
 
       var fixture = [
-        144, 5, // Header
+        144, 6, // Header
         0, 6, // Message id
-        0, 1, 2 // Granted qos (0, 1, 2)
+        0, 1, 2, 128 // Granted qos (0, 1, 2) and a rejected being 0x80
       ];
 
       this.stream.write(new Buffer(fixture));
