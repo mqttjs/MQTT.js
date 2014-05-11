@@ -9,7 +9,9 @@ module.exports = function(server, createClient, port) {
     it('should emit close if stream closes', function(done) {
       var client = createClient(port);
 
-      client.stream.end();
+      client.once('connect', function() {
+        client.stream.end();
+      });
       client.once('close', function() {
         done();
       });

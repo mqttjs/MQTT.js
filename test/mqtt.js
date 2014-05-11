@@ -63,11 +63,15 @@ describe('mqtt', function() {
     it('should return an MqttClient when connect is called with mqtts:/ url', function () {
       var c = mqtt.connect('mqtts://localhost', sslOpts);
 
+      c.on('error', function() {});
+
       c.should.be.instanceOf(mqtt.MqttClient);
     });
 
     it('should return an MqttClient when connect is called with ssl:/ url', function () {
       var c = mqtt.connect('ssl://localhost', sslOpts);
+
+      c.on('error', function() {});
 
       c.should.be.instanceOf(mqtt.MqttClient);
     });
@@ -91,6 +95,8 @@ describe('mqtt', function() {
     it('should return an MqttClient', function() {
       var c = mqtt.createSecureClient();
 
+      c.on('error', function() {});
+
       c.should.be.instanceOf(mqtt.MqttClient);
     });
 
@@ -99,6 +105,8 @@ describe('mqtt', function() {
         keyPath: __dirname + '/helpers/private-key.pem',
         certPath: __dirname + '/helpers/public-cert.pem'
       });
+
+      c.on('error', function() {});
 
       c.should.be.instanceOf(mqtt.MqttClient);
     });
@@ -110,6 +118,8 @@ describe('mqtt', function() {
     it('should return an MqttClient', function() {
       var c = mqtt.createSecureClient();
 
+      c.on('error', function() {});
+
       c.should.be.instanceOf(mqtt.MqttClient);
     });
 
@@ -119,6 +129,8 @@ describe('mqtt', function() {
         certPath: __dirname + '/helpers/public-cert.pem',
         ca: [__dirname + '/helpers/public-cert.pem']
       });
+
+      c.on('error', function() {});
 
       c.should.be.instanceOf(mqtt.MqttClient);
     });
