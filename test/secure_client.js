@@ -81,5 +81,45 @@ describe('MqttSecureClient', function () {
 
   describe('with secure parameters', function() {
 
+    it('should validate successfully the CA', function (done) {
+      var client = createClient(port, {
+        ca: [CERT],
+        rejectUnauthorized: true
+      });
+
+      client.on('error', done)
+
+      server.once('connect', function(client) {
+        done();
+      });
+    });
+
+    it('should validate unsuccessfully the CA', function (done) {
+      var client = createClient(port, {
+        ca: [WRONG_CERT],
+        rejectUnauthorized: true
+      });
+
+      server.once('connect', function(client) {
+        done(new Error('it should not happen'));
+      });
+
+      client.on('error', function() {
+        done()
+      })
+    });
+
+    it('should emit close on TLS error', function (done) {
+      var client = createClient(port, {
+        ca: [WRONG_CERT],
+        rejectUnauthorized: true
+      });
+
+      client.on('error', function() {})
+
+      client.on('close', function() {
+        done()
+      })
+    });
   })
 });
