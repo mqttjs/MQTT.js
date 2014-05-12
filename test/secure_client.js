@@ -104,7 +104,7 @@ describe('MqttSecureClient', function () {
         done(new Error('it should not happen'));
       });
 
-      client.on('error', function() {
+      client.once('error', function() {
         done()
       })
     });
@@ -117,7 +117,8 @@ describe('MqttSecureClient', function () {
 
       client.on('error', function() {})
 
-      client.on('close', function() {
+      // TODO node v0.8.x emits multiple close events
+      client.once('close', function() {
         done()
       })
     });
