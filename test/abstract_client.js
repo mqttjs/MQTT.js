@@ -2,9 +2,29 @@
 /**
  * Testing dependencies
  */
-var should = require('should');
+var should = require('should')
+  , MqttClient = require('../lib/client');
 
 module.exports = function(server, createClient, port) {
+  describe('creating', function() {
+    it('should allow instantiation of MqttClient without the \'new\' operator' , function(done) {
+      should(function() {
+	var client;
+	
+	try {
+	  client = MqttClient(function() {
+	    throw Error('break');
+	  }, {});
+	} catch (err) {
+	  if (err.message !== 'break') {
+	    throw err;
+	  }
+	  done();
+	}
+      }).not.throw("Object #<Object> has no method '_setupStream'");
+    });
+  });
+  
   describe('closing', function() {
     it('should emit close if stream closes', function(done) {
       var client = createClient(port);
