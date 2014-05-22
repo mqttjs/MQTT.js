@@ -2,7 +2,8 @@
 /**
  * Testing dependencies
  */
-var should = require('should');
+var should = require('should')
+  , MqttClient = require('../lib/client');
 
 module.exports = function(server, createClient, port) {
   describe('closing', function() {
