@@ -88,6 +88,41 @@ module.exports = function() {
       });
     });
 
+    it('should send a connect packet with binary username/password', function(done) {
+      var expected = new Buffer([
+        16, 28, // Header 
+        0, 6, 77, 81, 73, 115, 100, 112, // Protocol Id 
+        3, // Protocol version
+        0x40 | 0x80, // Connect flags
+        0, 30, // Keepalive
+        0, 4, // Client id length
+        116, 101, 115, 116, // Client Id
+        0, 3, // username length
+        12, 13, 14, // username
+        0, 3, // password length
+        15, 16, 17 //password
+      ]);
+
+      var fixture = {
+        protocolId: 'MQIsdp',
+        protocolVersion: 3,
+        clientId: 'test',
+        keepalive: 30,
+        username: new Buffer([12, 13, 14]),
+        password: new Buffer([15, 16, 17])
+      };
+
+      this.conn.setPacketEncoding('binary');
+      this.conn.connect(fixture);
+
+      var that = this;
+      this.stream.on('readable', function() {
+        var packet = that.stream.read();
+        packet.should.eql(expected);
+        done();
+      });
+    });
+
     describe('invalid options', function () {
       describe('protocol id', function () {
         it('should reject non-present', function (done) {

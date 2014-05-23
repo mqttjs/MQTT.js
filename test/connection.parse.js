@@ -1,5 +1,5 @@
 /**
- * Testing requires 
+ * Testing requires
  */
 var should = require('should')
   , Stream = require('./util').TestStream;
@@ -27,13 +27,13 @@ module.exports = function() {
       };
 
       var fixture = [
-        16, 18, // Header 
+        16, 18, // Header
         0, 6, // Protocol id length
         77, 81, 73, 115, 100, 112, // Protocol id
         3, // Protocol version
-        0, // Connect flags 
-        0, 30, // Keepalive 
-        0, 4, //Client id length 
+        0, // Connect flags
+        0, 30, // Keepalive
+        0, 4, //Client id length
         116, 101, 115, 116 // Client id
       ];
 
@@ -68,20 +68,20 @@ module.exports = function() {
         password: "password"
       };
       var fixture = [
-        16, 54, // Header 
-        0, 6, // Protocol id length 
-        77, 81, 73, 115, 100, 112, // Protocol id 
-        3, // Protocol version 
-        246, // Connect flags  
-        0, 30, // Keepalive 
-        0, 4, // Client id length 
-        116, 101, 115, 116, // Client id 
-        0, 5, // will topic length 
-        116, 111, 112, 105, 99, // will topic  
+        16, 54, // Header
+        0, 6, // Protocol id length
+        77, 81, 73, 115, 100, 112, // Protocol id
+        3, // Protocol version
+        246, // Connect flags
+        0, 30, // Keepalive
+        0, 4, // Client id length
+        116, 101, 115, 116, // Client id
+        0, 5, // will topic length
+        116, 111, 112, 105, 99, // will topic
         0, 7, // will payload length
         112, 97, 121, 108, 111, 97, 100, // will payload
-        0, 8, // username length 
-        117, 115, 101, 114, 110, 97, 109, 101, // username 
+        0, 8, // username length
+        117, 115, 101, 114, 110, 97, 109, 101, // username
         0, 8, // password length
         112, 97, 115, 115, 119, 111, 114, 100 //password
       ];
@@ -92,6 +92,49 @@ module.exports = function() {
         packet.should.eql(expected);
         done();
       });
+    });
+
+    it('should handle binary username/password', function(done) {
+      var expected =  {
+        cmd: "connect",
+        retain: false,
+        qos: 0,
+        dup: false,
+        length: 28,
+        protocolId: "MQIsdp",
+        protocolVersion: 3,
+        clean: false,
+        keepalive: 30,
+        clientId: "test",
+        username: new Buffer([12, 13, 14]),
+        password: new Buffer([15, 16, 17]),
+      };
+
+      var fixture = [
+        16, 28, // Header
+        0, 6, // Protocol id length
+        77, 81, 73, 115, 100, 112, // Protocol id
+        3, // Protocol version
+        0x80 | 0x40, // Connect flags
+        0, 30, // Keepalive
+        0, 4, //Client id length
+        116, 101, 115, 116, // Client id
+        0, 3, // username length
+        12, 13, 14, // username
+        0, 3, // password length
+        15, 16, 17 //password
+      ];
+
+      this.stream.write(new Buffer(fixture));
+
+      this.conn.setPacketEncoding('binary');
+
+      this.conn.once('connect', function(packet) {
+        packet.username.toString('hex').should.eql(expected.username.toString('hex'));
+        packet.password.toString('hex').should.eql(expected.password.toString('hex'));
+        done();
+      });
+
     });
 
     describe('parse errors', function() {
@@ -121,7 +164,7 @@ module.exports = function() {
         length: 2,
         returnCode: 0
       }
-      
+
       var fixture = [32, 2, 0, 0];
 
       this.stream.write(new Buffer(fixture));
@@ -141,7 +184,7 @@ module.exports = function() {
         length: 2,
         returnCode: 5
       }
-      
+
       var fixture = [32, 2, 0, 5];
 
       this.stream.write(new Buffer(fixture));
@@ -166,7 +209,7 @@ module.exports = function() {
       };
 
       var fixture = [
-        48, 10, // Header 
+        48, 10, // Header
         0, 4, // Topic length
         116, 101, 115, 116, // Topic (test)
         116, 101, 115, 116 // Payload (test)
@@ -276,7 +319,7 @@ module.exports = function() {
       };
 
       var fixture = [
-        48, 6, // Header 
+        48, 6, // Header
         0, 4, // Topic length
         116, 101, 115, 116 // Topic
         // Empty payload
@@ -302,7 +345,7 @@ module.exports = function() {
       };
 
       var fixture1 = [
-        48, 10, // Header 
+        48, 10, // Header
         0, 4, // Topic length
         116, 101, 115, 116 // Topic (test)
       ];
@@ -557,7 +600,7 @@ module.exports = function() {
       });
     });
   });
-  
+
   describe('unsuback', function() {
     it('should fire a unsuback event', function(done) {
       var expected = {
