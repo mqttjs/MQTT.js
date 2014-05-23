@@ -20,6 +20,8 @@ var CERT = __dirname + '/helpers/tls-cert.pem';
 
 var WRONG_CERT = __dirname + '/helpers/wrong-cert.pem';
 
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+
 /**
  * Test server
  */
