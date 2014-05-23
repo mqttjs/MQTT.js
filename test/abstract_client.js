@@ -691,6 +691,46 @@ module.exports = function(server, createClient, port) {
       });
     });
 
+    it('should emit \'reconnect\' when reconnecting', function(done) {
+      var client = createClient(port)
+        , tryReconnect = true
+        , reconnectEvent = false;
+
+      client.on('reconnect', function() {
+        reconnectEvent = true;
+      });
+
+      client.on('connect', function() {
+        if (tryReconnect) {
+          client.stream.end();
+          tryReconnect = false;
+        } else {
+          reconnectEvent.should.equal(true);
+          done();
+        }
+      });
+    });
+
+    it('should emit \'offline\' after going offline', function(done) {
+      var client = createClient(port)
+        , tryReconnect = true
+        , offlineEvent = false;
+
+      client.on('offline', function() {
+        offlineEvent = true;
+      });
+
+      client.on('connect', function() {
+        if (tryReconnect) {
+          client.stream.end();
+          tryReconnect = false;
+        } else {
+          offlineEvent.should.equal(true);
+          done();
+        }
+      });
+    });
+
     it('should not reconnect if it was ended by the user', function(done) {
       var client = createClient(port);
 
