@@ -3,7 +3,8 @@
  */
 
 var should = require('should')
-  , net = require('net');
+  , net = require('net')
+  , sinon = require('sinon');
 
 /**
  * Unit under test
@@ -46,6 +47,12 @@ describe('mqtt', function() {
       var c = mqtt.connect('tcp://localhost');
 
       c.should.be.instanceOf(mqtt.MqttClient);
+    });
+
+    it('should return an MqttClient with correct host when called with a host and port', function () {
+      sinon.spy(mqtt, "createClient");
+      var c = mqtt.connect('tcp://user:pass@localhost:1883');
+      mqtt.createClient.calledWith('1883', 'localhost').should.be.ok;
     });
 
     it('should throw an error when connect is called without a brokerUrl', function () {
