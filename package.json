@@ -20,6 +20,7 @@
   "scripts": {
     "test": "mocha"
   },
+  "pre-commit": "test",
   "bin": {
     "mqtt_pub": "./bin/mqtt_pub",
     "mqtt_sub": "./bin/mqtt_sub"
@@ -37,6 +38,8 @@
   },
   "devDependencies": {
     "mocha": "*",
-    "should": "*"
+    "should": "*",
+    "pre-commit": "0.0.7",
+    "sinon": "~1.10.0"
   }
 }

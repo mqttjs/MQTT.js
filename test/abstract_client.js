@@ -2,15 +2,19 @@
 /**
  * Testing dependencies
  */
-var should = require('should');
+var should = require('should')
+  , MqttClient = require('../lib/client');
 
 module.exports = function(server, createClient, port) {
   describe('closing', function() {
     it('should emit close if stream closes', function(done) {
       var client = createClient(port);
 
-      client.stream.end();
+      client.once('connect', function() {
+        client.stream.end();
+      });
       client.once('close', function() {
+        client.end()
         done();
       });
     });
@@ -19,6 +23,7 @@ module.exports = function(server, createClient, port) {
       var client = createClient(port);
 
       client.stream.once('close', function() {
+        client.end();
         if (!client.connected) {
           done();
         } else {
@@ -35,6 +40,7 @@ module.exports = function(server, createClient, port) {
 
       client.once('close', function() {
         should.not.exist(client.pingTimer);
+        client.end();
         done();
       });
 
@@ -76,6 +82,7 @@ module.exports = function(server, createClient, port) {
       var client = createClient(port);
 
       server.once('client', function(client) {
+        client.disconnect()
         done();
       });
     });
@@ -86,6 +93,7 @@ module.exports = function(server, createClient, port) {
       server.once('client', function (client) {
         client.once('connect', function(packet) {
           packet.clientId.should.match(/mqttjs.*/);
+          client.disconnect()
           done();
         });
       });
@@ -97,6 +105,7 @@ module.exports = function(server, createClient, port) {
       server.once('client', function (client) {
         client.once('connect', function(packet) {
           packet.clean.should.be.true;
+          client.disconnect();
           done();
         });
       });
@@ -109,6 +118,7 @@ module.exports = function(server, createClient, port) {
       server.once('client', function (client) {
         client.once('connect', function(packet) {
           packet.clientId.should.match(/testclient/);
+          client.disconnect();
           done();
         });
       });
@@ -122,6 +132,7 @@ module.exports = function(server, createClient, port) {
         client.once('connect', function(packet) {
           packet.clientId.should.match(/testclient/);
           packet.clean.should.be.false;
+          client.disconnect();
           done();
         });
       });
@@ -134,7 +145,7 @@ module.exports = function(server, createClient, port) {
         });
         done(new Error('should have thrown'));
       } catch(err) {
-        process.nextTick(done);
+        done();
       }
     });
 
@@ -144,6 +155,7 @@ module.exports = function(server, createClient, port) {
       server.once('client', function (client) {
         client.once('connect', function(packet) {
           packet.clientId.should.match(/testclient/);
+          client.disconnect();
           done();
         });
       });
@@ -151,7 +163,10 @@ module.exports = function(server, createClient, port) {
 
     it('should emit connect', function (done) {
       var client = createClient(port);
-      client.once('connect', done);
+      client.once('connect', function() {
+        client.end();
+        done();
+      });
       client.once('error', done);
     });
 
@@ -163,6 +178,7 @@ module.exports = function(server, createClient, port) {
         } else {
           done(new Error('Not marked as connected'));
         }
+        client.end();
       });
     });
 
@@ -172,15 +188,18 @@ module.exports = function(server, createClient, port) {
         done(new Error('Should not emit connect'));
       });
       client.once('error', function(error) {
+        client.end();
         done();
       });
     });
 
     it('should have different client ids', function() {
-      var client1 = createClient(port).options.clientId
-        , client2 = createClient(port).options.clientId;
+      var client1 = createClient(port)
+        , client2 = createClient(port);
 
-      client1.should.not.equal(client2);
+      client1.options.clientId.should.not.equal(client2.options.clientId);
+      client1.end();
+      client2.end();
     });
   });
 
@@ -362,6 +381,7 @@ module.exports = function(server, createClient, port) {
       var client = createClient(port, {keepalive: 3});
       client.once('connect', function() {
         should.exist(client.pingTimer);
+        client.end()
         done();
       });
     });
@@ -369,17 +389,20 @@ module.exports = function(server, createClient, port) {
       var client = createClient(port, {keepalive:0});
       client.on('connect', function() {
         should.not.exist(client.pingTimer);
+        client.end()
         done();
       });
     });
     it('should reconnect if pingresp is not sent', function(done) {
-      var client = createClient(port, {keepalive:1, reconnectPeriod: 200});
+      var client = createClient(port, {keepalive:1, reconnectPeriod: 50});
+
       // Fake no pingresp being send by stubbing the _handlePingresp function
       client._handlePingresp = function () {};
-      client.once('close', function() {
+
+      client.once('connect', function() {
         client.once('connect', function() {
-            true.should.equal(true);
-            done();
+          client.end()
+          done();
         });
       });
     });
@@ -668,6 +691,46 @@ module.exports = function(server, createClient, port) {
       });
     });
 
+    it('should emit \'reconnect\' when reconnecting', function(done) {
+      var client = createClient(port)
+        , tryReconnect = true
+        , reconnectEvent = false;
+
+      client.on('reconnect', function() {
+        reconnectEvent = true;
+      });
+
+      client.on('connect', function() {
+        if (tryReconnect) {
+          client.stream.end();
+          tryReconnect = false;
+        } else {
+          reconnectEvent.should.equal(true);
+          done();
+        }
+      });
+    });
+
+    it('should emit \'offline\' after going offline', function(done) {
+      var client = createClient(port)
+        , tryReconnect = true
+        , offlineEvent = false;
+
+      client.on('offline', function() {
+        offlineEvent = true;
+      });
+
+      client.on('connect', function() {
+        if (tryReconnect) {
+          client.stream.end();
+          tryReconnect = false;
+        } else {
+          offlineEvent.should.equal(true);
+          done();
+        }
+      });
+    });
+
     it('should not reconnect if it was ended by the user', function(done) {
       var client = createClient(port);
 
@@ -692,11 +755,11 @@ module.exports = function(server, createClient, port) {
     });
 
     it('should allow specification of a reconnect period', function(done) {
-      this.timeout(2200);
-      var client = createClient(port, {reconnectPeriod: 2000})
+      var period = 200
+        , client = createClient(port, {reconnectPeriod: period})
         , reconnect = false;
 
-      var start = process.hrtime()
+      var start = Date.now()
         , end;
 
       client.on('connect', function () {
@@ -704,8 +767,9 @@ module.exports = function(server, createClient, port) {
           client.stream.end();
           reconnect = true;
         } else {
-          end = process.hrtime(start);
-          if (end[0] === 2) {
+          client.end();
+          end = Date.now()
+          if (end - start >= period) {
             // Connected in about 2 seconds, that's good enough
             done();
           } else {

@@ -3,7 +3,8 @@
  */
 
 var should = require('should')
-  , net = require('net');
+  , net = require('net')
+  , sinon = require('sinon');
 
 /**
  * Unit under test
@@ -48,6 +49,12 @@ describe('mqtt', function() {
       c.should.be.instanceOf(mqtt.MqttClient);
     });
 
+    it('should return an MqttClient with correct host when called with a host and port', function () {
+      sinon.spy(mqtt, "createClient");
+      var c = mqtt.connect('tcp://user:pass@localhost:1883');
+      mqtt.createClient.calledWith('1883', 'localhost').should.be.ok;
+    });
+
     it('should throw an error when connect is called without a brokerUrl', function () {
       (function(){
         mqtt.connect()
@@ -63,11 +70,15 @@ describe('mqtt', function() {
     it('should return an MqttClient when connect is called with mqtts:/ url', function () {
       var c = mqtt.connect('mqtts://localhost', sslOpts);
 
+      c.on('error', function() {});
+
       c.should.be.instanceOf(mqtt.MqttClient);
     });
 
     it('should return an MqttClient when connect is called with ssl:/ url', function () {
       var c = mqtt.connect('ssl://localhost', sslOpts);
+
+      c.on('error', function() {});
 
       c.should.be.instanceOf(mqtt.MqttClient);
     });
@@ -91,6 +102,8 @@ describe('mqtt', function() {
     it('should return an MqttClient', function() {
       var c = mqtt.createSecureClient();
 
+      c.on('error', function() {});
+
       c.should.be.instanceOf(mqtt.MqttClient);
     });
 
@@ -99,6 +112,8 @@ describe('mqtt', function() {
         keyPath: __dirname + '/helpers/private-key.pem',
         certPath: __dirname + '/helpers/public-cert.pem'
       });
+
+      c.on('error', function() {});
 
       c.should.be.instanceOf(mqtt.MqttClient);
     });
@@ -110,6 +125,8 @@ describe('mqtt', function() {
     it('should return an MqttClient', function() {
       var c = mqtt.createSecureClient();
 
+      c.on('error', function() {});
+
       c.should.be.instanceOf(mqtt.MqttClient);
     });
 
@@ -119,6 +136,8 @@ describe('mqtt', function() {
         certPath: __dirname + '/helpers/public-cert.pem',
         ca: [__dirname + '/helpers/public-cert.pem']
       });
+
+      c.on('error', function() {});
 
       c.should.be.instanceOf(mqtt.MqttClient);
     });
