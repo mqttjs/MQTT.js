@@ -320,7 +320,7 @@ module.exports = function(server, createClient, port) {
 
       server.once('client', function(client) {
         client.once('unsubscribe', function(packet) {
-          packet.unsubscriptions.should.include('test');
+          packet.unsubscriptions.should.containEql('test');
           done();
         });
       });
@@ -336,7 +336,7 @@ module.exports = function(server, createClient, port) {
 
       server.once('client', function(client) {
         client.once('unsubscribe', function(packet) {
-          packet.unsubscriptions.should.include(topic);
+          packet.unsubscriptions.should.containEql(topic);
           done();
         });
       });
@@ -438,7 +438,7 @@ module.exports = function(server, createClient, port) {
 
       server.once('client', function(client) {
         client.once('subscribe', function(packet) {
-          packet.subscriptions.should.includeEql({
+          packet.subscriptions.should.containEql({
             topic: topic,
             qos: 0
           });
@@ -500,7 +500,7 @@ module.exports = function(server, createClient, port) {
             done(err);
           } else {
             should.exist(granted, 'granted not given');
-            granted.should.includeEql({topic: 'test', qos: 2});
+            granted.should.containEql({topic: 'test', qos: 2});
             done();
           }
         });
