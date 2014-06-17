@@ -310,6 +310,22 @@ module.exports = function(server, createClient, port) {
         client.publish('a', 'b', opts, done);
       });
     });
+
+    it('should support UTF-8 characters in topic', function(done) {
+      var client = createClient(port);
+
+      client.once('connect', function() {
+        client.publish('中国', 'hello', done);
+      });
+    })
+
+    it('should support UTF-8 characters in payload', function(done) {
+      var client = createClient(port);
+
+      client.once('connect', function() {
+        client.publish('hello', '中国', done);
+      });
+    })
   });
 
   describe('unsubscribing', function() {
@@ -374,6 +390,22 @@ module.exports = function(server, createClient, port) {
         });
       });
     });
+
+    it('should unsubscribe from a chinese topic', function(done) {
+      var client = createClient(port);
+      var topic = '中国';
+
+      client.once('connect', function() {
+        client.unsubscribe(topic);
+      });
+
+      server.once('client', function(client) {
+        client.once('unsubscribe', function(packet) {
+          packet.unsubscriptions.should.containEql(topic);
+          done();
+        });
+      });
+    });
   });
 
   describe('pinging', function () {
@@ -427,6 +459,7 @@ module.exports = function(server, createClient, port) {
         });
       });
     });
+
     it('should send a subscribe message', function(done) {
       var client = createClient(port);
 
@@ -503,6 +536,26 @@ module.exports = function(server, createClient, port) {
             granted.should.containEql({topic: 'test', qos: 2});
             done();
           }
+        });
+      });
+    });
+
+    it('should subscribe with a chinese topic', function(done) {
+      var client = createClient(port);
+
+      var topic = '中国';
+
+      client.once('connect', function() {
+        client.subscribe(topic);
+      });
+
+      server.once('client', function(client) {
+        client.once('subscribe', function(packet) {
+          packet.subscriptions.should.containEql({
+            topic: topic,
+            qos: 0
+          });
+          done();
         });
       });
     });
