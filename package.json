@@ -38,7 +38,7 @@
   },
   "devDependencies": {
     "mocha": "*",
-    "should": "=3.3.2",
+    "should": "*",
     "pre-commit": "0.0.7",
     "sinon": "~1.10.0"
   }
