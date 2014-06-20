@@ -3,6 +3,7 @@
  * Testing dependencies
  */
 var should = require('should')
+  , sinon = require('sinon')
   , MqttClient = require('../lib/client');
 
 module.exports = function(server, createClient, port) {
@@ -376,7 +377,42 @@ module.exports = function(server, createClient, port) {
     });
   });
 
+  describe('keepalive', function () {
+    var clock;
+
+    beforeEach(function() {
+      clock = sinon.useFakeTimers();
+    });
+
+    afterEach(function() {
+      clock.restore();
+    });
+
+    it('should checkPing at keepalive interval', function (done) {
+      var interval = 3,
+      client = createClient(port, {keepalive: interval});
+
+      client._checkPing = sinon.spy();
+
+      client.once('connect', function() {
+
+        clock.tick(interval * 1000);
+        client._checkPing.callCount.should.equal(1);
+
+        clock.tick(interval * 1000);
+        client._checkPing.callCount.should.equal(2);
+
+        clock.tick(interval * 1000);
+        client._checkPing.callCount.should.equal(3);
+
+        client.end()
+        done();
+      });
+    });
+  });
+
   describe('pinging', function () {
+
     it('should set a ping timer', function (done) {
       var client = createClient(port, {keepalive: 3});
       client.once('connect', function() {
