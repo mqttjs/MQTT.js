@@ -311,6 +311,22 @@ module.exports = function(server, createClient, port) {
         client.publish('a', 'b', opts, done);
       });
     });
+
+    it('should support UTF-8 characters in topic', function(done) {
+      var client = createClient(port);
+
+      client.once('connect', function() {
+        client.publish('中国', 'hello', done);
+      });
+    })
+
+    it('should support UTF-8 characters in payload', function(done) {
+      var client = createClient(port);
+
+      client.once('connect', function() {
+        client.publish('hello', '中国', done);
+      });
+    })
   });
 
   describe('unsubscribing', function() {
@@ -372,6 +388,22 @@ module.exports = function(server, createClient, port) {
       server.once('client', function(client) {
         client.once('unsubscribe', function(packet) {
           client.unsuback(packet);
+        });
+      });
+    });
+
+    it('should unsubscribe from a chinese topic', function(done) {
+      var client = createClient(port);
+      var topic = '中国';
+
+      client.once('connect', function() {
+        client.unsubscribe(topic);
+      });
+
+      server.once('client', function(client) {
+        client.once('unsubscribe', function(packet) {
+          packet.unsubscriptions.should.containEql(topic);
+          done();
         });
       });
     });
@@ -463,6 +495,7 @@ module.exports = function(server, createClient, port) {
         });
       });
     });
+
     it('should send a subscribe message', function(done) {
       var client = createClient(port);
 
@@ -542,6 +575,26 @@ module.exports = function(server, createClient, port) {
         });
       });
     });
+
+    it('should subscribe with a chinese topic', function(done) {
+      var client = createClient(port);
+
+      var topic = '中国';
+
+      client.once('connect', function() {
+        client.subscribe(topic);
+      });
+
+      server.once('client', function(client) {
+        client.once('subscribe', function(packet) {
+          packet.subscriptions.should.containEql({
+            topic: topic,
+            qos: 0
+          });
+          done();
+        });
+      });
+    });
   });
 
   describe('receiving messages', function() {
@@ -615,6 +668,33 @@ module.exports = function(server, createClient, port) {
           function(topic, message, packet) {
         topic.should.equal(testPacket.topic);
         message.should.equal(testPacket.payload);
+        packet.should.equal(packet);
+        done();
+      });
+
+      server.once('client', function(client) {
+        client.on('subscribe', function(packet) {
+          client.publish(testPacket);
+        });
+      });
+    });
+
+    it('should support chinese topic', function(done) {
+      var client = createClient(port, { encoding: 'binary' })
+        , testPacket = {
+            topic: '国',
+            payload: 'message',
+            retain: true,
+            qos: 1,
+            messageId: 5
+          };
+
+      client.subscribe(testPacket.topic);
+      client.once('message',
+          function(topic, message, packet) {
+        topic.should.equal(testPacket.topic);
+        message.should.be.an.instanceOf(Buffer);
+        message.toString().should.equal(testPacket.payload);
         packet.should.equal(packet);
         done();
       });
