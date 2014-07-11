@@ -2,7 +2,7 @@
   "author": "Adam Rudd <adam.rudd@uqconnect.edu.au>",
   "name": "mqtt",
   "description": "A library for the MQTT protocol",
-  "version": "0.3.10",
+  "version": "0.3.11",
   "contributors": [
     "Matteo Collina <matteo.collina@gmail.com> (https://github.com/mcollina)"
   ],
