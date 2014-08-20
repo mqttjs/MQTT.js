@@ -538,6 +538,34 @@ module.exports = function(server, createClient, port) {
       });
     });
 
+    it('should accept an hash of subscriptions', function(done) {
+      var client = createClient(port);
+      
+      var topics = {'test1': 0, 'test2': 1}
+      
+      client.once('connect', function() {
+        client.subscribe(topics);
+      });
+      
+      server.once('client', function(client) {
+	client.once('subscribe', function(packet) {
+	  var expected = [];
+      
+	  for (var k in topics) {
+	    if (topics.hasOwnProperty(k)) {
+	      expected.push({
+		topic: k,
+		qos: topics[k]
+	      });
+	    }
+	  }
+	  
+	  packet.subscriptions.should.eql(expected);
+	  done();
+	});
+      });
+    });
+      
     it('should accept an options parameter', function(done) {
       var client = createClient(port);
 
