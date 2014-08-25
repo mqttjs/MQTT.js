@@ -173,8 +173,12 @@ mqtt.createServer(function(client) {
   });
 
   client.on('error', function(err) {
+    console.log('error!', err);
+
+    if (!self.clients[client.id]) return;
+
+    delete self.clients[client.id];
     client.stream.end();
-    console.log('error!');
   });
 }).listen(1883);
 ```

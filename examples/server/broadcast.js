@@ -46,6 +46,10 @@ mqtt.createServer(function(client) {
   });
 
   client.on('error', function(err) {
+    console.log('error!', err);
+
+    if (!self.clients[client.id]) return;
+
     client.stream.end();
     console.dir(err);
   });
