@@ -77,6 +77,20 @@ module.exports = function(server, createClient, port) {
     });
   });
 
+  describe("destroying", function() {
+    it('should close the connection',function(done){
+      var client = createClient(port);
+
+      client.once('close',function() {
+        done();
+      });
+
+      client.once('connect',function() {
+        client.conn.destroy();
+      });
+    })
+  });
+
   describe('connecting', function() {
 
     it('should connect to the broker', function (done) {
@@ -540,17 +554,17 @@ module.exports = function(server, createClient, port) {
 
     it('should accept an hash of subscriptions', function(done) {
       var client = createClient(port);
-      
+
       var topics = {'test1': 0, 'test2': 1}
-      
+
       client.once('connect', function() {
         client.subscribe(topics);
       });
-      
+
       server.once('client', function(client) {
 	client.once('subscribe', function(packet) {
 	  var expected = [];
-      
+
 	  for (var k in topics) {
 	    if (topics.hasOwnProperty(k)) {
 	      expected.push({
@@ -559,13 +573,13 @@ module.exports = function(server, createClient, port) {
 	      });
 	    }
 	  }
-	  
+
 	  packet.subscriptions.should.eql(expected);
 	  done();
 	});
       });
     });
-      
+
     it('should accept an options parameter', function(done) {
       var client = createClient(port);
 
