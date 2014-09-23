@@ -134,8 +134,59 @@ module.exports = function() {
         packet.password.toString('hex').should.eql(expected.password.toString('hex'));
         done();
       });
-
     });
+
+    it('should handle binary will payload', function(done) {
+      var expected = {
+        cmd: "connect",
+        retain: false,
+        qos: 0,
+        dup: false,
+        length: 54,
+        protocolId: "MQIsdp",
+        protocolVersion: 3,
+        will: {
+          retain: true,
+          qos: 2,
+          topic: "topic",
+          payload: new Buffer([18, 19, 20])
+        },
+        clean: true,
+        keepalive: 30,
+        clientId: "test",
+        username: "username",
+        password: "password"
+      };
+
+      var fixture = [
+        16, 50, // Header
+        0, 6, // Protocol id length
+        77, 81, 73, 115, 100, 112, // Protocol id
+        3, // Protocol version
+        246, // Connect flags
+        0, 30, // Keepalive
+        0, 4, // Client id length
+        116, 101, 115, 116, // Client id
+        0, 5, // will topic length
+        116, 111, 112, 105, 99, // will topic
+        0, 3, // will payload length
+        18, 19, 20, // will payload
+        0, 8, // username length
+        117, 115, 101, 114, 110, 97, 109, 101, // username
+        0, 8, // password length
+        112, 97, 115, 115, 119, 111, 114, 100 //password
+      ];
+
+      this.stream.write(new Buffer(fixture));
+
+      this.conn.setPacketEncoding('binary');
+
+      this.conn.once('connect', function(packet) {
+        packet.will.payload.toString('hex').should.eql(expected.will.payload.toString('hex'));
+        done();
+      });
+    });
+
 
     describe('parse errors', function() {
       it('should say protocol not parseable', function(done) {
