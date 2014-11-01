@@ -2,7 +2,7 @@
  * Testing requires
  */
 var should = require('should')
-  , Stream = require('./util').TestStream;
+  , stream = require('./util').testStream;
 
 /**
  * Units under test
@@ -11,10 +11,11 @@ var Connection = require('../lib/connection');
 
 
 describe('Connection', function() {
+
   beforeEach(function () {
     var that = this;
-    this.stream = new Stream();
-    this.conn = this.stream.pipe(new Connection());
+    this.stream = stream();
+    this.conn = new Connection(this.stream);
   });
 
   describe('parsing', require('./connection.parse.js'));

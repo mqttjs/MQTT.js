@@ -32,12 +32,15 @@
     "./lib/mqtt.js": "./lib/browser.js"
   },
   "dependencies": {
+    "inherits": "^2.0.1",
+    "mqtt-packet": "^1.0.1",
     "readable-stream": "~1.0.2"
   },
   "devDependencies": {
     "mocha": "*",
-    "should": "*",
     "pre-commit": "0.0.7",
-    "sinon": "~1.10.0"
+    "should": "*",
+    "sinon": "~1.10.0",
+    "through2": "^0.6.3"
   }
 }

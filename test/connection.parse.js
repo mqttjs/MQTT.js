@@ -2,7 +2,7 @@
  * Testing requires
  */
 var should = require('should')
-  , Stream = require('./util').TestStream;
+  , stream = require('./util').testStream;
 
 /**
  * Units under test
@@ -125,9 +125,10 @@ module.exports = function() {
         15, 16, 17 //password
       ];
 
-      this.stream.write(new Buffer(fixture));
+      this.stream = stream();
+      this.conn = new Connection(this.stream, { encoding: 'binary' });
 
-      this.conn.setPacketEncoding('binary');
+      this.stream.write(new Buffer(fixture));
 
       this.conn.once('connect', function(packet) {
         packet.username.toString('hex').should.eql(expected.username.toString('hex'));
@@ -177,9 +178,10 @@ module.exports = function() {
         112, 97, 115, 115, 119, 111, 114, 100 //password
       ];
 
-      this.stream.write(new Buffer(fixture));
+      this.stream = stream();
+      this.conn = new Connection(this.stream, { encoding: 'binary' });
 
-      this.conn.setPacketEncoding('binary');
+      this.stream.write(new Buffer(fixture));
 
       this.conn.once('connect', function(packet) {
         packet.will.payload.toString('hex').should.eql(expected.will.payload.toString('hex'));
@@ -281,7 +283,7 @@ module.exports = function() {
         qos: 0,
         dup: false,
         length: 2054,
-        topic: "test",
+        topic: new Buffer("test", "utf8"),
         payload: new Buffer(2048)
       };
 
@@ -293,10 +295,12 @@ module.exports = function() {
 
       fixture = Buffer.concat([fixture, expected.payload]);
 
-      this.conn.setPacketEncoding('binary');
-      this.stream.write(fixture);
+      var s = stream()
+      var c = new Connection(s, { encoding: 'binary' });
 
-      this.conn.once('publish', function(packet) {
+      s.write(fixture);
+
+      c.once('publish', function(packet) {
         packet.should.eql(expected);
         done();
       });
@@ -309,7 +313,7 @@ module.exports = function() {
         qos: 0,
         dup: false,
         length: 6 + 2 * 1024 * 1024,
-        topic: "test",
+        topic: new Buffer("test", "utf8"),
         payload: new Buffer(2 * 1024 * 1024)
       };
 
@@ -321,10 +325,12 @@ module.exports = function() {
 
       fixture = Buffer.concat([fixture, expected.payload]);
 
-      this.conn.setPacketEncoding('binary');
-      this.stream.write(fixture);
+      var s = stream()
+      var c = new Connection(s, { encoding: 'binary' });
 
-      this.conn.once('publish', function(packet) {
+      s.write(fixture);
+
+      c.once('publish', function(packet) {
         packet.should.eql(expected);
         done();
       });
