@@ -3,7 +3,7 @@
  */
 
 var should = require('should')
-  , Stream = require('./util').TestStream;
+  , stream = require('./util').testStream;
 
 /**
  * Unit under test
@@ -19,8 +19,8 @@ module.exports = function() {
   describe('#connect', function() {
     it('should send a connect packet (minimal)', function(done) {
       var expected = new Buffer([
-        16, 18, // Header 
-        0, 6, 77, 81, 73, 115, 100, 112, // Protocol Id 
+        16, 18, // Header
+        0, 6, 77, 81, 73, 115, 100, 112, // Protocol Id
         3, // Protocol version
         0, // Connect flags
         0, 30, // Keepalive
@@ -32,7 +32,8 @@ module.exports = function() {
         protocolId: 'MQIsdp',
         protocolVersion: 3,
         clientId: 'test',
-        keepalive: 30
+        keepalive: 30,
+        clean: false
       };
 
       this.conn.connect(fixture);
@@ -47,8 +48,8 @@ module.exports = function() {
 
     it('should send a connect packet (maximal)', function(done) {
       var expected = new Buffer([
-        16, 54, // Header 
-        0, 6, 77, 81, 73, 115, 100, 112, // Protocol Id 
+        16, 54, // Header
+        0, 6, 77, 81, 73, 115, 100, 112, // Protocol Id
         3, // Protocol version
         246, // Connect flags (u=1,p=1,wr=1,wq=2,wf=1,c=1)
         0, 30, // Keepalive (30)
@@ -90,8 +91,8 @@ module.exports = function() {
 
     it('should send a connect packet with binary username/password', function(done) {
       var expected = new Buffer([
-        16, 28, // Header 
-        0, 6, 77, 81, 73, 115, 100, 112, // Protocol Id 
+        16, 28, // Header
+        0, 6, 77, 81, 73, 115, 100, 112, // Protocol Id
         3, // Protocol version
         0x40 | 0x80, // Connect flags
         0, 30, // Keepalive
@@ -108,25 +109,28 @@ module.exports = function() {
         protocolVersion: 3,
         clientId: 'test',
         keepalive: 30,
+        clean: false,
         username: new Buffer([12, 13, 14]),
         password: new Buffer([15, 16, 17])
       };
 
-      this.conn.setPacketEncoding('binary');
-      this.conn.connect(fixture);
+      var s = stream()
+      var c = new Connection(s, { encoding: 'binary' });
 
-      var that = this;
-      this.stream.on('readable', function() {
-        var packet = that.stream.read();
+      s.removeAllListeners();
+      c.connect(fixture);
+
+      s.on('readable', function() {
+        var packet = s.read();
         packet.should.eql(expected);
         done();
       });
     });
-	
+
     it('should send a connect packet with binary will payload', function(done) {
       var expected = new Buffer([
         16, 50, // Header
-        0, 6, 77, 81, 73, 115, 100, 112, // Protocol Id 
+        0, 6, 77, 81, 73, 115, 100, 112, // Protocol Id
         3, // Protocol version
         246, // Connect flags
         0, 30, // Keepalive
@@ -158,21 +162,23 @@ module.exports = function() {
         password: 'password'
       };
 
-      this.conn.setPacketEncoding('binary');
-      this.conn.connect(fixture);
+      var s = stream()
+      var c = new Connection(s, { encoding: 'binary' });
 
-      var that = this;
-      this.stream.on('readable', function() {
-        var packet = that.stream.read();
+      s.removeAllListeners();
+      c.connect(fixture);
+
+      s.on('readable', function() {
+        var packet = s.read();
         packet.should.eql(expected);
         done();
       });
     });
-	
+
     it('should send a connect packet with unicode will payload', function(done) {
       var expected = new Buffer([
         16, 49, // Header
-        0, 6, 77, 81, 73, 115, 100, 112, // Protocol Id 
+        0, 6, 77, 81, 73, 115, 100, 112, // Protocol Id
         3, // Protocol version
         246, // Connect flags
         0, 30, // Keepalive
@@ -204,12 +210,15 @@ module.exports = function() {
         password: 'password'
       };
 
-      this.conn.setPacketEncoding('binary');
-      this.conn.connect(fixture);
 
-      var that = this;
-      this.stream.on('readable', function() {
-        var packet = that.stream.read();
+      var s = stream()
+      var c = new Connection(s, { encoding: 'binary' });
+
+      s.removeAllListeners();
+      c.connect(fixture);
+
+      s.on('readable', function() {
+        var packet = s.read();
         packet.should.eql(expected);
         done();
       });
@@ -217,26 +226,9 @@ module.exports = function() {
 
     describe('invalid options', function () {
       describe('protocol id', function () {
-        it('should reject non-present', function (done) {
+        it('should reject non-string', function(done) {
           var fixture = {
-            protocolVersion: 3,
-            clientId: 'test',
-            keepalive: 30
-          };
-
-          var expectedErr = 'Invalid protocol id';
-
-          this.conn.once('error', function(error) {
-            error.message.should.equal(expectedErr);
-            done();
-          });
-
-          this.conn.connect(fixture);
-        });
-          
-        it('should reject falsy', function (done) {
-          var fixture = {
-            protocolId: '',
+            protocolId: 42,
             protocolVersion: 3,
             clientId: 'test',
             keepalive: 30
@@ -253,42 +245,7 @@ module.exports = function() {
         });
       });
 
-      it('should reject non-string', function(done) {
-        var fixture = {
-          protocolId: new Buffer(0),
-          protocolVersion: 3,
-          clientId: 'test',
-          keepalive: 30
-        }
-
-        var expectedErr = 'Invalid protocol id';
-
-        this.conn.once('error', function(error) {
-          error.message.should.equal(expectedErr);
-          done();
-        });
-
-        this.conn.connect(fixture);
-      });
-
       describe('protocol version', function() {
-        it('should reject non-present', function(done) {
-          var fixture = {
-            protocolId: 'MQIsdp',
-            clientId: 'test',
-            keepalive: 30
-          };
-
-          var expectedErr = 'Invalid protocol version';
-
-          this.conn.once('error', function(error) {
-            error.message.should.equal(expectedErr);
-            done();
-          });
-
-          this.conn.connect(fixture);
-        });
-
         it('should reject non-number', function(done) {
           var fixture = {
             protocolId: 'MQIsdp',
@@ -400,23 +357,6 @@ module.exports = function() {
       });
 
       describe('keepalive', function() {
-        it('should reject non-present', function(done) {
-          var fixture = {
-            protocolId: 'MQIsdp',
-            protocolVersion: 3,
-            clientId: 'test'
-          };
-
-          var expectedErr = 'Invalid keepalive';
-
-          this.conn.once('error', function(error) {
-            error.message.should.equal(expectedErr);
-            done();
-          });
-
-          this.conn.connect(fixture);
-        });
-
         it('should reject non-number', function(done) {
           var fixture = {
             protocolId: 'MQIsdp',
@@ -510,7 +450,7 @@ module.exports = function() {
             }
           };
 
-          var expectedErr = 'Invalid will - invalid topic';
+          var expectedErr = 'Invalid will topic';
 
           this.conn.once('error', function(error) {
             error.message.should.equal(expectedErr);
@@ -535,7 +475,7 @@ module.exports = function() {
             }
           };
 
-          var expectedErr = 'Invalid will - invalid payload';
+          var expectedErr = 'Invalid will payload';
 
           this.conn.once('error', function(error) {
             error.message.should.equal(expectedErr);
@@ -559,7 +499,7 @@ module.exports = function() {
             }
           };
 
-          var expectedErr = 'Invalid will - invalid qos';
+          var expectedErr = 'Invalid will qos';
 
           this.conn.once('error', function(error) {
             error.message.should.equal(expectedErr);
@@ -766,15 +706,14 @@ module.exports = function() {
         payload: payload
       };
 
-      this.conn.publish(fixture);
-      this.conn.end();
-
-      var buffers = []
-
-      this.stream.on('data', function(data) {
+      this.stream.on('readable', function() {
+        var data = this.read();
         data.toString('hex').should.eql(expected.toString('hex'));
         done();
       });
+
+      this.conn.publish(fixture);
+      this.conn.end();
     });
 
     it('should send a publish packet of 2 MB', function(done) {
@@ -795,9 +734,8 @@ module.exports = function() {
       this.conn.publish(fixture);
       this.conn.end();
 
-      var buffers = []
-
-      this.stream.on('data', function(data) {
+      this.stream.on('readable', function() {
+        var data = this.read();
         data.toString('hex').should.eql(expected.toString('hex'));
         done();
       });
@@ -897,7 +835,7 @@ module.exports = function() {
   describe('#pubcomp', function() {
     it('should send a pubcomp packet', function(done) {
       var expected = new Buffer([
-        112, 2, // header
+        116, 2, // header
         0, 9 // mid=9
       ]);
 
