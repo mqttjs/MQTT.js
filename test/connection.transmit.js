@@ -215,6 +215,53 @@ module.exports = function() {
       });
     });
 
+    it('should send a connect packet with null (0 length) will payload', function(done) {
+      var expected = new Buffer([
+        16, 47, // Header
+        0, 6, 77, 81, 73, 115, 100, 112, // Protocol Id
+        3, // Protocol version
+        246, // Connect flags
+        0, 30, // Keepalive
+        0, 4, // Client id length
+        116, 101, 115, 116, // Client Id
+        0, 5, // Will topic length
+        116, 111, 112, 105, 99, // Will topic ('topic')
+        0, 0, // Will payload length
+        // Will payload (empty)
+        0, 8, // Username length
+        117, 115, 101, 114, 110, 97, 109, 101, // ('username')
+        0, 8, // Password length
+        112, 97, 115, 115, 119, 111, 114, 100 // ('password')
+      ]);
+
+      var fixture = {
+        protocolId: 'MQIsdp',
+        protocolVersion: 3,
+        clientId: 'test',
+        keepalive: 30,
+        will: {
+          topic: 'topic',
+          payload: null,
+          qos: 2,
+          retain: true
+        },
+        clean: true,
+        username: 'username',
+        password: 'password'
+      };
+
+      this.conn.setPacketEncoding('binary');
+      this.conn.connect(fixture);
+
+      var that = this;
+      this.stream.on('readable', function() {
+        var packet = that.stream.read();
+        packet.should.eql(expected);
+        done();
+      });
+    });
+
+
     describe('invalid options', function () {
       describe('protocol id', function () {
         it('should reject non-present', function (done) {
