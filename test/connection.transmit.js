@@ -1088,5 +1088,18 @@ module.exports = function() {
         done();
       });
     });
+
+    it('should send a null disconnect packet', function(done) {
+      var expected = new Buffer([
+        224, 0 // header
+      ]);
+
+      this.conn.disconnect();
+      var that = this;
+      this.stream.once('readable', function() {
+        that.stream.read(expected.length).should.eql(expected);
+        done();
+      });
+    });
   });
 };
