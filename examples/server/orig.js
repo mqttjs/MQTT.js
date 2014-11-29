@@ -1,7 +1,7 @@
 var mqtt = require('../..')
   , util = require('util');
-  
-mqtt.createServer(function(client) {
+
+new mqtt.Server(function(client) {
   var self = this;
 
   if (!self.clients) self.clients = {};

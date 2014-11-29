@@ -1,9 +1,10 @@
-var mqtt = require('mqtt');
+var mqtt = require('../../');
+var fs = require('fs');
 
-mqtt.createSecureServer(
-	 __dirname + '/key.csr.server1.pem',
-	 __dirname + '/crt.server1.pem',
-function(client) {
+new mqtt.SecureServer({
+	 key: fs.readFileSync(__dirname + '/key.csr.server1.pem'),
+	 cert: fs.readFileSync(__dirname + '/crt.server1.pem'),
+}, function(client) {
   var self = this;
 
   if (!self.clients) self.clients = {};

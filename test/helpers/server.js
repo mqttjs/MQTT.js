@@ -1,7 +1,7 @@
 var mqtt = require('../../lib/mqtt');
 
 module.exports.init_server = function (PORT) {
-  var server = mqtt.createServer(function (client) {
+  var server = new mqtt.Server(function (client) {
     /*var i, events = ['connect', 'publish', 'pubrel', 'subscribe', 'disconnect'];
 
     for (i = 0; i < events.length; i++) {
@@ -46,12 +46,15 @@ module.exports.init_server = function (PORT) {
   return server;
 };
 
-module.exports.init_secure_server = function (PORT, KEY, CERT) {
-  var server = mqtt.createSecureServer(KEY, CERT, function (client) {
+module.exports.init_secure_server = function (port, key, cert) {
+  var server = new mqtt.SecureServer({
+    key: fs.readFileSync(key),
+    cert: fs.readFileSync(cert)
+  }, function (client) {
     client.on('connect', function (packet) {
       client.connack({returnCode: 0});
     });
   });
-  server.listen(PORT);
+  server.listen(port);
   return server;
 };

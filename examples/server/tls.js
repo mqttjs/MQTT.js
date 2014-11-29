@@ -1,8 +1,12 @@
 /* broadcast.js - all published messages are relayed to all connected clients */
 
 var mqtt = require('../..');
+var fs = require('fs');
 
-mqtt.createSecureServer("private-key.pem", "public-cert.pem", function(client) {
+new mqtt.SecureServer({
+  key: fs.readFileSync("../../test/helpers/private-key.pem"),
+  cert: fs.readFileSync("../../test/helpers/public-cert.pem")
+}, function(client) {
   var self = this;
 
   if (!self.clients) self.clients = {};

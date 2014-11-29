@@ -25,7 +25,7 @@ var WRONG_CERT = __dirname + '/helpers/wrong-cert.pem';
 /**
  * Test server
  */
-var server = mqtt.createSecureServer({
+var server = new mqtt.SecureServer({
   key: fs.readFileSync(KEY),
   cert: fs.readFileSync(CERT)
 }, function (client) {

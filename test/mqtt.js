@@ -146,37 +146,10 @@ describe('mqtt', function() {
     it('should throw on incorrect args');
   });
 
-  describe('#createServer', function() {
-    it('should return an MqttServer', function() {
-      var s = mqtt.createServer();
-
-      s.should.be.instanceOf(mqtt.MqttServer);
-    });
-  });
-
-  describe('#createSecureServer', function() {
-    it('should return an MqttSecureServer', function() {
-      var s = mqtt.createSecureServer(
-        __dirname + '/helpers/private-key.pem', 
-        __dirname + '/helpers/public-cert.pem'
-      );
-      s.should.be.instanceOf(mqtt.MqttSecureServer);
-    });
-
-    it('should accept options object', function() {
-      var s = mqtt.createSecureServer({
-        key: fs.readFileSync(__dirname + '/helpers/private-key.pem'),
-        cert: fs.readFileSync(__dirname + '/helpers/public-cert.pem')
-      });
-
-      s.should.be.instanceOf(mqtt.MqttSecureServer);
-    });
-  });
-
   describe('#createConnection', function() {
     before(function () {
       // Setup dummy server
-      
+
       // If there's an error it's probably EADDRINUSE
       // Just use whatever's there already (likely mosquitto)
       this.server = new net.Server();

@@ -19,7 +19,7 @@ var port = 9876;
 /**
  * Test server
  */
-var server = mqtt.createServer(function (client) {
+var server = new mqtt.Server(function (client) {
 
   client.on('connect', function(packet) {
     if (packet.clientId === 'invalid') {

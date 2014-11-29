@@ -1,4 +1,6 @@
-var server = require('../../lib/mqtt').createServer(function (client) {
+var mqtt = require('../../lib/mqtt');
+
+var server = new mqtt.Server(function (client) {
   client.on('connect', function () {
     client.connack({ returnCode : 0 });
   });
