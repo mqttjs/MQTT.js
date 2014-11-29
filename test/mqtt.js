@@ -3,6 +3,7 @@
  */
 
 var should = require('should')
+  , fs = require('fs')
   , net = require('net')
   , sinon = require('sinon');
 
@@ -159,6 +160,15 @@ describe('mqtt', function() {
         __dirname + '/helpers/private-key.pem', 
         __dirname + '/helpers/public-cert.pem'
       );
+      s.should.be.instanceOf(mqtt.MqttSecureServer);
+    });
+
+    it('should accept options object', function() {
+      var s = mqtt.createSecureServer({
+        key: fs.readFileSync(__dirname + '/helpers/private-key.pem'),
+        cert: fs.readFileSync(__dirname + '/helpers/public-cert.pem')
+      });
+
       s.should.be.instanceOf(mqtt.MqttSecureServer);
     });
   });

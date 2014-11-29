@@ -10,6 +10,7 @@ var should = require('should')
  */
 
 var server = require('../lib/server');
+var Connection = require('../lib/connection');
 
 describe('MqttServer', function() {
   it('should emit MqttServerClients', function(done) {
@@ -17,7 +18,7 @@ describe('MqttServer', function() {
     s.listen(9877);
 
     s.on('client', function(client) {
-      client.should.be.instanceOf(server.MqttServerClient);
+      client.should.be.instanceOf(Connection);
       done();
     });
 

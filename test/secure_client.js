@@ -3,7 +3,9 @@
  * Testing dependencies
  */
 var mqtt = require('..')
-  , abstractClientTests = require("./abstract_client");
+  , abstractClientTests = require("./abstract_client")
+  , fs = require('fs');
+
 
 /**
  * Modules to be tested
@@ -23,7 +25,10 @@ var WRONG_CERT = __dirname + '/helpers/wrong-cert.pem';
 /**
  * Test server
  */
-var server = mqtt.createSecureServer(KEY, CERT, function (client) {
+var server = mqtt.createSecureServer({
+  key: fs.readFileSync(KEY),
+  cert: fs.readFileSync(CERT)
+}, function (client) {
   client.on('connect', function(packet) {
     if (packet.clientId === 'invalid') {
       client.connack({returnCode: 2});
@@ -79,50 +84,44 @@ var server = mqtt.createSecureServer(KEY, CERT, function (client) {
 describe('MqttSecureClient', function () {
   abstractClientTests(server, createClient, port);
 
-  if (!process.version.match(/^v0.8/)) {
-    describe('with secure parameters', function() {
+  describe('with secure parameters', function() {
 
-      it('should validate successfully the CA', function (done) {
-        var client = createClient(port, {
-          ca: [CERT],
-          rejectUnauthorized: true
-        });
-
-        client.on('error', done)
-
-        server.once('connect', function(client) {
-          done();
-        });
+    it('should validate successfully the CA', function (done) {
+      var client = createClient(port, {
+        ca: [CERT],
+        rejectUnauthorized: true
       });
 
-      it('should validate unsuccessfully the CA', function (done) {
-        var client = createClient(port, {
-          ca: [WRONG_CERT],
-          rejectUnauthorized: true
-        });
+      client.on('error', done)
 
-        server.once('connect', function(client) {
-          done(new Error('it should not happen'));
-        });
+      server.once('connect', function(client) {
+        done();
+      });
+    });
 
-        client.once('error', function() {
-          done()
-        })
+    it('should validate unsuccessfully the CA', function (done) {
+      var client = createClient(port, {
+        ca: [WRONG_CERT],
+        rejectUnauthorized: true
       });
 
-      it('should emit close on TLS error', function (done) {
-        var client = createClient(port, {
-          ca: [WRONG_CERT],
-          rejectUnauthorized: true
-        });
+      client.once('error', function() {
+        done();
+      })
+    });
 
-        client.on('error', function() {})
-
-        // TODO node v0.8.x emits multiple close events
-        client.once('close', function() {
-          done()
-        })
+    it('should emit close on TLS error', function (done) {
+      var client = createClient(port, {
+        ca: [WRONG_CERT],
+        rejectUnauthorized: true
       });
-    })
-  }
+
+      client.on('error', function() {})
+
+      // TODO node v0.8.x emits multiple close events
+      client.once('close', function() {
+        done();
+      })
+    });
+  })
 });

@@ -6,3 +6,4 @@ certs/*
 Session.vim
 .netrwhist
 *~
+npm-debug.log
