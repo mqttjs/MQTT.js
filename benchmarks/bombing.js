@@ -9,19 +9,16 @@ var interval = 5000;
 function count() {
   console.log("sent/s", sent / interval * 1000);
   sent = 0;
-  setTimeout(count, interval);
 }
+
+setInterval(count, interval)
 
 function publish() {
   sent++;
-  client.publish("test", "payload");
-  setImmediate(publish);
+  client.publish("test", "payload", publish);
 }
 
-client.on("connect", function() {
-  publish();
-  count();
-});
+client.on("connect", publish);
 
 client.on("error", function() {
   console.log("reconnect!");
