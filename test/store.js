@@ -88,4 +88,20 @@ describe("inflight store", function() {
       });
     });
   });
+
+  it("should get a packet with the same messageId", function(done) {
+    var packet = {
+      topic: "hello",
+      payload: "world",
+      qos: 1,
+      messageId: 42
+    };
+
+    store.put(packet, function() {
+      store.get({ messageId: 42 }, function(err, fromDb) {
+        fromDb.should.equal(packet);
+        done();
+      });
+    });
+  });
 });

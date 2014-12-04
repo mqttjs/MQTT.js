@@ -707,6 +707,36 @@ module.exports = function(server, createClient, port) {
       });
     });
 
+    it('should emit a message event (qos=2) - repeated publish', function(done) {
+      var client = createClient(port)
+        , testPacket = {
+          topic: 'test',
+          payload: 'message',
+          retain: true,
+          qos: 2,
+          messageId: 5
+        };
+
+      server.testPublish = testPacket;
+
+      client.subscribe(testPacket.topic);
+      client.on('message',
+          function(topic, message, packet) {
+        topic.should.equal(testPacket.topic);
+        message.should.equal(testPacket.payload);
+        packet.should.equal(packet);
+        done();
+      });
+
+      server.once('client', function(client) {
+        client.on('subscribe', function(packet) {
+          client.publish(testPacket);
+          // twice, should be ignored
+          client.publish(testPacket);
+        });
+      });
+    });
+
     it('should support chinese topic', function(done) {
       var client = createClient(port, { encoding: 'binary' })
         , testPacket = {
