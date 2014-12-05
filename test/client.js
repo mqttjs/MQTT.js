@@ -110,5 +110,25 @@ describe('MqttClient', function() {
       client._nextId().should.equal(65535);
       client._nextId().should.equal(1);
     })
-  })
+  });
+
+  describe('reconnecting', function () {
+    it('should attempt to reconnect once server is down', function (done) {
+      this.timeout(15000);
+
+      var fork   = require('child_process').fork;
+      var server = fork(__dirname + '/helpers/server_process.js');
+
+      var client = mqtt.createClient('3000', 'localhost', { keepalive: 1 });
+
+      client.once('connect', function () {
+        server.kill('SIGINT'); // mocks server shutdown
+
+        client.once('close', function () {
+          should.exist(client.reconnectTimer);
+          done();
+        });
+      });
+    });
+  });
 });
