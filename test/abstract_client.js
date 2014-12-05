@@ -952,5 +952,30 @@ module.exports = function(server, createClient, port) {
         }
       });
     });
+
+    it('should resend in-flight QoS 1 messages from the client', function(done) {
+      var client = createClient(port, {reconnectPeriod: 200})
+        , reconnect = false;
+
+      server.once('client', function(client) {
+        client.on('connect', function() {
+          setImmediate(function() {
+            client.stream.destroy();
+          });
+        });
+
+        client.on('publish', function() {
+          console.log('publish!!')
+        });
+
+        server.once('client', function(client) {
+          client.on('publish', function() {
+            done()
+          });
+        });
+      });
+
+      client.publish('hello', 'world', { qos: 1 });
+    });
   });
 };
