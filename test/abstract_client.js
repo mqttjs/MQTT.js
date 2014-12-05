@@ -953,7 +953,7 @@ module.exports = function(server, createClient, port) {
       });
     });
 
-    it('should resend in-flight QoS 1 messages from the client', function(done) {
+    it('should resend in-flight QoS 1 publish messages from the client', function(done) {
       var client = createClient(port, {reconnectPeriod: 200})
         , reconnect = false;
 
@@ -976,6 +976,48 @@ module.exports = function(server, createClient, port) {
       });
 
       client.publish('hello', 'world', { qos: 1 });
+    });
+
+    it('should resend in-flight QoS 2 publish messages from the client', function(done) {
+      var client = createClient(port, {reconnectPeriod: 200})
+        , reconnect = false;
+
+      server.once('client', function(client) {
+        client.on('publish', function() {
+          setImmediate(function() {
+            client.stream.destroy();
+          });
+        });
+
+        server.once('client', function(client) {
+          client.on('pubrel', function() {
+            done()
+          });
+        });
+      });
+
+      client.publish('hello', 'world', { qos: 2 });
+    });
+
+    it('should resend in-flight QoS 2 publish messages from the client', function(done) {
+      var client = createClient(port, {reconnectPeriod: 200})
+        , reconnect = false;
+
+      server.once('client', function(client) {
+        client.on('publish', function() {
+          setImmediate(function() {
+            client.stream.destroy();
+          });
+        });
+
+        server.once('client', function(client) {
+          client.on('pubrel', function() {
+            done()
+          });
+        });
+      });
+
+      client.publish('hello', 'world', { qos: 2 });
     });
   });
 };
