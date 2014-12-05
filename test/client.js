@@ -77,24 +77,24 @@ describe('MqttClient', function() {
   describe('creating', function() {
     it('should allow instantiation of MqttClient without the \'new\' operator' , function(done) {
       should(function() {
-	var client;
-	
-	try {
-	  client = mqtt.MqttClient(function() {
-	    throw Error('break');
-	  }, {});
-	} catch (err) {
-	  if (err.message !== 'break') {
-	    throw err;
-	  }
-	  done();
-	}
+        var client;
+
+        try {
+          client = mqtt.MqttClient(function() {
+            throw Error('break');
+          }, {});
+        } catch (err) {
+          if (err.message !== 'break') {
+            throw err;
+          }
+          done();
+        }
       }).not.throw("Object #<Object> has no method '_setupStream'");
     });
   });
-  
+
   abstractClientTests(server, createClient, port);
-  
+
   describe('message ids', function() {
     it('should increment the message id', function() {
       var client = createClient();
