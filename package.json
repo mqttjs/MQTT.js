@@ -34,7 +34,8 @@
   "dependencies": {
     "inherits": "^2.0.1",
     "mqtt-packet": "^1.0.1",
-    "readable-stream": "~1.0.2"
+    "readable-stream": "~1.0.2",
+    "xtend": "^4.0.0"
   },
   "devDependencies": {
     "mocha": "*",

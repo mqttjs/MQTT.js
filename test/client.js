@@ -119,7 +119,7 @@ describe('MqttClient', function() {
       var fork   = require('child_process').fork;
       var server = fork(__dirname + '/helpers/server_process.js');
 
-      var client = mqtt.createClient('3000', 'localhost', { keepalive: 1 });
+      var client = mqtt.connect({ port: 3000, host: 'localhost', keepalive: 1 });
 
       client.once('connect', function () {
         server.kill('SIGINT'); // mocks server shutdown

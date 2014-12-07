@@ -88,7 +88,7 @@ describe('MqttSecureClient', function () {
 
     it('should validate successfully the CA', function (done) {
       var client = createClient(port, {
-        ca: [CERT],
+        caPaths: [CERT],
         rejectUnauthorized: true
       });
 
@@ -101,7 +101,7 @@ describe('MqttSecureClient', function () {
 
     it('should validate unsuccessfully the CA', function (done) {
       var client = createClient(port, {
-        ca: [WRONG_CERT],
+        caPaths: [WRONG_CERT],
         rejectUnauthorized: true
       });
 

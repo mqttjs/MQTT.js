@@ -53,13 +53,9 @@ describe('mqtt', function() {
     it('should return an MqttClient with correct host when called with a host and port', function () {
       sinon.spy(mqtt, "createClient");
       var c = mqtt.connect('tcp://user:pass@localhost:1883');
-      mqtt.createClient.calledWith('1883', 'localhost').should.be.ok;
-    });
 
-    it('should throw an error when connect is called without a brokerUrl', function () {
-      (function(){
-        mqtt.connect()
-      }).should.throwError(/^Missing brokerUrl/);
+      c.options.should.have.property('hostname', 'localhost');
+      c.options.should.have.property('port', '1883');
     });
 
     var sslOpts = {
@@ -82,12 +78,6 @@ describe('mqtt', function() {
       c.on('error', function() {});
 
       c.should.be.instanceOf(mqtt.MqttClient);
-    });
-
-    it('should throw an error when an unknown protocol is supplied', function () {
-      (function(){
-        mqtt.connect('http://localhost')
-      }).should.throwError(/^Unknown protocol/);
     });
   });
 
