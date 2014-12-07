@@ -61,7 +61,7 @@ describe('mqtt', function() {
     var sslOpts = {
       keyPath: __dirname + '/helpers/private-key.pem',
       certPath: __dirname + '/helpers/public-cert.pem',
-      ca: [__dirname + '/helpers/public-cert.pem']
+      caPaths: [__dirname + '/helpers/public-cert.pem']
     };
 
     it('should return an MqttClient when connect is called with mqtts:/ url', function () {
