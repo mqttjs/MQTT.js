@@ -7,11 +7,6 @@ var mqtt = require('..')
   , abstractClientTests = require("./abstract_client");
 
 /**
- * Modules to be tested
- */
-var createClient = require('../lib/mqtt').createClient;
-
-/**
  * Testing options
  */
 var port = 9876;
@@ -93,18 +88,19 @@ describe('MqttClient', function() {
     });
   });
 
-  abstractClientTests(server, createClient, port);
+  var config = { protocol: 'mqtt', port: port };
+  abstractClientTests(server, config);
 
   describe('message ids', function() {
     it('should increment the message id', function() {
-      var client = createClient();
+      var client = mqtt.connect(config);
       var currentId = client._nextId();
 
       client._nextId().should.equal(currentId + 1);
     }),
 
     it('should return 1 once the interal counter reached limit', function() {
-      var client = createClient();
+      var client = mqtt.connect(config);
       client.nextId = 65535;
 
       client._nextId().should.equal(65535);

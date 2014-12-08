@@ -2,14 +2,24 @@
 /**
  * Testing dependencies
  */
-var should = require('should')
-  , sinon = require('sinon')
-  , MqttClient = require('../lib/client');
+var should      = require('should')
+  , sinon       = require('sinon')
+  , mqtt        = require('../lib/mqtt')
+  , MqttClient  = require('../lib/client');
 
-module.exports = function(server, createClient, port) {
+module.exports = function(server, config) {
+  function connect(opts) {
+    opts = Object.keys(config).reduce(function(acc, key) {
+      acc[key] = config[key];
+      return acc;
+    }, opts || {});
+
+    return mqtt.connect(opts);
+  }
+
   describe('closing', function() {
     it('should emit close if stream closes', function(done) {
-      var client = createClient(port);
+      var client = connect();
 
       client.once('connect', function() {
         client.stream.end();
@@ -21,9 +31,9 @@ module.exports = function(server, createClient, port) {
     });
 
     it('should mark the client as disconnected', function(done) {
-      var client = createClient(port);
+      var client = connect();
 
-      client.stream.once('close', function() {
+      client.once('close', function() {
         client.end();
         if (!client.connected) {
           done();
@@ -37,7 +47,7 @@ module.exports = function(server, createClient, port) {
     });
 
     it('should stop ping timer if stream closes', function(done) {
-      var client = createClient(port);
+      var client = connect();
 
       client.once('close', function() {
         should.not.exist(client.pingTimer);
@@ -52,7 +62,7 @@ module.exports = function(server, createClient, port) {
     });
 
     it('should emit close after end called', function(done) {
-      var client = createClient(port);
+      var client = connect();
 
       client.once('close', function() {
         done();
@@ -65,7 +75,7 @@ module.exports = function(server, createClient, port) {
     });
 
     it('should stop ping timer after end called', function(done) {
-      var client = createClient(port);
+      var client = connect();
 
       client.once('connect', function() {
         should.exist(client.pingTimer);
@@ -80,7 +90,7 @@ module.exports = function(server, createClient, port) {
   describe('connecting', function() {
 
     it('should connect to the broker', function (done) {
-      var client = createClient(port);
+      var client = connect();
 
       server.once('client', function(client) {
         client.disconnect()
@@ -89,7 +99,7 @@ module.exports = function(server, createClient, port) {
     });
 
     it('should send a default client id', function (done) {
-      var client = createClient(port);
+      var client = connect();
 
       server.once('client', function (client) {
         client.once('connect', function(packet) {
@@ -101,7 +111,7 @@ module.exports = function(server, createClient, port) {
     });
 
     it('should send be clean by default', function (done) {
-      var client = createClient(port);
+      var client = connect();
 
       server.once('client', function (client) {
         client.once('connect', function(packet) {
@@ -113,8 +123,7 @@ module.exports = function(server, createClient, port) {
     });
 
     it('should connect with the given client id', function (done) {
-      var client = createClient(port, 'localhost',
-        {clientId: 'testclient'});
+      var client = connect({clientId: 'testclient'});
 
       server.once('client', function (client) {
         client.once('connect', function(packet) {
@@ -126,8 +135,7 @@ module.exports = function(server, createClient, port) {
     });
 
     it('should connect with the client id and unclean state', function (done) {
-      var client = createClient(port, 'localhost',
-        {clientId: 'testclient', clean: false});
+      var client = connect({clientId: 'testclient', clean: false});
 
       server.once('client', function (client) {
         client.once('connect', function(packet) {
@@ -141,9 +149,7 @@ module.exports = function(server, createClient, port) {
 
     it('should require a clientId with clean=false', function (done) {
       try {
-        var client = createClient(port, 'localhost', {
-          clean: false
-        });
+        var client = connect({ clean: false });
         done(new Error('should have thrown'));
       } catch(err) {
         done();
@@ -151,7 +157,7 @@ module.exports = function(server, createClient, port) {
     });
 
     it('should default to localhost', function (done) {
-      var client = createClient(port, {clientId: 'testclient'});
+      var client = connect({clientId: 'testclient'});
 
       server.once('client', function (client) {
         client.once('connect', function(packet) {
@@ -163,7 +169,7 @@ module.exports = function(server, createClient, port) {
     });
 
     it('should emit connect', function (done) {
-      var client = createClient(port);
+      var client = connect();
       client.once('connect', function() {
         client.end();
         done();
@@ -172,7 +178,7 @@ module.exports = function(server, createClient, port) {
     });
 
     it('should mark the client as connected', function(done) {
-      var client = createClient(port);
+      var client = connect();
       client.once('connect', function() {
         if (client.connected) {
           done();
@@ -184,7 +190,7 @@ module.exports = function(server, createClient, port) {
     });
 
     it('should emit error', function (done) {
-      var client = createClient(port, {clientId: 'invalid'});
+      var client = connect({clientId: 'invalid'});
       client.once('connect', function () {
         done(new Error('Should not emit connect'));
       });
@@ -195,8 +201,8 @@ module.exports = function(server, createClient, port) {
     });
 
     it('should have different client ids', function() {
-      var client1 = createClient(port)
-        , client2 = createClient(port);
+      var client1 = connect()
+        , client2 = connect();
 
       client1.options.clientId.should.not.equal(client2.options.clientId);
       client1.end();
@@ -206,7 +212,7 @@ module.exports = function(server, createClient, port) {
 
   describe('offline messages', function() {
     it('should queue message until connected', function(done) {
-      var client = createClient(port);
+      var client = connect();
 
       client.publish('test', 'test');
       client.subscribe('test');
@@ -222,7 +228,7 @@ module.exports = function(server, createClient, port) {
 
   describe('publishing', function() {
     it('should publish a message (offline)', function (done) {
-      var client = createClient(port)
+      var client = connect()
         , payload = 'test'
         , topic = 'test';
 
@@ -240,7 +246,7 @@ module.exports = function(server, createClient, port) {
     });
 
     it('should publish a message (online)', function (done) {
-      var client = createClient(port)
+      var client = connect()
         , payload = 'test'
         , topic = 'test';
 
@@ -260,7 +266,7 @@ module.exports = function(server, createClient, port) {
     });
 
     it('should accept options', function (done) {
-      var client = createClient(port)
+      var client = connect()
         , payload = 'test'
         , topic = 'test';
 
@@ -285,7 +291,7 @@ module.exports = function(server, createClient, port) {
     });
 
     it('should fire a callback (qos 0)', function (done) {
-      var client = createClient(port);
+      var client = connect();
 
       client.once('connect', function() {
         client.publish('a', 'b', done);
@@ -293,7 +299,7 @@ module.exports = function(server, createClient, port) {
     });
 
     it('should fire a callback (qos 1)', function (done) {
-      var client = createClient(port);
+      var client = connect();
 
       var opts = {qos: 1};
 
@@ -303,7 +309,7 @@ module.exports = function(server, createClient, port) {
     });
 
     it('should fire a callback (qos 2)', function (done) {
-      var client = createClient(port);
+      var client = connect();
 
       var opts = {qos: 2};
 
@@ -313,7 +319,7 @@ module.exports = function(server, createClient, port) {
     });
 
     it('should support UTF-8 characters in topic', function(done) {
-      var client = createClient(port);
+      var client = connect();
 
       client.once('connect', function() {
         client.publish('中国', 'hello', done);
@@ -321,7 +327,7 @@ module.exports = function(server, createClient, port) {
     })
 
     it('should support UTF-8 characters in payload', function(done) {
-      var client = createClient(port);
+      var client = connect();
 
       client.once('connect', function() {
         client.publish('hello', '中国', done);
@@ -331,7 +337,7 @@ module.exports = function(server, createClient, port) {
 
   describe('unsubscribing', function() {
     it('should send an unsubscribe packet (offline)', function(done) {
-      var client = createClient(port);
+      var client = connect();
 
       client.unsubscribe('test');
 
@@ -344,7 +350,7 @@ module.exports = function(server, createClient, port) {
     });
 
     it('should send an unsubscribe packet', function(done) {
-      var client = createClient(port);
+      var client = connect();
       var topic = 'topic';
 
       client.once('connect', function() {
@@ -360,7 +366,7 @@ module.exports = function(server, createClient, port) {
     });
 
     it('should accept an array of unsubs', function(done) {
-      var client = createClient(port);
+      var client = connect();
 
       var topics = ['topic1', 'topic2'];
 
@@ -377,7 +383,7 @@ module.exports = function(server, createClient, port) {
     });
 
     it('should fire a callback on unsuback', function(done) {
-      var client = createClient(port);
+      var client = connect();
 
       var topic = 'topic';
 
@@ -393,7 +399,7 @@ module.exports = function(server, createClient, port) {
     });
 
     it('should unsubscribe from a chinese topic', function(done) {
-      var client = createClient(port);
+      var client = connect();
       var topic = '中国';
 
       client.once('connect', function() {
@@ -422,7 +428,7 @@ module.exports = function(server, createClient, port) {
 
     it('should checkPing at keepalive interval', function (done) {
       var interval = 3,
-      client = createClient(port, {keepalive: interval});
+      client = connect({keepalive: interval});
 
       client._checkPing = sinon.spy();
 
@@ -446,7 +452,7 @@ module.exports = function(server, createClient, port) {
   describe('pinging', function () {
 
     it('should set a ping timer', function (done) {
-      var client = createClient(port, {keepalive: 3});
+      var client = connect({keepalive: 3});
       client.once('connect', function() {
         should.exist(client.pingTimer);
         client.end()
@@ -454,7 +460,7 @@ module.exports = function(server, createClient, port) {
       });
     });
     it('should not set a ping timer keepalive=0', function(done) {
-      var client = createClient(port, {keepalive:0});
+      var client = connect({keepalive:0});
       client.on('connect', function() {
         should.not.exist(client.pingTimer);
         client.end()
@@ -462,7 +468,7 @@ module.exports = function(server, createClient, port) {
       });
     });
     it('should reconnect if pingresp is not sent', function(done) {
-      var client = createClient(port, {keepalive:1, reconnectPeriod: 50});
+      var client = connect({keepalive:1, reconnectPeriod: 50});
 
       // Fake no pingresp being send by stubbing the _handlePingresp function
       client._handlePingresp = function () {};
@@ -475,7 +481,7 @@ module.exports = function(server, createClient, port) {
       });
     });
     it('should not reconnect if pingresp is successful', function(done) {
-      var client = createClient(port, {keepalive:1});
+      var client = connect({keepalive:1});
       client.once('close', function() {
         done(new Error('Client closed connection'));
       });
@@ -485,7 +491,7 @@ module.exports = function(server, createClient, port) {
 
   describe('subscribing', function () {
     it('should send a subscribe message (offline)', function(done) {
-      var client = createClient(port);
+      var client = connect();
 
       client.subscribe('test');
 
@@ -497,7 +503,7 @@ module.exports = function(server, createClient, port) {
     });
 
     it('should send a subscribe message', function(done) {
-      var client = createClient(port);
+      var client = connect();
 
       var topic = 'test';
 
@@ -517,7 +523,7 @@ module.exports = function(server, createClient, port) {
     });
 
     it('should accept an array of subscriptions', function(done) {
-      var client = createClient(port);
+      var client = connect();
 
       var subs = ['test1', 'test2'];
 
@@ -539,7 +545,7 @@ module.exports = function(server, createClient, port) {
     });
 
     it('should accept an hash of subscriptions', function(done) {
-      var client = createClient(port);
+      var client = connect();
 
       var topics = {'test1': 0, 'test2': 1}
 
@@ -567,7 +573,7 @@ module.exports = function(server, createClient, port) {
     });
 
     it('should accept an options parameter', function(done) {
-      var client = createClient(port);
+      var client = connect();
 
       var topic = 'test'
         , opts = {qos: 1};
@@ -587,7 +593,7 @@ module.exports = function(server, createClient, port) {
     });
 
     it('should fire a callback on suback', function(done) {
-      var client = createClient(port);
+      var client = connect();
 
       var topic = 'test';
 
@@ -605,7 +611,7 @@ module.exports = function(server, createClient, port) {
     });
 
     it('should subscribe with a chinese topic', function(done) {
-      var client = createClient(port);
+      var client = connect();
 
       var topic = '中国';
 
@@ -627,7 +633,7 @@ module.exports = function(server, createClient, port) {
 
   describe('receiving messages', function() {
     it('should fire the message event ', function(done) {
-      var client = createClient(port)
+      var client = connect()
         , testPacket = {
           topic: 'test',
           payload: 'message',
@@ -653,7 +659,7 @@ module.exports = function(server, createClient, port) {
     });
 
     it('should support binary data', function(done) {
-      var client = createClient(port, { encoding: 'binary' })
+      var client = connect({ encoding: 'binary' })
         , testPacket = {
             topic: 'test',
             payload: 'message',
@@ -680,7 +686,7 @@ module.exports = function(server, createClient, port) {
     });
 
     it('should emit a message event (qos=2)', function(done) {
-      var client = createClient(port)
+      var client = connect()
         , testPacket = {
           topic: 'test',
           payload: 'message',
@@ -708,7 +714,7 @@ module.exports = function(server, createClient, port) {
     });
 
     it('should emit a message event (qos=2) - repeated publish', function(done) {
-      var client = createClient(port)
+      var client = connect()
         , testPacket = {
           topic: 'test',
           payload: 'message',
@@ -738,7 +744,7 @@ module.exports = function(server, createClient, port) {
     });
 
     it('should support chinese topic', function(done) {
-      var client = createClient(port, { encoding: 'binary' })
+      var client = connect({ encoding: 'binary' })
         , testPacket = {
             topic: '国',
             payload: 'message',
@@ -768,7 +774,7 @@ module.exports = function(server, createClient, port) {
   describe('qos handling', function() {
 
     it('should follow qos 0 semantics (trivial)', function(done) {
-      var client = createClient(port)
+      var client = connect()
         , test_topic = 'test'
         , test_message = 'message';
 
@@ -790,7 +796,7 @@ module.exports = function(server, createClient, port) {
     });
 
     it('should follow qos 1 semantics', function(done) {
-      var client = createClient(port)
+      var client = connect()
         , test_topic = 'test'
         , test_message = 'message'
         , mid = 50;
@@ -817,7 +823,7 @@ module.exports = function(server, createClient, port) {
     });
 
     it('should follow qos 2 semantics', function(done) {
-      var client = createClient(port)
+      var client = connect()
         , test_topic = 'test'
         , test_message = 'message'
         , mid = 253;
@@ -845,14 +851,14 @@ module.exports = function(server, createClient, port) {
 
   describe('auto reconnect', function() {
     it('should mark the client disconnecting if #end called', function() {
-      var client = createClient(port);
+      var client = connect();
 
       client.end();
       client.disconnecting.should.eql(true);
     });
 
     it('should reconnect after stream disconnect', function(done) {
-      var client = createClient(port)
+      var client = connect()
         , tryReconnect = true;
 
       client.on('connect', function() {
@@ -866,7 +872,7 @@ module.exports = function(server, createClient, port) {
     });
 
     it('should emit \'reconnect\' when reconnecting', function(done) {
-      var client = createClient(port)
+      var client = connect()
         , tryReconnect = true
         , reconnectEvent = false;
 
@@ -886,7 +892,7 @@ module.exports = function(server, createClient, port) {
     });
 
     it('should emit \'offline\' after going offline', function(done) {
-      var client = createClient(port)
+      var client = connect()
         , tryReconnect = true
         , offlineEvent = false;
 
@@ -906,7 +912,7 @@ module.exports = function(server, createClient, port) {
     });
 
     it('should not reconnect if it was ended by the user', function(done) {
-      var client = createClient(port);
+      var client = connect();
 
       client.on('connect', function() {
         client.end();
@@ -915,7 +921,7 @@ module.exports = function(server, createClient, port) {
     });
 
     it('should setup a reconnect timer on disconnect', function(done) {
-      var client = createClient(port);
+      var client = connect();
 
       client.once('connect', function() {
         should.not.exist(client.reconnectTimer);
@@ -930,7 +936,7 @@ module.exports = function(server, createClient, port) {
 
     it('should allow specification of a reconnect period', function(done) {
       var period = 200
-        , client = createClient(port, {reconnectPeriod: period})
+        , client = connect({reconnectPeriod: period})
         , reconnect = false;
 
       var start = Date.now()
@@ -954,7 +960,7 @@ module.exports = function(server, createClient, port) {
     });
 
     it('should resend in-flight QoS 1 publish messages from the client', function(done) {
-      var client = createClient(port, {reconnectPeriod: 200})
+      var client = connect({reconnectPeriod: 200})
         , reconnect = false;
 
       server.once('client', function(client) {
@@ -962,10 +968,6 @@ module.exports = function(server, createClient, port) {
           setImmediate(function() {
             client.stream.destroy();
           });
-        });
-
-        client.on('publish', function() {
-          console.log('publish!!')
         });
 
         server.once('client', function(client) {
@@ -979,28 +981,7 @@ module.exports = function(server, createClient, port) {
     });
 
     it('should resend in-flight QoS 2 publish messages from the client', function(done) {
-      var client = createClient(port, {reconnectPeriod: 200})
-        , reconnect = false;
-
-      server.once('client', function(client) {
-        client.on('publish', function() {
-          setImmediate(function() {
-            client.stream.destroy();
-          });
-        });
-
-        server.once('client', function(client) {
-          client.on('pubrel', function() {
-            done()
-          });
-        });
-      });
-
-      client.publish('hello', 'world', { qos: 2 });
-    });
-
-    it('should resend in-flight QoS 2 publish messages from the client', function(done) {
-      var client = createClient(port, {reconnectPeriod: 200})
+      var client = connect({reconnectPeriod: 200})
         , reconnect = false;
 
       server.once('client', function(client) {

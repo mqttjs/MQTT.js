@@ -32,6 +32,7 @@
     "./lib/mqtt.js": "./lib/browser.js"
   },
   "dependencies": {
+    "end-of-stream": "^1.1.0",
     "inherits": "^2.0.1",
     "mqtt-packet": "^1.0.1",
     "readable-stream": "~1.0.2",
