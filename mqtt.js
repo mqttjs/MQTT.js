@@ -184,6 +184,8 @@ module.exports.MqttSecureServer = MqttSecureServer;
 // Expose Connection
 module.exports.MqttConnection = MqttConnection;
 
+module.exports.attachWebsocketServer = require('./lib/websocket_server');
+
 if (require.main === module) {
   commist.register('publish', require('./bin/pub'));
   commist.register('subscribe', require('./bin/sub'));

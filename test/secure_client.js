@@ -6,12 +6,6 @@ var mqtt = require('..')
   , abstractClientTests = require("./abstract_client")
   , fs = require('fs');
 
-
-/**
- * Modules to be tested
- */
-var createClient = mqtt.createSecureClient;
-
 /**
  * Testing options
  */
@@ -114,6 +108,8 @@ describe('MqttSecureClient', function () {
 
       client.once('error', function() {
         done();
+        client.end();
+        client.on('error', function() {});
       })
     });
 
