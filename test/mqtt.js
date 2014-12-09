@@ -11,7 +11,7 @@ var should = require('should')
  * Unit under test
  */
 
-var mqtt = require('../lib/mqtt');
+var mqtt = require('../');
 
 describe('mqtt', function() {
 

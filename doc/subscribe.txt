@@ -1,0 +1,23 @@
+Usage: mqtt subscribe [opts] [topic]
+
+Available options:
+
+  -h/--host HOST       the broker host
+  -p/--port PORT       the broker port
+  -i/--client-id ID    the client id
+  -q/--qos 0/1/2       the QoS of the message
+  -c/--clean           discard any pending message for the given id
+  -t/--topic TOPIC     the message topic
+  -k/--keep-alive SEC  send a ping every SEC seconds
+  -u/--username USER   the username
+  -P/--password PASS   the password
+  -C/--protocol PROTO  the protocol to use, 'mqtt' or 'mqtts'
+  --key PATH           path to the key file
+  --cert PATH          path to the cert file
+  --ca PATH            path to the ca certificate
+  --will-topic TOPIC   the will topic
+  --will-message BODY  the will message
+  --will-qos 0/1/2     the will qos
+  --will-retain        send a will retained message
+  -v/--verbose         print the topic before the message
+  -h/--help            show this

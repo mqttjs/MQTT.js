@@ -1,0 +1,23 @@
+Usage: mqtt publish [opts] topic [message]
+
+Available options:
+
+  -h/--host HOST       the broker host
+  -p/--port PORT       the broker port
+  -i/--client-id ID    the client id
+  -q/--qos 0/1/2       the QoS of the message
+  -t/--topic TOPIC     the message topic
+  -m/--message MSG     the message body
+  -r/--retain          send a retained message
+  -s/--stdin           read the message body from stdin
+  -u/--username USER   the username
+  -P/--password PASS   the password
+  -C/--protocol PROTO  the protocol to use, 'mqtt' or 'mqtts'
+  --key PATH           path to the key file
+  --cert PATH          path to the cert file
+  --ca PATH            path to the ca certificate
+  --will-topic TOPIC   the will topic
+  --will-payload BODY  the will message
+  --will-qos 0/1/2     the will qos
+  --will-retain        send a will retained message
+  -h/--help            show this

@@ -1,14 +1,18 @@
+#!/usr/bin/env node
+
 /*
  * Copyright (c) 2011 Adam Rudd.
  * See LICENSE for more information
  */
 
-var MqttServer        = require('./server').MqttServer
-  , MqttSecureServer  = require('./server').MqttSecureServer
-  , MqttClient        = require('./client')
-  , MqttConnection    = require('./connection')
+var MqttServer        = require('./lib/server').MqttServer
+  , MqttSecureServer  = require('./lib/server').MqttSecureServer
+  , MqttClient        = require('./lib/client')
+  , commist           = require('commist')()
+  , helpMe            = require('help-me')()
+  , MqttConnection    = require('./lib/connection')
   , fs                = require("fs")
-  , connect           = require('./connect')
+  , connect           = require('./lib/connect')
   , net               = require('net')
   , defaultHost       = 'localhost'
   , defaultPort       = 1883;
@@ -179,3 +183,17 @@ module.exports.MqttSecureServer = MqttSecureServer;
 
 // Expose Connection
 module.exports.MqttConnection = MqttConnection;
+
+if (require.main === module) {
+  commist.register('publish', require('./bin/pub'));
+  commist.register('subscribe', require('./bin/sub'));
+  commist.register('version', function() {
+    console.log('MQTT.js version:', require('./package.json').version);
+  });
+  commist.register('help', helpMe.toStdout);
+
+  if (commist.parse(process.argv.slice(2)) !== null) {
+    console.log('No such command:', process.argv[2], '\n')
+    helpMe.toStdout()
+  }
+}

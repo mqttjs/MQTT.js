@@ -4,7 +4,7 @@
  */
 var should      = require('should')
   , sinon       = require('sinon')
-  , mqtt        = require('../lib/mqtt')
+  , mqtt        = require('../')
   , MqttClient  = require('../lib/client');
 
 module.exports = function(server, config) {

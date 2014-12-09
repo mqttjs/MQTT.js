@@ -10,7 +10,7 @@ var mqtt = require('..')
 /**
  * Modules to be tested
  */
-var createClient = require('../lib/mqtt').createSecureClient;
+var createClient = mqtt.createSecureClient;
 
 /**
  * Testing options

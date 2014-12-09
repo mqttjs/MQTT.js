@@ -3,7 +3,7 @@
  */
 
 var should = require('should')
-  , mqtt = require('../lib/mqtt');
+  , mqtt = require('../');
 
 /**
  * Units under test

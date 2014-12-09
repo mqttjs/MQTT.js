@@ -1,4 +1,4 @@
-var mqtt = require('../../lib/mqtt');
+var mqtt = require('../../');
 
 module.exports.init_server = function (PORT) {
   var server = new mqtt.Server(function (client) {
