@@ -18,18 +18,20 @@
   },
   "main": "mqtt.js",
   "scripts": {
-    "test": "mocha"
+    "test": "mocha",
+    "browser-test": "zuul --server test/browser/server.js --local --open test/browser/test.js"
   },
   "pre-commit": "test",
   "bin": {
     "mqtt_pub": "./bin/pub.js",
-    "mqtt_sub": "./bin/sub.js"
+    "mqtt_sub": "./bin/sub.js",
+    "mqtt": "./mqtt.js"
   },
   "engines": {
     "node": ">=0.8.6"
   },
   "browser": {
-    "./lib/mqtt.js": "./lib/browser.js"
+    "./mqtt.js": "./lib/connect/index.js"
   },
   "dependencies": {
     "commist": "^1.0.0",
