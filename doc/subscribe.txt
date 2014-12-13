@@ -11,7 +11,8 @@ Available options:
   -k/--keep-alive SEC  send a ping every SEC seconds
   -u/--username USER   the username
   -P/--password PASS   the password
-  -C/--protocol PROTO  the protocol to use, 'mqtt' or 'mqtts'
+  -C/--protocol PROTO  the protocol to use, 'mqtt',
+                       'mqtts', 'ws' or 'wss'
   --key PATH           path to the key file
   --cert PATH          path to the cert file
   --ca PATH            path to the ca certificate
