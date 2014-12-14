@@ -481,7 +481,7 @@ module.exports = function(server, config) {
       });
     });
     it('should not reconnect if pingresp is successful', function(done) {
-      var client = connect({keepalive:1});
+      var client = connect({keepalive:100});
       client.once('close', function() {
         done(new Error('Client closed connection'));
       });

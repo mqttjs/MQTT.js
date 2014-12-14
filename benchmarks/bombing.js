@@ -1,7 +1,7 @@
 #! /usr/bin/env node
 
 var mqtt = require('../');
-var client = mqtt.createClient(1883, "localhost", { clean: true });
+var client = mqtt.connect({ port: 1883, host: "localhost", clean: true });
 
 var sent = 0;
 var interval = 5000;
