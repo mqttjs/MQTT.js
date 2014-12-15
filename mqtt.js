@@ -14,6 +14,7 @@ var MqttServer        = require('./lib/server').MqttServer
   , fs                = require("fs")
   , connect           = require('./lib/connect')
   , net               = require('net')
+  , setimmediate      = require('setimmediate')
   , defaultHost       = 'localhost'
   , defaultPort       = 1883;
 

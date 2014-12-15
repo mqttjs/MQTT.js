@@ -42,6 +42,7 @@
     "minimist": "^1.1.0",
     "mqtt-packet": "^1.0.1",
     "readable-stream": "~1.0.2",
+    "setimmediate": "~1.0.2",
     "websocket-stream": "^1.1.0",
     "ws": "^0.6.3",
     "through2": "^0.6.3",
