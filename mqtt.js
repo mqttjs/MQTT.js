@@ -5,6 +5,9 @@
  * See LICENSE for more information
  */
 
+// setup the global setImmediate if missing; for node < 0.9
+require('setimmediate');
+
 var MqttServer        = require('./lib/server').MqttServer
   , MqttSecureServer  = require('./lib/server').MqttSecureServer
   , MqttClient        = require('./lib/client')
@@ -14,7 +17,6 @@ var MqttServer        = require('./lib/server').MqttServer
   , fs                = require("fs")
   , connect           = require('./lib/connect')
   , net               = require('net')
-  , setimmediate      = require('setimmediate')
   , defaultHost       = 'localhost'
   , defaultPort       = 1883;
 
