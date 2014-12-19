@@ -10,7 +10,7 @@ var should = require('should')
  */
 
 var server = require('../lib/server');
-var Connection = require('../lib/connection');
+var Connection = require('mqtt-connection');
 
 describe('MqttServer', function() {
   it('should emit MqttServerClients', function(done) {

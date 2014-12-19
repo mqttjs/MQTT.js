@@ -13,7 +13,7 @@ var MqttServer        = require('./lib/server').MqttServer
   , MqttClient        = require('./lib/client')
   , commist           = require('commist')()
   , helpMe            = require('help-me')()
-  , MqttConnection    = require('./lib/connection')
+  , MqttConnection    = require('mqtt-connection')
   , fs                = require("fs")
   , connect           = require('./lib/connect')
   , net               = require('net')
@@ -94,7 +94,7 @@ module.exports.createSecureClient = function(port, host, opts) {
  */
 
 module.exports.createServer = function(listener) {
-  console.warn('createServer() is deprecated, use new mqtt.SecureServer() instead')
+  console.warn('createServer() is deprecated, use http://npm.im/mqtt-connection or MqttServer instead');
   return new MqttServer(listener);
 };
 
@@ -109,7 +109,7 @@ module.exports.createServer = function(listener) {
  */
 module.exports.createSecureServer =
 function (keyPath, certPath, listener) {
-  console.warn('createSecureServer() is deprecated, use new mqtt.SecureServer() instead')
+  console.warn('createSecureServer() is deprecated, use http://npm.im/mqtt-connection or MqttSecureServer instead');
   var opts = {};
 
   // Deprecated style
@@ -132,6 +132,7 @@ function (keyPath, certPath, listener) {
  * @param {Function} [callback]
  */
 module.exports.createConnection = function(port, host, callback) {
+  console.warn('createSecureServer() is deprecated, use http://npm.im/mqtt-connection instead');
   var net_client, mqtt_conn;
   if ('undefined' === typeof port) {
     // createConnection();
@@ -154,11 +155,6 @@ module.exports.createConnection = function(port, host, callback) {
 
   net_client = net.createConnection(port, host);
   mqtt_conn = new MqttConnection(net_client);
-
-  // Echo net errors
-  net_client.on('error', mqtt_conn.emit.bind(mqtt_conn, 'error'));
-
-  net_client.on('close', mqtt_conn.emit.bind(mqtt_conn, 'close'));
 
   net_client.on('connect', function() {
     mqtt_conn.emit('connected');
@@ -186,8 +182,6 @@ module.exports.MqttSecureServer = MqttSecureServer;
 
 // Expose Connection
 module.exports.MqttConnection = MqttConnection;
-
-module.exports.attachWebsocketServer = require('./lib/websocket_server');
 
 if (require.main === module) {
   commist.register('publish', require('./bin/pub'));

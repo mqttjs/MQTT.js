@@ -40,12 +40,12 @@
     "help-me": "^0.1.0",
     "inherits": "^2.0.1",
     "minimist": "^1.1.0",
-    "mqtt-packet": "^1.0.1",
+    "mqtt-connection": "^1.0.1",
+    "mqtt-packet": "^2.0.0",
     "readable-stream": "~1.0.2",
     "setimmediate": "~1.0.2",
     "websocket-stream": "^1.1.0",
     "ws": "^0.6.3",
-    "through2": "^0.6.3",
     "xtend": "^4.0.0"
   },
   "devDependencies": {
@@ -54,6 +54,7 @@
     "pre-commit": "0.0.7",
     "should": "*",
     "sinon": "~1.10.0",
+    "through2": "^0.6.3",
     "uglify": "^0.1.1",
     "zuul": "^1.15.2"
   }

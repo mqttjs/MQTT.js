@@ -4,6 +4,9 @@
  */
 var mqtt = require('..')
   , http = require('http')
+  , websocket = require('websocket-stream')
+  , WebSocketServer = require('ws').Server
+  , Connection = require('mqtt-connection')
   , abstractClientTests = require("./abstract_client");
 
 /**
@@ -16,7 +19,21 @@ var port = 9999;
  * Test server
  */
 var server = http.createServer()
-mqtt.attachWebsocketServer(server);
+
+function attachWebsocketServer(server) {
+  var wss = new WebSocketServer({server: server})
+
+  wss.on('connection', function(ws) {
+    var stream = websocket(ws);
+    var connection = new Connection(stream);
+
+    server.emit("client", connection);
+  });
+
+  return server;
+}
+
+attachWebsocketServer(server);
 
 server.on('client', function (client) {
   client.on('connect', function(packet) {
