@@ -14,58 +14,62 @@ var port = 9876;
 /**
  * Test server
  */
-var server = new mqtt.Server(function (client) {
+function buildServer() {
+  return new mqtt.Server(function (client) {
 
-  client.on('connect', function(packet) {
-    if (packet.clientId === 'invalid') {
-      client.connack({returnCode: 2});
-    } else {
-      client.connack({returnCode: 0});
-    }
-  });
+    client.on('connect', function(packet) {
+      if (packet.clientId === 'invalid') {
+        client.connack({returnCode: 2});
+      } else {
+        client.connack({returnCode: 0});
+      }
+    });
 
-  client.on('publish', function (packet) {
-    switch (packet.qos) {
-      case 0:
-        break;
-      case 1:
-        client.puback(packet);
-        break;
-      case 2:
-        client.pubrec(packet);
-        break;
-    }
-  });
+    client.on('publish', function (packet) {
+      switch (packet.qos) {
+        case 0:
+          break;
+        case 1:
+          client.puback(packet);
+          break;
+        case 2:
+          client.pubrec(packet);
+          break;
+      }
+    });
 
-  client.on('pubrel', function(packet) {
-    client.pubcomp(packet);
-  });
+    client.on('pubrel', function(packet) {
+      client.pubcomp(packet);
+    });
 
-  client.on('pubrec', function(packet) {
-    client.pubrel(packet);
-  });
+    client.on('pubrec', function(packet) {
+      client.pubrel(packet);
+    });
 
-  client.on('pubcomp', function(packet) {
-    // Nothing to be done
-  });
+    client.on('pubcomp', function(packet) {
+      // Nothing to be done
+    });
 
-  client.on('subscribe', function(packet) {
-    client.suback({
-      messageId: packet.messageId,
-      granted: packet.subscriptions.map(function (e) {
-        return e.qos;
-      })
+    client.on('subscribe', function(packet) {
+      client.suback({
+        messageId: packet.messageId,
+        granted: packet.subscriptions.map(function (e) {
+          return e.qos;
+        })
+      });
+    });
+
+    client.on('unsubscribe', function(packet) {
+      client.unsuback(packet);
+    });
+
+    client.on('pingreq', function(packet) {
+      client.pingresp();
     });
   });
+};
 
-  client.on('unsubscribe', function(packet) {
-    client.unsuback(packet);
-  });
-
-  client.on('pingreq', function(packet) {
-    client.pingresp();
-  });
-}).listen(port);
+var server = buildServer().listen(port);
 
 
 describe('MqttClient', function() {
@@ -123,6 +127,35 @@ describe('MqttClient', function() {
         client.once('close', function () {
           should.exist(client.reconnectTimer);
           done();
+        });
+      });
+    });
+
+    it('should reconnect to multiple host-ports combination if servers is passed', function (done) {
+      this.timeout(15000);
+
+      var fork   = require('child_process').fork;
+      var server2 = buildServer().listen(port + 1);
+
+      server2.on('client', function(c) {
+        c.stream.destroy();
+        server2.close();
+      });
+
+      server2.on('listening', function() {
+
+        var client = mqtt.connect({ servers: [
+          { port: port + 1, host: 'localhost' },
+          { port: port, host: 'localhost' },
+        ], keepalive: 50 });
+
+        server.once('client', function(client) {
+          client.disconnect();
+          done();
+        });
+
+        client.once('connect', function () {
+          client.stream.destroy();
         });
       });
     });
