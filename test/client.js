@@ -135,7 +135,7 @@ describe('MqttClient', function() {
       this.timeout(15000);
 
       var fork   = require('child_process').fork;
-      var server2 = buildServer().listen(port + 1);
+      var server2 = buildServer().listen(port + 42);
 
       server2.on('client', function(c) {
         c.stream.destroy();
@@ -145,7 +145,7 @@ describe('MqttClient', function() {
       server2.on('listening', function() {
 
         var client = mqtt.connect({ servers: [
-          { port: port + 1, host: 'localhost' },
+          { port: port + 42, host: 'localhost' },
           { port: port, host: 'localhost' },
         ], keepalive: 50 });
 
