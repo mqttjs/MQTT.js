@@ -9,6 +9,14 @@
 MQTT.js is a client library for the [MQTT](http://mqtt.org/) protocol, written
 in JavaScript to be used in node.js and the browser.
 
+* [Upgrade notes](#notes)
+* [Installation](#install)
+* [Example](#example)
+* [Command Line Tools](#cli)
+* [API](#api)
+* [License](#license)
+
+<a name="notes"></a>
 Important notes for existing users
 ----------------------------------
 
@@ -22,6 +30,7 @@ performance by a 30% factor, embeds Websocket support
 support for QoS 1 and 2. The previous API is still supported but
 deprecated, as such, it id not documented in this README.
 
+<a name="install"></a>
 Installation
 ------------
 
@@ -29,6 +38,7 @@ Installation
 npm install mqtt --save
 ```
 
+<a name="example"></a>
 Example
 -------
 
@@ -64,6 +74,32 @@ If you do not want to install a separate broker, you can try using the
 example.
 It implements enough of the semantics of the MQTT protocol to
 run the example.
+
+<a name="cli"></a>
+Command Line Tools
+------------------
+
+MQTT.js bundles a command to interact with a broker.
+In order to have it available on your path, you should install MQTT.js
+globally:
+
+```sh
+npm install mqtt -g
+```
+
+Then, on one terminal
+
+```
+mqtt sub -t 'hello' -h 'test.mosquitto.org' -v
+```
+
+On another
+
+```
+mqtt sub -t 'hello' -h 'test.mosquitto.org' -m 'from MQTT.js'
+```
+
+See `mqtt help <command>` for the command help.
 
 <a name="api"></a>
 API
@@ -258,6 +294,7 @@ The callback is called when the packet has been removed.
 
 Closes the Store.
 
+<a name="license"></a>
 License
 -------
 
