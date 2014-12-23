@@ -79,7 +79,10 @@ function start(args) {
   args.keepAlive = args['keep-alive'];
 
   var client = mqtt.connect(args);
-  client.subscribe(args.topic)
+
+  client.on('connect', function() {
+    client.subscribe(args.topic);
+  });
 
   client.on('message', function(topic, payload) {
     if (args.verbose) {
@@ -87,7 +90,7 @@ function start(args) {
     } else {
       console.log(payload)
     }
-  })
+  });
 }
 
 module.exports = start;
