@@ -16,6 +16,7 @@ var MqttServer        = require('./lib/server').MqttServer
   , MqttConnection    = require('mqtt-connection')
   , fs                = require("fs")
   , connect           = require('./lib/connect')
+  , Store             = require('./lib/store')
   , net               = require('net')
   , defaultHost       = 'localhost'
   , defaultPort       = 1883;
@@ -173,6 +174,8 @@ module.exports.createConnection = function(port, host, callback) {
 
 // Expose MqttClient
 module.exports.MqttClient = MqttClient;
+module.exports.Client = MqttClient;
+module.exports.Store = Store;
 
 // Expose servers
 module.exports.Server = MqttServer;
