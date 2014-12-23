@@ -1,41 +1,40 @@
-# mqtt.js [![Build Status](https://travis-ci.org/adamvr/MQTT.js.png)](https://travis-ci.org/adamvr/MQTT.js)
-
-## Introduction
+mqtt.js [![Build Status](https://travis-ci.org/adamvr/MQTT.js.png)](https://travis-ci.org/adamvr/MQTT.js)
+=======
 
 [![NPM](https://nodei.co/npm/mqtt.png)](https://nodei.co/npm/mqtt/)
 [![NPM](https://nodei.co/npm-dl/mqtt.png)](https://nodei.co/npm/mqtt/)
 
-mqtt.js is a library for the [MQTT](http://mqtt.org/) protocol, written
-in JavaScript to be used in node.js.
+MQTT.js is a client library for the [MQTT](http://mqtt.org/) protocol, written
+in JavaScript to be used in node.js and the browser.
 
-## Important notes for existing users
+Important notes for existing users
+----------------------------------
 
-* v0.3.0 improves connection stability, performance, the reconnection
-  logic and SSL support. See [#118](https://github.com/adamvr/MQTT.js/pull/118) for
-  details. A Connection is a Writable stream, so you can run
-  MQTT.js over any kind of Stream (doc needed). Both the constructors of
-  MqttClient and MqttConnection changed, but not the factory method
-  `mqtt.createClient` and `mqtt.createConnection`.
+v1.0.0 improves the overall architecture of the project, which is now
+splitted in three components: MQTT.js keeps the Client,
+[mqtt-connection](http://npm.im/mqtt-connection) includes the barebone
+Connection code for server-side usage, and [mqtt-packet](http://npm.im/mqtt-packet)
+includes the protocol parser and generator. The new Client improves
+performance by a 30% factor, embeds Websocket support
+([MOWS](http://npm.im/mows) is now deprecated), and it has a better
+support for QoS 1 and 2. The previous API is still supported but
+deprecated, as such, it id not documented in this README.
 
-* v0.2.0 has brough some API breaking changes to mqtt.js. 
-  Please consult the [migration guide](http://github.com/adamvr/MQTT.js/wiki/migration) for information
-  or open an issue if you need any help.
+Installation
+------------
 
-## Installation
+```sh
+npm install mqtt --save
+```
 
-    npm install mqtt
-
-## Example
-
-First you will need to install and run a broker, such as
-[Mosquitto](http://mosquitto.org) or
-[Mosca](http://mcollina.github.io/mosca/), and launch it.
+Example
+-------
 
 For the sake of simplicity, let's put the subscriber and the publisher in the same file:
-```js
-var mqtt = require('mqtt')
 
-client = mqtt.createClient(1883, 'localhost');
+```js
+var mqtt    = require('mqtt');
+var client  = mqtt.connect('mqtt://test.mosquitto.org');
 
 client.subscribe('presence');
 client.publish('presence', 'Hello mqtt');
@@ -52,137 +51,199 @@ output:
 Hello mqtt
 ```
 
+If you want to run your own MQTT broker, you can use
+[Mosquitto](http://mosquitto.org) or
+[Mosca](http://mcollina.github.io/mosca/), and launch it.
+You can also use a test instance: test.mosquitto.org and test.mosca.io
+are both public.
+
 If you do not want to install a separate broker, you can try using the
 [server/orig](https://github.com/adamvr/MQTT.js/blob/master/examples/server/orig.js)
 example.
 It implements enough of the semantics of the MQTT protocol to
 run the example.
 
-## Documentation
+<a name="api"></a>
+API
+---
 
-Detailed documentation can be found in [the wiki](http://github.com/adamvr/MQTT.js/wiki)
+  * <a href="#connect"><code>mqtt.<b>connect()</b></code></a>
+  * <a href="#client"><code>mqtt.<b>Client()</b></code></a>
+  * <a href="#publish"><code>mqtt.Client#<b>publish()</b></code></a>
+  * <a href="#subscribe"><code>mqtt.Client#<b>subscribe()</b></code></a>
+  * <a href="#unsubscribe"><code>mqtt.Client#<b>unsubscribe()</b></code></a>
+  * <a href="#end"><code>mqtt.Client#<b>end()</b></code></a>
+  * <a href="#handleMessage"><code>mqtt.Client#<b>handleMessage()</b></code></a>
+  * <a href="#store"><code>mqtt.<b>Store()</b></code></a>
+  * <a href="#put"><code>mqtt.Store#<b>put()</b></code></a>
+  * <a href="#del"><code>mqtt.Store#<b>del()</b></code></a>
+  * <a href="#createStream"><code>mqtt.Store#<b>createStream()</b></code></a>
+  * <a href="#close"><code>mqtt.Store#<b>close()</b></code></a>
 
-## Client API usage
+-------------------------------------------------------
+<a name="connect"></a>
+### mqtt.connect([url], options)
 
-See: [examples/client](https://github.com/adamvr/MQTT.js/tree/master/examples/client)
+Connects to the broker specified by the given url and options and
+returns a [Client](#client).
 
-### Simple publish client
+-------------------------------------------------------
+<a name="client"></a>
+### mqtt.Client(streamBuilder, options)
 
-```js
-var mqtt = require('mqtt')
-  , client = mqtt.createClient();
+The `Client` class wraps a client connection to an
+MQTT broker over an arbitrary transport method (TCP, TLS,
+WebSocket, ecc).
 
-client.publish('messages', 'mqtt');
-client.publish('messages', 'is pretty cool');
-client.publish('messages', 'remember that!', {retain: true});
-client.end();
-```
+`Client` automatically handles the following:
 
-### Simple subscribe client
+* Regular server pings
+* QoS flow
+* Automatic reconnections
+* Start publishing before being connected
 
-```js
-var mqtt = require('mqtt')
-  , client = mqtt.createClient();
+The arguments are:
 
-client.subscribe('messages');
-client.publish('messages', 'hello me!');
-client.on('message', function(topic, message) {
-  console.log(message);
-});
-client.options.reconnectPeriod = 0;  // disable automatic reconnect
-```
+* `streamBuilder` is a function that returns a subclass of the `Stream` class that supports
+the `connect` event. Typically a `net.Socket`.
+* `options` is the client connection options (see: the [connect packet](https://github.com/mcollina/mqtt-packet#connect)). Defaults:
+  * `keepalive`: `10` seconds, set to `0` to disable
+  * `clientId`: `'mqttjs'_ + crypto.randomBytes(16).toString('hex')`
+  * `protocolId`: `'MQTT'`
+  * `protocolVersion`: `4`
+  * `encoding`: `'utf8'` (set to `'binary'` for receiving binary payloads)
+  * `clean`: `true`, set to false to receive QoS 1 and 2 messages while
+    offline
+  * `reconnectPeriod`: `1000` milliseconds, interval between two
+    reconnections
+  * `incomingStore`: a [Store](#store) for the incoming packets
+  * `outgoingStore`: a [Store](#store) for the outgoing packets
 
-### Connect using a URL
+#### Event `'connect'`
 
-Using the connect method, which can create either a normal or secure MQTT client.
+`function() {}`
 
-```js
-var mqtt = require('mqtt')
-  , client = mqtt.connect('mqtt://user:pass@localhost?clientId=123abc');
+Emitted on successful (re)connection (i.e. connack rc=0).
 
-client.subscribe('messages');
-client.publish('messages', 'hello me!');
-client.on('message', function(topic, message) {
-  console.log(message);
-});
-```
+#### Event `'close'`
 
-Supports `mqtt://` and `tcp://` for normal connections, and `mqtts://` or `ssl://` for secure connections.
+`function() {}`
 
-As seen above the `clientId` can be passed in as a query parameter.
+Emitted after a disconnection.
 
-### Chainable API!
+#### Event `'offline'`
 
-```js
-var mqtt = require('mqtt')
-  , client = mqtt.createClient();
+`function() {}`
 
-client
-  .subscribe('messages')
-  .publish('presence', 'bin hier')
-  .on('message', function(topic, message) {
-    console.log(topic);
-  });
-```
+Emitted when the client goes offline.
 
-## Server API usage
+#### Event `'error'`
 
-### Broadcast server example
+`function(error) {}`
 
-Included in [examples/broadcast.js](https://github.com/adamvr/MQTT.js/blob/master/examples/server/broadcast.js):
+Emitted when the client cannot connect (i.e. connack rc != 0) or when a
+parsing error occurs.
 
-```js
-var mqtt = require('mqtt');
+### Event `'message'`
 
-mqtt.createServer(function(client) {
-  var self = this;
+`function(topic, message, packet) {}`
 
-  if (!self.clients) self.clients = {};
+Emitted when the client recieves a publish packet
+* `topic` topic of the received packet
+* `message` payload of the received packet
+* `packet` received packet, as defined in
+  [mqtt-packet](https://github.com/mcollina/mqtt-packet#publish)
 
-  client.on('connect', function(packet) {
-    client.connack({returnCode: 0});
-    client.id = packet.clientId;
-    self.clients[client.id] = client;
-  });
+-------------------------------------------------------
+<a name="publish"></a>
+### mqtt.Client#publish(topic, payload, [options])
 
-  client.on('publish', function(packet) {
-    for (var k in self.clients) {
-      self.clients[k].publish({topic: packet.topic, payload: packet.payload});
-    }
-  });
+Publish a message
 
-  client.on('subscribe', function(packet) {
-    var granted = [];
-    for (var i = 0; i < packet.subscriptions.length; i++) {
-      granted.push(packet.subscriptions[i].qos);
-    }
+* `topic` is the topic to publish to, `String`
+* `message` is the message to publish, `Buffer` or `String`
+* `options` is the options to publish with, including:
+  * `qos` qos level, default `0`
+  * `retain` retain flag, default `false`
+* `callback` callback fired when the QoS handling completes,
+  or at the next tick if QoS 0.
 
-    client.suback({granted: granted, messageId: packet.messageId});
-  });
+-------------------------------------------------------
+<a name="subscribe"></a>
+### mqtt.Client#subscribe(topic/topic array/topic object, [options], [callback])
 
-  client.on('pingreq', function(packet) {
-    client.pingresp();
-  });
+Subscribe to a topic or topics
 
-  client.on('disconnect', function(packet) {
-    client.stream.end();
-  });
+* `topic` is a `String` topic to subscribe to or an `Array` of
+  topics to subscribe to. It can also be an object, it has as object
+  keys the topic name and as value the QoS, like `{'test1': 0, 'test2': 1}`.
+* `options` is the options to subscribe with, including:
+  * `qos` qos subscription level, default 0
+* `callback` - `function(err, granted)`
+  callback fired on suback where:
+  * `err` a subscription error
+  * `granted` is an array of `{topic, qos}` where:
+    * `topic` is a subscribed to topic
+    * `qos` is the granted qos level on it
 
-  client.on('close', function(err) {
-    delete self.clients[client.id];
-  });
+-------------------------------------------------------
+<a name="unsubscribe"></a>
+### mqtt.Client#unsubscribe(topic/topic array, [options], [callback])
 
-  client.on('error', function(err) {
-    console.log('error!', err);
+Unsubscribe from a topic or topics
 
-    if (!self.clients[client.id]) return;
+* `topic` is a `String` topic or an array of topics to unsubscribe from
+* `callback` fired on unsuback
 
-    delete self.clients[client.id];
-    client.stream.end();
-  });
-}).listen(1883);
-```
+-------------------------------------------------------
+<a name="end"></a>
+### mqtt.Client#end(cb)
 
-## License
+Close the client, calls `callback` when finished.
+
+-------------------------------------------------------
+<a name="handleMessage"></a>
+### mqtt.Client#handleMessage(packet, callback)
+
+Handle messages with backpressure support, one at a time.
+Override at will, but __always call `callback`__, or the client
+will hang.
+
+-------------------------------------------------------
+<a name="store"></a>
+### mqtt.Store()
+
+In-memory implementation of the message store.
+
+-------------------------------------------------------
+<a name="put"></a>
+### mqtt.Store#put(packet, callback)
+
+Adds a packet to the store, a packet is
+anything that has a `messageId` property.
+The callback is called when the packet has been stored.
+
+-------------------------------------------------------
+<a name="createStream"></a>
+### mqtt.Store#createStream()
+
+Creates a stream with all the packets in the store.
+
+-------------------------------------------------------
+<a name="del"></a>
+### mqtt.Store#del(packet, cb)
+
+Removes a packet from the store, a packet is
+anything that has a `messageId` property.
+The callback is called when the packet has been removed.
+
+-------------------------------------------------------
+<a name="close"></a>
+### mqtt.Store#close(cb)
+
+Closes the Store.
+
+License
+-------
 
 MIT
