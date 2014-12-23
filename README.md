@@ -89,6 +89,19 @@ API
 Connects to the broker specified by the given url and options and
 returns a [Client](#client).
 
+The URL can be on the following protocols: 'mqtt', 'mqtts', 'tcp',
+'tls', 'ws', 'wss'. The URL can also be an object as returned by
+[`URL.parse()`](http://nodejs.org/api/url.html#url_url_parse_urlstr_parsequerystring_slashesdenotehost),
+in that case the two objects are merged, i.e. you can pass a single
+object with both the URL and the connect options.
+
+You can also specify a `servers` options with content: `[{ host:
+'localhost', port: 1883 }, ... ]`, in that case that array is iterated
+at every connect.
+
+For all MQTT-related options, see the [Client](#client)
+constructor.
+
 -------------------------------------------------------
 <a name="client"></a>
 ### mqtt.Client(streamBuilder, options)
