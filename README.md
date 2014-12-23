@@ -96,7 +96,7 @@ mqtt sub -t 'hello' -h 'test.mosquitto.org' -v
 On another
 
 ```
-mqtt sub -t 'hello' -h 'test.mosquitto.org' -m 'from MQTT.js'
+mqtt pub -t 'hello' -h 'test.mosquitto.org' -m 'from MQTT.js'
 ```
 
 See `mqtt help <command>` for the command help.
