@@ -7,7 +7,8 @@ var should        = require('should')
   , mqtt          = require('../')
   , MqttClient    = require('../lib/client')
   , setImmediate  = global.setImmediate || function(callback) {
-      setTimeout(callback, 0);
+      // for node v0.8 support
+      process.nextTick(callback);
     };
 
 module.exports = function(server, config) {
