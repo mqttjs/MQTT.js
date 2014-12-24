@@ -5,9 +5,6 @@
  * See LICENSE for more information
  */
 
-// setup the global setImmediate if missing; for node < 0.9
-require('setimmediate');
-
 var MqttServer        = require('./lib/server').MqttServer
   , MqttSecureServer  = require('./lib/server').MqttSecureServer
   , MqttClient        = require('./lib/client')
