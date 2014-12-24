@@ -2,10 +2,13 @@
 /**
  * Testing dependencies
  */
-var should      = require('should')
-  , sinon       = require('sinon')
-  , mqtt        = require('../')
-  , MqttClient  = require('../lib/client');
+var should        = require('should')
+  , sinon         = require('sinon')
+  , mqtt          = require('../')
+  , MqttClient    = require('../lib/client')
+  , setImmediate  = global.setImmediate || function(callback) {
+      setTimeout(callback, 0);
+    };
 
 module.exports = function(server, config) {
   function connect(opts) {
