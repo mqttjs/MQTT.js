@@ -8,8 +8,6 @@
 var MqttServer        = require('./lib/server').MqttServer
   , MqttSecureServer  = require('./lib/server').MqttSecureServer
   , MqttClient        = require('./lib/client')
-  , commist           = require('commist')()
-  , helpMe            = require('help-me')()
   , MqttConnection    = require('mqtt-connection')
   , fs                = require("fs")
   , connect           = require('./lib/connect')
@@ -183,7 +181,10 @@ module.exports.MqttSecureServer = MqttSecureServer;
 // Expose Connection
 module.exports.MqttConnection = MqttConnection;
 
-if (require.main === module) {
+function cli() {
+  var commist           = require('commist')()
+    , helpMe            = require('help-me')();
+
   commist.register('publish', require('./bin/pub'));
   commist.register('subscribe', require('./bin/sub'));
   commist.register('version', function() {
@@ -195,4 +196,8 @@ if (require.main === module) {
     console.log('No such command:', process.argv[2], '\n')
     helpMe.toStdout()
   }
+}
+
+if (require.main === module) {
+  cli();
 }
