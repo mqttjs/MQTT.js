@@ -23,7 +23,7 @@ function start(args) {
       topic: 't',
       qos: 'q',
       clean: 'c',
-      keepAlive: 'k',
+      keepalive: 'k',
       clientId: ['i', 'id'],
       username: 'u',
       password: 'P',

@@ -8,7 +8,7 @@ Available options:
   -q/--qos 0/1/2       the QoS of the message
   -c/--clean           discard any pending message for the given id
   -t/--topic TOPIC     the message topic
-  -k/--keep-alive SEC  send a ping every SEC seconds
+  -k/--keepalive SEC  send a ping every SEC seconds
   -u/--username USER   the username
   -P/--password PASS   the password
   -C/--protocol PROTO  the protocol to use, 'mqtt',
