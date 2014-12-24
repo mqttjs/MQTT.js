@@ -1,6 +1,8 @@
 
 var websocket = require('websocket-stream');
+var WebSocketServer = require('ws').Server;
 var mqtt = require("../../");
+var Connection = require('mqtt-connection');
 var http = require("http");
 var ports = require('./ports');
 
@@ -93,7 +95,13 @@ var handleClient = function (client) {
 
 function start(port, done) {
   var server = http.createServer();
-  mqtt.attachWebsocketServer(server, handleClient);
+  var wss = new WebSocketServer({server: server});
+
+  wss.on('connection', function(ws) {
+    var stream = websocket(ws);
+    var connection = new Connection(stream);
+    handleClient(connection);
+  });
   server.listen(port, done);
   return server;
 }

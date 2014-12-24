@@ -21,7 +21,7 @@ var port = 9999;
 var server = http.createServer()
 
 function attachWebsocketServer(server) {
-  var wss = new WebSocketServer({server: server})
+  var wss = new WebSocketServer({server: server});
 
   wss.on('connection', function(ws) {
     var stream = websocket(ws);
