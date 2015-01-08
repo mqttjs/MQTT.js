@@ -17,6 +17,7 @@ Available options:
   --key PATH           path to the key file
   --cert PATH          path to the cert file
   --ca PATH            path to the ca certificate
+  --insecure           do not verify the server certificate
   --will-topic TOPIC   the will topic
   --will-payload BODY  the will message
   --will-qos 0/1/2     the will qos
