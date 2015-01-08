@@ -19,7 +19,7 @@ function start(args) {
   args = minimist(args, {
     string: ['host', 'username', 'password', 'key', 'cert'],
     integer: ['port', 'qos'],
-    boolean: ['stdin', 'retain', 'help'],
+    boolean: ['stdin', 'retain', 'help', 'insecure'],
     alias: {
       port: 'p',
       host: 'h',
@@ -32,11 +32,10 @@ function start(args) {
       password: 'P',
       stdin: 's',
       protocol: 'C',
-      help: '-h'
+      help: 'h'
     },
     default: {
       host: 'localhost',
-      port: 1883,
       qos: 0,
       retain: false
     }
@@ -76,6 +75,14 @@ function start(args) {
     args.will.payload = args['will-message'];
     args.will.qos = args['will-qos'];
     args.will.retain = args['will-retain'];
+  }
+
+  if (args.insecure) {
+    args.rejectUnauthorized = false;
+  }
+
+  if (args.insecure) {
+    args.rejectUnauthorized = false;
   }
 
   if (args.stdin) {

@@ -16,7 +16,7 @@ function start(args) {
   args = minimist(args, {
     string: ['host', 'username', 'password', 'key', 'cert'],
     integer: ['port', 'qos', 'keepAlive'],
-    boolean: ['stdin', 'help', 'clean'],
+    boolean: ['stdin', 'help', 'clean', 'insecure'],
     alias: {
       port: 'p',
       host: 'h',
@@ -33,7 +33,6 @@ function start(args) {
     },
     default: {
       host: 'localhost',
-      port: 1883,
       qos: 0,
       retain: false,
       clean: true,
@@ -65,7 +64,11 @@ function start(args) {
   }
 
   if (args.key && args.cert && !args.protocol) {
-    args.protocol = 'mqtts'
+    args.protocol = 'mqtts';
+  }
+
+  if (args.insecure) {
+    args.rejectUnauthorized = false;
   }
 
   if (args['will-topic']) {

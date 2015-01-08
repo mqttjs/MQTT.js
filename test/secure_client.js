@@ -76,7 +76,7 @@ var server = new mqtt.SecureServer({
 }).listen(port);
 
 describe('MqttSecureClient', function () {
-  var config = { protocol: 'mqtts', port: port };
+  var config = { protocol: 'mqtts', port: port, rejectUnauthorized: false };
   abstractClientTests(server, config);
 
   describe('with secure parameters', function() {

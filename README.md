@@ -170,6 +170,10 @@ the `connect` event. Typically a `net.Socket`.
   * `incomingStore`: a [Store](#store) for the incoming packets
   * `outgoingStore`: a [Store](#store) for the outgoing packets
 
+In case mqtts (mqtt over tls) is required, the `options` object is
+passed through to
+[`tls.connect()`](http://nodejs.org/api/tls.html#tls_tls_connect_options_callback).
+
 #### Event `'connect'`
 
 `function() {}`
