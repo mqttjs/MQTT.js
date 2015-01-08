@@ -62,7 +62,7 @@ function start(args) {
   }
 
   if (args.ca) {
-    args.ca = fs.readFileSync(ca);
+    args.ca = fs.readFileSync(args.ca);
   }
 
   if (args.key && args.cert && !args.protocol) {
