@@ -1,7 +1,7 @@
 {
   "name": "mqtt",
   "description": "A library for the MQTT protocol",
-  "version": "1.0.0-pre.5",
+  "version": "1.0.0-pre.6",
   "contributors": [
     "Adam Rudd <adam.rudd@uqconnect.edu.au>",
     "Matteo Collina <matteo.collina@gmail.com> (https://github.com/mcollina)"
