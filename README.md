@@ -7,14 +7,17 @@
 [![NPM](https://nodei.co/npm-dl/mqtt.png)](https://nodei.co/npm/mqtt/)
 
 MQTT.js is a client library for the [MQTT](http://mqtt.org/) protocol, written
-in JavaScript to be used in node.js and the browser.
+in JavaScript for node.js and the browser.
 
 * [Upgrade notes](#notes)
 * [Installation](#install)
 * [Example](#example)
 * [Command Line Tools](#cli)
 * [API](#api)
+* [Contributing](#contributing)
 * [License](#license)
+
+MQTT.js is an OPEN Open Source Project, see the [Contributing](#contributing) section to find out what this means.
 
 <a name="notes"></a>
 Important notes for existing users
@@ -297,6 +300,25 @@ The callback is called when the packet has been removed.
 ### mqtt.Store#close(cb)
 
 Closes the Store.
+
+<a name="contributing"></a>
+Contributing
+------------
+
+MQTT.js is an **OPEN Open Source Project**. This means that:
+
+> Individuals making significant and valuable contributions are given commit-access to the project to contribute as they see fit. This project is more like an open wiki than a standard guarded open source project.
+
+See the [CONTRIBUTING.md](https://github.com/mqttjs/MQTT.js/blob/master/CONTRIBUTING.md) file for more details.
+
+### Contributors
+
+MQTT.js is only possible due to the excellent work of the following contributors:
+
+<table><tbody>
+<tr><th align="left">Adam Rudd</th><td><a href="https://github.com/adamvr">GitHub/adamvr</a></td><td><a href="http://twitter.com/adam_vr">Twitter/@adam_vr</a></td></tr>
+<tr><th align="left">Matteo Collina</th><td><a href="https://github.com/mcollina">GitHub/mcollina</a></td><td><a href="http://twitter.com/matteocollina">Twitter/@matteocollina</a></td></tr>
+</tbody></table>
 
 <a name="license"></a>
 License
