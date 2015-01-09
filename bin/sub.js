@@ -89,9 +89,9 @@ function start(args) {
 
   client.on('message', function(topic, payload) {
     if (args.verbose) {
-      console.log(topic, payload)
+      console.log(topic, payload.toString())
     } else {
-      console.log(payload)
+      console.log(payload.toString())
     }
   });
 }
