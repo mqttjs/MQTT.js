@@ -33,6 +33,10 @@ performance by a 30% factor, embeds Websocket support
 support for QoS 1 and 2. The previous API is still supported but
 deprecated, as such, it id not documented in this README.
 
+As a __breaking change__, the `encoding` option in the old client is
+removed, and now everything is UTF-8 with the exception of the
+`password` in the CONNECT message and `payload` in the PUBLISH message.
+
 <a name="install"></a>
 Installation
 ------------
@@ -165,7 +169,6 @@ the `connect` event. Typically a `net.Socket`.
   * `clientId`: `'mqttjs'_ + crypto.randomBytes(16).toString('hex')`
   * `protocolId`: `'MQTT'`
   * `protocolVersion`: `4`
-  * `encoding`: `'utf8'` (set to `'binary'` for receiving binary payloads)
   * `clean`: `true`, set to false to receive QoS 1 and 2 messages while
     offline
   * `reconnectPeriod`: `1000` milliseconds, interval between two

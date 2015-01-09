@@ -241,7 +241,7 @@ module.exports = function(server, config) {
       server.once('client', function(client) {
         client.once('publish', function (packet) {
           packet.topic.should.equal(topic);
-          packet.payload.should.equal(payload);
+          packet.payload.toString().should.equal(payload);
           packet.qos.should.equal(0);
           packet.retain.should.equal(false);
           done();
@@ -261,7 +261,7 @@ module.exports = function(server, config) {
       server.once('client', function(client) {
         client.once('publish', function (packet) {
           packet.topic.should.equal(topic);
-          packet.payload.should.equal(payload);
+          packet.payload.toString().should.equal(payload);
           packet.qos.should.equal(0);
           packet.retain.should.equal(false);
           done();
@@ -286,7 +286,7 @@ module.exports = function(server, config) {
       server.once('client', function(client) {
         client.once('publish', function (packet) {
           packet.topic.should.equal(topic);
-          packet.payload.should.equal(payload);
+          packet.payload.toString().should.equal(payload);
           packet.qos.should.equal(opts.qos, 'incorrect qos');
           packet.retain.should.equal(opts.retain, 'incorrect ret');
           done();
@@ -636,7 +636,7 @@ module.exports = function(server, config) {
   });
 
   describe('receiving messages', function() {
-    it('should fire the message event ', function(done) {
+    it('should fire the message event', function(done) {
       var client = connect()
         , testPacket = {
           topic: 'test',
@@ -650,7 +650,7 @@ module.exports = function(server, config) {
       client.once('message',
           function(topic, message, packet) {
         topic.should.equal(testPacket.topic);
-        message.should.equal(testPacket.payload);
+        message.toString().should.equal(testPacket.payload);
         packet.should.equal(packet);
         done();
       });
@@ -705,7 +705,7 @@ module.exports = function(server, config) {
       client.once('message',
           function(topic, message, packet) {
         topic.should.equal(testPacket.topic);
-        message.should.equal(testPacket.payload);
+        message.toString().should.equal(testPacket.payload);
         packet.should.equal(packet);
         done();
       });
@@ -733,7 +733,7 @@ module.exports = function(server, config) {
       client.on('message',
           function(topic, message, packet) {
         topic.should.equal(testPacket.topic);
-        message.should.equal(testPacket.payload);
+        message.toString().should.equal(testPacket.payload);
         packet.should.equal(packet);
         done();
       });
