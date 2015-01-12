@@ -2,7 +2,7 @@
 
 var mqtt = require('../');
 
-var client = mqtt.connect({ port: 1883, host: "localhost", clean: true, encoding: 'binary' });
+var client = mqtt.connect({ port: 1883, host: "localhost", clean: true, encoding: 'binary', keepalive: 0 });
 var counter = 0;
 var interval = 5000;
 
