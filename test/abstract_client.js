@@ -218,14 +218,41 @@ module.exports = function(server, config) {
     it('should queue message until connected', function(done) {
       var client = connect();
 
-      client.publish('test', 'test');
       client.subscribe('test');
-      client.unsubscribe('test');
-      client.queue.length.should.equal(3);
+      client.publish('test', 'test');
 
-      client.once('connect', function() {
+      client.once('message', function() {
         client.queue.length.should.equal(0);
+        client.end()
         done();
+      });
+
+      server.once('client', function(client) {
+        client.on('subscribe', function() {
+          client.on('publish', function(packet) {
+            client.publish(packet);
+          });
+        });
+      });
+    });
+
+    it('should delay closing everything up until the queue is depleted', function(done) {
+      var client = connect();
+
+      client.subscribe('test');
+      client.publish('test', 'test');
+      client.end()
+
+      client.once('message', function() {
+        done();
+      });
+
+      server.once('client', function(client) {
+        client.on('subscribe', function() {
+          client.on('publish', function(packet) {
+            client.publish(packet);
+          });
+        });
       });
     });
   });
