@@ -215,46 +215,60 @@ module.exports = function(server, config) {
   });
 
   describe('offline messages', function() {
+
     it('should queue message until connected', function(done) {
       var client = connect();
 
-      client.subscribe('test');
       client.publish('test', 'test');
+      client.subscribe('test');
+      client.unsubscribe('test');
+      client.queue.length.should.equal(3);
 
-      client.once('message', function() {
+      client.once('connect', function() {
         client.queue.length.should.equal(0);
+        done();
+      });
+    });
+
+    if (!process.env.TRAVIS) {
+      it('should queue message until connected', function(done) {
+        var client = connect();
+
+        client.subscribe('test');
+        client.publish('test', 'test');
+        client.queue.length.should.equal(2);
+
+        client.on('queueEmpty', client.end.bind(client));
+
+        server.once('client', function(client) {
+          client.on('subscribe', function() {
+            client.on('publish', function(packet) {
+              done();
+            });
+          });
+        });
+      });
+
+      it('should delay closing everything up until the queue is depleted', function(done) {
+        var client = connect();
+
+        client.subscribe('test');
+        client.publish('test', 'test');
         client.end()
-        done();
-      });
 
-      server.once('client', function(client) {
-        client.on('subscribe', function() {
-          client.on('publish', function(packet) {
-            client.publish(packet);
+        client.once('message', function() {
+          done();
+        });
+
+        server.once('client', function(client) {
+          client.on('subscribe', function() {
+            client.on('publish', function(packet) {
+              client.publish(packet);
+            });
           });
         });
       });
-    });
-
-    it('should delay closing everything up until the queue is depleted', function(done) {
-      var client = connect();
-
-      client.subscribe('test');
-      client.publish('test', 'test');
-      client.end()
-
-      client.once('message', function() {
-        done();
-      });
-
-      server.once('client', function(client) {
-        client.on('subscribe', function() {
-          client.on('publish', function(packet) {
-            client.publish(packet);
-          });
-        });
-      });
-    });
+    }
   });
 
   describe('publishing', function() {
