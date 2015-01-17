@@ -45,7 +45,7 @@ server.on('client', function (client) {
     }
   });
 
-  client.on('publish', function (packet) {
+  client.on('publish', setImmediate.bind(null, function (packet) {
     switch (packet.qos) {
       case 0:
         break;
@@ -56,7 +56,7 @@ server.on('client', function (client) {
         client.pubrec(packet);
         break;
     }
-  });
+  }));
 
   client.on('pubrel', function(packet) {
     client.pubcomp(packet);

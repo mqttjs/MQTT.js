@@ -268,6 +268,41 @@ module.exports = function(server, config) {
           });
         });
       });
+
+      it('should delay ending up until all inflight messages are delivered', function(done) {
+        var client = connect();
+
+        client.on('connect', function() {
+          client.subscribe('test', function() {
+            done();
+          });
+          client.publish('test', 'test', function() {
+            client.end();
+          });
+        });
+      });
+
+      it('wait QoS 1 publish messages', function(done) {
+        var client = connect();
+
+        client.on('connect', function() {
+          client.subscribe('test');
+          client.publish('test', 'test', { qos: 1 }, function() {
+            client.end();
+          });
+          client.on('message', function(t, p, packet) {
+            done();
+          });
+        });
+
+        server.once('client', function(client) {
+          client.on('subscribe', function() {
+            client.on('publish', function(packet) {
+              client.publish(packet);
+            });
+          });
+        });
+      });
     }
   });
 
