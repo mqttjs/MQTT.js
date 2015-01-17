@@ -22,6 +22,8 @@ var PORT = 1883;
 var HOST = 'stark';
 
 var options = {
+  port: PORT,
+  host: HOST,
   keyPath: KEY,
   certPath: CERT,
   rejectUnauthorized : true, 
@@ -29,7 +31,7 @@ var options = {
   ca: TRUSTED_CA_LIST
 };
 
-var client = mqtt.createSecureClient(PORT,HOST,options);
+var client = mqtt.connect(options);
 
 client.subscribe('messages');
 client.publish('messages', 'Current time is: ' + new Date());
