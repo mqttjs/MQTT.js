@@ -36,18 +36,20 @@ var server = new mqtt.SecureServer({
     }
   });
 
-  client.on('publish', setImmediate.bind(null, function (packet) {
-    switch (packet.qos) {
-      case 0:
-        break;
-      case 1:
-        client.puback(packet);
-        break;
-      case 2:
-        client.pubrec(packet);
-        break;
-    }
-  }));
+  client.on('publish', function(packet) {
+    setImmediate(function () {
+      switch (packet.qos) {
+        case 0:
+          break;
+        case 1:
+          client.puback(packet);
+          break;
+        case 2:
+          client.pubrec(packet);
+          break;
+      }
+    });
+  });
 
   client.on('pubrel', function(packet) {
     client.pubcomp(packet);
