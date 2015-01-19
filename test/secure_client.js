@@ -4,7 +4,11 @@
  */
 var mqtt = require('..')
   , abstractClientTests = require("./abstract_client")
-  , fs = require('fs');
+  , fs = require('fs')
+  , setImmediate = global.setImmediate || function(callback) {
+      // works in node v0.8
+      process.nextTick(callback);
+    };
 
 /**
  * Testing options

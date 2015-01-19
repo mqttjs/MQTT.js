@@ -7,7 +7,11 @@ var mqtt = require('..')
   , websocket = require('websocket-stream')
   , WebSocketServer = require('ws').Server
   , Connection = require('mqtt-connection')
-  , abstractClientTests = require("./abstract_client");
+  , abstractClientTests = require("./abstract_client")
+  , setImmediate = global.setImmediate || function(callback) {
+      // works in node v0.8
+      process.nextTick(callback);
+    };
 
 /**
  * Testing options
