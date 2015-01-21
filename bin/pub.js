@@ -11,18 +11,20 @@ var mqtt      = require('../')
 
 function send(args) {
   var client = mqtt.connect(args);
-  client.publish(args.topic, args.message, args)
-  client.end()
+  client.on('connect', function() {
+    client.publish(args.topic, args.message, args);
+    client.end();
+  });
 }
 
 function start(args) {
   args = minimist(args, {
-    string: ['host', 'username', 'password', 'key', 'cert'],
+    string: ['hostname', 'username', 'password', 'key', 'cert'],
     integer: ['port', 'qos'],
     boolean: ['stdin', 'retain', 'help', 'insecure'],
     alias: {
       port: 'p',
-      host: 'h',
+      hostname: ['h', 'host'],
       topic: 't',
       message: 'm',
       qos: 'q',
@@ -32,14 +34,14 @@ function start(args) {
       password: 'P',
       stdin: 's',
       protocol: 'C',
-      help: 'h'
+      help: 'H'
     },
     default: {
       host: 'localhost',
       qos: 0,
       retain: false
     }
-  })
+  });
 
   if (args.help) {
     return helpMe.toStdout('publish');
@@ -49,7 +51,7 @@ function start(args) {
   args.message = args.message || args._.shift() || '';
 
   if (!args.topic) {
-    console.error('missing topic\n')
+    console.error('missing topic\n');
     return helpMe.toStdout('publish');
   }
 
@@ -91,7 +93,7 @@ function start(args) {
       send(args);
     }));
   } else {
-    send(args)
+    send(args);
   }
 }
 

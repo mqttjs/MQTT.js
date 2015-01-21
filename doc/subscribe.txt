@@ -2,7 +2,7 @@ Usage: mqtt subscribe [opts] [topic]
 
 Available options:
 
-  -h/--host HOST       the broker host
+  -h/--hostname HOST   the broker host
   -p/--port PORT       the broker port
   -i/--client-id ID    the client id
   -q/--qos 0/1/2       the QoS of the message
@@ -22,4 +22,4 @@ Available options:
   --will-qos 0/1/2     the will qos
   --will-retain        send a will retained message
   -v/--verbose         print the topic before the message
-  -h/--help            show this
+  -H/--help            show this

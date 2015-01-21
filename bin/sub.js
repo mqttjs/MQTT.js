@@ -9,17 +9,14 @@ var mqtt      = require('../')
     })
   , minimist  = require('minimist');
 
-function send(args) {
-}
-
 function start(args) {
   args = minimist(args, {
-    string: ['host', 'username', 'password', 'key', 'cert'],
+    string: ['hostname', 'username', 'password', 'key', 'cert'],
     integer: ['port', 'qos', 'keepAlive'],
     boolean: ['stdin', 'help', 'clean', 'insecure'],
     alias: {
       port: 'p',
-      host: 'h',
+      hostname: ['h', 'host'],
       topic: 't',
       qos: 'q',
       clean: 'c',
@@ -29,7 +26,7 @@ function start(args) {
       password: 'P',
       protocol: 'C',
       verbose: 'v',
-      help: '-h'
+      help: '-H'
     },
     default: {
       host: 'localhost',
