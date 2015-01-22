@@ -95,7 +95,7 @@ describe('mqtt', function() {
     });
     
     it('should return an MqttClient when connect is called with wss:/ url', function () {
-      var c = mqtt.connect('ws://localhost', sslOpts);
+      var c = mqtt.connect('wss://localhost', sslOpts);
       
       c.options.should.have.property('protocol', 'wss')
 
