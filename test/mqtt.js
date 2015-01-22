@@ -66,6 +66,8 @@ describe('mqtt', function() {
 
     it('should return an MqttClient when connect is called with mqtts:/ url', function () {
       var c = mqtt.connect('mqtts://localhost', sslOpts);
+      
+      c.options.should.have.property('protocol', 'mqtts')
 
       c.on('error', function() {});
 
@@ -74,6 +76,28 @@ describe('mqtt', function() {
 
     it('should return an MqttClient when connect is called with ssl:/ url', function () {
       var c = mqtt.connect('ssl://localhost', sslOpts);
+      
+      c.options.should.have.property('protocol', 'ssl')
+
+      c.on('error', function() {});
+
+      c.should.be.instanceOf(mqtt.MqttClient);
+    });
+    
+    it('should return an MqttClient when connect is called with ws:/ url', function () {
+      var c = mqtt.connect('ws://localhost', sslOpts);
+      
+      c.options.should.have.property('protocol', 'ws')
+
+      c.on('error', function() {});
+
+      c.should.be.instanceOf(mqtt.MqttClient);
+    });
+    
+    it('should return an MqttClient when connect is called with wss:/ url', function () {
+      var c = mqtt.connect('wss://localhost', sslOpts);
+      
+      c.options.should.have.property('protocol', 'wss')
 
       c.on('error', function() {});
 
