@@ -128,7 +128,7 @@ function (keyPath, certPath, listener) {
  * @param {Function} [callback]
  */
 module.exports.createConnection = function(port, host, callback) {
-  console.warn('createSecureServer() is deprecated, use http://npm.im/mqtt-connection instead');
+  console.warn('createConnection() is deprecated, use http://npm.im/mqtt-connection instead');
   var net_client, mqtt_conn;
   if ('undefined' === typeof port) {
     // createConnection();
