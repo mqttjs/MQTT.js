@@ -21,8 +21,7 @@ in JavaScript for node.js and the browser.
 MQTT.js is an OPEN Open Source Project, see the [Contributing](#contributing) section to find out what this means.
 
 <a name="notes"></a>
-Important notes for existing users
-----------------------------------
+## Important notes for existing users
 
 v1.0.0 improves the overall architecture of the project, which is now
 splitted in three components: MQTT.js keeps the Client,
@@ -39,16 +38,14 @@ removed, and now everything is UTF-8 with the exception of the
 `password` in the CONNECT message and `payload` in the PUBLISH message.
 
 <a name="install"></a>
-Installation
-------------
+## Installation
 
 ```sh
 npm install mqtt --save
 ```
 
 <a name="example"></a>
-Example
--------
+## Example
 
 For the sake of simplicity, let's put the subscriber and the publisher in the same file:
 
@@ -87,8 +84,7 @@ run the example.
 to use MQTT.js in the browser see the [browserify](#browserify) section
 
 <a name="cli"></a>
-Command Line Tools
-------------------
+## Command Line Tools
 
 MQTT.js bundles a command to interact with a broker.
 In order to have it available on your path, you should install MQTT.js
@@ -113,8 +109,7 @@ mqtt pub -t 'hello' -h 'test.mosquitto.org' -m 'from MQTT.js'
 See `mqtt help <command>` for the command help.
 
 <a name="api"></a>
-API
----
+## API
 
   * <a href="#connect"><code>mqtt.<b>connect()</b></code></a>
   * <a href="#client"><code>mqtt.<b>Client()</b></code></a>
@@ -309,8 +304,7 @@ The callback is called when the packet has been removed.
 Closes the Store.
 
 <a name="browserify"></a>
-Browserify
-----------
+## Browserify
 
 In order to use MQTT.js as a browserify module you can either require it in your browserify bundles or build it as a stand alone module. The exported module is AMD/CommonJs compatible and it will add an object in the global space.
 
@@ -345,11 +339,10 @@ you can then use mqtt.js in the browser with the same api than node's one.
 </html>
 ```
 
-Your broker should accept websocket connection (see [MQTT over Websockets](https://github.com/mcollina/mosca/wiki/MQTT-over-Websockets) to setup [Mosca](http://mcollina.github.io/mosca/)) 
+Your broker should accept websocket connection (see [MQTT over Websockets](https://github.com/mcollina/mosca/wiki/MQTT-over-Websockets) to setup [Mosca](http://mcollina.github.io/mosca/)).
 
 <a name="contributing"></a>
-Contributing
-------------
+## Contributing
 
 MQTT.js is an **OPEN Open Source Project**. This means that:
 
@@ -367,7 +360,6 @@ MQTT.js is only possible due to the excellent work of the following contributors
 </tbody></table>
 
 <a name="license"></a>
-License
--------
+## License
 
 MIT
