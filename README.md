@@ -309,9 +309,10 @@ The callback is called when the packet has been removed.
 Closes the Store.
 
 <a name="browserify"></a>
-BROWSERIFY
+Browserify
 ----------
-to use mqtt as a browserify module you can either require it in your browserify bundles or build it as a stand alone module. exported module is AMD/CommonJs compatible or will export an object in the global space.
+
+In order to use MQTT.js as a browserify module you can either require it in your browserify bundles or build it as a stand alone module. The exported module is AMD/CommonJs compatible and it will add an object in the global space.
 
 ```javascript
 npm install -g browserify // install browserify
