@@ -14,6 +14,7 @@ in JavaScript for node.js and the browser.
 * [Example](#example)
 * [Command Line Tools](#cli)
 * [API](#api)
+* [Browserify](#browserify)
 * [Contributing](#contributing)
 * [License](#license)
 
@@ -82,6 +83,8 @@ If you do not want to install a separate broker, you can try using the
 example.
 It implements enough of the semantics of the MQTT protocol to
 run the example.
+
+to use MQTT.js in the browser see the [browserify](#browserify) section
 
 <a name="cli"></a>
 Command Line Tools
@@ -304,6 +307,44 @@ The callback is called when the packet has been removed.
 ### mqtt.Store#close(cb)
 
 Closes the Store.
+
+<a name="browserify"></a>
+BROWSERIFY
+----------
+to use mqtt as a browserify module you can either require it in your browserify bundles or build it as a stand alone module. exported module is AMD/CommonJs compatible or will export an object in the global space.
+
+```javascript
+npm install -g browserify // install browserify
+cd node_modules/mqtt
+npm install . // install dev dependencies
+browserify mqtt.js -s mqtt > browserMqtt.js // require mqtt in your client-side app
+```
+
+you can then use mqtt.js in the browser with the same api than node's one.
+
+```html
+<html>
+<head>
+  <title>test Ws mqtt.js</title>
+</head>
+<body>
+<script src="./browserMqtt.js"></script>
+<script>
+      var client = mqtt.connect(); // you add a ws:// url here
+      client.subscribe("mqtt/demo");
+
+      client.on("message", function(topic, payload) {
+        alert([topic, payload].join(": "));
+        client.end();
+      });
+
+      client.publish("mqtt/demo", "hello world!");
+    </script>
+</body>
+</html>
+```
+
+Your broker should accept websocket connection (see [MQTT over Websockets](https://github.com/mcollina/mosca/wiki/MQTT-over-Websockets) to setup [Mosca](http://mcollina.github.io/mosca/)) 
 
 <a name="contributing"></a>
 Contributing
