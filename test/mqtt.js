@@ -103,6 +103,62 @@ describe('mqtt', function() {
 
       c.should.be.instanceOf(mqtt.MqttClient);
     });
+    var sslOpts2 = {
+      key: fs.readFileSync(__dirname + '/helpers/private-key.pem'),
+      cert: fs.readFileSync(__dirname + '/helpers/public-cert.pem'),
+      ca: [fs.readFileSync(__dirname + '/helpers/public-cert.pem')]
+    };
+    it('should throw an error when it is called with cert and key set but no protocol specified', function () {
+      (function () {
+        var c = mqtt.connect(sslOpts2);
+      }).should.throw('Missing secure protocol key');
+    });
+    it('should throw an error when it is called with cert and key set and protocol other than allowed: mqtt,mqtts,ws,wss', function () {
+      (function () {
+        sslOpts2.protocol = 'UNKNOWNPROTOCOL';
+        var c = mqtt.connect(sslOpts2);
+      }).should.throw();
+    });
+    it('should return a MqttClient with mqtts set when connect is called key and cert set and protocol mqtt', function () {
+      sslOpts2.protocol = 'mqtt'
+      var c = mqtt.connect(sslOpts2);
+      
+      c.options.should.have.property('protocol', 'mqtts')
+
+      c.on('error', function() {});
+
+      c.should.be.instanceOf(mqtt.MqttClient);
+    });
+    it('should return a MqttClient with mqtts set when connect is called key and cert set and protocol mqtts', function () {
+      sslOpts2.protocol = 'mqtts'
+      var c = mqtt.connect(sslOpts2);
+      
+      c.options.should.have.property('protocol', 'mqtts')
+
+      c.on('error', function() {});
+
+      c.should.be.instanceOf(mqtt.MqttClient);
+    });
+    it('should return a MqttClient with wss set when connect is called key and cert set and protocol ws', function () {
+      sslOpts2.protocol = 'ws'
+      var c = mqtt.connect(sslOpts2);
+      
+      c.options.should.have.property('protocol', 'wss')
+
+      c.on('error', function() {});
+
+      c.should.be.instanceOf(mqtt.MqttClient);
+    });
+    it('should return a MqttClient with wss set when connect is called key and cert set and protocol wss', function () {
+      sslOpts2.protocol = 'wss'
+      var c = mqtt.connect(sslOpts2);
+      
+      c.options.should.have.property('protocol', 'wss')
+
+      c.on('error', function() {});
+
+      c.should.be.instanceOf(mqtt.MqttClient);
+    });
   });
 
   describe('#createClient', function() {
