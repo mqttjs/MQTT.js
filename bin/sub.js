@@ -24,7 +24,7 @@ function start(args) {
       clientId: ['i', 'id'],
       username: 'u',
       password: 'P',
-      protocol: 'C',
+      protocol: ['C', 'l'],
       verbose: 'v',
       help: '-H'
     },
@@ -81,7 +81,7 @@ function start(args) {
   var client = mqtt.connect(args);
 
   client.on('connect', function() {
-    client.subscribe(args.topic);
+    client.subscribe(args.topic, { qos: args.qos });
   });
 
   client.on('message', function(topic, payload) {
