@@ -98,6 +98,10 @@ function start(port, done) {
   var wss = new WebSocketServer({server: server});
 
   wss.on('connection', function(ws) {
+    if (ws.protocol !== 'mqttv3.1') {
+      return ws.end();
+    }
+
     var stream = websocket(ws);
     var connection = new Connection(stream);
     handleClient(connection);
@@ -120,6 +124,6 @@ if (require.main === module) {
       console.error(err);
       return;
     }
-    console.log('tunnelled server started on port', port);
+    console.log('tunnelled server started on port', process.env.PORT || process.env.ZUUL_PORT);
   });
 }
