@@ -4,25 +4,21 @@
 /**
  * Testing dependencies
  */
-var port, KEY, CERT, WRONG_CERT, server,
-  mqtt = require('..'),
+var mqtt = require('..'),
   abstractClientTests = require('./abstract_client'),
   fs = require('fs'),
   setImmediate = global.setImmediate || function (callback) {
-      // works in node v0.8
-      process.nextTick(callback);
-    };
-
-/**
- * Testing options
- */
-port = 9899;
-// better use path.resolve(__dirname, 'helpers', "tls-key.pem")
-// with this you are system path joining aware
-KEY = __dirname + '/helpers/tls-key.pem';
-CERT = __dirname + '/helpers/tls-cert.pem';
-
-WRONG_CERT = __dirname + '/helpers/wrong-cert.pem';
+    // works in node v0.8
+    process.nextTick(callback);
+  },
+  // testing options
+  port = 9899,
+  // better use path.resolve(__dirname, 'helpers', "tls-key.pem")
+  // with this you are system path joining aware
+  KEY = __dirname + '/helpers/tls-key.pem',
+  CERT = __dirname + '/helpers/tls-cert.pem',
+  WRONG_CERT = __dirname + '/helpers/wrong-cert.pem',
+  server;
 
 /**
  * Test server

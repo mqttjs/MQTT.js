@@ -3,15 +3,9 @@
  * Testing requires
  */
 
-var server, Connection,
+var server = require('../lib/server'),
+  Connection = require('mqtt-connection'),
   mqtt = require('../');
-
-/**
- * Units under test
- */
-
-server = require('../lib/server');
-Connection = require('mqtt-connection');
 
 describe('MqttServer', function () {
   it('should emit MqttServerClients', function (done) {

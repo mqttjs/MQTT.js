@@ -6,19 +6,15 @@
  * Testing dependencies
  */
 
-var port, server,
-  mqtt = require('..'),
+var mqtt = require('..'),
   should = require('should'),
   abstractClientTests = require('./abstract_client'),
   setImmediate = global.setImmediate || function (callback) {
     // works in node v0.8
     process.nextTick(callback);
-  };
-
-/**
- * Testing options
- */
-port = 9876;
+  },
+  port = 9876,
+  server;
 
 /**
  * Test server

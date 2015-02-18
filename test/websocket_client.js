@@ -3,8 +3,7 @@
  * Testing dependencies
  */
 /*global setImmediate:true*/
-var port, server,
-  http = require('http'),
+var http = require('http'),
   websocket = require('websocket-stream'),
   WebSocketServer = require('ws').Server,
   Connection = require('mqtt-connection'),
@@ -12,18 +11,10 @@ var port, server,
   setImmediate = global.setImmediate || function (callback) {
     // works in node v0.8
     process.nextTick(callback);
-  };
+  },
+  port = 9999,
+  server = http.createServer();
 
-/**
- * Testing options
- */
-port = 9999;
-
-
-/**
- * Test server
- */
-server = http.createServer();
 
 function attachWebsocketServer (wsServer) {
   var wss = new WebSocketServer({server: wsServer});

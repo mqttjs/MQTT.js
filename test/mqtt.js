@@ -5,16 +5,14 @@
  * Testing includes
  */
 
-var mqtt,
-  fs = require('fs'),
+var fs = require('fs'),
   net = require('net'),
-  sinon = require('sinon');
+  sinon = require('sinon'),
+  mqtt = require('../');
 
 /**
  * Unit under test
  */
-
-mqtt = require('../');
 
 describe('mqtt', function () {
 
@@ -112,6 +110,7 @@ describe('mqtt', function () {
       cert: fs.readFileSync(__dirname + '/helpers/public-cert.pem'),
       ca: [fs.readFileSync(__dirname + '/helpers/public-cert.pem')]
     };
+    /*jshint -W068*/
     it('should throw an error when it is called with cert and key set but no protocol specified', function () {
       // to do rewrite wrap function
       (function () {
@@ -126,6 +125,7 @@ describe('mqtt', function () {
         c.end();
       }).should.throw();
     });
+    /*jshint +W068*/
     it('should return a MqttClient with mqtts set when connect is called key and cert set and protocol mqtt', function () {
       sslOpts2.protocol = 'mqtt';
       var c = mqtt.connect(sslOpts2);
