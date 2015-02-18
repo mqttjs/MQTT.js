@@ -20,9 +20,9 @@
   "scripts": {
     "test": "mocha",
     "pretest": "npm run check-style",
-    "check-style:eslint": "eslint mqtt.js lib/*",
-    "check-style:jshint": "jshint mqtt.js lib/*",
-    "check-style:jscs": "jscs mqtt.js lib/*",
+    "check-style:eslint": "eslint mqtt.js lib/* test/*.js test/browser/*.js test/helpers/*.js",
+    "check-style:jshint": "jshint mqtt.js lib/* test/*.js test/browser/*.js test/helpers/*.js",
+    "check-style:jscs": "jscs mqtt.js lib/* test/*.js test/browser/*.js test/helpers/*.js",
     "check-style": "npm run check-style:jshint && npm run check-style:jscs && npm run check-style:eslint",
     "browser-test": "zuul --server test/browser/server.js --local --open test/browser/test.js"
   },
@@ -165,7 +165,8 @@
       "spaced-line-comment": [2, "always", { "exceptions": ["-"]}],
       "strict": [2, "global"],
       "wrap-iife": 2,
-      "camelcase": false
+      "camelcase": false,
+      "new-cap": false
     }
   }
 }
