@@ -5,16 +5,16 @@
  * See LICENSE for more information
  */
 
-var MqttServer        = require('./lib/server').MqttServer,
-  MqttSecureServer  = require('./lib/server').MqttSecureServer,
-  MqttClient        = require('./lib/client'),
-  MqttConnection    = require('mqtt-connection'),
-  fs                = require('fs'),
-  connect           = require('./lib/connect'),
-  Store             = require('./lib/store'),
-  net               = require('net'),
-  defaultHost       = 'localhost',
-  defaultPort       = 1883;
+var MqttServer = require('./lib/server').MqttServer,
+  MqttSecureServer = require('./lib/server').MqttSecureServer,
+  MqttClient = require('./lib/client'),
+  MqttConnection = require('mqtt-connection'),
+  fs = require('fs'),
+  connect = require('./lib/connect'),
+  Store = require('./lib/store'),
+  net = require('net'),
+  defaultHost = 'localhost',
+  defaultPort = 1883;
 
 module.exports.connect = connect;
 
@@ -29,14 +29,14 @@ module.exports.connect = connect;
 module.exports.createClient = function (port, host, opts) {
   console.warn('createClient is deprecated, use connect instead');
 
-  if (typeof host === 'object') {
+  if ('object' === typeof host) {
     opts = host;
     host = null;
   }
 
-  opts          = opts || {};
-  opts.port     = opts.port || port;
-  opts.host     = opts.host || host;
+  opts = opts || {};
+  opts.port = opts.port || port;
+  opts.host = opts.host || host;
   opts.protocol = 'mqtt';
 
   return connect(opts);
@@ -65,8 +65,8 @@ module.exports.createSecureClient = function (port, host, opts) {
     opts = {};
   }
 
-  opts.port     = port;
-  opts.host     = host;
+  opts.port = port;
+  opts.host = host;
   opts.protocol = 'mqtts';
 
   if (opts.keyPath && opts.certPath) {
@@ -183,8 +183,8 @@ module.exports.MqttSecureServer = MqttSecureServer;
 module.exports.MqttConnection = MqttConnection;
 
 function cli () {
-  var commist           = require('commist')(),
-    helpMe            = require('help-me')();
+  var commist = require('commist')(),
+    helpMe = require('help-me')();
 
   commist.register('publish', require('./bin/pub'));
   commist.register('subscribe', require('./bin/sub'));
@@ -193,7 +193,7 @@ function cli () {
   });
   commist.register('help', helpMe.toStdout);
 
-  if (commist.parse(process.argv.slice(2)) !== null) {
+  if (null !== commist.parse(process.argv.slice(2))) {
     console.log('No such command:', process.argv[2], '\n');
     helpMe.toStdout();
   }
