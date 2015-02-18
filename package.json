@@ -56,5 +56,78 @@
     "through2": "^0.6.3",
     "uglify": "^0.1.1",
     "zuul": "^1.15.2"
+  },
+  "jshintConfig": {
+    "curly": false,
+    "eqeqeq": true,
+    "immed": true,
+    "newcap": true,
+    "noarg": true,
+    "sub": true,
+    "undef": true,
+    "unused": true,
+    "boss": true,
+    "eqnull": true,
+    "node": true,
+    "strict": true,
+    "white": true,
+    "nonbsp": true,
+    "browser": true,
+    "mocha": true,
+    "indent": 2,
+    "latedef": true,
+    "immed": true,
+    "shadow": false
+  },
+  "jscsConfig": {
+    "disallowTrailingWhitespace": true,
+    "validateIndentation": 2,
+    "validateParameterSeparator": ", ",
+    "validateQuoteMarks": { 
+      "mark": "'",
+      "escape": true
+    },
+    "disallowEmptyBlocks": true,
+    "disallowMixedSpacesAndTabs": true,
+    "disallowMultipleLineStrings": true,
+    "disallowSpaceAfterObjectKeys": true,
+    "disallowSpaceAfterPrefixUnaryOperators": true,
+    "disallowSpaceBeforePostfixUnaryOperators": true,
+    "disallowSpacesInCallExpression": true,
+    "disallowTrailingComma": true,
+    "requireDotNotation": "except_snake_case",
+    "requireLineBreakAfterVariableAssignment": true,
+    "requireMultipleVarDecl": "onevar",
+    "requireSpaceAfterBinaryOperators": true,
+    "requireSpaceAfterKeywords": true,
+    "requireSpaceBeforeBinaryOperators": true,
+    "requireSpaceBeforeBlockStatements": true,
+    "requireSpaceBetweenArguments": true,
+    "requireSpacesInNamedFunctionExpression": {
+      "beforeOpeningRoundBrace": true,
+      "beforeOpeningCurlyBrace": true
+    },
+    "requireSpacesInFunctionExpression": {
+      "beforeOpeningRoundBrace": true,
+      "beforeOpeningCurlyBrace": true
+    },
+    "requireSpacesInAnonymousFunctionExpression": {
+      "beforeOpeningRoundBrace": true,
+      "beforeOpeningCurlyBrace": true
+    },
+    "requireSpacesInFunctionDeclaration": {
+      "beforeOpeningRoundBrace": true,
+      "beforeOpeningCurlyBrace": true
+    },
+    "requireBlocksOnNewline": true,
+    "requireCurlyBraces": [
+      "if",
+      "else",
+      "for",
+      "while",
+      "do",
+      "try",
+      "catch"
+    ]
   }
 }
