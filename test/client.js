@@ -1,36 +1,42 @@
+'use strict';
+/*global setImmediate:true*/
+/*eslint no-path-concat:0*/
+/*eslint default-case:0*/
 /**
  * Testing dependencies
  */
 
-var mqtt = require('..')
-  , should = require('should')
-  , abstractClientTests = require("./abstract_client")
-  , setImmediate = global.setImmediate || function(callback) {
-      // works in node v0.8
-      process.nextTick(callback);
-    };
+var port, server,
+  mqtt = require('..'),
+  should = require('should'),
+  abstractClientTests = require('./abstract_client'),
+  setImmediate = global.setImmediate || function (callback) {
+    // works in node v0.8
+    process.nextTick(callback);
+  };
 
 /**
  * Testing options
  */
-var port = 9876;
+port = 9876;
 
 /**
  * Test server
  */
-function buildServer() {
+function buildServer () {
   return new mqtt.Server(function (client) {
 
-    client.on('connect', function(packet) {
-      if (packet.clientId === 'invalid') {
+    client.on('connect', function (packet) {
+      if ('invalid' === packet.clientId) {
         client.connack({returnCode: 2});
       } else {
         client.connack({returnCode: 0});
       }
     });
 
-    client.on('publish', function(packet) {
+    client.on('publish', function (packet) {
       setImmediate(function () {
+        /*jshint -W027*/
         switch (packet.qos) {
           case 0:
             break;
@@ -41,22 +47,23 @@ function buildServer() {
             client.pubrec(packet);
             break;
         }
+        /*jshint +W027*/
       });
     });
 
-    client.on('pubrel', function(packet) {
+    client.on('pubrel', function (packet) {
       client.pubcomp(packet);
     });
 
-    client.on('pubrec', function(packet) {
+    client.on('pubrec', function (packet) {
       client.pubrel(packet);
     });
 
-    client.on('pubcomp', function(packet) {
+    client.on('pubcomp', function (/*packet*/) {
       // Nothing to be done
     });
 
-    client.on('subscribe', function(packet) {
+    client.on('subscribe', function (packet) {
       client.suback({
         messageId: packet.messageId,
         granted: packet.subscriptions.map(function (e) {
@@ -65,70 +72,71 @@ function buildServer() {
       });
     });
 
-    client.on('unsubscribe', function(packet) {
+    client.on('unsubscribe', function (packet) {
       client.unsuback(packet);
     });
 
-    client.on('pingreq', function(packet) {
+    client.on('pingreq', function (/*packet*/) {
       client.pingresp();
     });
   });
-};
+}
 
-var server = buildServer().listen(port);
+server = buildServer().listen(port);
 
 
-describe('MqttClient', function() {
-  describe('creating', function() {
-    it('should allow instantiation of MqttClient without the \'new\' operator' , function(done) {
-      should(function() {
+describe('MqttClient', function () {
+  describe('creating', function () {
+    it('should allow instantiation of MqttClient without the \'new\' operator', function (done) {
+      should(function () {
         var client;
-
         try {
-          client = mqtt.MqttClient(function() {
+          client = mqtt.MqttClient(function () {
             throw Error('break');
           }, {});
+          client.end();
         } catch (err) {
-          if (err.message !== 'break') {
+          if ('break' !== err.message) {
             throw err;
           }
           done();
         }
-      }).not.throw("Object #<Object> has no method '_setupStream'");
+      }).not.throw('Object #<Object> has no method \'_setupStream\'');
     });
   });
 
   var config = { protocol: 'mqtt', port: port };
   abstractClientTests(server, config);
 
-  describe('message ids', function() {
-    it('should increment the message id', function() {
-      var client = mqtt.connect(config);
-      var currentId = client._nextId();
+  describe('message ids', function () {
+    it('should increment the message id', function () {
+      var client = mqtt.connect(config),
+        currentId = client._nextId();
 
       client._nextId().should.equal(currentId + 1);
-    }),
+    });
 
-    it('should return 1 once the interal counter reached limit', function() {
+    it('should return 1 once the interal counter reached limit', function () {
       var client = mqtt.connect(config);
       client.nextId = 65535;
 
       client._nextId().should.equal(65535);
       client._nextId().should.equal(1);
-    })
+    });
   });
 
   describe('reconnecting', function () {
     it('should attempt to reconnect once server is down', function (done) {
       this.timeout(15000);
 
-      var fork   = require('child_process').fork;
-      var server = fork(__dirname + '/helpers/server_process.js');
-
-      var client = mqtt.connect({ port: 3000, host: 'localhost', keepalive: 1 });
+      var fork = require('child_process').fork,
+        // better use path.resolve(__dirname, 'helpers', "server_process.js")
+        // with this you are system path joining aware
+        innerServer = fork(__dirname + '/helpers/server_process.js'),
+        client = mqtt.connect({ port: 3000, host: 'localhost', keepalive: 1 });
 
       client.once('connect', function () {
-        server.kill('SIGINT'); // mocks server shutdown
+        innerServer.kill('SIGINT'); // mocks server shutdown
 
         client.once('close', function () {
           should.exist(client.reconnectTimer);
@@ -140,23 +148,22 @@ describe('MqttClient', function() {
     it('should reconnect to multiple host-ports combination if servers is passed', function (done) {
       this.timeout(15000);
 
-      var fork   = require('child_process').fork;
       var server2 = buildServer().listen(port + 42);
 
-      server2.on('client', function(c) {
+      server2.on('client', function (c) {
         c.stream.destroy();
         server2.close();
       });
 
-      server2.on('listening', function() {
+      server2.on('listening', function () {
 
         var client = mqtt.connect({ servers: [
           { port: port + 42, host: 'localhost' },
-          { port: port, host: 'localhost' },
+          { port: port, host: 'localhost' }
         ], keepalive: 50 });
 
-        server.once('client', function(client) {
-          client.disconnect();
+        server.once('client', function (serverClient) {
+          serverClient.disconnect();
           done();
         });
 

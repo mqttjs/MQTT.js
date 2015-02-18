@@ -1,57 +1,58 @@
+'use strict';
 /**
  * Testing dependencies
  */
 
-var mqtt = require('../../lib/connect')
-  , ports = require('./ports');
+var mqtt = require('../../lib/connect'),
+  ports = require('./ports');
 
 
-function clientTests(buildClient) {
+function clientTests (buildClient) {
   var client;
 
-  beforeEach(function() {
+  beforeEach(function () {
     client = buildClient();
   });
 
-  afterEach(function(done) {
-    client.once("close", done);
+  afterEach(function (done) {
+    client.once('close', done);
     client.end();
   });
 
-  it("should connect", function(done) {
-    client.on("connect", function() {
+  it('should connect', function (done) {
+    client.on('connect', function () {
       done();
     });
   });
 
-  it("should publish and subscribe", function(done) {
-    client.subscribe("hello", function() {
+  it('should publish and subscribe', function (done) {
+    client.subscribe('hello', function () {
       done();
-    }).publish("hello", "world");
+    }).publish('hello', 'world');
   });
 }
 
-describe('MqttClient', function() {
-  describe("specifying a port", function() {
-    clientTests(function() {
+describe('MqttClient', function () {
+  describe('specifying a port', function () {
+    clientTests(function () {
       return mqtt.connect({ port: ports.port });
     });
   });
 
-  describe("specifying a port and host", function() {
-    clientTests(function() {
+  describe('specifying a port and host', function () {
+    clientTests(function () {
       return mqtt.connect({ port: ports.port, host: 'localhost' });
     });
   });
 
-  describe("specifying a URL", function() {
-    clientTests(function() {
+  describe('specifying a URL', function () {
+    clientTests(function () {
       return mqtt.connect('ws://localhost:' + ports.port);
     });
   });
 
-  describe("specifying nothing", function() {
-    clientTests(function() {
+  describe('specifying nothing', function () {
+    clientTests(function () {
       return mqtt.connect();
     });
   });
