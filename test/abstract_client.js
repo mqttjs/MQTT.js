@@ -413,6 +413,39 @@ module.exports = function(server, config) {
         client.publish('hello', '中国', done);
       });
     })
+    it('Publish 10 QoS 2 and receive for issue 252', function(done) {
+        var client = connect();
+
+	var count=0;
+        client.on('connect', function() {
+          client.subscribe('test');
+          client.publish('test', 'test', { qos: 2 });
+        });
+
+        client.on('message', function(t, p, packet) {
+	  //console.log("got a message"+ count);
+	  if (count>=10){
+	    done();
+	  } else {
+            client.publish('test', 'test', { qos: 2 });
+	  }
+
+        });
+        server.once('client', function(client) {
+          client.on('offline', function() {
+	    done("error went offline... didnt see this happen");
+	  });
+          client.on('subscribe', function() {
+            client.on('publish', function(packet) {
+              client.publish(packet);
+            });
+          });
+          client.on('pubrel', function(packet) {
+	    count++;
+	    //console.log("got pubrel");
+	  });
+        });
+      });
   });
 
   describe('unsubscribing', function() {
@@ -1079,6 +1112,11 @@ module.exports = function(server, config) {
       });
 
       client.publish('hello', 'world', { qos: 2 });
+
     });
+
+
+
+
   });
-};
+}
