@@ -1,34 +1,34 @@
-  
+'use strict';
+/*global setImmediate:true*/
+/*eslint no-path-concat:0*/
 /**
  * Testing dependencies
  */
-var mqtt = require('..')
-  , abstractClientTests = require("./abstract_client")
-  , fs = require('fs')
-  , setImmediate = global.setImmediate || function(callback) {
-      // works in node v0.8
-      process.nextTick(callback);
-    };
-
-/**
- * Testing options
- */
-var port = 9899;
-
-var KEY = __dirname + '/helpers/tls-key.pem';
-var CERT = __dirname + '/helpers/tls-cert.pem';
-
-var WRONG_CERT = __dirname + '/helpers/wrong-cert.pem';
+var mqtt = require('..'),
+  abstractClientTests = require('./abstract_client'),
+  fs = require('fs'),
+  setImmediate = global.setImmediate || function (callback) {
+    // works in node v0.8
+    process.nextTick(callback);
+  },
+  // testing options
+  port = 9899,
+  // better use path.resolve(__dirname, 'helpers', "tls-key.pem")
+  // with this you are system path joining aware
+  KEY = __dirname + '/helpers/tls-key.pem',
+  CERT = __dirname + '/helpers/tls-cert.pem',
+  WRONG_CERT = __dirname + '/helpers/wrong-cert.pem',
+  server;
 
 /**
  * Test server
  */
-var server = new mqtt.SecureServer({
+server = new mqtt.SecureServer({
   key: fs.readFileSync(KEY),
   cert: fs.readFileSync(CERT)
 }, function (client) {
-  client.on('connect', function(packet) {
-    if (packet.clientId === 'invalid') {
+  client.on('connect', function (packet) {
+    if ('invalid' === packet.clientId) {
       client.connack({returnCode: 2});
     } else {
       server.emit('connect', client);
@@ -36,8 +36,10 @@ var server = new mqtt.SecureServer({
     }
   });
 
-  client.on('publish', function(packet) {
+  client.on('publish', function (packet) {
     setImmediate(function () {
+      /*jshint -W027*/
+      /*eslint default-case:0*/
       switch (packet.qos) {
         case 0:
           break;
@@ -48,22 +50,23 @@ var server = new mqtt.SecureServer({
           client.pubrec(packet);
           break;
       }
+      /*jshint +W027*/
     });
   });
 
-  client.on('pubrel', function(packet) {
+  client.on('pubrel', function (packet) {
     client.pubcomp(packet);
   });
 
-  client.on('pubrec', function(packet) {
+  client.on('pubrec', function (packet) {
     client.pubrel(packet);
   });
 
-  client.on('pubcomp', function(packet) {
+  client.on('pubcomp', function (/*packet*/) {
     // Nothing to be done
   });
 
-  client.on('subscribe', function(packet) {
+  client.on('subscribe', function (packet) {
     client.suback({
       messageId: packet.messageId,
       granted: packet.subscriptions.map(function (e) {
@@ -72,11 +75,11 @@ var server = new mqtt.SecureServer({
     });
   });
 
-  client.on('unsubscribe', function(packet) {
+  client.on('unsubscribe', function (packet) {
     client.unsuback(packet);
   });
 
-  client.on('pingreq', function(packet) {
+  client.on('pingreq', function (/*packet*/) {
     client.pingresp();
   });
 }).listen(port);
@@ -85,7 +88,7 @@ describe('MqttSecureClient', function () {
   var config = { protocol: 'mqtts', port: port, rejectUnauthorized: false };
   abstractClientTests(server, config);
 
-  describe('with secure parameters', function() {
+  describe('with secure parameters', function () {
 
     it('should validate successfully the CA', function (done) {
       var client = mqtt.connect({
@@ -95,11 +98,11 @@ describe('MqttSecureClient', function () {
         rejectUnauthorized: true
       });
 
-      client.on('error', function(err) {
+      client.on('error', function (err) {
         done(err);
       });
 
-      server.once('connect', function(client) {
+      server.once('connect', function (/*serverClient*/) {
         done();
       });
     });
@@ -112,11 +115,11 @@ describe('MqttSecureClient', function () {
         rejectUnauthorized: true
       });
 
-      client.once('error', function() {
+      client.once('error', function () {
         done();
         client.end();
-        client.on('error', function() {});
-      })
+        client.on('error', function () {});
+      });
     });
 
     it('should emit close on TLS error', function (done) {
@@ -127,12 +130,12 @@ describe('MqttSecureClient', function () {
         rejectUnauthorized: true
       });
 
-      client.on('error', function() {})
+      client.on('error', function () {});
 
       // TODO node v0.8.x emits multiple close events
-      client.once('close', function() {
+      client.once('close', function () {
         done();
-      })
+      });
     });
-  })
+  });
 });

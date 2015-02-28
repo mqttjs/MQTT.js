@@ -1,47 +1,39 @@
-  
+'use strict';
 /**
  * Testing dependencies
  */
-var mqtt = require('..')
-  , http = require('http')
-  , websocket = require('websocket-stream')
-  , WebSocketServer = require('ws').Server
-  , Connection = require('mqtt-connection')
-  , abstractClientTests = require("./abstract_client")
-  , setImmediate = global.setImmediate || function(callback) {
-      // works in node v0.8
-      process.nextTick(callback);
-    };
-
-/**
- * Testing options
- */
-var port = 9999;
+/*global setImmediate:true*/
+var http = require('http'),
+  websocket = require('websocket-stream'),
+  WebSocketServer = require('ws').Server,
+  Connection = require('mqtt-connection'),
+  abstractClientTests = require('./abstract_client'),
+  setImmediate = global.setImmediate || function (callback) {
+    // works in node v0.8
+    process.nextTick(callback);
+  },
+  port = 9999,
+  server = http.createServer();
 
 
-/**
- * Test server
- */
-var server = http.createServer()
+function attachWebsocketServer (wsServer) {
+  var wss = new WebSocketServer({server: wsServer});
 
-function attachWebsocketServer(server) {
-  var wss = new WebSocketServer({server: server});
+  wss.on('connection', function (ws) {
+    var stream = websocket(ws),
+      connection = new Connection(stream);
 
-  wss.on('connection', function(ws) {
-    var stream = websocket(ws);
-    var connection = new Connection(stream);
-
-    server.emit("client", connection);
+    wsServer.emit('client', connection);
   });
 
-  return server;
+  return wsServer;
 }
 
 attachWebsocketServer(server);
 
 server.on('client', function (client) {
-  client.on('connect', function(packet) {
-    if (packet.clientId === 'invalid') {
+  client.on('connect', function (packet) {
+    if ('invalid' === packet.clientId) {
       client.connack({returnCode: 2});
     } else {
       server.emit('connect', client);
@@ -49,8 +41,10 @@ server.on('client', function (client) {
     }
   });
 
-  client.on('publish', function(packet) {
+  client.on('publish', function (packet) {
     setImmediate(function () {
+      /*jshint -W027*/
+      /*eslint default-case:0*/
       switch (packet.qos) {
         case 0:
           break;
@@ -61,22 +55,23 @@ server.on('client', function (client) {
           client.pubrec(packet);
           break;
       }
+      /*jshint +W027*/
     });
   });
 
-  client.on('pubrel', function(packet) {
+  client.on('pubrel', function (packet) {
     client.pubcomp(packet);
   });
 
-  client.on('pubrec', function(packet) {
+  client.on('pubrec', function (packet) {
     client.pubrel(packet);
   });
 
-  client.on('pubcomp', function(packet) {
+  client.on('pubcomp', function (/*packet*/) {
     // Nothing to be done
   });
 
-  client.on('subscribe', function(packet) {
+  client.on('subscribe', function (packet) {
     client.suback({
       messageId: packet.messageId,
       granted: packet.subscriptions.map(function (e) {
@@ -85,11 +80,11 @@ server.on('client', function (client) {
     });
   });
 
-  client.on('unsubscribe', function(packet) {
+  client.on('unsubscribe', function (packet) {
     client.unsuback(packet);
   });
 
-  client.on('pingreq', function(packet) {
+  client.on('pingreq', function (/*packet*/) {
     client.pingresp();
   });
 }).listen(port);

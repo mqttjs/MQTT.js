@@ -1,20 +1,20 @@
 #!/usr/bin/env node
-
+'use strict';
 /*
  * Copyright (c) 2011 Adam Rudd.
  * See LICENSE for more information
  */
 
-var MqttServer        = require('./lib/server').MqttServer
-  , MqttSecureServer  = require('./lib/server').MqttSecureServer
-  , MqttClient        = require('./lib/client')
-  , MqttConnection    = require('mqtt-connection')
-  , fs                = require("fs")
-  , connect           = require('./lib/connect')
-  , Store             = require('./lib/store')
-  , net               = require('net')
-  , defaultHost       = 'localhost'
-  , defaultPort       = 1883;
+var MqttServer = require('./lib/server').MqttServer,
+  MqttSecureServer = require('./lib/server').MqttSecureServer,
+  MqttClient = require('./lib/client'),
+  MqttConnection = require('mqtt-connection'),
+  fs = require('fs'),
+  connect = require('./lib/connect'),
+  Store = require('./lib/store'),
+  net = require('net'),
+  defaultHost = 'localhost',
+  defaultPort = 1883;
 
 module.exports.connect = connect;
 
@@ -26,20 +26,20 @@ module.exports.connect = connect;
  * @param {Object} [opts] - see MqttClient#constructor
  * @api public
  */
-module.exports.createClient = function(port, host, opts) {
-  console.warn('createClient is deprecated, use connect instead')
+module.exports.createClient = function (port, host, opts) {
+  console.warn('createClient is deprecated, use connect instead');
 
-  if (typeof host === 'object') {
+  if ('object' === typeof host) {
     opts = host;
-    host = null
+    host = null;
   }
 
-  opts          = opts || {};
-  opts.port     = opts.port || port;
-  opts.host     = opts.host || host;
+  opts = opts || {};
+  opts.port = opts.port || port;
+  opts.host = opts.host || host;
   opts.protocol = 'mqtt';
 
-  return connect(opts)
+  return connect(opts);
 };
 
 /**
@@ -50,8 +50,9 @@ module.exports.createClient = function(port, host, opts) {
  * @param {Object} opts
  * @api public
  */
-module.exports.createSecureClient = function(port, host, opts) {
-  console.warn('createSecureClient is deprecated, use connect instead')
+module.exports.createSecureClient = function (port, host, opts) {
+  var i;
+  console.warn('createSecureClient is deprecated, use connect instead');
 
   if ('object' === typeof port) {
     opts = port;
@@ -64,8 +65,8 @@ module.exports.createSecureClient = function(port, host, opts) {
     opts = {};
   }
 
-  opts.port     = port;
-  opts.host     = host;
+  opts.port = port;
+  opts.host = host;
   opts.protocol = 'mqtts';
 
   if (opts.keyPath && opts.certPath) {
@@ -75,7 +76,7 @@ module.exports.createSecureClient = function(port, host, opts) {
 
   opts.ca = [];
   if (opts.caPaths) {
-    for (var i = 0;i<opts.caPaths.length;i++) {
+    for (i = 0; i < opts.caPaths.length; i++) {
       opts.ca[i] = fs.readFileSync(opts.caPaths[i]);
     }
   }
@@ -89,7 +90,7 @@ module.exports.createSecureClient = function(port, host, opts) {
  * @param {Function} listener - called on new client connections
  */
 
-module.exports.createServer = function(listener) {
+module.exports.createServer = function (listener) {
   console.warn('createServer() is deprecated, use http://npm.im/mqtt-connection or MqttServer instead');
   return new MqttServer(listener);
 };
@@ -127,14 +128,14 @@ function (keyPath, certPath, listener) {
  * @param {String} [host]
  * @param {Function} [callback]
  */
-module.exports.createConnection = function(port, host, callback) {
+module.exports.createConnection = function (port, host, callback) {
   console.warn('createConnection() is deprecated, use http://npm.im/mqtt-connection instead');
   var net_client, mqtt_conn;
   if ('undefined' === typeof port) {
     // createConnection();
     port = defaultPort;
     host = defaultHost;
-    callback = function(){};
+    callback = function () {};
   } else if ('function' === typeof port) {
     // createConnection(function(){});
     callback = port;
@@ -146,21 +147,21 @@ module.exports.createConnection = function(port, host, callback) {
     host = defaultHost;
   } else if ('function' !== typeof callback) {
     // createConnection(1883, 'localhost');
-    callback = function(){};
+    callback = function () {};
   }
 
   net_client = net.createConnection(port, host);
   mqtt_conn = new MqttConnection(net_client);
 
-  net_client.on('connect', function() {
+  net_client.on('connect', function () {
     mqtt_conn.emit('connected');
   });
 
-  mqtt_conn.once('connected', function() {
+  mqtt_conn.once('connected', function () {
     callback(null, mqtt_conn);
   });
 
-  mqtt_conn.once('error', function(err) {
+  mqtt_conn.once('error', function (err) {
     callback(err);
   });
 
@@ -181,20 +182,20 @@ module.exports.MqttSecureServer = MqttSecureServer;
 // Expose Connection
 module.exports.MqttConnection = MqttConnection;
 
-function cli() {
-  var commist           = require('commist')()
-    , helpMe            = require('help-me')();
+function cli () {
+  var commist = require('commist')(),
+    helpMe = require('help-me')();
 
   commist.register('publish', require('./bin/pub'));
   commist.register('subscribe', require('./bin/sub'));
-  commist.register('version', function() {
+  commist.register('version', function () {
     console.log('MQTT.js version:', require('./package.json').version);
   });
   commist.register('help', helpMe.toStdout);
 
-  if (commist.parse(process.argv.slice(2)) !== null) {
-    console.log('No such command:', process.argv[2], '\n')
-    helpMe.toStdout()
+  if (null !== commist.parse(process.argv.slice(2))) {
+    console.log('No such command:', process.argv[2], '\n');
+    helpMe.toStdout();
   }
 }
 

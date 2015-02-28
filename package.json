@@ -19,9 +19,16 @@
   "main": "mqtt.js",
   "scripts": {
     "test": "mocha",
+    "pretest": "npm run check-style",
+    "check-style:eslint": "eslint mqtt.js lib/* test/*.js test/browser/*.js test/helpers/*.js",
+    "check-style:jshint": "jshint mqtt.js lib/* test/*.js test/browser/*.js test/helpers/*.js",
+    "check-style:jscs": "jscs mqtt.js lib/* test/*.js test/browser/*.js test/helpers/*.js",
+    "check-style": "npm run check-style:jshint && npm run check-style:jscs && npm run check-style:eslint",
     "browser-test": "zuul --server test/browser/server.js --local --open test/browser/test.js"
   },
-  "pre-commit": "test",
+  "pre-commit": [
+    "test"
+  ],
   "bin": {
     "mqtt_pub": "./bin/pub.js",
     "mqtt_sub": "./bin/sub.js",
@@ -49,6 +56,9 @@
   },
   "devDependencies": {
     "browserify": "^7.0.0",
+    "eslint": "^0.15.1",
+    "jscs": "^1.11.3",
+    "jshint": "^2.6.2",
     "mocha": "*",
     "pre-commit": "0.0.7",
     "should": "*",

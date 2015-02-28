@@ -1,21 +1,23 @@
+'use strict';
+/*eslint no-path-concat:0*/
+/*eslint no-wrap-func:0*/
 /**
  * Testing includes
  */
 
-var should = require('should')
-  , fs = require('fs')
-  , net = require('net')
-  , sinon = require('sinon');
+var fs = require('fs'),
+  net = require('net'),
+  sinon = require('sinon'),
+  mqtt = require('../');
 
 /**
  * Unit under test
  */
 
-var mqtt = require('../');
-
-describe('mqtt', function() {
+describe('mqtt', function () {
 
   describe('#connect', function () {
+    var sslOpts, sslOpts2;
     it('should return an MqttClient when connect is called with mqtt:/ url', function () {
       var c = mqtt.connect('mqtt://localhost:1883');
 
@@ -51,14 +53,14 @@ describe('mqtt', function() {
     });
 
     it('should return an MqttClient with correct host when called with a host and port', function () {
-      sinon.spy(mqtt, "createClient");
+      sinon.spy(mqtt, 'createClient');
       var c = mqtt.connect('tcp://user:pass@localhost:1883');
 
       c.options.should.have.property('hostname', 'localhost');
       c.options.should.have.property('port', '1883');
     });
 
-    var sslOpts = {
+    sslOpts = {
       keyPath: __dirname + '/helpers/private-key.pem',
       certPath: __dirname + '/helpers/public-cert.pem',
       caPaths: [__dirname + '/helpers/public-cert.pem']
@@ -66,125 +68,130 @@ describe('mqtt', function() {
 
     it('should return an MqttClient when connect is called with mqtts:/ url', function () {
       var c = mqtt.connect('mqtts://localhost', sslOpts);
-      
-      c.options.should.have.property('protocol', 'mqtts')
 
-      c.on('error', function() {});
+      c.options.should.have.property('protocol', 'mqtts');
+
+      c.on('error', function () {});
 
       c.should.be.instanceOf(mqtt.MqttClient);
     });
 
     it('should return an MqttClient when connect is called with ssl:/ url', function () {
       var c = mqtt.connect('ssl://localhost', sslOpts);
-      
-      c.options.should.have.property('protocol', 'ssl')
 
-      c.on('error', function() {});
+      c.options.should.have.property('protocol', 'ssl');
+
+      c.on('error', function () {});
 
       c.should.be.instanceOf(mqtt.MqttClient);
     });
-    
+
     it('should return an MqttClient when connect is called with ws:/ url', function () {
       var c = mqtt.connect('ws://localhost', sslOpts);
-      
-      c.options.should.have.property('protocol', 'ws')
 
-      c.on('error', function() {});
+      c.options.should.have.property('protocol', 'ws');
+
+      c.on('error', function () {});
 
       c.should.be.instanceOf(mqtt.MqttClient);
     });
-    
+
     it('should return an MqttClient when connect is called with wss:/ url', function () {
       var c = mqtt.connect('wss://localhost', sslOpts);
-      
-      c.options.should.have.property('protocol', 'wss')
 
-      c.on('error', function() {});
+      c.options.should.have.property('protocol', 'wss');
+
+      c.on('error', function () {});
 
       c.should.be.instanceOf(mqtt.MqttClient);
     });
-    var sslOpts2 = {
+    sslOpts2 = {
       key: fs.readFileSync(__dirname + '/helpers/private-key.pem'),
       cert: fs.readFileSync(__dirname + '/helpers/public-cert.pem'),
       ca: [fs.readFileSync(__dirname + '/helpers/public-cert.pem')]
     };
+    /*jshint -W068*/
     it('should throw an error when it is called with cert and key set but no protocol specified', function () {
+      // to do rewrite wrap function
       (function () {
         var c = mqtt.connect(sslOpts2);
+        c.end();
       }).should.throw('Missing secure protocol key');
     });
     it('should throw an error when it is called with cert and key set and protocol other than allowed: mqtt,mqtts,ws,wss', function () {
       (function () {
         sslOpts2.protocol = 'UNKNOWNPROTOCOL';
         var c = mqtt.connect(sslOpts2);
+        c.end();
       }).should.throw();
     });
+    /*jshint +W068*/
     it('should return a MqttClient with mqtts set when connect is called key and cert set and protocol mqtt', function () {
-      sslOpts2.protocol = 'mqtt'
+      sslOpts2.protocol = 'mqtt';
       var c = mqtt.connect(sslOpts2);
-      
-      c.options.should.have.property('protocol', 'mqtts')
 
-      c.on('error', function() {});
+      c.options.should.have.property('protocol', 'mqtts');
+
+      c.on('error', function () {});
 
       c.should.be.instanceOf(mqtt.MqttClient);
     });
     it('should return a MqttClient with mqtts set when connect is called key and cert set and protocol mqtts', function () {
-      sslOpts2.protocol = 'mqtts'
+      sslOpts2.protocol = 'mqtts';
       var c = mqtt.connect(sslOpts2);
-      
-      c.options.should.have.property('protocol', 'mqtts')
 
-      c.on('error', function() {});
+      c.options.should.have.property('protocol', 'mqtts');
+
+      c.on('error', function () {});
 
       c.should.be.instanceOf(mqtt.MqttClient);
     });
     it('should return a MqttClient with wss set when connect is called key and cert set and protocol ws', function () {
-      sslOpts2.protocol = 'ws'
+      sslOpts2.protocol = 'ws';
       var c = mqtt.connect(sslOpts2);
-      
-      c.options.should.have.property('protocol', 'wss')
 
-      c.on('error', function() {});
+      c.options.should.have.property('protocol', 'wss');
+
+      c.on('error', function () {});
 
       c.should.be.instanceOf(mqtt.MqttClient);
     });
     it('should return a MqttClient with wss set when connect is called key and cert set and protocol wss', function () {
-      sslOpts2.protocol = 'wss'
+      sslOpts2.protocol = 'wss';
       var c = mqtt.connect(sslOpts2);
-      
-      c.options.should.have.property('protocol', 'wss')
 
-      c.on('error', function() {});
+      c.options.should.have.property('protocol', 'wss');
+
+      c.on('error', function () {});
 
       c.should.be.instanceOf(mqtt.MqttClient);
     });
   });
 
-  describe('#createClient', function() {
-    it('should return an MqttClient', function() {
+  describe('#createClient', function () {
+    it('should return an MqttClient', function () {
       var c = mqtt.createClient();
 
       c.should.be.instanceOf(mqtt.MqttClient);
     });
   });
 
-  describe('#createSecureClient', function() {
-    it('should return an MqttClient', function() {
+  describe('#createSecureClient', function () {
+    it('should return an MqttClient', function () {
       var c = mqtt.createSecureClient();
 
-      c.on('error', function() {});
+      c.on('error', function () {});
 
       c.should.be.instanceOf(mqtt.MqttClient);
     });
 
-    it('should support passing the key and cert', function() {
+    it('should support passing the key and cert', function () {
       var c = mqtt.createSecureClient({
         keyPath: __dirname + '/helpers/private-key.pem',
         certPath: __dirname + '/helpers/public-cert.pem'
       });
 
-      c.on('error', function() {});
+      c.on('error', function () {});
 
       c.should.be.instanceOf(mqtt.MqttClient);
     });
@@ -192,23 +199,23 @@ describe('mqtt', function() {
     it('should throw on incorrect args');
   });
 
-  describe('#createSecureClientWithListCA', function() {
-    it('should return an MqttClient', function() {
+  describe('#createSecureClientWithListCA', function () {
+    it('should return an MqttClient', function () {
       var c = mqtt.createSecureClient();
 
-      c.on('error', function() {});
+      c.on('error', function () {});
 
       c.should.be.instanceOf(mqtt.MqttClient);
     });
 
-    it('should support passing the key, cert and CA list', function() {
+    it('should support passing the key, cert and CA list', function () {
       var c = mqtt.createSecureClient({
         keyPath: __dirname + '/helpers/private-key.pem',
         certPath: __dirname + '/helpers/public-cert.pem',
         ca: [__dirname + '/helpers/public-cert.pem']
       });
 
-      c.on('error', function() {});
+      c.on('error', function () {});
 
       c.should.be.instanceOf(mqtt.MqttClient);
     });
@@ -216,7 +223,7 @@ describe('mqtt', function() {
     it('should throw on incorrect args');
   });
 
-  describe('#createConnection', function() {
+  describe('#createConnection', function () {
     before(function () {
       // Setup dummy server
 
@@ -224,27 +231,31 @@ describe('mqtt', function() {
       // Just use whatever's there already (likely mosquitto)
       this.server = new net.Server();
       this.server.listen(1883);
-      this.server.on('error', function(){});
+      this.server.on('error', function () {});
     });
-    it('should return an MqttConnection', function() {
+    it('should return an MqttConnection', function () {
       var c = mqtt.createConnection();
 
       c.should.be.instanceOf(mqtt.MqttConnection);
     });
 
-    it('should fire callback on net connect', function(done) {
+    it('should fire callback on net connect', function (done) {
       mqtt.createConnection(done);
     });
-    it('should bind stream close to connection', function(done) {
+    it('should bind stream close to connection', function (done) {
       var c = mqtt.createConnection();
-      c.once('connected', function() {
-        c.once('close', function() { done() });
+      c.once('connected', function () {
+        c.once('close', function () {
+          done();
+        });
         c.stream.end();
       });
     });
-    it('should bind stream error to conn', function(done) {
+    it('should bind stream error to conn', function (done) {
       var c = mqtt.createConnection();
-      c.once('error', function() { done() });
+      c.once('error', function () {
+        done();
+      });
       c.stream.emit('error', new Error('Bad idea!'));
     });
   });
