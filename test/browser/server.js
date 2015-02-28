@@ -2,7 +2,7 @@
 /*eslint default-case:0*/
 /*eslint guard-for-in:0*/
 var port, handleClient,
-websocket = require('websocket-stream'),
+  websocket = require('websocket-stream'),
   WebSocketServer = require('ws').Server,
   Connection = require('mqtt-connection'),
   http = require('http'),
@@ -111,7 +111,7 @@ function start (startPort, done) {
 
     stream = websocket(ws);
     connection = new Connection(stream);
-    handleClient(connection);
+    handleClient.call(server, connection);
   });
   server.listen(startPort, done);
   return server;

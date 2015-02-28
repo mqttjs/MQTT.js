@@ -51,6 +51,12 @@ describe('MqttClient', function () {
     });
   });
 
+  describe('specifying a URL with a path', function () {
+    clientTests(function () {
+      return mqtt.connect('ws://localhost:' + ports.port + '/mqtt');
+    });
+  });
+
   describe('specifying nothing', function () {
     clientTests(function () {
       return mqtt.connect();
