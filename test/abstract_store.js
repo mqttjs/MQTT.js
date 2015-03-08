@@ -28,7 +28,7 @@ module.exports = function abstractStoreTest (build) {
       store
         .createStream()
         .on('data', function (data) {
-          data.should.equal(packet);
+          data.should.eql(packet);
           done();
         });
     });
@@ -71,7 +71,7 @@ module.exports = function abstractStoreTest (build) {
         store
           .createStream()
           .on('data', function (data) {
-            data.should.equal(packet2);
+            data.should.eql(packet2);
             done();
           });
       });
@@ -91,7 +91,7 @@ module.exports = function abstractStoreTest (build) {
         if (err) {
           throw err;
         }
-        deleted.should.equal(packet);
+        deleted.should.eql(packet);
         done();
       });
     });
@@ -110,7 +110,7 @@ module.exports = function abstractStoreTest (build) {
         if (err) {
           throw err;
         }
-        fromDb.should.equal(packet);
+        fromDb.should.eql(packet);
         done();
       });
     });
