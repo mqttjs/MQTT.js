@@ -53,15 +53,16 @@ For the sake of simplicity, let's put the subscriber and the publisher in the sa
 var mqtt    = require('mqtt');
 var client  = mqtt.connect('mqtt://test.mosquitto.org');
 
-client.subscribe('presence');
-client.publish('presence', 'Hello mqtt');
+client.on('connect', function () {
+  client.subscribe('presence');
+  client.publish('presence', 'Hello mqtt');
+});
 
 client.on('message', function (topic, message) {
   // message is Buffer
   console.log(message.toString());
+  client.end();
 });
-
-client.end();
 ```
 
 output:
@@ -286,6 +287,11 @@ will hang.
 ### mqtt.Store()
 
 In-memory implementation of the message store.
+
+Another implementaion is
+[mqtt-level-store](http://npm.im/mqtt-level-store) which uses
+[Level-browserify](http://npm.im/level-browserify) to store the inflight
+data, making it usable both in Node and the Browser.
 
 -------------------------------------------------------
 <a name="put"></a>
