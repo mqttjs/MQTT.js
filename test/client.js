@@ -105,19 +105,21 @@ describe('MqttClient', function () {
   abstractClientTests(server, config);
 
   describe('message ids', function () {
-    it('should increment the message id', function () {
+    it('should increment the message id', function (done) {
       var client = mqtt.connect(config),
         currentId = client._nextId();
 
       client._nextId().should.equal(currentId + 1);
+      done();
     });
 
-    it('should return 1 once the interal counter reached limit', function () {
+    it('should return 1 once the interal counter reached limit', function (done) {
       var client = mqtt.connect(config);
       client.nextId = 65535;
 
       client._nextId().should.equal(65535);
       client._nextId().should.equal(1);
+      done();
     });
   });
 
