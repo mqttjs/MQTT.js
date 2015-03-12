@@ -8,6 +8,7 @@
 var fs = require('fs'),
   net = require('net'),
   sinon = require('sinon'),
+  // should = require('should'),
   mqtt = require('../');
 
 /**
@@ -120,22 +121,24 @@ describe('mqtt', function () {
       cert: fs.readFileSync(__dirname + '/helpers/public-cert.pem'),
       ca: [fs.readFileSync(__dirname + '/helpers/public-cert.pem')]
     };
-    /*jshint -W068*/
-    it('should throw an error when it is called with cert and key set but no protocol specified', function () {
+
+    it('should throw an error when it is called with cert and key set but no protocol specified', function (done) {
       // to do rewrite wrap function
       (function () {
         var c = mqtt.connect(sslOpts2);
         c.end();
       }).should.throw('Missing secure protocol key');
+      done();
     });
-    it('should throw an error when it is called with cert and key set and protocol other than allowed: mqtt,mqtts,ws,wss', function () {
+    it('should throw an error when it is called with cert and key set and protocol other than allowed: mqtt,mqtts,ws,wss', function (done) {
       (function () {
         sslOpts2.protocol = 'UNKNOWNPROTOCOL';
         var c = mqtt.connect(sslOpts2);
         c.end();
-      }).should.throw();
+      }).should.throw('Unknown protocol for secure conenction: "UNKNOWNPROTOCOL"!');
+      done();
     });
-    /*jshint +W068*/
+
     it('should return a MqttClient with mqtts set when connect is called key and cert set and protocol mqtt', function (done) {
       sslOpts2.protocol = 'mqtt';
       var c = mqtt.connect(sslOpts2);
