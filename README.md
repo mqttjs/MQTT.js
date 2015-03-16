@@ -175,6 +175,12 @@ the `connect` event. Typically a `net.Socket`.
     reconnections
   * `incomingStore`: a [Store](#store) for the incoming packets
   * `outgoingStore`: a [Store](#store) for the outgoing packets
+  * `will`: a message that will sent by the broker automatically when
+     the client disconnect badly. The format is:
+    * `topic`: the topic to publish
+    * `payload`: the message to publish
+    * `qos`: the QoS
+    * `retain`: the retain flag
 
 In case mqtts (mqtt over tls) is required, the `options` object is
 passed through to
