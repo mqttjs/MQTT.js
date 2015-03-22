@@ -35,7 +35,11 @@ deprecated, as such, it id not documented in this README.
 
 As a __breaking change__, the `encoding` option in the old client is
 removed, and now everything is UTF-8 with the exception of the
-`password` in the CONNECT message and `payload` in the PUBLISH message.
+`password` in the CONNECT message and `payload` in the PUBLISH message,
+which are `Buffer`.
+
+Another __breaking change__ is that MQTT.js now defaults to MQTT v3.1.1,
+so to support old brokers, please read the [client options doc](#client).
 
 <a name="install"></a>
 ## Installation
@@ -196,7 +200,8 @@ If you are connecting to a broker that supports only MQTT 3.1 (not
 }
 ```
 
-This is confirmed on RabbitMQ 3.2.4.
+This is confirmed on RabbitMQ 3.2.4, and on Mosquitto < 1.3. Mosquitto
+version 1.3 and 1.4 works fine without those.
 
 #### Event `'connect'`
 
