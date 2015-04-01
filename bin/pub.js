@@ -19,7 +19,7 @@ function send(args) {
 
 function start(args) {
   args = minimist(args, {
-    string: ['hostname', 'username', 'password', 'key', 'cert'],
+    string: ['hostname', 'username', 'password', 'key', 'cert', 'message'],
     integer: ['port', 'qos'],
     boolean: ['stdin', 'retain', 'help', 'insecure'],
     alias: {
