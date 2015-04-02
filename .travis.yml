@@ -4,4 +4,4 @@ node_js:
   - "0.10"
   - "0.8"
 before_install:
-  - npm install npm@latest -g
+  - node -v | grep v0.8 && npm install npm@1.4 -g
