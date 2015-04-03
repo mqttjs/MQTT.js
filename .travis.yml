@@ -2,6 +2,4 @@ language: node_js
 node_js:
   - "0.12"
   - "0.10"
-  - "0.8"
-before_install:
-  - (node -v | grep v0.8 && npm install npm@1.4 -g) || echo 'npm upgrade not needed'
+  - "iojs"
