@@ -19,7 +19,7 @@ function send(args) {
 
 function start(args) {
   args = minimist(args, {
-    string: ['hostname', 'username', 'password', 'key', 'cert'],
+    string: ['hostname', 'username', 'password', 'key', 'cert', 'message'],
     integer: ['port', 'qos'],
     boolean: ['stdin', 'retain', 'help', 'insecure'],
     alias: {
@@ -47,8 +47,8 @@ function start(args) {
     return helpMe.toStdout('publish');
   }
 
-  args.topic = args.topic || args._.shift();
-  args.message = args.message || args._.shift() || '';
+  args.topic = (args.topic || args._.shift()).toString();
+  args.message = (args.message || args._.shift()).toString() || '';
 
   if (!args.topic) {
     console.error('missing topic\n');
