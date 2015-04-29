@@ -240,15 +240,15 @@ Emitted when the client recieves a publish packet
 
 -------------------------------------------------------
 <a name="publish"></a>
-### mqtt.Client#publish(topic, payload, [options])
+### mqtt.Client#publish(topic, message, [options], [callback])
 
-Publish a message
+Publish a message to a topic
 
 * `topic` is the topic to publish to, `String`
 * `message` is the message to publish, `Buffer` or `String`
 * `options` is the options to publish with, including:
-  * `qos` qos level, default `0`
-  * `retain` retain flag, default `false`
+  * `qos` QoS level, `Number`, default `0`
+  * `retain` retain flag, `Boolean`, default `false`
 * `callback` callback fired when the QoS handling completes,
   or at the next tick if QoS 0.
 
