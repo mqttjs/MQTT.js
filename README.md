@@ -232,7 +232,7 @@ parsing error occurs.
 
 `function(topic, message, packet) {}`
 
-Emitted when the client recieves a publish packet
+Emitted when the client receives a publish packet
 * `topic` topic of the received packet
 * `message` payload of the received packet
 * `packet` received packet, as defined in
