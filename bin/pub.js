@@ -83,10 +83,6 @@ function start(args) {
     args.rejectUnauthorized = false;
   }
 
-  if (args.insecure) {
-    args.rejectUnauthorized = false;
-  }
-
   if (args.stdin) {
     process.stdin.pipe(concat(function(data) {
       args.message = data.toString().trim();
