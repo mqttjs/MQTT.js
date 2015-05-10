@@ -24,7 +24,7 @@ MQTT.js is an OPEN Open Source Project, see the [Contributing](#contributing) se
 ## Important notes for existing users
 
 v1.0.0 improves the overall architecture of the project, which is now
-splitted in three components: MQTT.js keeps the Client,
+split into three components: MQTT.js keeps the Client,
 [mqtt-connection](http://npm.im/mqtt-connection) includes the barebone
 Connection code for server-side usage, and [mqtt-packet](http://npm.im/mqtt-packet)
 includes the protocol parser and generator. The new Client improves
