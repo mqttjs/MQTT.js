@@ -91,6 +91,20 @@ module.exports = function (server, config) {
       });
 
     });
+
+    it('should restart the ping timer if stream ends badly', function (done) {
+      var client = connect();
+
+      client.once('reconnect', function () {
+        should.exist(client.pingTimer);
+        client.end();
+        done();
+      });
+
+      client.once('connect', function () {
+        client.stream.end();
+      });
+    });
   });
 
   describe('connecting', function () {
