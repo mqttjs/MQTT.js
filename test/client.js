@@ -13,6 +13,8 @@ var mqtt = require('..'),
     // works in node v0.8
     process.nextTick(callback);
   },
+  net = require('net'),
+  eos = require('end-of-stream'),
   port = 9876,
   server;
 
@@ -157,6 +159,35 @@ describe('MqttClient', function () {
           { port: port + 42, host: 'localhost' },
           { port: port, host: 'localhost' }
         ], keepalive: 50 });
+
+        server.once('client', function (serverClient) {
+          serverClient.disconnect();
+          done();
+        });
+
+        client.once('connect', function () {
+          client.stream.destroy();
+        });
+      });
+    });
+
+    it('should reconnect if a connack is not received in an interval', function (done) {
+      this.timeout(2000);
+
+      var server2 = net.createServer().listen(port + 43);
+
+      server2.on('connection', function (c) {
+        eos(c, function () {
+          server2.close();
+        });
+      });
+
+      server2.on('listening', function () {
+
+        var client = mqtt.connect({ servers: [
+          { port: port + 43, host: 'localhost' },
+          { port: port, host: 'localhost' }
+        ], connectTimeout: 500 });
 
         server.once('client', function (serverClient) {
           serverClient.disconnect();
