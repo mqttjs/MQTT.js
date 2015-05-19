@@ -177,6 +177,8 @@ the `connect` event. Typically a `net.Socket`.
     offline
   * `reconnectPeriod`: `1000` milliseconds, interval between two
     reconnections
+  * `connectTimeout`: `30 * 1000` milliseconds, time to wait before a
+    CONNACK is received
   * `incomingStore`: a [Store](#store) for the incoming packets
   * `outgoingStore`: a [Store](#store) for the outgoing packets
   * `will`: a message that will sent by the broker automatically when
@@ -208,6 +210,12 @@ version 1.3 and 1.4 works fine without those.
 `function() {}`
 
 Emitted on successful (re)connection (i.e. connack rc=0).
+
+#### Event `'reconnect'`
+
+`function() {}`
+
+Emitted when a reconnect starts.
 
 #### Event `'close'`
 
