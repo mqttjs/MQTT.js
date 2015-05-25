@@ -191,6 +191,9 @@ the `connect` event. Typically a `net.Socket`.
 In case mqtts (mqtt over tls) is required, the `options` object is
 passed through to
 [`tls.connect()`](http://nodejs.org/api/tls.html#tls_tls_connect_options_callback).
+If you are using a **self-signed certificate**, pass the `rejectUnauthorized: false` option.
+Beware that you are exposing yourself to man in the middle attacks, so it is a configuration
+that is not recommended for production environments.
 
 If you are connecting to a broker that supports only MQTT 3.1 (not
 3.1.1 compliant), you should pass these additional options:
