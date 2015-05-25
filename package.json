@@ -12,6 +12,7 @@
     "publish",
     "subscribe"
   ],
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git://github.com/mqttjs/MQTT.js.git"
