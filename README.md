@@ -292,9 +292,15 @@ Unsubscribe from a topic or topics
 
 -------------------------------------------------------
 <a name="end"></a>
-### mqtt.Client#end(cb)
+### mqtt.Client#end([force], [cb])
 
-Close the client, calls `callback` when finished.
+Close the client, accepts the following options:
+
+* `force`: passing it to true will close the client right away, without
+  waiting for the in-flight messages to be acked. This parameter is
+  optional.
+* `cb`: will be called when the client is closed. This parameter is
+  optional.
 
 -------------------------------------------------------
 <a name="handleMessage"></a>
