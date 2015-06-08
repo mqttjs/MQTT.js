@@ -77,7 +77,6 @@ module.exports = function (server, config) {
       client.once('connect', function () {
         client.end();
       });
-
     });
 
     it('should stop ping timer after end called', function (done) {
@@ -89,7 +88,6 @@ module.exports = function (server, config) {
         should.not.exist(client.pingTimer);
         done();
       });
-
     });
   });
 
@@ -328,6 +326,14 @@ module.exports = function (server, config) {
             });
           });
         });
+      });
+
+      it('does not wait acks when force-closing', function (done) {
+        // non-running broker
+        var client = connect('mqtt://localhost:8993');
+
+        client.publish('test', 'test', { qos: 1 });
+        client.end(true, done);
       });
     }
   });
