@@ -210,16 +210,15 @@ describe('MqttClient', function () {
       });
 
       server2.once('listening', function () {
-        var reconnects = 0;
-        var connectTimeout = 1000;
-        var reconnectPeriod = 100;
-        var expectedReconnects = Math.floor(connectTimeout / reconnectPeriod);
-
-        var client = mqtt.connect({
-          port: port + 44,
-          host: 'localhost',
-          connectTimeout: connectTimeout,
-          reconnectPeriod: reconnectPeriod });
+        var reconnects = 0,
+          connectTimeout = 1000,
+          reconnectPeriod = 100,
+          expectedReconnects = Math.floor(connectTimeout / reconnectPeriod),
+          client = mqtt.connect({
+            port: port + 44,
+            host: 'localhost',
+            connectTimeout: connectTimeout,
+            reconnectPeriod: reconnectPeriod });
 
         client.on('reconnect', function () {
           reconnects++;
