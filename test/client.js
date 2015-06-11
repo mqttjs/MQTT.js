@@ -199,5 +199,35 @@ describe('MqttClient', function () {
         });
       });
     });
+
+    it('shoud not be cleared by the connack timer', function (done) {
+      this.timeout(4000);
+
+      var server2 = net.createServer().listen(port + 44);
+
+      server2.on('connection', function (c) {
+        c.destroy();
+      });
+
+      server2.once('listening', function () {
+        var reconnects = 0,
+          connectTimeout = 1000,
+          reconnectPeriod = 100,
+          expectedReconnects = Math.floor(connectTimeout / reconnectPeriod),
+          client = mqtt.connect({
+            port: port + 44,
+            host: 'localhost',
+            connectTimeout: connectTimeout,
+            reconnectPeriod: reconnectPeriod });
+
+        client.on('reconnect', function () {
+          reconnects++;
+          if (reconnects >= expectedReconnects) {
+            client.end();
+            done();
+          }
+        });
+      });
+    });
   });
 });
