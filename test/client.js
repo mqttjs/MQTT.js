@@ -248,7 +248,7 @@ describe('MqttClient', function () {
       });
 
       setTimeout(function () {
-        if (client.queue.length === 0) {
+        if (0 === client.queue.length) {
           client.end(true);
           done();
         } else {

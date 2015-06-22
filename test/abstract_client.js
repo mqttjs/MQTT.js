@@ -8,6 +8,7 @@
 var should = require('should'),
   sinon = require('sinon'),
   mqtt = require('../'),
+  xtend = require('xtend'),
   setImmediate = global.setImmediate || function (callback) {
     // for node v0.8 support
     process.nextTick(callback);
@@ -15,11 +16,7 @@ var should = require('should'),
 
 module.exports = function (server, config) {
   function connect (opts) {
-    opts = Object.keys(config).reduce(function (acc, key) {
-      acc[key] = config[key];
-      return acc;
-    }, opts || {});
-
+    opts = xtend(config, opts);
     return mqtt.connect(opts);
   }
 
