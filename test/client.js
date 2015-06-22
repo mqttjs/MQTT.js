@@ -229,5 +229,32 @@ describe('MqttClient', function () {
         });
       });
     });
+    it('shoud not keep requeueing the first message when offline', function (done) {
+      this.timeout(2500);
+
+      var server2 = buildServer().listen(port + 45),
+      client = mqtt.connect({
+            port: port + 45,
+            host: 'localhost',
+            connectTimeout: 350,
+            reconnectPeriod: 300 });
+
+      server2.on('client', function (c) {
+        client.publish('hello', 'world', { qos: 1 }, function () {
+          c.destroy();
+          server2.close();
+          client.publish('hello', 'world', { qos: 1 });
+        });
+      });
+
+      setTimeout(function () {
+        if (client.queue.length === 0) {
+          client.end(true);
+          done();
+        } else {
+          client.end(true);
+        }
+      }, 2000);
+    });
   });
 });
