@@ -47,9 +47,6 @@ function start(args) {
     return helpMe.toStdout('publish');
   }
 
-  args.topic = (args.topic || args._.shift()).toString();
-  args.message = (args.message || args._.shift()).toString() || '';
-
   if (!args.topic) {
     console.error('missing topic\n');
     return helpMe.toStdout('publish');
@@ -82,6 +79,9 @@ function start(args) {
   if (args.insecure) {
     args.rejectUnauthorized = false;
   }
+
+  args.topic = (args.topic || args._.shift()).toString();
+  args.message = (args.message || args._.shift()).toString() || '';
 
   if (args.stdin) {
     process.stdin.pipe(concat(function(data) {
