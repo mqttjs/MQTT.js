@@ -179,6 +179,8 @@ the `connect` event. Typically a `net.Socket`.
     reconnections
   * `connectTimeout`: `30 * 1000` milliseconds, time to wait before a
     CONNACK is received
+  * `username`: the username required by your broker, if any
+  * `password`: the password required by your broker, if any
   * `incomingStore`: a [Store](#store) for the incoming packets
   * `outgoingStore`: a [Store](#store) for the outgoing packets
   * `will`: a message that will sent by the broker automatically when
@@ -194,8 +196,6 @@ passed through to
 If you are using a **self-signed certificate**, pass the `rejectUnauthorized: false` option.
 Beware that you are exposing yourself to man in the middle attacks, so it is a configuration
 that is not recommended for production environments.
-
-If your broker requires username and password, you can add `username` and `password` to the `options` object.
 
 If you are connecting to a broker that supports only MQTT 3.1 (not
 3.1.1 compliant), you should pass these additional options:
