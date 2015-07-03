@@ -195,6 +195,8 @@ If you are using a **self-signed certificate**, pass the `rejectUnauthorized: fa
 Beware that you are exposing yourself to man in the middle attacks, so it is a configuration
 that is not recommended for production environments.
 
+If your broker requires username and password, you can add `username` and `password` to the `options` object.
+
 If you are connecting to a broker that supports only MQTT 3.1 (not
 3.1.1 compliant), you should pass these additional options:
 
