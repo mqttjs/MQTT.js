@@ -39,16 +39,12 @@ function start(args) {
     default: {
       host: 'localhost',
       qos: 0,
-      retain: false
+      retain: false,
+      topic: ''
     }
   });
 
   if (args.help) {
-    return helpMe.toStdout('publish');
-  }
-
-  if (!args.topic) {
-    console.error('missing topic\n');
     return helpMe.toStdout('publish');
   }
 
@@ -82,6 +78,11 @@ function start(args) {
 
   args.topic = (args.topic || args._.shift()).toString();
   args.message = (args.message || args._.shift()).toString() || '';
+
+  if (!args.topic) {
+    console.error('missing topic\n');
+    return helpMe.toStdout('publish');
+  }
 
   if (args.stdin) {
     process.stdin.pipe(concat(function(data) {
