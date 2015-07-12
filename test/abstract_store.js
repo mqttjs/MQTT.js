@@ -34,6 +34,21 @@ module.exports = function abstractStoreTest (build) {
     });
   });
 
+  it('should support destroying the stream', function (done) {
+    var packet = {
+      topic: 'hello',
+      payload: 'world',
+      qos: 1,
+      messageId: 42
+    };
+
+    store.put(packet, function () {
+      var stream = store.createStream();
+      stream.on('close', done);
+      stream.destroy();
+    });
+  });
+
   it('should add and del in-flight packets', function (done) {
     var packet = {
       topic: 'hello',
