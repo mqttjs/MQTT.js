@@ -183,6 +183,8 @@ the `connect` event. Typically a `net.Socket`.
   * `password`: the password required by your broker, if any
   * `incomingStore`: a [Store](#store) for the incoming packets
   * `outgoingStore`: a [Store](#store) for the outgoing packets
+  * `username` : username for authenticating to server
+  * `password`: pasword for authenticating to server
   * `will`: a message that will sent by the broker automatically when
      the client disconnect badly. The format is:
     * `topic`: the topic to publish
