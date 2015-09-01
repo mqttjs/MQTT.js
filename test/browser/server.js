@@ -70,7 +70,7 @@ handleClient = function (client) {
     client.pubrel(packet);
   });
 
-  client.on('pubcomp', function (/*packet*/) {
+  client.on('pubcomp', function () {
     // Nothing to be done
   });
 
@@ -94,7 +94,7 @@ handleClient = function (client) {
     client.unsuback(packet);
   });
 
-  client.on('pingreq', function (/*packet*/) {
+  client.on('pingreq', function () {
     client.pingresp();
   });
 };

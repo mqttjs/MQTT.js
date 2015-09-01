@@ -61,7 +61,7 @@ module.exports = function abstractStoreTest (build) {
       store.del(packet, function () {
         store
           .createStream()
-          .on('data', function (/*data*/) {
+          .on('data', function () {
             done(new Error('this should never happen'));
           })
           .on('end', done);
@@ -71,11 +71,11 @@ module.exports = function abstractStoreTest (build) {
 
   it('should replace a packet when doing put with the same messageId', function (done) {
     var packet1 = {
-      topic: 'hello',
-      payload: 'world',
-      qos: 2,
-      messageId: 42
-    },
+        topic: 'hello',
+        payload: 'world',
+        qos: 2,
+        messageId: 42
+      },
       packet2 = {
         qos: 2,
         messageId: 42

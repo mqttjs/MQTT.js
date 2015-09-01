@@ -4,7 +4,8 @@ var mqtt = require('../../'),
 
 module.exports.init_server = function (PORT) {
   var server = new mqtt.Server(function (client) {
-    /*var i, events = ['connect', 'publish', 'pubrel', 'subscribe', 'disconnect'];
+    /*
+    var i, events = ['connect', 'publish', 'pubrel', 'subscribe', 'disconnect'];
 
     for (i = 0; i < events.length; i++) {
       client.on(events[i], function (packet) {
@@ -13,21 +14,21 @@ module.exports.init_server = function (PORT) {
     }
     */
 
-    client.on('connect', function (/*packet*/) {
+    client.on('connect', function () {
       client.connack(0);
     });
 
     client.on('publish', function (packet) {
       switch (packet.qos) {
-      case 1:
-        client.puback({messageId: packet.messageId});
-        break;
-      case 2:
-        client.pubrec({messageId: packet.messageId});
-        break;
-      default:
-        // console.log('errors? QOS=', packet.qos);
-        break;
+        case 1:
+          client.puback({messageId: packet.messageId});
+          break;
+        case 2:
+          client.pubrec({messageId: packet.messageId});
+          break;
+        default:
+          // console.log('errors? QOS=', packet.qos);
+          break;
       }
 
     });
@@ -36,11 +37,11 @@ module.exports.init_server = function (PORT) {
       client.pubcomp({messageId: packet.messageId});
     });
 
-    client.on('pingreq', function (/*packet*/) {
+    client.on('pingreq', function () {
       client.pingresp();
     });
 
-    client.on('disconnect', function (/*packet*/) {
+    client.on('disconnect', function () {
       client.stream.end();
     });
   });
@@ -53,7 +54,7 @@ module.exports.init_secure_server = function (port, key, cert) {
     key: fs.readFileSync(key),
     cert: fs.readFileSync(cert)
   }, function (client) {
-    client.on('connect', function (/*packet*/) {
+    client.on('connect', function () {
       client.connack({returnCode: 0});
     });
   });

@@ -13,17 +13,15 @@
       0,
       false
     ],
-    "no-underscore-dangle": [
-      0,
-      false
-    ],
+    "no-underscore-dangle": 0,
     "yoda": [
       1,
       "always"
     ],
     "indent": [
       2,
-      2
+      2,
+      {"SwitchCase": 1}
     ],
     "brace-style": [
       2,
@@ -43,7 +41,7 @@
     "no-nested-ternary": 2,
     "no-undefined": 2,
     "radix": 2,
-    "space-after-function-name": [
+    "space-before-function-paren": [
       1,
       "always"
     ],
@@ -52,13 +50,18 @@
       "always"
     ],
     "space-before-blocks": 2,
-    "spaced-line-comment": [
+    "spaced-comment": [
       2,
       "always",
       {
         "exceptions": [
           "-"
-        ]
+        ],
+        "markers": [
+          "eslint",
+	  "jshint",
+          "global"
+         ]
       }
     ],
     "strict": [
@@ -66,7 +69,7 @@
       "global"
     ],
     "wrap-iife": 2,
-    "camelcase": false,
-    "new-cap": false
+    "camelcase": 0,
+    "new-cap": 0
   }
 }
