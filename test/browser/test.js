@@ -57,7 +57,7 @@ describe('MqttClient', function () {
     });
   });
 
-  describe('specifying nothing', function () {
+  describe.skip('specifying nothing', function () {
     clientTests(function () {
       return mqtt.connect();
     });

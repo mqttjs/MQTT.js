@@ -216,7 +216,7 @@ module.exports = function (server, config) {
       client.once('connect', function () {
         done(new Error('Should not emit connect'));
       });
-      client.once('error', function (/*error*/) {
+      client.once('error', function (/* error */) {
         // to do
         // check for error message
         // and validate it is the expected one
@@ -263,7 +263,7 @@ module.exports = function (server, config) {
 
         server.once('client', function (serverClient) {
           serverClient.on('subscribe', function () {
-            serverClient.on('publish', function (/*packet*/) {
+            serverClient.on('publish', function () {
               done();
             });
           });
@@ -311,7 +311,7 @@ module.exports = function (server, config) {
           client.publish('test', 'test', { qos: 1 }, function () {
             client.end();
           });
-          client.on('message', function (/*t, p, packet*/) {
+          client.on('message', function () {
             done();
           });
         });
@@ -566,7 +566,7 @@ module.exports = function (server, config) {
 
     it('should checkPing at keepalive interval', function (done) {
       var interval = 3,
-      client = connect({keepalive: interval});
+        client = connect({keepalive: interval});
 
       client._checkPing = sinon.spy();
 
@@ -634,7 +634,7 @@ module.exports = function (server, config) {
       client.subscribe('test');
 
       server.once('client', function (serverClient) {
-        serverClient.once('subscribe', function (/*packet*/) {
+        serverClient.once('subscribe', function () {
           done();
         });
       });
@@ -663,7 +663,7 @@ module.exports = function (server, config) {
       var client = connect(),
         subs = ['test1', 'test2'];
 
-      client.once('connect', function (/*args*/) {
+      client.once('connect', function () {
         client.subscribe(subs);
       });
 
@@ -713,7 +713,7 @@ module.exports = function (server, config) {
         topic = 'test',
         opts = {qos: 1};
 
-      client.once('connect', function (/*args*/) {
+      client.once('connect', function () {
         client.subscribe(topic, opts);
       });
 
@@ -731,7 +731,7 @@ module.exports = function (server, config) {
       var client = connect(),
         topic = 'test';
 
-      client.once('connect', function (/*args*/) {
+      client.once('connect', function () {
         client.subscribe(topic, {qos: 2}, function (err, granted) {
           if (err) {
             done(err);
@@ -785,7 +785,7 @@ module.exports = function (server, config) {
       });
 
       server.once('client', function (serverClient) {
-        serverClient.on('subscribe', function (/*packet*/) {
+        serverClient.on('subscribe', function () {
           serverClient.publish(testPacket);
         });
       });
@@ -794,12 +794,12 @@ module.exports = function (server, config) {
     it('should support binary data', function (done) {
       var client = connect({ encoding: 'binary' }),
         testPacket = {
-            topic: 'test',
-            payload: 'message',
-            retain: true,
-            qos: 1,
-            messageId: 5
-          };
+          topic: 'test',
+          payload: 'message',
+          retain: true,
+          qos: 1,
+          messageId: 5
+        };
 
       client.subscribe(testPacket.topic);
       client.once('message',
@@ -812,7 +812,7 @@ module.exports = function (server, config) {
       });
 
       server.once('client', function (serverClient) {
-        serverClient.on('subscribe', function (/*packet*/) {
+        serverClient.on('subscribe', function () {
           serverClient.publish(testPacket);
         });
       });
@@ -840,7 +840,7 @@ module.exports = function (server, config) {
       });
 
       server.once('client', function (serverClient) {
-        serverClient.on('subscribe', function (/*packet*/) {
+        serverClient.on('subscribe', function () {
           serverClient.publish(testPacket);
         });
       });
@@ -868,7 +868,7 @@ module.exports = function (server, config) {
       });
 
       server.once('client', function (serverClient) {
-        serverClient.on('subscribe', function (/*packet*/) {
+        serverClient.on('subscribe', function () {
           serverClient.publish(testPacket);
           // twice, should be ignored
           serverClient.publish(testPacket);
@@ -879,12 +879,12 @@ module.exports = function (server, config) {
     it('should support chinese topic', function (done) {
       var client = connect({ encoding: 'binary' }),
         testPacket = {
-            topic: '国',
-            payload: 'message',
-            retain: true,
-            qos: 1,
-            messageId: 5
-          };
+          topic: '国',
+          payload: 'message',
+          retain: true,
+          qos: 1,
+          messageId: 5
+        };
 
       client.subscribe(testPacket.topic);
       client.once('message',
@@ -897,7 +897,7 @@ module.exports = function (server, config) {
       });
 
       server.once('client', function (serverClient) {
-        serverClient.on('subscribe', function (/*packet*/) {
+        serverClient.on('subscribe', function () {
           serverClient.publish(testPacket);
         });
       });
@@ -916,7 +916,7 @@ module.exports = function (server, config) {
       });
 
       server.once('client', function (serverClient) {
-        serverClient.once('subscribe', function (/*packet*/) {
+        serverClient.once('subscribe', function () {
           serverClient.publish({
             topic: test_topic,
             payload: test_message,
@@ -934,12 +934,12 @@ module.exports = function (server, config) {
         test_message = 'message',
         mid = 50;
 
-      client.once('connect', function (/*args*/) {
+      client.once('connect', function () {
         client.subscribe(test_topic, {qos: 1});
       });
 
       server.once('client', function (serverClient) {
-        serverClient.once('subscribe', function (/*packet*/) {
+        serverClient.once('subscribe', function () {
           serverClient.publish({
             topic: test_topic,
             payload: test_message,
@@ -966,7 +966,7 @@ module.exports = function (server, config) {
       });
 
       server.once('client', function (serverClient) {
-        serverClient.once('subscribe', function (/*packet*/) {
+        serverClient.once('subscribe', function () {
           serverClient.publish({
             topic: test_topic,
             payload: test_message,
@@ -975,7 +975,7 @@ module.exports = function (server, config) {
           });
         });
 
-        serverClient.once('pubcomp', function (/*packet*/) {
+        serverClient.once('pubcomp', function () {
           done();
         });
       });

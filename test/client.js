@@ -57,7 +57,7 @@ function buildServer () {
       client.pubrel(packet);
     });
 
-    client.on('pubcomp', function (/*packet*/) {
+    client.on('pubcomp', function () {
       // Nothing to be done
     });
 
@@ -74,7 +74,7 @@ function buildServer () {
       client.unsuback(packet);
     });
 
-    client.on('pingreq', function (/*packet*/) {
+    client.on('pingreq', function () {
       client.pingresp();
     });
   });
@@ -233,11 +233,12 @@ describe('MqttClient', function () {
       this.timeout(2500);
 
       var server2 = buildServer().listen(port + 45),
-      client = mqtt.connect({
-            port: port + 45,
-            host: 'localhost',
-            connectTimeout: 350,
-            reconnectPeriod: 300 });
+        client = mqtt.connect({
+          port: port + 45,
+          host: 'localhost',
+          connectTimeout: 350,
+          reconnectPeriod: 300
+        });
 
       server2.on('client', function (c) {
         client.publish('hello', 'world', { qos: 1 }, function () {

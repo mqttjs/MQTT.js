@@ -62,7 +62,7 @@ server = new mqtt.SecureServer({
     client.pubrel(packet);
   });
 
-  client.on('pubcomp', function (/*packet*/) {
+  client.on('pubcomp', function () {
     // Nothing to be done
   });
 
@@ -79,7 +79,7 @@ server = new mqtt.SecureServer({
     client.unsuback(packet);
   });
 
-  client.on('pingreq', function (/*packet*/) {
+  client.on('pingreq', function () {
     client.pingresp();
   });
 }).listen(port);
@@ -102,7 +102,7 @@ describe('MqttSecureClient', function () {
         done(err);
       });
 
-      server.once('connect', function (/*serverClient*/) {
+      server.once('connect', function () {
         done();
       });
     });
