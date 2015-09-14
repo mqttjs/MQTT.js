@@ -14,7 +14,7 @@ in JavaScript for node.js and the browser.
 * [Example](#example)
 * [Command Line Tools](#cli)
 * [API](#api)
-* [Browserify](#browserify)
+* [Browser](#browser)
 * [Contributing](#contributing)
 * [License](#license)
 
@@ -351,16 +351,33 @@ The callback is called when the packet has been removed.
 
 Closes the Store.
 
+<a name="browser"></a>
+## Browser
+
 <a name="browserify"></a>
-## Browserify
+### Browserify
 
 In order to use MQTT.js as a browserify module you can either require it in your browserify bundles or build it as a stand alone module. The exported module is AMD/CommonJs compatible and it will add an object in the global space.
 
+<a name="webpack"></a>
+### Webpack
+
+Just like browserify, export MQTT.js as library. The exported module would be `var mqtt = xxx` and it will add an object in the global space. You could also export module in other [formats (AMD/CommonJS/others)](http://webpack.github.io/docs/configuration.html#output-librarytarget) by setting **output.libraryTarget** in webpack configuration.
+
+
 ```javascript
+// Browserify
 npm install -g browserify // install browserify
+// Webpack
+npm install -g webpack // install webpack
+
 cd node_modules/mqtt
 npm install . // install dev dependencies
+
+// Browserify
 browserify mqtt.js -s mqtt > browserMqtt.js // require mqtt in your client-side app
+// Webpack
+webpack mqtt.js ./browserMqtt.js --output-library mqtt
 ```
 
 you can then use mqtt.js in the browser with the same api than node's one.
