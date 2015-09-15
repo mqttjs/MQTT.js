@@ -39,7 +39,10 @@
     "node": ">=0.8.6"
   },
   "browser": {
-    "./mqtt.js": "./lib/connect/index.js"
+    "./mqtt.js": "./lib/connect/index.js",
+    "fs": false,
+    "tls": false,
+    "net": false
   },
   "dependencies": {
     "commist": "^1.0.0",
