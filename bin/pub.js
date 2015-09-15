@@ -33,7 +33,7 @@ function start(args) {
       username: 'u',
       password: 'P',
       stdin: 's',
-      protocol: 'C',
+      protocol: ['C', 'l'],
       help: 'H'
     },
     default: {
