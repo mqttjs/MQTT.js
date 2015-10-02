@@ -776,8 +776,7 @@ module.exports = function (server, config) {
         };
 
       client.subscribe(testPacket.topic);
-      client.once('message',
-          function (topic, message, packet) {
+      client.once('message', function (topic, message, packet) {
         topic.should.equal(testPacket.topic);
         message.toString().should.equal(testPacket.payload);
         packet.should.equal(packet);
@@ -802,8 +801,7 @@ module.exports = function (server, config) {
         };
 
       client.subscribe(testPacket.topic);
-      client.once('message',
-          function (topic, message, packet) {
+      client.once('message', function (topic, message, packet) {
         topic.should.equal(testPacket.topic);
         message.should.be.an.instanceOf(Buffer);
         message.toString().should.equal(testPacket.payload);
@@ -831,8 +829,7 @@ module.exports = function (server, config) {
       server.testPublish = testPacket;
 
       client.subscribe(testPacket.topic);
-      client.once('message',
-          function (topic, message, packet) {
+      client.once('message', function (topic, message, packet) {
         topic.should.equal(testPacket.topic);
         message.toString().should.equal(testPacket.payload);
         packet.should.equal(packet);
@@ -859,8 +856,7 @@ module.exports = function (server, config) {
       server.testPublish = testPacket;
 
       client.subscribe(testPacket.topic);
-      client.on('message',
-          function (topic, message, packet) {
+      client.on('message', function (topic, message, packet) {
         topic.should.equal(testPacket.topic);
         message.toString().should.equal(testPacket.payload);
         packet.should.equal(packet);
@@ -887,8 +883,7 @@ module.exports = function (server, config) {
         };
 
       client.subscribe(testPacket.topic);
-      client.once('message',
-          function (topic, message, packet) {
+      client.once('message', function (topic, message, packet) {
         topic.should.equal(testPacket.topic);
         message.should.be.an.instanceOf(Buffer);
         message.toString().should.equal(testPacket.payload);
