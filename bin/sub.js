@@ -11,7 +11,7 @@ var mqtt      = require('../')
 
 function start(args) {
   args = minimist(args, {
-    string: ['hostname', 'username', 'password', 'key', 'cert'],
+    string: ['hostname', 'username', 'password', 'key', 'cert', 'ca'],
     integer: ['port', 'qos', 'keepAlive'],
     boolean: ['stdin', 'help', 'clean', 'insecure'],
     alias: {
@@ -26,7 +26,8 @@ function start(args) {
       password: 'P',
       protocol: ['C', 'l'],
       verbose: 'v',
-      help: '-H'
+      help: '-H',
+      ca: 'cafile'
     },
     default: {
       host: 'localhost',
@@ -49,11 +50,11 @@ function start(args) {
   }
 
   if (args.key) {
-    args.key = fs.readFileSync(key);
+    args.key = fs.readFileSync(args.key);
   }
 
   if (args.cert) {
-    args.cert = fs.readFileSync(cert);
+    args.cert = fs.readFileSync(args.cert);
   }
 
   if (args.ca) {
