@@ -19,7 +19,7 @@ function send(args) {
 
 function start(args) {
   args = minimist(args, {
-    string: ['hostname', 'username', 'password', 'key', 'cert', 'message'],
+    string: ['hostname', 'username', 'password', 'key', 'cert', 'ca', 'message'],
     integer: ['port', 'qos'],
     boolean: ['stdin', 'retain', 'help', 'insecure'],
     alias: {
@@ -34,7 +34,8 @@ function start(args) {
       password: 'P',
       stdin: 's',
       protocol: ['C', 'l'],
-      help: 'H'
+      help: 'H',
+      ca: 'cafile'
     },
     default: {
       host: 'localhost',
@@ -49,11 +50,11 @@ function start(args) {
   }
 
   if (args.key) {
-    args.key = fs.readFileSync(key);
+    args.key = fs.readFileSync(args.key);
   }
 
   if (args.cert) {
-    args.cert = fs.readFileSync(cert);
+    args.cert = fs.readFileSync(args.cert);
   }
 
   if (args.ca) {
@@ -77,7 +78,7 @@ function start(args) {
   }
 
   args.topic = (args.topic || args._.shift()).toString();
-  args.message = (args.message || args._.shift()).toString() || '';
+  args.message = (args.message || args._.shift() || '').toString() || '';
 
   if (!args.topic) {
     console.error('missing topic\n');
