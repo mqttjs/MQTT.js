@@ -170,7 +170,7 @@ The arguments are:
 the `connect` event. Typically a `net.Socket`.
 * `options` is the client connection options (see: the [connect packet](https://github.com/mcollina/mqtt-packet#connect)). Defaults:
   * `keepalive`: `10` seconds, set to `0` to disable
-  * `clientId`: `'mqttjs'_ + crypto.randomBytes(16).toString('hex')`
+  * `clientId`: `'mqttjs_' + Math.random().toString(16).substr(2, 8)`
   * `protocolId`: `'MQTT'`
   * `protocolVersion`: `4`
   * `clean`: `true`, set to false to receive QoS 1 and 2 messages while
