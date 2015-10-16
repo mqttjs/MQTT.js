@@ -215,7 +215,9 @@ version 1.3 and 1.4 works fine without those.
 `function(connack) {}`
 
 Emitted on successful (re)connection (i.e. connack rc=0). 
-* `connack` received connack packet 
+* `connack` received connack packet. When `clean` connection option is `false` and server has a previous session 
+for `clientId` connection option, then `connack.sessionPresent` flag is `true`. When that is the case, 
+you may rely on stored session and prefer not to send subscribe commands for the client.
 
 #### Event `'reconnect'`
 
