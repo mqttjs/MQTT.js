@@ -212,9 +212,10 @@ version 1.3 and 1.4 works fine without those.
 
 #### Event `'connect'`
 
-`function() {}`
+`function(connack) {}`
 
-Emitted on successful (re)connection (i.e. connack rc=0).
+Emitted on successful (re)connection (i.e. connack rc=0). 
+* `connack` received connack packet 
 
 #### Event `'reconnect'`
 

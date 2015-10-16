@@ -199,6 +199,26 @@ module.exports = function (server, config) {
       client.once('error', done);
     });
 
+    it('should provide connack packet with connect event', function (done) {
+      server.once('client', function (serverClient) {
+        serverClient.connack({returnCode: 0, sessionPresent: true});
+
+        server.once('client', function (serverClient) {
+          serverClient.connack({returnCode: 0, sessionPresent: false});
+        });
+      });
+
+      var client = connect();
+      client.once('connect', function (packet) {
+        should(packet.sessionPresent).be.equal(true);
+        client.once('connect', function (packet) {
+          should(packet.sessionPresent).be.equal(false);
+          client.end();
+          done();
+        });
+      });
+    });
+
     it('should mark the client as connected', function (done) {
       var client = connect();
       client.once('connect', function () {
