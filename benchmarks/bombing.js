@@ -13,13 +13,9 @@ function count() {
 
 setInterval(count, interval)
 
-function immediatePublish() {
-  setImmediate(publish)
-}
-
 function publish() {
   sent++;
-  client.publish("test", "payload", immediatePublish);
+  client.publish("test", "payload", publish);
 }
 
 client.on("connect", publish);
