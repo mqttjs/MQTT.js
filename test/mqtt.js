@@ -8,6 +8,7 @@
 var fs = require('fs'),
   net = require('net'),
   sinon = require('sinon'),
+  // should = require('should'),
   mqtt = require('../');
 
 /**
@@ -18,46 +19,52 @@ describe('mqtt', function () {
 
   describe('#connect', function () {
     var sslOpts, sslOpts2;
-    it('should return an MqttClient when connect is called with mqtt:/ url', function () {
+    it('should return an MqttClient when connect is called with mqtt:/ url', function (done) {
       var c = mqtt.connect('mqtt://localhost:1883');
 
       c.should.be.instanceOf(mqtt.MqttClient);
+      done();
     });
 
-    it('should return an MqttClient with username option set', function () {
+    it('should return an MqttClient with username option set', function (done) {
       var c = mqtt.connect('mqtt://user:pass@localhost:1883');
 
       c.should.be.instanceOf(mqtt.MqttClient);
       c.options.should.have.property('username', 'user');
       c.options.should.have.property('password', 'pass');
+      done();
     });
 
-    it('should return an MqttClient with username and password options set', function () {
+    it('should return an MqttClient with username and password options set', function (done) {
       var c = mqtt.connect('mqtt://user@localhost:1883');
 
       c.should.be.instanceOf(mqtt.MqttClient);
       c.options.should.have.property('username', 'user');
+      done();
     });
 
-    it('should return an MqttClient with the clientid option set', function () {
+    it('should return an MqttClient with the clientid option set', function (done) {
       var c = mqtt.connect('mqtt://user@localhost:1883?clientId=123');
 
       c.should.be.instanceOf(mqtt.MqttClient);
       c.options.should.have.property('clientId', '123');
+      done();
     });
 
-    it('should return an MqttClient when connect is called with tcp:/ url', function () {
+    it('should return an MqttClient when connect is called with tcp:/ url', function (done) {
       var c = mqtt.connect('tcp://localhost');
 
       c.should.be.instanceOf(mqtt.MqttClient);
+      done();
     });
 
-    it('should return an MqttClient with correct host when called with a host and port', function () {
+    it('should return an MqttClient with correct host when called with a host and port', function (done) {
       sinon.spy(mqtt, 'createClient');
       var c = mqtt.connect('tcp://user:pass@localhost:1883');
 
       c.options.should.have.property('hostname', 'localhost');
       c.options.should.have.property('port', '1883');
+      done();
     });
 
     sslOpts = {
@@ -66,7 +73,7 @@ describe('mqtt', function () {
       caPaths: [__dirname + '/helpers/public-cert.pem']
     };
 
-    it('should return an MqttClient when connect is called with mqtts:/ url', function () {
+    it('should return an MqttClient when connect is called with mqtts:/ url', function (done) {
       var c = mqtt.connect('mqtts://localhost', sslOpts);
 
       c.options.should.have.property('protocol', 'mqtts');
@@ -74,9 +81,10 @@ describe('mqtt', function () {
       c.on('error', function () {});
 
       c.should.be.instanceOf(mqtt.MqttClient);
+      done();
     });
 
-    it('should return an MqttClient when connect is called with ssl:/ url', function () {
+    it('should return an MqttClient when connect is called with ssl:/ url', function (done) {
       var c = mqtt.connect('ssl://localhost', sslOpts);
 
       c.options.should.have.property('protocol', 'ssl');
@@ -84,9 +92,10 @@ describe('mqtt', function () {
       c.on('error', function () {});
 
       c.should.be.instanceOf(mqtt.MqttClient);
+      done();
     });
 
-    it('should return an MqttClient when connect is called with ws:/ url', function () {
+    it('should return an MqttClient when connect is called with ws:/ url', function (done) {
       var c = mqtt.connect('ws://localhost', sslOpts);
 
       c.options.should.have.property('protocol', 'ws');
@@ -94,9 +103,10 @@ describe('mqtt', function () {
       c.on('error', function () {});
 
       c.should.be.instanceOf(mqtt.MqttClient);
+      done();
     });
 
-    it('should return an MqttClient when connect is called with wss:/ url', function () {
+    it('should return an MqttClient when connect is called with wss:/ url', function (done) {
       var c = mqtt.connect('wss://localhost', sslOpts);
 
       c.options.should.have.property('protocol', 'wss');
@@ -104,29 +114,32 @@ describe('mqtt', function () {
       c.on('error', function () {});
 
       c.should.be.instanceOf(mqtt.MqttClient);
+      done();
     });
     sslOpts2 = {
       key: fs.readFileSync(__dirname + '/helpers/private-key.pem'),
       cert: fs.readFileSync(__dirname + '/helpers/public-cert.pem'),
       ca: [fs.readFileSync(__dirname + '/helpers/public-cert.pem')]
     };
-    /*jshint -W068*/
-    it('should throw an error when it is called with cert and key set but no protocol specified', function () {
+
+    it('should throw an error when it is called with cert and key set but no protocol specified', function (done) {
       // to do rewrite wrap function
       (function () {
         var c = mqtt.connect(sslOpts2);
         c.end();
       }).should.throw('Missing secure protocol key');
+      done();
     });
-    it('should throw an error when it is called with cert and key set and protocol other than allowed: mqtt,mqtts,ws,wss', function () {
+    it('should throw an error when it is called with cert and key set and protocol other than allowed: mqtt,mqtts,ws,wss', function (done) {
       (function () {
         sslOpts2.protocol = 'UNKNOWNPROTOCOL';
         var c = mqtt.connect(sslOpts2);
         c.end();
-      }).should.throw();
+      }).should.throw('Unknown protocol for secure conenction: "UNKNOWNPROTOCOL"!');
+      done();
     });
-    /*jshint +W068*/
-    it('should return a MqttClient with mqtts set when connect is called key and cert set and protocol mqtt', function () {
+
+    it('should return a MqttClient with mqtts set when connect is called key and cert set and protocol mqtt', function (done) {
       sslOpts2.protocol = 'mqtt';
       var c = mqtt.connect(sslOpts2);
 
@@ -135,8 +148,9 @@ describe('mqtt', function () {
       c.on('error', function () {});
 
       c.should.be.instanceOf(mqtt.MqttClient);
+      done();
     });
-    it('should return a MqttClient with mqtts set when connect is called key and cert set and protocol mqtts', function () {
+    it('should return a MqttClient with mqtts set when connect is called key and cert set and protocol mqtts', function (done) {
       sslOpts2.protocol = 'mqtts';
       var c = mqtt.connect(sslOpts2);
 
@@ -145,8 +159,9 @@ describe('mqtt', function () {
       c.on('error', function () {});
 
       c.should.be.instanceOf(mqtt.MqttClient);
+      done();
     });
-    it('should return a MqttClient with wss set when connect is called key and cert set and protocol ws', function () {
+    it('should return a MqttClient with wss set when connect is called key and cert set and protocol ws', function (done) {
       sslOpts2.protocol = 'ws';
       var c = mqtt.connect(sslOpts2);
 
@@ -155,8 +170,9 @@ describe('mqtt', function () {
       c.on('error', function () {});
 
       c.should.be.instanceOf(mqtt.MqttClient);
+      done();
     });
-    it('should return a MqttClient with wss set when connect is called key and cert set and protocol wss', function () {
+    it('should return a MqttClient with wss set when connect is called key and cert set and protocol wss', function (done) {
       sslOpts2.protocol = 'wss';
       var c = mqtt.connect(sslOpts2);
 
@@ -165,27 +181,30 @@ describe('mqtt', function () {
       c.on('error', function () {});
 
       c.should.be.instanceOf(mqtt.MqttClient);
+      done();
     });
   });
 
   describe('#createClient', function () {
-    it('should return an MqttClient', function () {
+    it('should return an MqttClient', function (done) {
       var c = mqtt.createClient();
 
       c.should.be.instanceOf(mqtt.MqttClient);
+      done();
     });
   });
 
   describe('#createSecureClient', function () {
-    it('should return an MqttClient', function () {
+    it('should return an MqttClient', function (done) {
       var c = mqtt.createSecureClient();
 
       c.on('error', function () {});
 
       c.should.be.instanceOf(mqtt.MqttClient);
+      done();
     });
 
-    it('should support passing the key and cert', function () {
+    it('should support passing the key and cert', function (done) {
       var c = mqtt.createSecureClient({
         keyPath: __dirname + '/helpers/private-key.pem',
         certPath: __dirname + '/helpers/public-cert.pem'
@@ -194,21 +213,24 @@ describe('mqtt', function () {
       c.on('error', function () {});
 
       c.should.be.instanceOf(mqtt.MqttClient);
+      done();
     });
 
-    it('should throw on incorrect args');
+    // empty test it does nothing
+    // it('should throw on incorrect args');
   });
 
   describe('#createSecureClientWithListCA', function () {
-    it('should return an MqttClient', function () {
+    it('should return an MqttClient', function (done) {
       var c = mqtt.createSecureClient();
 
       c.on('error', function () {});
 
       c.should.be.instanceOf(mqtt.MqttClient);
+      done();
     });
 
-    it('should support passing the key, cert and CA list', function () {
+    it('should support passing the key, cert and CA list', function (done) {
       var c = mqtt.createSecureClient({
         keyPath: __dirname + '/helpers/private-key.pem',
         certPath: __dirname + '/helpers/public-cert.pem',
@@ -218,9 +240,10 @@ describe('mqtt', function () {
       c.on('error', function () {});
 
       c.should.be.instanceOf(mqtt.MqttClient);
+      done();
     });
-
-    it('should throw on incorrect args');
+    // empty test it does nothing
+    // it('should throw on incorrect args');
   });
 
   describe('#createConnection', function () {
@@ -233,10 +256,11 @@ describe('mqtt', function () {
       this.server.listen(1883);
       this.server.on('error', function () {});
     });
-    it('should return an MqttConnection', function () {
+    it('should return an MqttConnection', function (done) {
       var c = mqtt.createConnection();
 
       c.should.be.instanceOf(mqtt.MqttConnection);
+      done();
     });
 
     it('should fire callback on net connect', function (done) {
