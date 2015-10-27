@@ -14,9 +14,9 @@ The line to add on the file should be as follows:
 
 var mqtt = require('mqtt');
 var fs = require('fs');
-var KEY = __dirname + '/tls-key.pem';
-var CERT = __dirname + '/tls-cert.pem';
-var TRUSTED_CA_LIST = [__dirname + '/crt.ca.cg.pem'];
+var KEY = fs.readFileSync(__dirname + '/tls-key.pem');
+var CERT = fs.readFileSync(__dirname + '/tls-cert.pem');
+var TRUSTED_CA_LIST = fs.readFileSync(__dirname + '/crt.ca.cg.pem');
 
 var PORT = 1883;
 var HOST = 'stark';
