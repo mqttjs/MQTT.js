@@ -51,7 +51,6 @@
     "help-me": "^0.1.0",
     "inherits": "^2.0.1",
     "minimist": "^1.1.0",
-    "mqtt-connection": "^2.0.0",
     "mqtt-packet": "^4.0.0",
     "readable-stream": "~1.0.2",
     "websocket-stream": "^2.0.2",
@@ -69,6 +68,7 @@
     "through2": "^0.6.3",
     "uglify": "^0.1.1",
     "ws": "^0.8.0",
+    "mqtt-connection": "^2.0.0",
     "zuul": "^3.4.0"
   }
 }

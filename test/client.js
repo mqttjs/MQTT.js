@@ -15,6 +15,7 @@ var mqtt = require('..'),
   },
   net = require('net'),
   eos = require('end-of-stream'),
+  Server = require('./server'),
   port = 9876,
   server;
 
@@ -22,7 +23,7 @@ var mqtt = require('..'),
  * Test server
  */
 function buildServer () {
-  return new mqtt.Server(function (client) {
+  return new Server(function (client) {
 
     client.on('connect', function (packet) {
       if ('invalid' === packet.clientId) {

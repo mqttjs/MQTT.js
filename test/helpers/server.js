@@ -1,9 +1,9 @@
 'use strict';
-var mqtt = require('../../'),
+var Server = require('../server'),
   fs = require('fs');
 
 module.exports.init_server = function (PORT) {
-  var server = new mqtt.Server(function (client) {
+  var server = new Server(function (client) {
     /*
     var i, events = ['connect', 'publish', 'pubrel', 'subscribe', 'disconnect'];
 
@@ -50,7 +50,7 @@ module.exports.init_server = function (PORT) {
 };
 
 module.exports.init_secure_server = function (port, key, cert) {
-  var server = new mqtt.SecureServer({
+  var server = new Server.SecureServer({
     key: fs.readFileSync(key),
     cert: fs.readFileSync(cert)
   }, function (client) {

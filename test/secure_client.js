@@ -18,12 +18,13 @@ var mqtt = require('..'),
   KEY = __dirname + '/helpers/tls-key.pem',
   CERT = __dirname + '/helpers/tls-cert.pem',
   WRONG_CERT = __dirname + '/helpers/wrong-cert.pem',
+  Server = require('./server'),
   server;
 
 /**
  * Test server
  */
-server = new mqtt.SecureServer({
+server = new Server.SecureServer({
   key: fs.readFileSync(KEY),
   cert: fs.readFileSync(CERT)
 }, function (client) {

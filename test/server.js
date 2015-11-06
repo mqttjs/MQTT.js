@@ -1,48 +1,68 @@
 'use strict';
 /**
- * Testing requires
+ * Requires
  */
-
-var server = require('../lib/server'),
+var net = require('net'),
+  tls = require('tls'),
+  util = require('util'),
   Connection = require('mqtt-connection'),
-  mqtt = require('../');
+  MqttServer, MqttSecureServer;
 
-describe('MqttServer', function () {
-  it('should emit MqttServerClients', function (done) {
-    var s = new server.MqttServer();
-    s.listen(9877);
+function setupConnection (duplex) {
+  /*jshint validthis: true*/
+  var connection = new Connection(duplex);
+  this.emit('client', connection);
+  /*jshint validthis: false*/
+}
 
-    s.on('client', function (client) {
-      client.should.be.instanceOf(Connection);
-      done();
-    });
+/*
+ * MqttServer
+ *
+ * @param {Function} listener - fired on client connection
+ */
+MqttServer = module.exports = function Server (listener) {
+  if (!(this instanceof Server)) {
+    return new Server(listener);
+  }
 
-    mqtt.createClient(9877);
-  });
+  net.Server.call(this);
 
-  it('should bind the stream\'s error in the clients', function (done) {
-    var s = new server.MqttServer();
-    s.listen(9878);
+  this.on('connection', setupConnection);
 
-    s.on('client', function (client) {
-      client.on('error', function () {
-        done();
-      });
-      client.stream.emit('error', new Error('bad idea!'));
-    });
+  if (listener) {
+    this.on('client', listener);
+  }
 
-    mqtt.createClient(9878);
-  });
+  return this;
+};
+util.inherits(MqttServer, net.Server);
 
-  it('should bind the stream\'s close in the clients', function (done) {
-    var s = new server.MqttServer();
-    s.listen(9879);
+/**
+ * MqttSecureServer
+ *
+ * @param {Object} opts - server options
+ * @param {Function} listener
+ */
+MqttSecureServer = module.exports.SecureServer =
+  function SecureServer (opts, listener) {
+    if (!(this instanceof SecureServer)) {
+      return new SecureServer(opts, listener);
+    }
 
-    s.on('client', function (client) {
-      client.on('close', done);
-      client.stream.emit('close');
-    });
+    // new MqttSecureServer(function(){})
+    if ('function' === typeof opts) {
+      listener = opts;
+      opts = {};
+    }
 
-    mqtt.createClient(9879);
-  });
-});
+    tls.Server.call(this, opts);
+
+    if (listener) {
+      this.on('client', listener);
+    }
+
+    this.on('secureConnection', setupConnection);
+
+    return this;
+  };
+util.inherits(MqttSecureServer, tls.Server);

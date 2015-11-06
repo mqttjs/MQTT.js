@@ -1,9 +1,9 @@
 'use strict';
 /*eslint no-unused-vars:0*/
 var server,
-  mqtt = require('../../');
+  Server = require('../server');
 
-server = new mqtt.Server(function (client) {
+server = new Server(function (client) {
   client.on('connect', function () {
     client.connack({ returnCode: 0 });
   });
