@@ -23,6 +23,9 @@ MQTT.js is an OPEN Open Source Project, see the [Contributing](#contributing) se
 <a name="notes"></a>
 ## Important notes for existing users
 
+v2.0.0 removes support for node v0.8, and it is 3x faster in sending
+packets. It also removes all the deprecated functionality in v1.0.0.
+
 v1.0.0 improves the overall architecture of the project, which is now
 split into three components: MQTT.js keeps the Client,
 [mqtt-connection](http://npm.im/mqtt-connection) includes the barebone
