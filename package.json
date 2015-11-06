@@ -52,8 +52,8 @@
     "inherits": "^2.0.1",
     "minimist": "^1.1.0",
     "mqtt-packet": "^4.0.0",
-    "readable-stream": "~1.0.2",
-    "websocket-stream": "^2.0.2",
+    "readable-stream": "^2.0.0",
+    "websocket-stream": "^2.1.0",
     "xtend": "^4.0.0"
   },
   "devDependencies": {
@@ -65,7 +65,7 @@
     "pre-commit": "1.1.1",
     "should": "*",
     "sinon": "~1.10.0",
-    "through2": "^0.6.3",
+    "through2": "^2.0.0",
     "uglify": "^0.1.1",
     "ws": "^0.8.0",
     "mqtt-connection": "^2.0.0",
