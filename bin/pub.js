@@ -65,6 +65,13 @@ function start(args) {
     args.protocol = 'mqtts'
   }
 
+  if (args.port){
+    if (typeof args.port !== 'number') {
+      console.warn('# Port: number expected, \'%s\' was given.', typeof args.port);
+      return;
+    }
+  }
+
   if (args['will-topic']) {
     args.will = {};
     args.will.topic = args['will-topic'];
