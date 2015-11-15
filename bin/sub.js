@@ -69,6 +69,13 @@ function start(args) {
     args.rejectUnauthorized = false;
   }
 
+  if (args.port){
+    if (typeof args.port !== 'number') {
+      console.warn('# Port: number expected, \'%s\' was given.', typeof args.port);
+      return;
+    }
+  }
+
   if (args['will-topic']) {
     args.will = {};
     args.will.topic = args['will-topic'];
