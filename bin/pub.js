@@ -15,6 +15,13 @@ function send(args) {
     client.publish(args.topic, args.message, args);
     client.end();
   });
+  client.on('error', function(err){
+    // Handle 'Wrong credentials' case
+    console.warn(err);
+    client.end();
+  });
+  // TODO: Handle 'No Authorization'
+  
 }
 
 function start(args) {
