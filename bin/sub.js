@@ -99,6 +99,14 @@ function start(args) {
       console.log(payload.toString())
     }
   });
+  
+  client.on('error', function(err){
+    // Handle 'No Authentication'
+    console.warn(err);
+    client.end();
+  });
+  // TODO: alert impossibility to subscribe to a topic, 'No authorization'.
+  
 }
 
 module.exports = start;
