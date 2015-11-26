@@ -645,6 +645,20 @@ module.exports = function (server, config) {
       });
       setTimeout(done, 1000);
     });
+    it('should defer the next ping when a control packer is received', function (done) {
+      var client = connect({keepalive: 100});
+      client.subscribe('test');
+      client._checkPing = sinon.spy();
+
+      setTimeout(function () {
+        client.publish('test');
+      }, 75);
+
+      setTimeout(function () {
+        client._checkPing.callCount.should.equal(0);
+        done();
+      }, 125);
+    });
   });
 
   describe('subscribing', function () {
