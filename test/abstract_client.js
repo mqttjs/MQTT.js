@@ -608,7 +608,6 @@ module.exports = function (server, config) {
   });
 
   describe('pinging', function () {
-
     it('should set a ping timer', function (done) {
       var client = connect({keepalive: 3});
       client.once('connect', function () {
@@ -645,19 +644,39 @@ module.exports = function (server, config) {
       });
       setTimeout(done, 1000);
     });
-    it('should defer the next ping when a control packer is received', function (done) {
-      var client = connect({keepalive: 100});
-      client.subscribe('test');
-      client._checkPing = sinon.spy();
+    it('should defer the next ping when a control packet is received', function (done) {
+      var client = connect({keepalive: 0.1});
 
-      setTimeout(function () {
-        client.publish('test');
-      }, 75);
+      var testPacket = {
+          topic: 'test',
+          payload: 'message',
+          retain: true,
+          qos: 1,
+          messageId: 42
+        };
 
-      setTimeout(function () {
-        client._checkPing.callCount.should.equal(0);
-        done();
-      }, 125);
+      server.once('client', function (serverClient) {
+        client.subscribe('test', function () {
+
+          serverClient.publish(testPacket);
+          client._checkPing = sinon.spy();
+
+          setTimeout(function () {
+            client._checkPing.callCount.should.equal(0);
+            serverClient.publish(testPacket);
+
+            setTimeout(function () {
+              client._checkPing.callCount.should.equal(0);
+              serverClient.publish(testPacket);
+
+              setTimeout(function () {
+                client._checkPing.callCount.should.equal(0);
+                done();
+              }, 75);
+            }, 75);
+          }, 75);
+        });
+      });
     });
   });
 
