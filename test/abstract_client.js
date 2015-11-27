@@ -645,9 +645,9 @@ module.exports = function (server, config) {
       setTimeout(done, 1000);
     });
     it('should defer the next ping when a control packet is received', function (done) {
-      var client = connect({keepalive: 0.1});
+      var client = connect({keepalive: 0.1}),
 
-      var testPacket = {
+        testPacket = {
           topic: 'test',
           payload: 'message',
           retain: true,
