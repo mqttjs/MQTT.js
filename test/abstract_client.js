@@ -644,38 +644,27 @@ module.exports = function (server, config) {
       });
       setTimeout(done, 1000);
     });
-    it('should defer the next ping when a control packet is received', function (done) {
-      var client = connect({keepalive: 0.1}),
+    it('should defer the next ping when sending a control packet', function (done) {
+      var client = connect({keepalive: 0.1});
 
-        testPacket = {
-          topic: 'test',
-          payload: 'message',
-          retain: true,
-          qos: 1,
-          messageId: 42
-        };
+      client.once('connect', function () {
+        client._checkPing = sinon.spy();
 
-      server.once('client', function (serverClient) {
-        client.subscribe('test', function () {
-
-          serverClient.publish(testPacket);
-          client._checkPing = sinon.spy();
+        client.publish('foo', 'bar');
+        setTimeout(function () {
+          client._checkPing.callCount.should.equal(0);
+          client.publish('foo', 'bar');
 
           setTimeout(function () {
             client._checkPing.callCount.should.equal(0);
-            serverClient.publish(testPacket);
+            client.publish('foo', 'bar');
 
             setTimeout(function () {
               client._checkPing.callCount.should.equal(0);
-              serverClient.publish(testPacket);
-
-              setTimeout(function () {
-                client._checkPing.callCount.should.equal(0);
-                done();
-              }, 75);
+              done();
             }, 75);
           }, 75);
-        });
+        }, 75);
       });
     });
   });
