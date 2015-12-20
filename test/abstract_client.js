@@ -374,6 +374,36 @@ module.exports = function (server, config) {
       });
     });
 
+    it('should publish a message (offline) from queue', function (done) {
+      var nop,
+        topic = 'test',
+        payload = 'test',
+        queuePacket = {cmd: 'publish',
+            topic: topic,
+            payload: payload,
+            qos: 0,
+            retain: false,
+            messageId: 1
+          },
+        queue,
+        client;
+
+      nop = function () {};
+      queue = [{ packet: queuePacket, cb: nop }];
+
+      client = connect({queue: queue});
+
+      server.once('client', function (serverClient) {
+        serverClient.once('publish', function (packet) {
+          packet.topic.should.equal(topic);
+          packet.payload.toString().should.equal(payload);
+          packet.qos.should.equal(0);
+          packet.retain.should.equal(false);
+          done();
+        });
+      });
+    });
+
     it('should publish a message (online)', function (done) {
       var client = connect(),
         payload = 'test',
