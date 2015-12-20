@@ -1129,7 +1129,9 @@ module.exports = function (server, config) {
     });
 
     it('should resend in-flight QoS 1 publish messages from the client', function (done) {
-      var client = connect({reconnectPeriod: 200});
+      var client = connect({reconnectPeriod: 200}),
+        serverPublished = false,
+        clientCalledBack = false;
 
       server.once('client', function (serverClient) {
         serverClient.on('connect', function () {
@@ -1140,16 +1142,28 @@ module.exports = function (server, config) {
 
         server.once('client', function (serverClientNew) {
           serverClientNew.on('publish', function () {
-            done();
+            serverPublished = true;
+            check();
           });
         });
       });
 
-      client.publish('hello', 'world', { qos: 1 });
+      client.publish('hello', 'world', { qos: 1 }, function () {
+        clientCalledBack = true;
+        check();
+      });
+
+      function check () {
+        if (serverPublished && clientCalledBack) {
+          done();
+        }
+      }
     });
 
     it('should resend in-flight QoS 2 publish messages from the client', function (done) {
-      var client = connect({reconnectPeriod: 200});
+      var client = connect({reconnectPeriod: 200}),
+        serverPublished = false,
+        clientCalledBack = false;
 
       server.once('client', function (serverClient) {
         serverClient.on('publish', function () {
@@ -1160,17 +1174,22 @@ module.exports = function (server, config) {
 
         server.once('client', function (serverClientNew) {
           serverClientNew.on('pubrel', function () {
-            done();
+            serverPublished = true;
+            check();
           });
         });
       });
 
-      client.publish('hello', 'world', { qos: 2 });
+      client.publish('hello', 'world', { qos: 2 }, function () {
+        clientCalledBack = true;
+        check();
+      });
 
+      function check () {
+        if (serverPublished && clientCalledBack) {
+          done();
+        }
+      }
     });
-
-
-
-
   });
 };
