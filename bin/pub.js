@@ -12,9 +12,16 @@ var mqtt      = require('../')
 function send(args) {
   var client = mqtt.connect(args);
   client.on('connect', function() {
-    client.publish(args.topic, args.message, args);
+    client.publish(args.topic, args.message, args, function(err){ if(err) console.log(err); });
     client.end();
   });
+  client.on('error', function(err){
+    // Handle 'Wrong credentials' case
+    console.warn(err);
+    client.end();
+  });
+  // TODO: Handle 'No Authorization'
+  
 }
 
 function start(args) {

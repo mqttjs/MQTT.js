@@ -89,8 +89,16 @@ function start(args) {
   var client = mqtt.connect(args);
 
   client.on('connect', function() {
-    client.subscribe(args.topic, { qos: args.qos });
-  });
+    client.subscribe(args.topic, { qos: args.qos }, function(err, granted){
+      // Handle 'No authorization'
+      if (err){
+        console.warn('Error: ', err);
+        client.end();
+      }else if (granted.length && granted[0].hasOwnProperty('qos') && granted[0].qos > 2) {
+        console.warn('Error: client not authorized to subscribe to %s', granted[0].topic);
+        client.end();
+      }
+    });
 
   client.on('message', function(topic, payload) {
     if (args.verbose) {
@@ -99,6 +107,13 @@ function start(args) {
       console.log(payload.toString())
     }
   });
+  
+  client.on('error', function(err){
+    // Handle 'No Authentication'
+    console.warn(err);
+    client.end();
+  });
+  
 }
 
 module.exports = start;
