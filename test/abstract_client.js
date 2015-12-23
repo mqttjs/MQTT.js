@@ -786,6 +786,32 @@ module.exports = function (server, config) {
       });
     });
 
+    it('should fire a callback with error if disconnected (options provided)', function (done) {
+      var client = connect(),
+        topic = 'test';
+      client.once('connect', function () {
+        client.end(true, function () {
+          client.subscribe(topic, {qos: 2}, function (err, granted) {
+            should.not.exist(granted, 'granted given');
+            should.exist(err, 'no error given');
+            done();
+          });
+        });
+      });
+    });
+    it('should fire a callback with error if disconnected (options not provided)', function (done) {
+      var client = connect(),
+        topic = 'test';
+      client.once('connect', function () {
+        client.end(true, function () {
+          client.subscribe(topic, function (err, granted) {
+            should.not.exist(granted, 'granted given');
+            should.exist(err, 'no error given');
+            done();
+          });
+        });
+      });
+    });
     it('should subscribe with a chinese topic', function (done) {
       var client = connect(),
         topic = '中国';
