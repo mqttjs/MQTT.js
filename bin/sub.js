@@ -89,7 +89,14 @@ function start(args) {
   var client = mqtt.connect(args);
 
   client.on('connect', function() {
-    client.subscribe(args.topic, { qos: args.qos });
+    client.subscribe(args.topic, { qos: args.qos }, function (err, result) {
+      result.forEach(function (sub) {
+        if (sub.qos > 2) {
+          console.error('subscription negated to', sub.topic, 'with code', sub.qos);
+          process.exit(1);
+        }
+      })
+    });
   });
 
   client.on('message', function(topic, payload) {
