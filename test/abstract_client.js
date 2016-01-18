@@ -645,7 +645,7 @@ module.exports = function (server, config) {
       setTimeout(done, 1000);
     });
     it('should defer the next ping when sending a control packet', function (done) {
-      var client = connect({keepalive: 0.1});
+      var client = connect({keepalive: 1});
 
       client.once('connect', function () {
         client._checkPing = sinon.spy();
@@ -662,9 +662,9 @@ module.exports = function (server, config) {
             setTimeout(function () {
               client._checkPing.callCount.should.equal(0);
               done();
-            }, 75);
-          }, 75);
-        }, 75);
+            }, 750);
+          }, 750);
+        }, 750);
       });
     });
   });
