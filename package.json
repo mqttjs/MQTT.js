@@ -55,7 +55,7 @@
     "mqtt-packet": "^3.2.0",
     "readable-stream": "~1.0.2",
     "reinterval": "^1.0.1",
-    "websocket-stream": "^2.0.2",
+    "websocket-stream": "^3.0.1",
     "xtend": "^4.0.0"
   },
   "devDependencies": {
