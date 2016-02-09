@@ -185,7 +185,7 @@ describe('MqttClient', function () {
       server2.on('listening', function () {
 
         var client = mqtt.connect({ servers: [
-          { port: port + 43, host: 'localhost' },
+          { port: port + 43, host: 'localhost_fake' },
           { port: port, host: 'localhost' }
         ], connectTimeout: 500 });
 
