@@ -199,6 +199,26 @@ module.exports = function (server, config) {
       client.once('error', done);
     });
 
+    it('should provide connack packet with connect event', function (done) {
+      server.once('client', function (serverClient) {
+        serverClient.connack({returnCode: 0, sessionPresent: true});
+
+        server.once('client', function (serverClient) {
+          serverClient.connack({returnCode: 0, sessionPresent: false});
+        });
+      });
+
+      var client = connect();
+      client.once('connect', function (packet) {
+        should(packet.sessionPresent).be.equal(true);
+        client.once('connect', function (packet) {
+          should(packet.sessionPresent).be.equal(false);
+          client.end();
+          done();
+        });
+      });
+    });
+
     it('should mark the client as connected', function (done) {
       var client = connect();
       client.once('connect', function () {
@@ -588,7 +608,6 @@ module.exports = function (server, config) {
   });
 
   describe('pinging', function () {
-
     it('should set a ping timer', function (done) {
       var client = connect({keepalive: 3});
       client.once('connect', function () {
@@ -624,6 +643,29 @@ module.exports = function (server, config) {
         done(new Error('Client closed connection'));
       });
       setTimeout(done, 1000);
+    });
+    it('should defer the next ping when sending a control packet', function (done) {
+      var client = connect({keepalive: 1});
+
+      client.once('connect', function () {
+        client._checkPing = sinon.spy();
+
+        client.publish('foo', 'bar');
+        setTimeout(function () {
+          client._checkPing.callCount.should.equal(0);
+          client.publish('foo', 'bar');
+
+          setTimeout(function () {
+            client._checkPing.callCount.should.equal(0);
+            client.publish('foo', 'bar');
+
+            setTimeout(function () {
+              client._checkPing.callCount.should.equal(0);
+              done();
+            }, 75);
+          }, 75);
+        }, 75);
+      });
     });
   });
 
@@ -744,6 +786,32 @@ module.exports = function (server, config) {
       });
     });
 
+    it('should fire a callback with error if disconnected (options provided)', function (done) {
+      var client = connect(),
+        topic = 'test';
+      client.once('connect', function () {
+        client.end(true, function () {
+          client.subscribe(topic, {qos: 2}, function (err, granted) {
+            should.not.exist(granted, 'granted given');
+            should.exist(err, 'no error given');
+            done();
+          });
+        });
+      });
+    });
+    it('should fire a callback with error if disconnected (options not provided)', function (done) {
+      var client = connect(),
+        topic = 'test';
+      client.once('connect', function () {
+        client.end(true, function () {
+          client.subscribe(topic, function (err, granted) {
+            should.not.exist(granted, 'granted given');
+            should.exist(err, 'no error given');
+            done();
+          });
+        });
+      });
+    });
     it('should subscribe with a chinese topic', function (done) {
       var client = connect(),
         topic = '中国';
@@ -1087,7 +1155,9 @@ module.exports = function (server, config) {
     });
 
     it('should resend in-flight QoS 1 publish messages from the client', function (done) {
-      var client = connect({reconnectPeriod: 200});
+      var client = connect({reconnectPeriod: 200}),
+        serverPublished = false,
+        clientCalledBack = false;
 
       server.once('client', function (serverClient) {
         serverClient.on('connect', function () {
@@ -1098,16 +1168,28 @@ module.exports = function (server, config) {
 
         server.once('client', function (serverClientNew) {
           serverClientNew.on('publish', function () {
-            done();
+            serverPublished = true;
+            check();
           });
         });
       });
 
-      client.publish('hello', 'world', { qos: 1 });
+      client.publish('hello', 'world', { qos: 1 }, function () {
+        clientCalledBack = true;
+        check();
+      });
+
+      function check () {
+        if (serverPublished && clientCalledBack) {
+          done();
+        }
+      }
     });
 
     it('should resend in-flight QoS 2 publish messages from the client', function (done) {
-      var client = connect({reconnectPeriod: 200});
+      var client = connect({reconnectPeriod: 200}),
+        serverPublished = false,
+        clientCalledBack = false;
 
       server.once('client', function (serverClient) {
         serverClient.on('publish', function () {
@@ -1118,17 +1200,22 @@ module.exports = function (server, config) {
 
         server.once('client', function (serverClientNew) {
           serverClientNew.on('pubrel', function () {
-            done();
+            serverPublished = true;
+            check();
           });
         });
       });
 
-      client.publish('hello', 'world', { qos: 2 });
+      client.publish('hello', 'world', { qos: 2 }, function () {
+        clientCalledBack = true;
+        check();
+      });
 
+      function check () {
+        if (serverPublished && clientCalledBack) {
+          done();
+        }
+      }
     });
-
-
-
-
   });
 };

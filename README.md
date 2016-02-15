@@ -173,7 +173,7 @@ The arguments are:
 the `connect` event. Typically a `net.Socket`.
 * `options` is the client connection options (see: the [connect packet](https://github.com/mcollina/mqtt-packet#connect)). Defaults:
   * `keepalive`: `10` seconds, set to `0` to disable
-  * `clientId`: `'mqttjs'_ + crypto.randomBytes(16).toString('hex')`
+  * `clientId`: `'mqttjs_' + Math.random().toString(16).substr(2, 8)`
   * `protocolId`: `'MQTT'`
   * `protocolVersion`: `4`
   * `clean`: `true`, set to false to receive QoS 1 and 2 messages while
@@ -215,9 +215,12 @@ version 1.3 and 1.4 works fine without those.
 
 #### Event `'connect'`
 
-`function() {}`
+`function(connack) {}`
 
-Emitted on successful (re)connection (i.e. connack rc=0).
+Emitted on successful (re)connection (i.e. connack rc=0). 
+* `connack` received connack packet. When `clean` connection option is `false` and server has a previous session 
+for `clientId` connection option, then `connack.sessionPresent` flag is `true`. When that is the case, 
+you may rely on stored session and prefer not to send subscribe commands for the client.
 
 #### Event `'reconnect'`
 
@@ -424,6 +427,7 @@ MQTT.js is only possible due to the excellent work of the following contributors
 <table><tbody>
 <tr><th align="left">Adam Rudd</th><td><a href="https://github.com/adamvr">GitHub/adamvr</a></td><td><a href="http://twitter.com/adam_vr">Twitter/@adam_vr</a></td></tr>
 <tr><th align="left">Matteo Collina</th><td><a href="https://github.com/mcollina">GitHub/mcollina</a></td><td><a href="http://twitter.com/matteocollina">Twitter/@matteocollina</a></td></tr>
+<tr><th align="left">Maxime Agor</th><td><a href="https://github.com/4rzael">GitHub/4rzael</a></td><td><a href="http://twitter.com/4rzael">Twitter/@4rzael</a></td></tr>
 </tbody></table>
 
 <a name="license"></a>
