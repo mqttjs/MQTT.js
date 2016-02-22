@@ -3,6 +3,8 @@
 
 [![Build Status](https://travis-ci.org/mqttjs/MQTT.js.svg)](https://travis-ci.org/mqttjs/MQTT.js)
 
+[![DefinitelyTyped](http://img.shields.io/badge/Definitely-Typed-blue.svg)](https://github.com/borisyankov/DefinitelyTyped/tree/master/mqtt)
+
 [![NPM](https://nodei.co/npm/mqtt.png)](https://nodei.co/npm/mqtt/)
 [![NPM](https://nodei.co/npm-dl/mqtt.png)](https://nodei.co/npm/mqtt/)
 
