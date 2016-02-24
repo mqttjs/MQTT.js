@@ -172,6 +172,7 @@ The arguments are:
 the `connect` event. Typically a `net.Socket`.
 * `options` is the client connection options (see: the [connect packet](https://github.com/mcollina/mqtt-packet#connect)). Defaults:
   * `keepalive`: `10` seconds, set to `0` to disable
+  * `reschedulePings`: reschedule ping messages after sending packets (default `true`)
   * `clientId`: `'mqttjs_' + Math.random().toString(16).substr(2, 8)`
   * `protocolId`: `'MQTT'`
   * `protocolVersion`: `4`
