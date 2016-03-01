@@ -606,109 +606,33 @@ module.exports = function (server, config) {
       });
     });
     it('should not checkPing if publishing at a higher rate than keepalive', function (done) {
-      var interval = 3,
-        client = connect({keepalive: interval});
+      var intervalMs = 3000,
+        client = connect({keepalive: intervalMs / 1000});
 
       client._checkPing = sinon.spy();
 
       client.once('connect', function () {
-
         client.publish('foo', 'bar');
-        clock.tick(interval * 500);
+        clock.tick(intervalMs - 1);
         client.publish('foo', 'bar');
-        clock.tick(interval * 500);
-        client.publish('foo', 'bar');
-        clock.tick(interval * 500);
-        client.publish('foo', 'bar');
-        clock.tick(interval * 500);
-        client.publish('foo', 'bar');
-        clock.tick(interval * 500);
-        client.publish('foo', 'bar');
-        clock.tick(interval * 500);
-        client.publish('foo', 'bar');
-        clock.tick(interval * 500);
-        client.publish('foo', 'bar');
-        clock.tick(interval * 500);
-        client.publish('foo', 'bar');
-        clock.tick(interval * 500);
-        client.publish('foo', 'bar');
-        clock.tick(interval * 500);
-        client.publish('foo', 'bar');
-        clock.tick(interval * 500);
-        client.publish('foo', 'bar');
-        clock.tick(interval * 500);
-        client.publish('foo', 'bar');
-        clock.tick(interval * 500);
-        client.publish('foo', 'bar');
-        clock.tick(interval * 500);
-        client.publish('foo', 'bar');
-        clock.tick(interval * 500);
-        client.publish('foo', 'bar');
-        clock.tick(interval * 500);
-        client.publish('foo', 'bar');
-        clock.tick(interval * 500);
-        client.publish('foo', 'bar');
-        clock.tick(interval * 500);
-        client.publish('foo', 'bar');
-        clock.tick(interval * 500);
-        client.publish('foo', 'bar');
-        clock.tick(interval * 500);
-        client.publish('foo', 'bar');
-        clock.tick(interval * 500);
-        client.publish('foo', 'bar');
-        clock.tick(interval * 500);
-        client.publish('foo', 'bar');
-        clock.tick(interval * 500);
-        client.publish('foo', 'bar');
-        clock.tick(interval * 500);
-        client.publish('foo', 'bar');
-        clock.tick(interval * 500);
-        client.publish('foo', 'bar');
-        clock.tick(interval * 500);
+        clock.tick(2);
         client._checkPing.callCount.should.equal(0);
-
         client.end();
         done();
       });
     });
     it('should checkPing if publishing at a higher rate than keepalive and reschedulePings===false', function (done) {
-      var interval = 3,
-        client = connect({keepalive: interval,reschedulePings:false});
+      var intervalMs = 3000,
+        client = connect({keepalive: intervalMs / 1000,reschedulePings:false});
 
       client._checkPing = sinon.spy();
 
       client.once('connect', function () {
-
         client.publish('foo', 'bar');
-        clock.tick(interval * 500);
+        clock.tick(intervalMs - 1);
         client.publish('foo', 'bar');
-        clock.tick(interval * 500);
-        client.publish('foo', 'bar');
-        clock.tick(interval * 500);
-        client.publish('foo', 'bar');
-        clock.tick(interval * 500);
-        client.publish('foo', 'bar');
-        clock.tick(interval * 500);
-        client.publish('foo', 'bar');
-        clock.tick(interval * 500);
-        client.publish('foo', 'bar');
-        clock.tick(interval * 500);
-        client.publish('foo', 'bar');
-        clock.tick(interval * 500);
-        client.publish('foo', 'bar');
-        clock.tick(interval * 500);
-        client.publish('foo', 'bar');
-        clock.tick(interval * 500);
-        client.publish('foo', 'bar');
-        clock.tick(interval * 500);
-        client.publish('foo', 'bar');
-        clock.tick(interval * 500);
-        client.publish('foo', 'bar');
-        clock.tick(interval * 500);
-        client.publish('foo', 'bar');
-        clock.tick(interval * 500);
-        client._checkPing.callCount.should.equal(7);
-
+        clock.tick(2);
+        client._checkPing.callCount.should.equal(1);
         client.end();
         done();
       });
