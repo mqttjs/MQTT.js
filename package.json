@@ -72,6 +72,6 @@
     "uglify": "^0.1.1",
     "ws": "^0.8.0",
     "zuul": "^3.4.0",
-    "zuul-ngrok": "^3.2.0"
+    "zuul-ngrok": "gnandretta/zuul-ngrok#upgrade-ngrok"
   }
 }
