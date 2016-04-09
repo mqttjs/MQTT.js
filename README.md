@@ -3,6 +3,8 @@
 
 [![Build Status](https://travis-ci.org/mqttjs/MQTT.js.svg)](https://travis-ci.org/mqttjs/MQTT.js)
 
+[![Sauce Test Status](https://saucelabs.com/browser-matrix/mqttjs.svg)](https://saucelabs.com/u/mqttjs)
+
 [![DefinitelyTyped](http://img.shields.io/badge/Definitely-Typed-blue.svg)](https://github.com/borisyankov/DefinitelyTyped/tree/master/mqtt)
 
 [![NPM](https://nodei.co/npm/mqtt.png)](https://nodei.co/npm/mqtt/)
