@@ -6,3 +6,7 @@ browsers:
     version: latest
   - name: opera
     version: latest
+  - name: internet explorer
+    version: latest
+  - name: microsoft edge
+    version: latest
