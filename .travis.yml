@@ -1,10 +1,15 @@
 language: node_js
 sudo: false
 node_js:
-  - "0.12"
-  - "0.10"
-  - "iojs-v1"
-  - "iojs-v2"
-  - "iojs-v3"
-  - "4"
-  - "5"
+- '0.10'
+- '0.12'
+- '4'
+- '5'
+env:
+  global:
+  - secure: ODwb1nuf12e0Ja/HgPwZh4aU01G8tTYZliSHI7ZWmYzGv3Yde6UnATeFG8sxGnWPRXTmaZelZfzhq7Aco1fEUnPm31af3z/iaV60iNmz6E1ifTR+oX7jxIvCDtHwBrgevrmIH8vrEUm/kQqDnFNrGG8Cc2xw/LjsNUG1wuWD+I4=
+  - secure: buYrn01nPzsiduIQ5oqYTlBdDtM9WKP6gqoyq7IsutHb9sfwh9I6pUYsLibUo4Fq2um9QeXRZ4h1JLKK9xzDVSBpIGGaVzI4ClenfNt9O20IBGBnXcmEKPiRNYF4DkrqZzgx/OVWa6xzcRQI2R1ASQfoyfdpPAnqWXbfalSNkzs=
+  - secure: IJRxzV03o76uiL4tCw/Zk0Es6tS/ATlQNIpQxZOyRLBoGTmZfZRKRxiESCKUASHudJgNIlw0kar2/LSJjMlYC4KnlrMJOLCYakXW+CWySe4q/f+qbrcdSK1+DZpjyr6Rmo654td/DD5KjNF3UgwBbi1GkE5fd4UL9HI5mPqDpqw=
+script:
+  - npm test
+  - test $SAUCE_USERNAME && npm run sauce-test || echo 'not running on saucelabs'
