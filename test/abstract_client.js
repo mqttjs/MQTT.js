@@ -605,6 +605,38 @@ module.exports = function (server, config) {
         done();
       });
     });
+    it('should not checkPing if publishing at a higher rate than keepalive', function (done) {
+      var intervalMs = 3000,
+        client = connect({keepalive: intervalMs / 1000});
+
+      client._checkPing = sinon.spy();
+
+      client.once('connect', function () {
+        client.publish('foo', 'bar');
+        clock.tick(intervalMs - 1);
+        client.publish('foo', 'bar');
+        clock.tick(2);
+        client._checkPing.callCount.should.equal(0);
+        client.end();
+        done();
+      });
+    });
+    it('should checkPing if publishing at a higher rate than keepalive and reschedulePings===false', function (done) {
+      var intervalMs = 3000,
+        client = connect({keepalive: intervalMs / 1000,reschedulePings:false});
+
+      client._checkPing = sinon.spy();
+
+      client.once('connect', function () {
+        client.publish('foo', 'bar');
+        clock.tick(intervalMs - 1);
+        client.publish('foo', 'bar');
+        clock.tick(2);
+        client._checkPing.callCount.should.equal(1);
+        client.end();
+        done();
+      });
+    });
   });
 
   describe('pinging', function () {
