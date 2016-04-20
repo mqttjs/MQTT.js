@@ -188,7 +188,7 @@ the `connect` event. Typically a `net.Socket`.
   * `password`: the password required by your broker, if any
   * `incomingStore`: a [Store](#store) for the incoming packets
   * `outgoingStore`: a [Store](#store) for the outgoing packets
-  * `qosZeroNotQueued`: if connection is broken, do not queue outgoing QoS zero messages (default `false`)
+  * `queueQoSZero`: if connection is broken, queue outgoing QoS zero messages (default `true`)
   * `will`: a message that will sent by the broker automatically when
      the client disconnect badly. The format is:
     * `topic`: the topic to publish
