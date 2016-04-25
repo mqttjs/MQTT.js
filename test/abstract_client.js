@@ -271,6 +271,31 @@ module.exports = function (server, config) {
       });
     });
 
+    it('should not queue qos 0 messages if queueQoSZero is false', function () {
+      var client = connect({queueQoSZero: false});
+
+      client.publish('test', 'test', {qos: 0});
+      client.queue.length.should.equal(0);
+    });
+
+    it('should still queue qos != 0 messages if queueQoSZero is false', function () {
+      var client = connect({queueQoSZero: false});
+
+      client.publish('test', 'test', {qos: 1});
+      client.publish('test', 'test', {qos: 2});
+      client.subscribe('test');
+      client.unsubscribe('test');
+      client.queue.length.should.equal(4);
+    });
+
+    it('should call cb if an outgoing QoS 0 message is not sent', function (done) {
+      var client = connect({queueQoSZero: false});
+
+      client.publish('test', 'test', {qos: 0}, function () {
+        done();
+      });
+    });
+
     if (!process.env.TRAVIS) {
       it('should queue message until connected', function (done) {
         var client = connect();
