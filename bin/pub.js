@@ -7,7 +7,8 @@ var mqtt      = require('../')
   , helpMe    = require('help-me')({
       dir: path.join(__dirname, '..', 'doc')
     })
-  , minimist  = require('minimist');
+  , minimist  = require('minimist')
+  , split2    = require('split2');
 
 function send(args) {
   var client = mqtt.connect(args);
@@ -21,7 +22,7 @@ function start(args) {
   args = minimist(args, {
     string: ['hostname', 'username', 'password', 'key', 'cert', 'ca', 'message'],
     integer: ['port', 'qos'],
-    boolean: ['stdin', 'retain', 'help', 'insecure'],
+    boolean: ['stdin', 'retain', 'help', 'insecure', 'multiline'],
     alias: {
       port: 'p',
       hostname: ['h', 'host'],
@@ -33,6 +34,7 @@ function start(args) {
       username: 'u',
       password: 'P',
       stdin: 's',
+      multiline: 'M',
       protocol: ['C', 'l'],
       help: 'H',
       ca: 'cafile'
@@ -93,10 +95,17 @@ function start(args) {
   }
 
   if (args.stdin) {
-    process.stdin.pipe(concat(function(data) {
-      args.message = data.toString().trim();
-      send(args);
-    }));
+    if (args.multiline) {
+      process.stdin.pipe(split2(function(data) {
+          args.message = data.toString().trim();
+          send(args);
+      }));
+    } else {
+      process.stdin.pipe(concat(function(data) {
+        args.message = data.toString().trim();
+        send(args);
+      }));
+    }
   } else {
     send(args);
   }
