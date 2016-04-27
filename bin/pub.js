@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 
 var mqtt      = require('../')
+  , pump      = require('pump')
   , path      = require('path')
   , fs        = require('fs')
   , concat    = require('concat-stream')
+  , Writable  = require('readable-stream').Writable
   , helpMe    = require('help-me')({
       dir: path.join(__dirname, '..', 'doc')
     })
@@ -16,6 +18,25 @@ function send(args) {
     client.publish(args.topic, args.message, args);
     client.end();
   });
+}
+
+function multisend (args) {
+  var client = mqtt.connect(args);
+  var sender = new Writable({
+    objectMode: true
+  })
+  sender._write = function (line, enc, cb) {
+    client.publish(args.topic, line.trim(), args, cb);
+  }
+
+  client.on('connect', function () {
+    pump(process.stdin, split2(), sender, function (err) {
+      client.end()
+      if (err) {
+        throw err
+      }
+    })
+  })
 }
 
 function start(args) {
@@ -96,10 +117,7 @@ function start(args) {
 
   if (args.stdin) {
     if (args.multiline) {
-      process.stdin.pipe(split2(function(data) {
-          args.message = data.toString().trim();
-          send(args);
-      }));
+      multisend(args)
     } else {
       process.stdin.pipe(concat(function(data) {
         args.message = data.toString().trim();
