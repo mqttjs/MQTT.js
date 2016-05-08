@@ -126,8 +126,8 @@ See `mqtt help <command>` for the command help.
   * <a href="#subscribe"><code>mqtt.Client#<b>subscribe()</b></code></a>
   * <a href="#unsubscribe"><code>mqtt.Client#<b>unsubscribe()</b></code></a>
   * <a href="#end"><code>mqtt.Client#<b>end()</b></code></a>
-  * <a href="#isConnected"><code>mqtt.Client#<b>isConnected()</b></code></a>
   * <a href="#handleMessage"><code>mqtt.Client#<b>handleMessage()</b></code></a>
+  * <a href="#isConnected"><code>mqtt.Client#<b>isConnected()</b></code></a>
   * <a href="#store"><code>mqtt.<b>Store()</b></code></a>
   * <a href="#put"><code>mqtt.Store#<b>put()</b></code></a>
   * <a href="#del"><code>mqtt.Store#<b>del()</b></code></a>
