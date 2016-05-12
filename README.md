@@ -294,7 +294,7 @@ Subscribe to a topic or topics
 
 -------------------------------------------------------
 <a name="unsubscribe"></a>
-### mqtt.Client#unsubscribe(topic/topic array, [options], [callback])
+### mqtt.Client#unsubscribe(topic/topic array, [callback])
 
 Unsubscribe from a topic or topics
 
