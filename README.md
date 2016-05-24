@@ -260,6 +260,16 @@ Emitted when the client receives a publish packet
 * `packet` received packet, as defined in
   [mqtt-packet](https://github.com/mcollina/mqtt-packet#publish)
 
+### Event `'publish'`
+
+`function(topic, message, packet) {}`
+
+Emitted when the client sends a publish packet
+* `topic` topic of the received packet
+* `message` payload of the received packet
+* `packet` received packet, as defined in
+  [mqtt-packet](https://github.com/mcollina/mqtt-packet#publish)
+
 -------------------------------------------------------
 <a name="publish"></a>
 ### mqtt.Client#publish(topic, message, [options], [callback])
