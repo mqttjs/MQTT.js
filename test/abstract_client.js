@@ -422,20 +422,20 @@ module.exports = function (server, config) {
     it('should emit a publish event', function (done) {
       var client = connect(),
         payload = 'test_payload',
-        topic = 'test_topic';
+        test_topic = 'test_topic';
 
       client.once('publish', function (topic, message, packet) {
-        topic.should.equal(topic);
+        topic.should.equal(test_topic);
         message.should.equal(payload);
         packet.cmd.should.equal('publish');
         packet.qos.should.equal(0);
-        packet.topic.should.equal(topic);
+        packet.topic.should.equal(test_topic);
         packet.payload.should.equal(payload);
         packet.retain.should.equal(false);
         done();
       });
 
-      client.publish(topic, payload);
+      client.publish(test_topic, payload);
     });
 
     it('should accept options', function (done) {
