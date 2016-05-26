@@ -419,20 +419,22 @@ module.exports = function (server, config) {
       });
     });
 
-    it('should emit a publish event', function (done) {
+    it('should emit a packetsent event', function (done) {
       var client = connect(),
         payload = 'test_payload',
         test_topic = 'test_topic';
 
-      client.once('publish', function (topic, message, packet) {
-        topic.should.equal(test_topic);
-        message.should.equal(payload);
-        packet.cmd.should.equal('publish');
-        packet.qos.should.equal(0);
-        packet.topic.should.equal(test_topic);
-        packet.payload.should.equal(payload);
-        packet.retain.should.equal(false);
-        done();
+      client.on('packetsent', function (topic, message, packet) {
+        if ('publish' === packet.cmd) {
+          topic.should.equal(test_topic);
+          message.should.equal(payload);
+          packet.cmd.should.equal('publish');
+          packet.qos.should.equal(0);
+          packet.topic.should.equal(test_topic);
+          packet.payload.should.equal(payload);
+          packet.retain.should.equal(false);
+          done();
+        }
       });
 
       client.publish(test_topic, payload);
@@ -566,6 +568,20 @@ module.exports = function (server, config) {
           packet.unsubscriptions.should.containEql(topic);
           done();
         });
+      });
+    });
+
+    it('should emit a packetsent event', function (done) {
+      var client = connect(),
+        test_topic = 'test_topic';
+
+      client.once('connect', function () {
+        client.subscribe(test_topic);
+      });
+
+      client.once('packetsent', function (topic, message, packet) {
+        packet.cmd.should.equal('subscribe');
+        done();
       });
     });
 
@@ -774,6 +790,20 @@ module.exports = function (server, config) {
           });
           done();
         });
+      });
+    });
+
+    it('should emit a packetsent event', function (done) {
+      var client = connect(),
+        test_topic = 'test_topic';
+
+      client.once('connect', function () {
+        client.subscribe(test_topic);
+      });
+
+      client.once('packetsent', function (topic, message, packet) {
+        packet.cmd.should.equal('subscribe');
+        done();
       });
     });
 
