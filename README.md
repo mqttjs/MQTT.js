@@ -260,14 +260,12 @@ Emitted when the client receives a publish packet
 * `packet` received packet, as defined in
   [mqtt-packet](https://github.com/mcollina/mqtt-packet#publish)
 
-### Event `'packetsent'`
+### Event `'packetsend'`
 
-`function(topic, message, packet) {}`
+`function(packet) {}`
 
 Emitted when the client sends any packet. This includes .published() packets
 as well as packets used by MQTT for managing subscriptions and connections
-* `topic` topic of the received packet
-* `message` payload of the received packet
 * `packet` received packet, as defined in
   [mqtt-packet](https://github.com/mcollina/mqtt-packet#publish)
 

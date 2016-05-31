@@ -419,15 +419,13 @@ module.exports = function (server, config) {
       });
     });
 
-    it('should emit a packetsent event', function (done) {
+    it('should emit a packetsend event', function (done) {
       var client = connect(),
         payload = 'test_payload',
         test_topic = 'test_topic';
 
-      client.on('packetsent', function (topic, message, packet) {
+      client.on('packetsend', function (packet) {
         if ('publish' === packet.cmd) {
-          topic.should.equal(test_topic);
-          message.should.equal(payload);
           packet.cmd.should.equal('publish');
           packet.qos.should.equal(0);
           packet.topic.should.equal(test_topic);
@@ -571,7 +569,7 @@ module.exports = function (server, config) {
       });
     });
 
-    it('should emit a packetsent event', function (done) {
+    it('should emit a packetsend event', function (done) {
       var client = connect(),
         test_topic = 'test_topic';
 
@@ -579,7 +577,7 @@ module.exports = function (server, config) {
         client.subscribe(test_topic);
       });
 
-      client.once('packetsent', function (topic, message, packet) {
+      client.once('packetsend', function (packet) {
         packet.cmd.should.equal('subscribe');
         done();
       });
@@ -793,7 +791,7 @@ module.exports = function (server, config) {
       });
     });
 
-    it('should emit a packetsent event', function (done) {
+    it('should emit a packetsend event', function (done) {
       var client = connect(),
         test_topic = 'test_topic';
 
@@ -801,7 +799,7 @@ module.exports = function (server, config) {
         client.subscribe(test_topic);
       });
 
-      client.once('packetsent', function (topic, message, packet) {
+      client.once('packetsend', function (packet) {
         packet.cmd.should.equal('subscribe');
         done();
       });
