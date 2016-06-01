@@ -269,6 +269,16 @@ as well as packets used by MQTT for managing subscriptions and connections
 * `packet` received packet, as defined in
   [mqtt-packet](https://github.com/mcollina/mqtt-packet#publish)
 
+### Event `'packetreceive'`
+
+`function(packet) {}`
+
+Emitted when the client receives any packet. This includes packets from
+subscribed topics as well as packets used by MQTT for managing subscriptions
+and connections
+* `packet` received packet, as defined in
+  [mqtt-packet](https://github.com/mcollina/mqtt-packet#publish)
+
 -------------------------------------------------------
 <a name="publish"></a>
 ### mqtt.Client#publish(topic, message, [options], [callback])

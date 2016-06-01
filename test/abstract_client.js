@@ -426,7 +426,6 @@ module.exports = function (server, config) {
 
       client.on('packetsend', function (packet) {
         if ('publish' === packet.cmd) {
-          packet.cmd.should.equal('publish');
           packet.qos.should.equal(0);
           packet.topic.should.equal(test_topic);
           packet.payload.should.equal(payload);
@@ -577,9 +576,25 @@ module.exports = function (server, config) {
         client.subscribe(test_topic);
       });
 
-      client.once('packetsend', function (packet) {
-        packet.cmd.should.equal('subscribe');
-        done();
+      client.on('packetsend', function (packet) {
+        if ('subscribe' === packet.cmd) {
+          done();
+        }
+      });
+    });
+
+    it('should emit a packetreceive event', function (done) {
+      var client = connect(),
+        test_topic = 'test_topic';
+
+      client.once('connect', function () {
+        client.subscribe(test_topic);
+      });
+
+      client.on('packetreceive', function (packet) {
+        if ('suback' === packet.cmd) {
+          done();
+        }
       });
     });
 
@@ -799,9 +814,25 @@ module.exports = function (server, config) {
         client.subscribe(test_topic);
       });
 
-      client.once('packetsend', function (packet) {
-        packet.cmd.should.equal('subscribe');
-        done();
+      client.on('packetsend', function (packet) {
+        if ('subscribe' === packet.cmd) {
+          done();
+        }
+      });
+    });
+
+    it('should emit a packetreceive event', function (done) {
+      var client = connect(),
+        test_topic = 'test_topic';
+
+      client.once('connect', function () {
+        client.subscribe(test_topic);
+      });
+
+      client.on('packetreceive', function (packet) {
+        if ('suback' === packet.cmd) {
+          done();
+        }
       });
     });
 
@@ -953,6 +984,34 @@ module.exports = function (server, config) {
         message.toString().should.equal(testPacket.payload);
         packet.should.equal(packet);
         done();
+      });
+
+      server.once('client', function (serverClient) {
+        serverClient.on('subscribe', function () {
+          serverClient.publish(testPacket);
+        });
+      });
+    });
+
+    it('should emit a packetreceive event', function (done) {
+      var client = connect(),
+        testPacket = {
+          topic: 'test',
+          payload: 'message',
+          retain: true,
+          qos: 1,
+          messageId: 5
+        };
+
+      client.subscribe(testPacket.topic);
+      client.on('packetreceive', function (packet) {
+        if ('publish' === packet.cmd) {
+          packet.qos.should.equal(1);
+          packet.topic.should.equal(testPacket.topic);
+          packet.payload.toString().should.equal(testPacket.payload);
+          packet.retain.should.equal(true);
+          done();
+        }
       });
 
       server.once('client', function (serverClient) {
