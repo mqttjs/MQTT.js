@@ -419,6 +419,24 @@ module.exports = function (server, config) {
       });
     });
 
+    it('should emit a packetsend event', function (done) {
+      var client = connect(),
+        payload = 'test_payload',
+        test_topic = 'test_topic';
+
+      client.on('packetsend', function (packet) {
+        if ('publish' === packet.cmd) {
+          packet.qos.should.equal(0);
+          packet.topic.should.equal(test_topic);
+          packet.payload.should.equal(payload);
+          packet.retain.should.equal(false);
+          done();
+        }
+      });
+
+      client.publish(test_topic, payload);
+    });
+
     it('should accept options', function (done) {
       var client = connect(),
         payload = 'test',
@@ -547,6 +565,36 @@ module.exports = function (server, config) {
           packet.unsubscriptions.should.containEql(topic);
           done();
         });
+      });
+    });
+
+    it('should emit a packetsend event', function (done) {
+      var client = connect(),
+        test_topic = 'test_topic';
+
+      client.once('connect', function () {
+        client.subscribe(test_topic);
+      });
+
+      client.on('packetsend', function (packet) {
+        if ('subscribe' === packet.cmd) {
+          done();
+        }
+      });
+    });
+
+    it('should emit a packetreceive event', function (done) {
+      var client = connect(),
+        test_topic = 'test_topic';
+
+      client.once('connect', function () {
+        client.subscribe(test_topic);
+      });
+
+      client.on('packetreceive', function (packet) {
+        if ('suback' === packet.cmd) {
+          done();
+        }
       });
     });
 
@@ -758,6 +806,36 @@ module.exports = function (server, config) {
       });
     });
 
+    it('should emit a packetsend event', function (done) {
+      var client = connect(),
+        test_topic = 'test_topic';
+
+      client.once('connect', function () {
+        client.subscribe(test_topic);
+      });
+
+      client.on('packetsend', function (packet) {
+        if ('subscribe' === packet.cmd) {
+          done();
+        }
+      });
+    });
+
+    it('should emit a packetreceive event', function (done) {
+      var client = connect(),
+        test_topic = 'test_topic';
+
+      client.once('connect', function () {
+        client.subscribe(test_topic);
+      });
+
+      client.on('packetreceive', function (packet) {
+        if ('suback' === packet.cmd) {
+          done();
+        }
+      });
+    });
+
     it('should accept an array of subscriptions', function (done) {
       var client = connect(),
         subs = ['test1', 'test2'];
@@ -906,6 +984,34 @@ module.exports = function (server, config) {
         message.toString().should.equal(testPacket.payload);
         packet.should.equal(packet);
         done();
+      });
+
+      server.once('client', function (serverClient) {
+        serverClient.on('subscribe', function () {
+          serverClient.publish(testPacket);
+        });
+      });
+    });
+
+    it('should emit a packetreceive event', function (done) {
+      var client = connect(),
+        testPacket = {
+          topic: 'test',
+          payload: 'message',
+          retain: true,
+          qos: 1,
+          messageId: 5
+        };
+
+      client.subscribe(testPacket.topic);
+      client.on('packetreceive', function (packet) {
+        if ('publish' === packet.cmd) {
+          packet.qos.should.equal(1);
+          packet.topic.should.equal(testPacket.topic);
+          packet.payload.toString().should.equal(testPacket.payload);
+          packet.retain.should.equal(true);
+          done();
+        }
       });
 
       server.once('client', function (serverClient) {
