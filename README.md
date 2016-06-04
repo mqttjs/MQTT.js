@@ -127,7 +127,7 @@ See `mqtt help <command>` for the command help.
   * <a href="#unsubscribe"><code>mqtt.Client#<b>unsubscribe()</b></code></a>
   * <a href="#end"><code>mqtt.Client#<b>end()</b></code></a>
   * <a href="#handleMessage"><code>mqtt.Client#<b>handleMessage()</b></code></a>
-  * <a href="#isConnected"><code>mqtt.Client#<b>connected</b></code></a>
+  * <a href="#connected"><code>mqtt.Client#<b>connected</b></code></a>
   * <a href="#store"><code>mqtt.<b>Store()</b></code></a>
   * <a href="#put"><code>mqtt.Store#<b>put()</b></code></a>
   * <a href="#del"><code>mqtt.Store#<b>del()</b></code></a>
@@ -268,7 +268,7 @@ Emitted when the client receives a publish packet
 Emitted when the client sends any packet. This includes .published() packets
 as well as packets used by MQTT for managing subscriptions and connections
 * `packet` received packet, as defined in
-  [mqtt-packet](https://github.com/mcollina/mqtt-packet#publish)
+  [mqtt-packet](https://github.com/mcollina/mqtt-packet)
 
 ### Event `'packetreceive'`
 
@@ -278,7 +278,7 @@ Emitted when the client receives any packet. This includes packets from
 subscribed topics as well as packets used by MQTT for managing subscriptions
 and connections
 * `packet` received packet, as defined in
-  [mqtt-packet](https://github.com/mcollina/mqtt-packet#publish)
+  [mqtt-packet](https://github.com/mcollina/mqtt-packet)
 
 -------------------------------------------------------
 <a name="publish"></a>
