@@ -256,18 +256,18 @@ module.exports = function (server, config) {
 
     it('should use mqtt as the protocol by default', function (done) {
       server.once('client', function (client) {
-        client.stream.socket.protocol.should.equal("mqtt");
+        client.stream.socket.protocol.should.equal('mqtt');
         done();
-        client.end();
+        client.disconnect();
       });
       connect();
     });
 
     it('should use mqttv3.1 as the protocol if using v3.1', function (done) {
       server.once('client', function (client) {
-        client.stream.socket.protocol.should.equal("mqtt");
+        client.stream.socket.protocol.should.equal('mqttv3.1');
         done();
-        client.end();
+        client.disconnect();
       });
       connect({
         protocolId: 'MQIsdp',
