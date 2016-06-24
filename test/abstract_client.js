@@ -253,28 +253,6 @@ module.exports = function (server, config) {
       client1.end();
       client2.end();
     });
-
-    it('should use mqtt as the protocol by default', function (done) {
-      server.once('client', function (client) {
-        client.stream.socket.protocol.should.equal('mqtt');
-        done();
-        client.disconnect();
-      });
-      connect();
-    });
-
-    it('should use mqttv3.1 as the protocol if using v3.1', function (done) {
-      server.once('client', function (client) {
-        client.stream.socket.protocol.should.equal('mqttv3.1');
-        done();
-        client.disconnect();
-      });
-      connect({
-        protocolId: 'MQIsdp',
-        protocolVersion: 3
-      });
-    });
-
   });
 
   describe('offline messages', function () {
