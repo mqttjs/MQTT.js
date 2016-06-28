@@ -13,7 +13,7 @@
     "publish",
     "subscribe"
   ],
-  "homepage": "https://github.com/ccravens/MQTT.js",
+  "homepage": "https://github.com/mqttjs/MQTT.js",
   "moduleType": [],
   "private": true,
   "ignore": [
