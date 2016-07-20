@@ -255,6 +255,30 @@ module.exports = function (server, config) {
     });
   });
 
+  describe('Topic validations when subscribing', function () {
+
+    it('should be ok for well-formated topics', function (done) {
+      var client = connect();
+      client.subscribe( ['+', '+/event', 'event/+', '#', 'event/#'], function (err) {
+        if (err) {
+          return done(new Error(err));
+        }
+        done();
+      });
+    });
+
+    it('otherwise, should return an error (via callbacks)', function (done) {
+      var client = connect();
+      client.subscribe( ['#/event', 'event#', 'event+'], function (err) {
+        if (err) {
+          return done(new Error(err));
+        }
+        done();
+      });
+    });
+
+  });
+
   describe('offline messages', function () {
 
     it('should queue message until connected', function (done) {
