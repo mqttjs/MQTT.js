@@ -314,7 +314,6 @@ module.exports = function (server, config) {
       });
     });
 
-
     it('should return an error (via callbacks) for topic system/+/#/event', function (done) {
       var client = connect();
       client.subscribe( 'system/+/#/event', function (err) {
@@ -324,8 +323,6 @@ module.exports = function (server, config) {
         done(new Error('Validations do NOT work'));
       });
     });
-
-
 
   });
 
