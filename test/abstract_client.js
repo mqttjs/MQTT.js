@@ -271,9 +271,9 @@ module.exports = function (server, config) {
       var client = connect();
       client.subscribe( ['#/event', 'event#', 'event+'], function (err) {
         if (err) {
-          return done(new Error(err));
+          return done();
         }
-        done();
+        done(new Error('Validations do NOT work'));
       });
     });
 
