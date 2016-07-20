@@ -262,7 +262,8 @@ module.exports = function (server, config) {
       client.subscribe(
         [
           '+', '+/event', 'event/+', '#', 'event/#', 'system/event/+',
-          'system/+/event', 'system/registry/event/#', 'system/+/event/#'
+          'system/+/event', 'system/registry/event/#', 'system/+/event/#',
+          'system/registry/event/new_device', 'system/+/+/new_device'
         ],
         function (err) {
           if (err) {
