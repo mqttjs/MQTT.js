@@ -255,6 +255,77 @@ module.exports = function (server, config) {
     });
   });
 
+  describe('Topic validations when subscribing', function () {
+
+    it('should be ok for well-formated topics', function (done) {
+      var client = connect();
+      client.subscribe(
+        [
+          '+', '+/event', 'event/+', '#', 'event/#', 'system/event/+',
+          'system/+/event', 'system/registry/event/#', 'system/+/event/#',
+          'system/registry/event/new_device', 'system/+/+/new_device'
+        ],
+        function (err) {
+          if (err) {
+            return done(new Error(err));
+          }
+          done();
+        }
+      );
+    });
+
+    it('should return an error (via callbacks) for topic #/event', function (done) {
+      var client = connect();
+      client.subscribe( ['#/event', 'event#', 'event+'], function (err) {
+        if (err) {
+          return done();
+        }
+        done(new Error('Validations do NOT work'));
+      });
+    });
+
+    it('should return an error (via callbacks) for topic #/event', function (done) {
+      var client = connect();
+      client.subscribe( '#/event', function (err) {
+        if (err) {
+          return done();
+        }
+        done(new Error('Validations do NOT work'));
+      });
+    });
+
+    it('should return an error (via callbacks) for topic event#', function (done) {
+      var client = connect();
+      client.subscribe( 'event#', function (err) {
+        if (err) {
+          return done();
+        }
+        done(new Error('Validations do NOT work'));
+      });
+    });
+
+    it('should return an error (via callbacks) for topic system/#/event', function (done) {
+      var client = connect();
+      client.subscribe( 'system/#/event', function (err) {
+        if (err) {
+          return done();
+        }
+        done(new Error('Validations do NOT work'));
+      });
+    });
+
+    it('should return an error (via callbacks) for topic system/+/#/event', function (done) {
+      var client = connect();
+      client.subscribe( 'system/+/#/event', function (err) {
+        if (err) {
+          return done();
+        }
+        done(new Error('Validations do NOT work'));
+      });
+    });
+
+  });
+
   describe('offline messages', function () {
 
     it('should queue message until connected', function (done) {
