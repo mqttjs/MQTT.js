@@ -258,8 +258,8 @@ module.exports = function (server, config) {
   describe('Handling offline states', function () {
     it('should emit offline events once when the client transitions from connected states to disconnected ones', function (done) {
 
-      var client = connect({reconnectPeriod: 200});
-      var offlineHandler = sinon.spy()
+      var client = connect({reconnectPeriod: 200}),
+        offlineHandler = sinon.spy();
 
       server.once('client', function (serverClient) {
         serverClient.on('connect', function () {
@@ -268,34 +268,34 @@ module.exports = function (server, config) {
           });
 
           setTimeout(function () {
-            sinon.assert.calledOnce( offlineHandler )
-            client.end()
-            done()
-          }, 800)
+            sinon.assert.calledOnce( offlineHandler );
+            client.end();
+            done();
+          }, 800);
         });
-      })
+      });
 
-      client.on('offline', offlineHandler)
+      client.on('offline', offlineHandler);
     });
 
     it('should emit offline events once when the client (at first) can NOT connect to servers', function (done) {
 
-      var client = connect({reconnectPeriod: 200});
-      var offlineHandler = sinon.spy()
+      var client = connect({reconnectPeriod: 200}),
+        offlineHandler = sinon.spy();
 
       server.once('client', function (serverClient) {
         serverClient.stream.destroy();
         setTimeout(function () {
-          sinon.assert.calledOnce( offlineHandler )
-          client.end()
-          done()
-        }, 800)
-      })
+          sinon.assert.calledOnce( offlineHandler );
+          client.end();
+          done();
+        }, 800);
+      });
 
-      client.on('offline', offlineHandler)
+      client.on('offline', offlineHandler);
     });
 
-  })
+  });
 
   describe('Topic validations when subscribing', function () {
 
