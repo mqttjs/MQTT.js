@@ -39,9 +39,9 @@ client.subscribe("topic", { qos: 0 });
 client.publish("topic", "wss secure connection demo...!", { qos: 0, retained: false });
 
 client.on('message', function (topic, message, pakcet) {
-    console.log("Recieved Message:= " + message.toString() + "\nOn topic:= " + topic);
+    console.log("Received Message:= " + message.toString() + "\nOn topic:= " + topic);
 });
 
 client.on('close', function () {
-    console.log(client_Id + " disconected");
+    console.log(client_Id + " disconnected");
 });
