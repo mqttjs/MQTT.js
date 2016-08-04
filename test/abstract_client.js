@@ -255,7 +255,7 @@ module.exports = function (server, config) {
     });
   });
 
-  describe('Handling offline states', function () {
+  describe('handling offline states', function () {
     it('should emit offline events once when the client transitions from connected states to disconnected ones', function (done) {
 
       var client = connect({reconnectPeriod: 200}),
@@ -297,7 +297,7 @@ module.exports = function (server, config) {
 
   });
 
-  describe('Topic validations when subscribing', function () {
+  describe('topic validations when subscribing', function () {
 
     it('should be ok for well-formated topics', function (done) {
       var client = connect();
