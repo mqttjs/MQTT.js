@@ -128,6 +128,7 @@ See `mqtt help <command>` for the command help.
   * <a href="#end"><code>mqtt.Client#<b>end()</b></code></a>
   * <a href="#handleMessage"><code>mqtt.Client#<b>handleMessage()</b></code></a>
   * <a href="#connected"><code>mqtt.Client#<b>connected</b></code></a>
+  * <a href="#reconnecting"><code>mqtt.Client#<b>reconnecting</b></code></a>
   * <a href="#store"><code>mqtt.<b>Store()</b></code></a>
   * <a href="#put"><code>mqtt.Store#<b>put()</b></code></a>
   * <a href="#del"><code>mqtt.Store#<b>del()</b></code></a>
@@ -346,6 +347,12 @@ will hang.
 ### mqtt.Client#connected
 
 Boolean : set to `true` if the client is connected. `false` otherwise.
+
+-------------------------------------------------------
+<a name="reconnecting"></a>
+### mqtt.Client#reconnecting
+
+Boolean : set to `true` if the client is trying to reconnect to the server. `false` otherwise.
 
 -------------------------------------------------------
 <a name="store"></a>

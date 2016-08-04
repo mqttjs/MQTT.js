@@ -255,7 +255,49 @@ module.exports = function (server, config) {
     });
   });
 
-  describe('Topic validations when subscribing', function () {
+  describe('handling offline states', function () {
+    it('should emit offline events once when the client transitions from connected states to disconnected ones', function (done) {
+
+      var client = connect({reconnectPeriod: 200}),
+        offlineHandler = sinon.spy();
+
+      server.once('client', function (serverClient) {
+        serverClient.on('connect', function () {
+          setImmediate(function () {
+            serverClient.stream.destroy();
+          });
+
+          setTimeout(function () {
+            sinon.assert.calledOnce( offlineHandler );
+            client.end();
+            done();
+          }, 800);
+        });
+      });
+
+      client.on('offline', offlineHandler);
+    });
+
+    it('should emit offline events once when the client (at first) can NOT connect to servers', function (done) {
+
+      var client = connect({reconnectPeriod: 200}),
+        offlineHandler = sinon.spy();
+
+      server.once('client', function (serverClient) {
+        serverClient.stream.destroy();
+        setTimeout(function () {
+          sinon.assert.calledOnce( offlineHandler );
+          client.end();
+          done();
+        }, 800);
+      });
+
+      client.on('offline', offlineHandler);
+    });
+
+  });
+
+  describe('topic validations when subscribing', function () {
 
     it('should be ok for well-formated topics', function (done) {
       var client = connect();
