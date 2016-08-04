@@ -1,7 +1,7 @@
 {
   "name": "mqtt",
   "description": "A library for the MQTT protocol",
-  "version": "1.10.0",
+  "version": "1.13.0",
   "contributors": [
     "Adam Rudd <adamvrr@gmail.com>",
     "Matteo Collina <matteo.collina@gmail.com> (https://github.com/mcollina)"
@@ -53,7 +53,7 @@
     "inherits": "^2.0.1",
     "minimist": "^1.1.0",
     "mqtt-connection": "^2.0.0",
-    "mqtt-packet": "^3.2.0",
+    "mqtt-packet": "^3.4.7",
     "pump": "^1.0.1",
     "readable-stream": "~1.0.2",
     "reinterval": "^1.0.1",
