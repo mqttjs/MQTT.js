@@ -19,7 +19,7 @@
   },
   "main": "mqtt.js",
   "scripts": {
-    "test": "mocha --bail",
+    "test": "mocha",
     "pretest": "npm run check-style",
     "check-style:eslint": "eslint mqtt.js lib test test/browser test/helpers",
     "check-style:jshint": "jshint mqtt.js lib test test/browser test/helpers",
