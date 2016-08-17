@@ -1,4 +1,5 @@
 'use strict';
+
 /*global setImmediate:true*/
 /*eslint no-unused-expressions:0*/
 /*jshint expr:true*/
@@ -92,21 +93,17 @@ module.exports = function (server, config) {
 
     it('should connect to the broker', function (done) {
       var client = connect();
-      client.on('error', function (err) {
-        throw err;
-      });
+      client.on('error', done);
 
-      server.once('client', function (serverClient) {
-        serverClient.disconnect();
+      server.once('client', function () {
+        client.end();
         done();
       });
     });
 
     it('should send a default client id', function (done) {
       var client = connect();
-      client.on('error', function (err) {
-        throw err;
-      });
+      client.on('error', done);
 
       server.once('client', function (serverClient) {
         serverClient.once('connect', function (packet) {
@@ -119,9 +116,7 @@ module.exports = function (server, config) {
 
     it('should send be clean by default', function (done) {
       var client = connect();
-      client.on('error', function (err) {
-        throw err;
-      });
+      client.on('error', done);
 
       server.once('client', function (serverClient) {
         serverClient.once('connect', function (packet) {
@@ -222,12 +217,12 @@ module.exports = function (server, config) {
     it('should mark the client as connected', function (done) {
       var client = connect();
       client.once('connect', function () {
+        client.end();
         if (client.connected) {
           done();
         } else {
           done(new Error('Not marked as connected'));
         }
-        client.end();
       });
     });
 
@@ -245,56 +240,39 @@ module.exports = function (server, config) {
       });
     });
 
-    it('should have different client ids', function () {
+    it('should have different client ids', function (done) {
       var client1 = connect(),
         client2 = connect();
 
       client1.options.clientId.should.not.equal(client2.options.clientId);
-      client1.end();
-      client2.end();
+      client1.end(true);
+      client2.end(true);
+      setImmediate(done);
     });
   });
 
   describe('handling offline states', function () {
     it('should emit offline events once when the client transitions from connected states to disconnected ones', function (done) {
 
-      var client = connect({reconnectPeriod: 200}),
-        offlineHandler = sinon.spy();
+      var client = connect({reconnectPeriod: 20});
 
-      server.once('client', function (serverClient) {
-        serverClient.on('connect', function () {
-          setImmediate(function () {
-            serverClient.stream.destroy();
-          });
-
-          setTimeout(function () {
-            sinon.assert.calledOnce( offlineHandler );
-            client.end();
-            done();
-          }, 800);
-        });
+      client.on('connect', function () {
+        this.stream.end();
       });
 
-      client.on('offline', offlineHandler);
+      client.on('offline', function () {
+        client.end(true, done);
+      });
     });
 
     it('should emit offline events once when the client (at first) can NOT connect to servers', function (done) {
+      // fake a port
+      var client = connect({ reconnectPeriod: 20, port: 4557 });
 
-      var client = connect({reconnectPeriod: 200}),
-        offlineHandler = sinon.spy();
-
-      server.once('client', function (serverClient) {
-        serverClient.stream.destroy();
-        setTimeout(function () {
-          sinon.assert.calledOnce( offlineHandler );
-          client.end();
-          done();
-        }, 800);
+      client.on('offline', function () {
+        client.end(true, done);
       });
-
-      client.on('offline', offlineHandler);
     });
-
   });
 
   describe('topic validations when subscribing', function () {
@@ -308,6 +286,7 @@ module.exports = function (server, config) {
           'system/registry/event/new_device', 'system/+/+/new_device'
         ],
         function (err) {
+          client.end();
           if (err) {
             return done(new Error(err));
           }
@@ -319,6 +298,7 @@ module.exports = function (server, config) {
     it('should return an error (via callbacks) for topic #/event', function (done) {
       var client = connect();
       client.subscribe( ['#/event', 'event#', 'event+'], function (err) {
+        client.end();
         if (err) {
           return done();
         }
@@ -329,6 +309,7 @@ module.exports = function (server, config) {
     it('should return an error (via callbacks) for topic #/event', function (done) {
       var client = connect();
       client.subscribe( '#/event', function (err) {
+        client.end();
         if (err) {
           return done();
         }
@@ -339,6 +320,7 @@ module.exports = function (server, config) {
     it('should return an error (via callbacks) for topic event#', function (done) {
       var client = connect();
       client.subscribe( 'event#', function (err) {
+        client.end();
         if (err) {
           return done();
         }
@@ -349,6 +331,7 @@ module.exports = function (server, config) {
     it('should return an error (via callbacks) for topic system/#/event', function (done) {
       var client = connect();
       client.subscribe( 'system/#/event', function (err) {
+        client.end();
         if (err) {
           return done();
         }
@@ -359,6 +342,7 @@ module.exports = function (server, config) {
     it('should return an error (via callbacks) for topic system/+/#/event', function (done) {
       var client = connect();
       client.subscribe( 'system/+/#/event', function (err) {
+        client.end();
         if (err) {
           return done();
         }
@@ -380,18 +364,19 @@ module.exports = function (server, config) {
 
       client.once('connect', function () {
         client.queue.length.should.equal(0);
-        done();
+        client.end(true, done);
       });
     });
 
-    it('should not queue qos 0 messages if queueQoSZero is false', function () {
+    it('should not queue qos 0 messages if queueQoSZero is false', function (done) {
       var client = connect({queueQoSZero: false});
 
       client.publish('test', 'test', {qos: 0});
       client.queue.length.should.equal(0);
+      client.end(true, done);
     });
 
-    it('should still queue qos != 0 messages if queueQoSZero is false', function () {
+    it('should still queue qos != 0 messages if queueQoSZero is false', function (done) {
       var client = connect({queueQoSZero: false});
 
       client.publish('test', 'test', {qos: 1});
@@ -399,35 +384,18 @@ module.exports = function (server, config) {
       client.subscribe('test');
       client.unsubscribe('test');
       client.queue.length.should.equal(4);
+      client.end(true, done);
     });
 
     it('should call cb if an outgoing QoS 0 message is not sent', function (done) {
       var client = connect({queueQoSZero: false});
 
       client.publish('test', 'test', {qos: 0}, function () {
-        done();
+        client.end(true, done);
       });
     });
 
     if (!process.env.TRAVIS) {
-      it('should queue message until connected', function (done) {
-        var client = connect();
-
-        client.subscribe('test');
-        client.publish('test', 'test');
-        client.queue.length.should.equal(2);
-
-        client.on('queueEmpty', client.end.bind(client));
-
-        server.once('client', function (serverClient) {
-          serverClient.on('subscribe', function () {
-            serverClient.on('publish', function () {
-              done();
-            });
-          });
-        });
-      });
-
       it('should delay closing everything up until the queue is depleted', function (done) {
         var client = connect();
 
@@ -507,6 +475,7 @@ module.exports = function (server, config) {
           packet.payload.toString().should.equal(payload);
           packet.qos.should.equal(0);
           packet.retain.should.equal(false);
+          client.end();
           done();
         });
       });
@@ -527,6 +496,7 @@ module.exports = function (server, config) {
           packet.payload.toString().should.equal(payload);
           packet.qos.should.equal(0);
           packet.retain.should.equal(false);
+          client.end();
           done();
         });
       });
@@ -543,6 +513,7 @@ module.exports = function (server, config) {
           packet.topic.should.equal(test_topic);
           packet.payload.should.equal(payload);
           packet.retain.should.equal(false);
+          client.end();
           done();
         }
       });
@@ -569,6 +540,7 @@ module.exports = function (server, config) {
           packet.payload.toString().should.equal(payload);
           packet.qos.should.equal(opts.qos, 'incorrect qos');
           packet.retain.should.equal(opts.retain, 'incorrect ret');
+          client.end();
           done();
         });
       });
@@ -578,7 +550,10 @@ module.exports = function (server, config) {
       var client = connect();
 
       client.once('connect', function () {
-        client.publish('a', 'b', done);
+        client.publish('a', 'b', function () {
+          client.end();
+          done();
+        });
       });
     });
 
@@ -587,7 +562,10 @@ module.exports = function (server, config) {
         opts = {qos: 1};
 
       client.once('connect', function () {
-        client.publish('a', 'b', opts, done);
+        client.publish('a', 'b', opts, function () {
+          client.end();
+          done();
+        });
       });
     });
 
@@ -596,7 +574,10 @@ module.exports = function (server, config) {
         opts = {qos: 2};
 
       client.once('connect', function () {
-        client.publish('a', 'b', opts, done);
+        client.publish('a', 'b', opts, function () {
+          client.end();
+          done();
+        });
       });
     });
 
@@ -604,7 +585,10 @@ module.exports = function (server, config) {
       var client = connect();
 
       client.once('connect', function () {
-        client.publish('中国', 'hello', done);
+        client.publish('中国', 'hello', function () {
+          client.end();
+          done();
+        });
       });
     });
 
@@ -612,7 +596,10 @@ module.exports = function (server, config) {
       var client = connect();
 
       client.once('connect', function () {
-        client.publish('hello', '中国', done);
+        client.publish('hello', '中国', function () {
+          client.end();
+          done();
+        });
       });
     });
 
@@ -627,6 +614,7 @@ module.exports = function (server, config) {
 
       client.on('message', function () {
         if (10 <= count) {
+          client.end();
           done();
         } else {
           client.publish('test', 'test', { qos: 2 });
@@ -635,6 +623,7 @@ module.exports = function (server, config) {
 
       server.once('client', function (serverClient) {
         serverClient.on('offline', function () {
+          client.end();
           done('error went offline... didnt see this happen');
         });
 
@@ -660,6 +649,7 @@ module.exports = function (server, config) {
       server.once('client', function (serverClient) {
         serverClient.once('unsubscribe', function (packet) {
           packet.unsubscriptions.should.containEql('test');
+          client.end();
           done();
         });
       });
@@ -676,6 +666,7 @@ module.exports = function (server, config) {
       server.once('client', function (serverClient) {
         serverClient.once('unsubscribe', function (packet) {
           packet.unsubscriptions.should.containEql(topic);
+          client.end();
           done();
         });
       });
@@ -691,6 +682,7 @@ module.exports = function (server, config) {
 
       client.on('packetsend', function (packet) {
         if ('subscribe' === packet.cmd) {
+          client.end();
           done();
         }
       });
@@ -706,6 +698,7 @@ module.exports = function (server, config) {
 
       client.on('packetreceive', function (packet) {
         if ('suback' === packet.cmd) {
+          client.end();
           done();
         }
       });
@@ -738,6 +731,7 @@ module.exports = function (server, config) {
       server.once('client', function (serverClient) {
         serverClient.once('unsubscribe', function (packet) {
           serverClient.unsuback(packet);
+          client.end();
         });
       });
     });
@@ -753,6 +747,7 @@ module.exports = function (server, config) {
       server.once('client', function (serverClient) {
         serverClient.once('unsubscribe', function (packet) {
           packet.unsubscriptions.should.containEql(topic);
+          client.end();
           done();
         });
       });
@@ -777,7 +772,6 @@ module.exports = function (server, config) {
       client._checkPing = sinon.spy();
 
       client.once('connect', function () {
-
         clock.tick(interval * 1000);
         client._checkPing.callCount.should.equal(1);
 
@@ -843,7 +837,7 @@ module.exports = function (server, config) {
       });
     });
     it('should reconnect if pingresp is not sent', function (done) {
-      var client = connect({keepalive: 1, reconnectPeriod: 50});
+      var client = connect({keepalive: 1, reconnectPeriod: 100});
 
       // Fake no pingresp being send by stubbing the _handlePingresp function
       client._handlePingresp = function () {};

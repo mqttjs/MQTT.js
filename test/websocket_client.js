@@ -97,20 +97,18 @@ describe('Websocket Client', function () {
   it('should use mqtt as the protocol by default', function (done) {
     server.once('client', function (client) {
       client.stream.socket.protocol.should.equal('mqtt');
-      done();
-      client.disconnect();
     });
 
     var opts = xtend(config, {});
 
-    mqtt.connect(opts);
+    mqtt.connect(opts).on('connect', function () {
+      this.end(true, done);
+    });
   });
 
   it('should use mqttv3.1 as the protocol if using v3.1', function (done) {
     server.once('client', function (client) {
       client.stream.socket.protocol.should.equal('mqttv3.1');
-      done();
-      client.disconnect();
     });
 
     var opts = xtend(config, {
@@ -118,7 +116,9 @@ describe('Websocket Client', function () {
       protocolVersion: 3
     });
 
-    mqtt.connect(opts);
+    mqtt.connect(opts).on('connect', function () {
+      this.end(true, done);
+    });
   });
 
   abstractClientTests(server, config);

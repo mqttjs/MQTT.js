@@ -1,7 +1,7 @@
 {
   "name": "mqtt",
   "description": "A library for the MQTT protocol",
-  "version": "1.13.0",
+  "version": "1.14.0",
   "contributors": [
     "Adam Rudd <adamvrr@gmail.com>",
     "Matteo Collina <matteo.collina@gmail.com> (https://github.com/mcollina)"
@@ -19,7 +19,7 @@
   },
   "main": "mqtt.js",
   "scripts": {
-    "test": "mocha",
+    "test": "mocha --bail",
     "pretest": "npm run check-style",
     "check-style:eslint": "eslint mqtt.js lib test test/browser test/helpers",
     "check-style:jshint": "jshint mqtt.js lib test test/browser test/helpers",
