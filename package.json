@@ -49,7 +49,7 @@
     "commist": "^1.0.0",
     "concat-stream": "^1.4.7",
     "end-of-stream": "^1.1.0",
-    "help-me": "^0.1.0",
+    "help-me": "^1.0.0",
     "inherits": "^2.0.1",
     "minimist": "^1.1.0",
     "mqtt-connection": "^2.0.0",
