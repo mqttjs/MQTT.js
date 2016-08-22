@@ -292,8 +292,8 @@ Publish a message to a topic
 * `options` is the options to publish with, including:
   * `qos` QoS level, `Number`, default `0`
   * `retain` retain flag, `Boolean`, default `false`
-* `callback` callback fired when the QoS handling completes,
-  or at the next tick if QoS 0.
+* `callback` - `function(err)`, fired when the QoS handling completes,
+  or at the next tick if QoS 0. An error occurs if client is disconnecting.
 
 -------------------------------------------------------
 <a name="subscribe"></a>
@@ -308,7 +308,7 @@ Subscribe to a topic or topics
   * `qos` qos subscription level, default 0
 * `callback` - `function(err, granted)`
   callback fired on suback where:
-  * `err` a subscription error
+  * `err` a subscription error or an error that occurs when client is disconnecting
   * `granted` is an array of `{topic, qos}` where:
     * `topic` is a subscribed to topic
     * `qos` is the granted qos level on it
@@ -320,7 +320,7 @@ Subscribe to a topic or topics
 Unsubscribe from a topic or topics
 
 * `topic` is a `String` topic or an array of topics to unsubscribe from
-* `callback` fired on unsuback
+* `callback` - `function(err)`, fired on unsuback. An error occurs if client is disconnecting.
 
 -------------------------------------------------------
 <a name="end"></a>
