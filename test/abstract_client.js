@@ -77,6 +77,20 @@ module.exports = function (server, config) {
       });
     });
 
+    it('should return `this` if end called twice', function (done) {
+      var client = connect();
+
+      client.once('connect', function () {
+        client.end();
+        var value = client.end();
+        if (value === client) {
+          done();
+        } else {
+          done(new Error('Not returning client.'));
+        }
+      });
+    });
+
     it('should stop ping timer after end called', function (done) {
       var client = connect();
 
