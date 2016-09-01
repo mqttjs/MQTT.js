@@ -106,6 +106,11 @@ function start(args) {
       console.log(payload.toString())
     }
   });
+
+  client.on('error', function(err){
+    console.warn(err);
+    client.end();
+  });
 }
 
 module.exports = start;
