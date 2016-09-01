@@ -19,7 +19,7 @@
   },
   "main": "mqtt.js",
   "scripts": {
-    "test": "mocha",
+    "test": "mocha --bail",
     "pretest": "standard",
     "browser-test": "zuul --server test/browser/server.js --local --open test/browser/test.js",
     "sauce-test": "zuul --server test/browser/server.js --tunnel ngrok -- test/browser/test.js"

@@ -26,7 +26,6 @@ function buildServer () {
 
     client.on('publish', function (packet) {
       setImmediate(function () {
-        /* jshint -W027 */
         switch (packet.qos) {
           case 0:
             break
@@ -37,7 +36,6 @@ function buildServer () {
             client.pubrec(packet)
             break
         }
-        /* jshint +W027 */
       })
     })
 

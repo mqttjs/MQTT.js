@@ -815,6 +815,7 @@ module.exports = function (server, config) {
         done()
       })
     })
+
     it('should not set a ping timer keepalive=0', function (done) {
       var client = connect({keepalive: 0})
       client.on('connect', function () {
@@ -823,6 +824,7 @@ module.exports = function (server, config) {
         done()
       })
     })
+
     it('should reconnect if pingresp is not sent', function (done) {
       var client = connect({keepalive: 1, reconnectPeriod: 100})
 
@@ -836,6 +838,7 @@ module.exports = function (server, config) {
         })
       })
     })
+
     it('should not reconnect if pingresp is successful', function (done) {
       var client = connect({keepalive: 100})
       client.once('close', function () {
@@ -843,6 +846,7 @@ module.exports = function (server, config) {
       })
       setTimeout(done, 1000)
     })
+
     it('should defer the next ping when sending a control packet', function (done) {
       var client = connect({keepalive: 1})
 
@@ -1086,6 +1090,7 @@ module.exports = function (server, config) {
         topic.should.equal(testPacket.topic)
         message.toString().should.equal(testPacket.payload)
         packet.should.equal(packet)
+        client.end()
         done()
       })
 
@@ -1113,6 +1118,7 @@ module.exports = function (server, config) {
           packet.topic.should.equal(testPacket.topic)
           packet.payload.toString().should.equal(testPacket.payload)
           packet.retain.should.equal(true)
+          client.end()
           done()
         }
       })
@@ -1327,6 +1333,7 @@ module.exports = function (server, config) {
           client.stream.end()
           tryReconnect = false
         } else {
+          client.end()
           done()
         }
       })
@@ -1347,6 +1354,7 @@ module.exports = function (server, config) {
           tryReconnect = false
         } else {
           reconnectEvent.should.equal(true)
+          client.end()
           done()
         }
       })
@@ -1481,6 +1489,35 @@ module.exports = function (server, config) {
           done()
         }
       }
+    })
+
+    it('should resubscribe when reconnecting', function (done) {
+      var client = connect({ reconnectPeriod: 100 })
+      var tryReconnect = true
+      var reconnectEvent = false
+
+      client.on('reconnect', function () {
+        reconnectEvent = true
+      })
+
+      client.on('connect', function () {
+        if (tryReconnect) {
+          client.subscribe('hello', function () {
+            client.stream.end()
+
+            server.once('client', function (serverClient) {
+              serverClient.on('subscribe', function () {
+                client.end()
+                done()
+              })
+            })
+          })
+
+          tryReconnect = false
+        } else {
+          reconnectEvent.should.equal(true)
+        }
+      })
     })
   })
 }
