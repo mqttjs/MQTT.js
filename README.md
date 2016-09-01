@@ -19,6 +19,7 @@ in JavaScript for node.js and the browser.
 * [Command Line Tools](#cli)
 * [API](#api)
 * [Browser](#browser)
+* [About QoS](#qos)
 * [Contributing](#contributing)
 * [License](#license)
 
@@ -449,6 +450,17 @@ you can then use mqtt.js in the browser with the same api than node's one.
 ```
 
 Your broker should accept websocket connection (see [MQTT over Websockets](https://github.com/mcollina/mosca/wiki/MQTT-over-Websockets) to setup [Mosca](http://mcollina.github.io/mosca/)).
+
+<a name="qos"></a>
+## About QoS
+
+Here is how QoS works:
+
+* QoS 0 : received **at most once** : The packet is sent, and that's it. There is no validation about whether it has been received.
+* QoS 1 : received **at least once** : The packet is sent and stored as long as the client has not received a confirmation from the server. MQTT ensures that it *will* be received, but there can be duplicates.
+* QoS 2 : received **exactly once** : Same as QoS 1 but there is no duplicates.
+
+About data consumption, obviously, QoS 2 > QoS 1 > QoS 0, if that's a concern to you.
 
 <a name="contributing"></a>
 ## Contributing
