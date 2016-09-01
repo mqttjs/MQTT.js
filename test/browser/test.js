@@ -1,86 +1,81 @@
-'use strict';
-/**
- * Testing dependencies
- */
+'use strict'
 
-var mqtt = require('../../lib/connect'),
-  _URL = require('url'),
-  parsed = _URL.parse(document.URL),
-  isHttps = 'https:' === parsed.protocol,
-  port = parsed.port || (isHttps ? 443 : 80),
-  host = parsed.hostname,
-  protocol = isHttps ? 'wss' : 'ws';
-
-console.log(parsed);
+var mqtt = require('../../lib/connect')
+var _URL = require('url')
+var parsed = _URL.parse(document.URL)
+var isHttps = parsed.protocol === 'https:'
+var port = parsed.port || (isHttps ? 443 : 80)
+var host = parsed.hostname
+var protocol = isHttps ? 'wss' : 'ws'
 
 function clientTests (buildClient) {
-  var client;
+  var client
 
   beforeEach(function () {
-    client = buildClient();
+    client = buildClient()
     client.on('offline', function () {
-      console.log('client offline');
-    });
+      console.log('client offline')
+    })
     client.on('connect', function () {
-      console.log('client connect');
-    });
+      console.log('client connect')
+    })
     client.on('reconnect', function () {
-      console.log('client reconnect');
-    });
-  });
+      console.log('client reconnect')
+    })
+  })
 
   afterEach(function (done) {
     client.once('close', function () {
-      done();
-    });
-    client.end();
-  });
+      done()
+    })
+    client.end()
+  })
 
   it('should connect', function (done) {
     client.on('connect', function () {
-      done();
-    });
-  });
+      done()
+    })
+  })
 
   it('should publish and subscribe', function (done) {
     client.subscribe('hello', function () {
-      done();
-    }).publish('hello', 'world');
-  });
+      done()
+    }).publish('hello', 'world')
+  })
 }
 
 describe('MqttClient', function () {
-  this.timeout(10000);
+  this.timeout(10000)
 
   describe('specifying nothing', function () {
     clientTests(function () {
-      return mqtt.connect();
-    });
-  });
+      return mqtt.connect()
+    })
+  })
 
-  if ('localhost' === parsed.host) {
+  if (parsed.host === 'localhost') {
     describe('specifying a port', function () {
       clientTests(function () {
-        return mqtt.connect({ protocol: protocol, port: port });
-      });
-    });
+        return mqtt.connect({ protocol: protocol, port: port })
+      })
+    })
   }
 
   describe('specifying a port and host', function () {
     clientTests(function () {
-      return mqtt.connect({ protocol: protocol, port: port, host: host });
-    });
-  });
+      return mqtt.connect({ protocol: protocol, port: port, host: host })
+    })
+  })
 
   describe('specifying a URL', function () {
     clientTests(function () {
-      return mqtt.connect(protocol + '://' + host + ':' + port);
-    });
-  });
+      return mqtt.connect(protocol + '://' + host + ':' + port)
+    })
+  })
 
   describe('specifying a URL with a path', function () {
     clientTests(function () {
-      return mqtt.connect(protocol + '://' + host + ':' + port + '/mqtt');
-    });
-  });
-});
+      return mqtt.connect(protocol + '://' + host + ':' + port + '/mqtt')
+    })
+  })
+})

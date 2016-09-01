@@ -1,7 +1,7 @@
 The MIT License (MIT)
 =====================
 
-Copyright (c) 2015 MQTT.js contributors
+Copyright (c) 2015-2016 MQTT.js contributors
 ---------------------------------------
 
 *MQTT.js contributors listed at <https://github.com/mqttjs/MQTT.js#contributors>*

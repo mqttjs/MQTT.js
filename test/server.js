@@ -1,18 +1,15 @@
-'use strict';
-/**
- * Requires
- */
-var net = require('net'),
-  tls = require('tls'),
-  util = require('util'),
-  Connection = require('mqtt-connection'),
-  MqttServer, MqttSecureServer;
+'use strict'
+
+var net = require('net')
+var tls = require('tls')
+var util = require('util')
+var Connection = require('mqtt-connection')
+var MqttServer
+var MqttSecureServer
 
 function setupConnection (duplex) {
-  /*jshint validthis: true*/
-  var connection = new Connection(duplex);
-  this.emit('client', connection);
-  /*jshint validthis: false*/
+  var connection = new Connection(duplex)
+  this.emit('client', connection)
 }
 
 /*
@@ -22,20 +19,20 @@ function setupConnection (duplex) {
  */
 MqttServer = module.exports = function Server (listener) {
   if (!(this instanceof Server)) {
-    return new Server(listener);
+    return new Server(listener)
   }
 
-  net.Server.call(this);
+  net.Server.call(this)
 
-  this.on('connection', setupConnection);
+  this.on('connection', setupConnection)
 
   if (listener) {
-    this.on('client', listener);
+    this.on('client', listener)
   }
 
-  return this;
-};
-util.inherits(MqttServer, net.Server);
+  return this
+}
+util.inherits(MqttServer, net.Server)
 
 /**
  * MqttSecureServer
@@ -46,23 +43,23 @@ util.inherits(MqttServer, net.Server);
 MqttSecureServer = module.exports.SecureServer =
   function SecureServer (opts, listener) {
     if (!(this instanceof SecureServer)) {
-      return new SecureServer(opts, listener);
+      return new SecureServer(opts, listener)
     }
 
     // new MqttSecureServer(function(){})
-    if ('function' === typeof opts) {
-      listener = opts;
-      opts = {};
+    if (typeof opts === 'function') {
+      listener = opts
+      opts = {}
     }
 
-    tls.Server.call(this, opts);
+    tls.Server.call(this, opts)
 
     if (listener) {
-      this.on('client', listener);
+      this.on('client', listener)
     }
 
-    this.on('secureConnection', setupConnection);
+    this.on('secureConnection', setupConnection)
 
-    return this;
-  };
-util.inherits(MqttSecureServer, tls.Server);
+    return this
+  }
+util.inherits(MqttSecureServer, tls.Server)

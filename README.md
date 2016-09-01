@@ -25,6 +25,10 @@ in JavaScript for node.js and the browser.
 
 MQTT.js is an OPEN Open Source Project, see the [Contributing](#contributing) section to find out what this means.
 
+[![JavaScript Style
+Guide](https://cdn.rawgit.com/feross/standard/master/badge.svg)](https://github.com/feross/standard)
+
+
 <a name="notes"></a>
 ## Important notes for existing users
 
@@ -63,19 +67,19 @@ npm install mqtt --save
 For the sake of simplicity, let's put the subscriber and the publisher in the same file:
 
 ```js
-var mqtt    = require('mqtt');
-var client  = mqtt.connect('mqtt://test.mosquitto.org');
+var mqtt = require('mqtt')
+var client  = mqtt.connect('mqtt://test.mosquitto.org')
 
 client.on('connect', function () {
-  client.subscribe('presence');
-  client.publish('presence', 'Hello mqtt');
-});
+  client.subscribe('presence')
+  client.publish('presence', 'Hello mqtt')
+})
 
 client.on('message', function (topic, message) {
   // message is Buffer
-  console.log(message.toString());
-  client.end();
-});
+  console.log(message.toString())
+  client.end()
+})
 ```
 
 output:
@@ -225,7 +229,7 @@ version 1.3 and 1.4 works fine without those.
 
 #### Event `'connect'`
 
-`function(connack) {}`
+`function (connack) {}`
 
 Emitted on successful (re)connection (i.e. connack rc=0). 
 * `connack` received connack packet. When `clean` connection option is `false` and server has a previous session 
@@ -234,32 +238,32 @@ you may rely on stored session and prefer not to send subscribe commands for the
 
 #### Event `'reconnect'`
 
-`function() {}`
+`function () {}`
 
 Emitted when a reconnect starts.
 
 #### Event `'close'`
 
-`function() {}`
+`function () {}`
 
 Emitted after a disconnection.
 
 #### Event `'offline'`
 
-`function() {}`
+`function () {}`
 
 Emitted when the client goes offline.
 
 #### Event `'error'`
 
-`function(error) {}`
+`function (error) {}`
 
 Emitted when the client cannot connect (i.e. connack rc != 0) or when a
 parsing error occurs.
 
 ### Event `'message'`
 
-`function(topic, message, packet) {}`
+`function (topic, message, packet) {}`
 
 Emitted when the client receives a publish packet
 * `topic` topic of the received packet
@@ -269,7 +273,7 @@ Emitted when the client receives a publish packet
 
 ### Event `'packetsend'`
 
-`function(packet) {}`
+`function (packet) {}`
 
 Emitted when the client sends any packet. This includes .published() packets
 as well as packets used by MQTT for managing subscriptions and connections
@@ -278,7 +282,7 @@ as well as packets used by MQTT for managing subscriptions and connections
 
 ### Event `'packetreceive'`
 
-`function(packet) {}`
+`function (packet) {}`
 
 Emitted when the client receives any packet. This includes packets from
 subscribed topics as well as packets used by MQTT for managing subscriptions
@@ -297,7 +301,7 @@ Publish a message to a topic
 * `options` is the options to publish with, including:
   * `qos` QoS level, `Number`, default `0`
   * `retain` retain flag, `Boolean`, default `false`
-* `callback` - `function(err)`, fired when the QoS handling completes,
+* `callback` - `function (err)`, fired when the QoS handling completes,
   or at the next tick if QoS 0. An error occurs if client is disconnecting.
 
 -------------------------------------------------------
@@ -311,7 +315,7 @@ Subscribe to a topic or topics
   keys the topic name and as value the QoS, like `{'test1': 0, 'test2': 1}`.
 * `options` is the options to subscribe with, including:
   * `qos` qos subscription level, default 0
-* `callback` - `function(err, granted)`
+* `callback` - `function (err, granted)`
   callback fired on suback where:
   * `err` a subscription error or an error that occurs when client is disconnecting
   * `granted` is an array of `{topic, qos}` where:
@@ -325,7 +329,7 @@ Subscribe to a topic or topics
 Unsubscribe from a topic or topics
 
 * `topic` is a `String` topic or an array of topics to unsubscribe from
-* `callback` - `function(err)`, fired on unsuback. An error occurs if client is disconnecting.
+* `callback` - `function (err)`, fired on unsuback. An error occurs if client is disconnecting.
 
 -------------------------------------------------------
 <a name="end"></a>
@@ -436,15 +440,15 @@ you can then use mqtt.js in the browser with the same api than node's one.
 <body>
 <script src="./browserMqtt.js"></script>
 <script>
-      var client = mqtt.connect(); // you add a ws:// url here
-      client.subscribe("mqtt/demo");
+      var client = mqtt.connect() // you add a ws:// url here
+      client.subscribe("mqtt/demo")
 
-      client.on("message", function(topic, payload) {
-        alert([topic, payload].join(": "));
-        client.end();
-      });
+      client.on("message", function (topic, payload) {
+        alert([topic, payload].join(": "))
+        client.end()
+      })
 
-      client.publish("mqtt/demo", "hello world!");
+      client.publish("mqtt/demo", "hello world!")
     </script>
 </body>
 </html>

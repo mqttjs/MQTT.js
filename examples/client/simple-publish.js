@@ -1,5 +1,7 @@
-var mqtt = require('../..')
-  , client = mqtt.connect();
+'use strict'
 
-client.publish('presence', 'hello!');
-client.end();
+var mqtt = require('../..')
+var client = mqtt.connect()
+
+client.publish('presence', 'hello!')
+client.end()
