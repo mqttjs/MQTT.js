@@ -113,6 +113,7 @@ describe('MqttClient', function () {
         currentId = client._nextId();
 
       client._nextId().should.equal(currentId + 1);
+      client.end();
     });
 
     it('should return 1 once the interal counter reached limit', function () {
@@ -121,6 +122,7 @@ describe('MqttClient', function () {
 
       client._nextId().should.equal(65535);
       client._nextId().should.equal(1);
+      client.end();
     });
   });
 
@@ -139,6 +141,7 @@ describe('MqttClient', function () {
 
         client.once('close', function () {
           should.exist(client.reconnectTimer);
+          client.end();
           done();
         });
       });
@@ -161,8 +164,8 @@ describe('MqttClient', function () {
           { port: port, host: 'localhost' }
         ], keepalive: 50 });
 
-        server.once('client', function (serverClient) {
-          serverClient.disconnect();
+        server.once('client', function () {
+          client.end();
           done();
         });
 
@@ -190,8 +193,8 @@ describe('MqttClient', function () {
           { port: port, host: 'localhost' }
         ], connectTimeout: 500 });
 
-        server.once('client', function (serverClient) {
-          serverClient.disconnect();
+        server.once('client', function () {
+          client.end();
           done();
         });
 

@@ -1,14 +1,11 @@
 'use strict';
 /*eslint default-case:0*/
 /*eslint guard-for-in:0*/
-var port, handleClient,
+var handleClient,
   websocket = require('websocket-stream'),
   WebSocketServer = require('ws').Server,
   Connection = require('mqtt-connection'),
-  http = require('http'),
-  ports = require('./ports');
-
-port = ports.port;
+  http = require('http');
 
 handleClient = function (client) {
   var self = this;
@@ -109,23 +106,21 @@ function start (startPort, done) {
       return ws.end();
     }
 
+    console.log('MQTT connection');
+
     stream = websocket(ws);
     connection = new Connection(stream);
     handleClient.call(server, connection);
   });
   server.listen(startPort, done);
+  server.on('request', function (req, res) {
+    res.statusCode = 404;
+    res.end('Not Found');
+  });
   return server;
 }
 
 if (require.main === module) {
-  start(port, function (err) {
-    if (err) {
-      console.error(err);
-      return;
-    }
-    console.log('standalone server started on port', port);
-  });
-
   start(process.env.PORT || process.env.ZUUL_PORT, function (err) {
     if (err) {
       console.error(err);

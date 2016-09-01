@@ -8,6 +8,8 @@ var http = require('http'),
   WebSocketServer = require('ws').Server,
   Connection = require('mqtt-connection'),
   abstractClientTests = require('./abstract_client'),
+  mqtt = require('../'),
+  xtend = require('xtend'),
   setImmediate = global.setImmediate || function (callback) {
     // works in node v0.8
     process.nextTick(callback);
@@ -91,5 +93,33 @@ server.on('client', function (client) {
 
 describe('Websocket Client', function () {
   var config = { protocol: 'ws', port: port };
+
+  it('should use mqtt as the protocol by default', function (done) {
+    server.once('client', function (client) {
+      client.stream.socket.protocol.should.equal('mqtt');
+    });
+
+    var opts = xtend(config, {});
+
+    mqtt.connect(opts).on('connect', function () {
+      this.end(true, done);
+    });
+  });
+
+  it('should use mqttv3.1 as the protocol if using v3.1', function (done) {
+    server.once('client', function (client) {
+      client.stream.socket.protocol.should.equal('mqttv3.1');
+    });
+
+    var opts = xtend(config, {
+      protocolId: 'MQIsdp',
+      protocolVersion: 3
+    });
+
+    mqtt.connect(opts).on('connect', function () {
+      this.end(true, done);
+    });
+  });
+
   abstractClientTests(server, config);
 });

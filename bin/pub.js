@@ -1,13 +1,16 @@
 #!/usr/bin/env node
 
 var mqtt      = require('../')
+  , pump      = require('pump')
   , path      = require('path')
   , fs        = require('fs')
   , concat    = require('concat-stream')
+  , Writable  = require('readable-stream').Writable
   , helpMe    = require('help-me')({
       dir: path.join(__dirname, '..', 'doc')
     })
-  , minimist  = require('minimist');
+  , minimist  = require('minimist')
+  , split2    = require('split2');
 
 function send(args) {
   var client = mqtt.connect(args);
@@ -17,11 +20,30 @@ function send(args) {
   });
 }
 
+function multisend (args) {
+  var client = mqtt.connect(args);
+  var sender = new Writable({
+    objectMode: true
+  })
+  sender._write = function (line, enc, cb) {
+    client.publish(args.topic, line.trim(), args, cb);
+  }
+
+  client.on('connect', function () {
+    pump(process.stdin, split2(), sender, function (err) {
+      client.end()
+      if (err) {
+        throw err
+      }
+    })
+  })
+}
+
 function start(args) {
   args = minimist(args, {
     string: ['hostname', 'username', 'password', 'key', 'cert', 'ca', 'message'],
     integer: ['port', 'qos'],
-    boolean: ['stdin', 'retain', 'help', 'insecure'],
+    boolean: ['stdin', 'retain', 'help', 'insecure', 'multiline'],
     alias: {
       port: 'p',
       hostname: ['h', 'host'],
@@ -33,6 +55,7 @@ function start(args) {
       username: 'u',
       password: 'P',
       stdin: 's',
+      multiline: 'M',
       protocol: ['C', 'l'],
       help: 'H',
       ca: 'cafile'
@@ -93,10 +116,14 @@ function start(args) {
   }
 
   if (args.stdin) {
-    process.stdin.pipe(concat(function(data) {
-      args.message = data.toString().trim();
-      send(args);
-    }));
+    if (args.multiline) {
+      multisend(args)
+    } else {
+      process.stdin.pipe(concat(function(data) {
+        args.message = data.toString().trim();
+        send(args);
+      }));
+    }
   } else {
     send(args);
   }

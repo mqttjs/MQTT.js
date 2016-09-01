@@ -1,7 +1,7 @@
 {
   "name": "mqtt",
   "description": "A library for the MQTT protocol",
-  "version": "1.7.1",
+  "version": "1.14.1",
   "contributors": [
     "Adam Rudd <adamvrr@gmail.com>",
     "Matteo Collina <matteo.collina@gmail.com> (https://github.com/mcollina)"
@@ -21,11 +21,12 @@
   "scripts": {
     "test": "mocha",
     "pretest": "npm run check-style",
-    "check-style:eslint": "eslint mqtt.js lib/* test/*.js test/browser/*.js test/helpers/*.js",
-    "check-style:jshint": "jshint mqtt.js lib/* test/*.js test/browser/*.js test/helpers/*.js",
-    "check-style:jscs": "jscs mqtt.js lib/* test/*.js test/browser/*.js test/helpers/*.js",
+    "check-style:eslint": "eslint mqtt.js lib test test/browser test/helpers",
+    "check-style:jshint": "jshint mqtt.js lib test test/browser test/helpers",
+    "check-style:jscs": "jscs mqtt.js lib test test/browser test/helpers",
     "check-style": "npm run check-style:jshint && npm run check-style:jscs && npm run check-style:eslint",
-    "browser-test": "zuul --server test/browser/server.js --local --open test/browser/test.js"
+    "browser-test": "zuul --server test/browser/server.js --local --open test/browser/test.js",
+    "sauce-test": "zuul --server test/browser/server.js --tunnel ngrok -- test/browser/test.js"
   },
   "pre-commit": [
     "test"
@@ -48,13 +49,16 @@
     "commist": "^1.0.0",
     "concat-stream": "^1.4.7",
     "end-of-stream": "^1.1.0",
-    "help-me": "^0.1.0",
+    "help-me": "^1.0.0",
     "inherits": "^2.0.1",
     "minimist": "^1.1.0",
     "mqtt-packet": "^4.0.0",
     "readable-stream": "^2.0.0",
-    "websocket-stream": "^3.1.0",
+    "pump": "^1.0.1",
+    "readable-stream": "~1.0.2",
     "reinterval": "^1.0.1",
+    "split2": "^2.0.1",
+    "websocket-stream": "^3.1.0",
     "xtend": "^4.0.0"
   },
   "devDependencies": {
@@ -67,9 +71,10 @@
     "should": "*",
     "sinon": "~1.10.0",
     "through2": "^2.0.0",
+    "mqtt-connection": "^2.0.0",
     "uglify": "^0.1.1",
     "ws": "^0.8.0",
-    "mqtt-connection": "^2.0.0",
-    "zuul": "^3.4.0"
+    "zuul": "^3.4.0",
+    "zuul-ngrok": "gnandretta/zuul-ngrok#upgrade-ngrok"
   }
 }

@@ -10,6 +10,7 @@ Available options:
   -m/--message MSG      the message body
   -r/--retain           send a retained message
   -s/--stdin            read the message body from stdin
+  -M/--multiline        read lines from stdin as multiple messages 
   -u/--username USER    the username
   -P/--password PASS    the password
   -C/--protocol PROTO   the protocol to use, 'mqtt',
@@ -21,5 +22,5 @@ Available options:
   --will-topic TOPIC    the will topic
   --will-payload BODY   the will message
   --will-qos 0/1/2      the will qos
-  --will-retain         send a will retained message
+  --will-retain         send a will retained message 
   -H/--help             show this

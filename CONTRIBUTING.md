@@ -1,4 +1,4 @@
-# mqtt-packet is an OPEN Open Source Project
+# MQTT.js is an OPEN Open Source Project
 
 -----------------------------------------
 

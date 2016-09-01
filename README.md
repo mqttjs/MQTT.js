@@ -3,6 +3,10 @@
 
 [![Build Status](https://travis-ci.org/mqttjs/MQTT.js.svg)](https://travis-ci.org/mqttjs/MQTT.js)
 
+[![Sauce Test Status](https://saucelabs.com/browser-matrix/mqttjs.svg)](https://saucelabs.com/u/mqttjs)
+
+[![DefinitelyTyped](http://img.shields.io/badge/Definitely-Typed-blue.svg)](https://github.com/borisyankov/DefinitelyTyped/tree/master/mqtt)
+
 [![NPM](https://nodei.co/npm/mqtt.png)](https://nodei.co/npm/mqtt/)
 [![NPM](https://nodei.co/npm-dl/mqtt.png)](https://nodei.co/npm/mqtt/)
 
@@ -126,6 +130,8 @@ See `mqtt help <command>` for the command help.
   * <a href="#unsubscribe"><code>mqtt.Client#<b>unsubscribe()</b></code></a>
   * <a href="#end"><code>mqtt.Client#<b>end()</b></code></a>
   * <a href="#handleMessage"><code>mqtt.Client#<b>handleMessage()</b></code></a>
+  * <a href="#connected"><code>mqtt.Client#<b>connected</b></code></a>
+  * <a href="#reconnecting"><code>mqtt.Client#<b>reconnecting</b></code></a>
   * <a href="#store"><code>mqtt.<b>Store()</b></code></a>
   * <a href="#put"><code>mqtt.Store#<b>put()</b></code></a>
   * <a href="#del"><code>mqtt.Store#<b>del()</b></code></a>
@@ -173,6 +179,7 @@ The arguments are:
 the `connect` event. Typically a `net.Socket`.
 * `options` is the client connection options (see: the [connect packet](https://github.com/mcollina/mqtt-packet#connect)). Defaults:
   * `keepalive`: `10` seconds, set to `0` to disable
+  * `reschedulePings`: reschedule ping messages after sending packets (default `true`)
   * `clientId`: `'mqttjs_' + Math.random().toString(16).substr(2, 8)`
   * `protocolId`: `'MQTT'`
   * `protocolVersion`: `4`
@@ -186,6 +193,7 @@ the `connect` event. Typically a `net.Socket`.
   * `password`: the password required by your broker, if any
   * `incomingStore`: a [Store](#store) for the incoming packets
   * `outgoingStore`: a [Store](#store) for the outgoing packets
+  * `queueQoSZero`: if connection is broken, queue outgoing QoS zero messages (default `true`)
   * `will`: a message that will sent by the broker automatically when
      the client disconnect badly. The format is:
     * `topic`: the topic to publish
@@ -257,6 +265,25 @@ Emitted when the client receives a publish packet
 * `packet` received packet, as defined in
   [mqtt-packet](https://github.com/mcollina/mqtt-packet#publish)
 
+### Event `'packetsend'`
+
+`function(packet) {}`
+
+Emitted when the client sends any packet. This includes .published() packets
+as well as packets used by MQTT for managing subscriptions and connections
+* `packet` received packet, as defined in
+  [mqtt-packet](https://github.com/mcollina/mqtt-packet)
+
+### Event `'packetreceive'`
+
+`function(packet) {}`
+
+Emitted when the client receives any packet. This includes packets from
+subscribed topics as well as packets used by MQTT for managing subscriptions
+and connections
+* `packet` received packet, as defined in
+  [mqtt-packet](https://github.com/mcollina/mqtt-packet)
+
 -------------------------------------------------------
 <a name="publish"></a>
 ### mqtt.Client#publish(topic, message, [options], [callback])
@@ -268,8 +295,8 @@ Publish a message to a topic
 * `options` is the options to publish with, including:
   * `qos` QoS level, `Number`, default `0`
   * `retain` retain flag, `Boolean`, default `false`
-* `callback` callback fired when the QoS handling completes,
-  or at the next tick if QoS 0.
+* `callback` - `function(err)`, fired when the QoS handling completes,
+  or at the next tick if QoS 0. An error occurs if client is disconnecting.
 
 -------------------------------------------------------
 <a name="subscribe"></a>
@@ -284,19 +311,19 @@ Subscribe to a topic or topics
   * `qos` qos subscription level, default 0
 * `callback` - `function(err, granted)`
   callback fired on suback where:
-  * `err` a subscription error
+  * `err` a subscription error or an error that occurs when client is disconnecting
   * `granted` is an array of `{topic, qos}` where:
     * `topic` is a subscribed to topic
     * `qos` is the granted qos level on it
 
 -------------------------------------------------------
 <a name="unsubscribe"></a>
-### mqtt.Client#unsubscribe(topic/topic array, [options], [callback])
+### mqtt.Client#unsubscribe(topic/topic array, [callback])
 
 Unsubscribe from a topic or topics
 
 * `topic` is a `String` topic or an array of topics to unsubscribe from
-* `callback` fired on unsuback
+* `callback` - `function(err)`, fired on unsuback. An error occurs if client is disconnecting.
 
 -------------------------------------------------------
 <a name="end"></a>
@@ -317,6 +344,18 @@ Close the client, accepts the following options:
 Handle messages with backpressure support, one at a time.
 Override at will, but __always call `callback`__, or the client
 will hang.
+
+-------------------------------------------------------
+<a name="connected"></a>
+### mqtt.Client#connected
+
+Boolean : set to `true` if the client is connected. `false` otherwise.
+
+-------------------------------------------------------
+<a name="reconnecting"></a>
+### mqtt.Client#reconnecting
+
+Boolean : set to `true` if the client is trying to reconnect to the server. `false` otherwise.
 
 -------------------------------------------------------
 <a name="store"></a>
