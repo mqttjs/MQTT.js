@@ -32,10 +32,12 @@ Guide](https://cdn.rawgit.com/feross/standard/master/badge.svg)](https://github.
 <a name="notes"></a>
 ## Important notes for existing users
 
-v2.0.0 removes support for node v0.8 and v0.10, and it is 3x faster in sending
+v2.0.0 removes support for node v0.8, v0.10 and v0.12, and it is 3x faster in sending
 packets. It also removes all the deprecated functionality in v1.0.0,
 mainly `mqtt.createConnection` and `mqtt.Server`. From v2.0.0,
 subscriptions are restored upon reconnection if `clean: true`.
+v1.x.x is now in *LTS*, and it will keep being supported as long as
+there are v0.8, v0.10 and v0.12 users.
 
 v1.0.0 improves the overall architecture of the project, which is now
 split into three components: MQTT.js keeps the Client,
