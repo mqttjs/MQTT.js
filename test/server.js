@@ -2,7 +2,7 @@
 
 var net = require('net')
 var tls = require('tls')
-var util = require('util')
+var inherits = require('inherits')
 var Connection = require('mqtt-connection')
 var MqttServer
 var MqttSecureServer
@@ -32,7 +32,7 @@ MqttServer = module.exports = function Server (listener) {
 
   return this
 }
-util.inherits(MqttServer, net.Server)
+inherits(MqttServer, net.Server)
 
 /**
  * MqttSecureServer
@@ -62,4 +62,4 @@ MqttSecureServer = module.exports.SecureServer =
 
     return this
   }
-util.inherits(MqttSecureServer, tls.Server)
+inherits(MqttSecureServer, tls.Server)
