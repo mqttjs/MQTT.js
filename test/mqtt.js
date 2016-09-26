@@ -13,6 +13,18 @@ describe('mqtt', function () {
       c.should.be.instanceOf(mqtt.MqttClient)
     })
 
+    it('should throw an error when called with no protocol specified', function () {
+      (function () {
+        mqtt.connect('foo.bar.com')
+      }).should.throw('Missing protocol')
+    })
+
+    it('should throw an error when called with no protocol specified - with options', function () {
+      (function () {
+        mqtt.connect('tcp://foo.bar.com', { protocol: null })
+      }).should.throw('Missing protocol')
+    })
+
     it('should return an MqttClient with username option set', function () {
       var c = mqtt.connect('mqtt://user:pass@localhost:1883')
 
