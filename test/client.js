@@ -260,5 +260,68 @@ describe('MqttClient', function () {
         }
       }, 2000);
     });
+
+    it('shoud not send the same packet multiple times on a flaky connection', function (done) {
+      this.timeout(3500);
+
+      var KILL_COUNT = 4,
+        killedConnections = 0,
+        subCallbackCount = 0,
+        subIds = {},
+        client = mqtt.connect({
+          port: port + 46,
+          host: 'localhost',
+          connectTimeout: 350,
+          reconnectPeriod: 300
+        }),
+        server = new mqtt.Server(function (client) {
+          client.on('connect', function (packet) {
+            if ('invalid' === packet.clientId) {
+              client.connack({returnCode: 2});
+            } else {
+              client.connack({returnCode: 0});
+            }
+          });
+        }).listen(port + 46);
+
+      server.on('client', function (c) {
+        client.subscribe('topic', function () {
+          subCallbackCount++;
+          if (subCallbackCount === KILL_COUNT) {
+            done();
+            client.end(true);
+            c.destroy();
+            server.destroy();
+          }
+        });
+
+        c.on('subscribe', function (packet) {
+          if (killedConnections < KILL_COUNT) {
+            // Kill the first few sub attempts to simulate a flaky connection
+            killedConnections++;
+            c.destroy();
+          } else {
+            // Keep track of acks
+            if (!subIds[packet.messageId]) {
+              subIds[packet.messageId] = 0;
+            }
+            subIds[packet.messageId]++;
+            if (1 < subIds[packet.messageId]) {
+              done(new Error('Multiple duplicate acked subscriptions received for messageId ' + packet.messageId));
+              client.end(true);
+              c.destroy();
+              server.destroy();
+            }
+
+            c.suback({
+              messageId: packet.messageId,
+              granted: packet.subscriptions.map(function (e) {
+                return e.qos;
+              })
+            });
+          }
+        });
+      });
+    });
   });
 });
