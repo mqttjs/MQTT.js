@@ -253,7 +253,7 @@ describe('MqttClient', function () {
       }, 2000)
     })
 
-    it.only('should not send the same packet multiple times on a flaky connection', function (done) {
+    it('should not send the same packet multiple times on a flaky connection', function (done) {
       this.timeout(3500)
 
       var KILL_COUNT = 4
