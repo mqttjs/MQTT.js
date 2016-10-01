@@ -253,12 +253,11 @@ describe('MqttClient', function () {
       }, 2000)
     })
 
-    it.only('should not send the same packet multiple times on a flaky connection', function (done) {
+    it('should not send the same packet multiple times on a flaky connection', function (done) {
       this.timeout(3500)
 
       var KILL_COUNT = 4
       var killedConnections = 0
-      var subCallbackCount = 0
       var subIds = {}
       var client = mqtt.connect({
         port: port + 46,
@@ -280,13 +279,10 @@ describe('MqttClient', function () {
 
       server2.on('client', function (c) {
         client.subscribe('topic', function () {
-          subCallbackCount++
-          if (subCallbackCount === KILL_COUNT) {
-            done()
-            client.end(true)
-            c.destroy()
-            server2.destroy()
-          }
+          done()
+          client.end(true)
+          c.destroy()
+          server2.destroy()
         })
 
         c.on('subscribe', function (packet) {
