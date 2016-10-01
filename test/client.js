@@ -268,6 +268,7 @@ describe('MqttClient', function () {
       })
 
       var server2 = new Server(function (client) {
+        client.on('error', function () {})
         client.on('connect', function (packet) {
           if (packet.clientId === 'invalid') {
             client.connack({returnCode: 2})
