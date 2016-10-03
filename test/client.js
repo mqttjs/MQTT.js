@@ -7,6 +7,7 @@ var path = require('path')
 var abstractClientTests = require('./abstract_client')
 var net = require('net')
 var eos = require('end-of-stream')
+var Connection = require('mqtt-connection')
 var Server = require('./server')
 var port = 9876
 var server
@@ -253,7 +254,7 @@ describe('MqttClient', function () {
       }, 2000)
     })
 
-    it('should not send the same packet multiple times on a flaky connection', function (done) {
+    it('should not send the same subcribe multiple times on a flaky connection', function (done) {
       this.timeout(3500)
 
       var KILL_COUNT = 4
@@ -282,7 +283,7 @@ describe('MqttClient', function () {
           done()
           client.end(true)
           c.destroy()
-          server2.destroy()
+          server2.close()
         })
 
         c.on('subscribe', function (packet) {
@@ -309,6 +310,70 @@ describe('MqttClient', function () {
                 return e.qos
               })
             })
+          }
+        })
+      })
+    })
+
+    it('should not send the same publish multiple times on a flaky connection', function (done) {
+      this.timeout(3500)
+
+      var KILL_COUNT = 4
+      var killedConnections = 0
+      var pubIds = {}
+      var client = mqtt.connect({
+        port: port + 47,
+        host: 'localhost',
+        connectTimeout: 350,
+        reconnectPeriod: 300
+      })
+
+      var server2 = net.createServer(function (stream) {
+        var client = new Connection(stream)
+        client.on('error', function () {})
+        client.on('connect', function (packet) {
+          if (packet.clientId === 'invalid') {
+            client.connack({returnCode: 2})
+          } else {
+            client.connack({returnCode: 0})
+          }
+        })
+
+        this.emit('client', client)
+      }).listen(port + 47)
+
+      server2.on('client', function (c) {
+        client.publish('topic', 'data', { qos: 1 }, function () {
+          done()
+          client.end(true)
+          c.destroy()
+          server2.destroy()
+        })
+
+        c.on('publish', function onPublish (packet) {
+          if (killedConnections < KILL_COUNT) {
+            // Kill the first few pub attempts to simulate a flaky connection
+            killedConnections++
+            c.destroy()
+
+            // to avoid receiving inflight messages
+            c.removeListener('publish', onPublish)
+          } else {
+            // Keep track of acks
+            if (!pubIds[packet.messageId]) {
+              pubIds[packet.messageId] = 0
+            }
+
+            pubIds[packet.messageId]++
+
+            if (pubIds[packet.messageId] > 1) {
+              done(new Error('Multiple duplicate acked publishes received for messageId ' + packet.messageId))
+              client.end(true)
+              c.destroy()
+              server2.destroy()
+            }
+
+            c.puback(packet)
           }
         })
       })
