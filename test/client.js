@@ -258,6 +258,7 @@ describe('MqttClient', function () {
 
       var KILL_COUNT = 4
       var killedConnections = 0
+      var ackedMessages = 0
       var subIds = {}
       var client = mqtt.connect({
         port: port + 46,
@@ -278,14 +279,16 @@ describe('MqttClient', function () {
       }).listen(port + 46)
 
       server2.on('client', function (c) {
-        client.subscribe('topic', function () {
-          done()
-          client.end(true)
-          c.destroy()
-          server2.destroy()
+        client.publish('topic', 'data', {qos: 1}, function () {
+          ackedMessages++
+          if (ackedMessages === KILL_COUNT) {
+            done()
+            client.end(true)
+            c.destroy()
+            server2.destroy()
+          }
         })
-
-        c.on('subscribe', function (packet) {
+        c.on('publish', function (packet) {
           if (killedConnections < KILL_COUNT) {
             // Kill the first few sub attempts to simulate a flaky connection
             killedConnections++
@@ -303,12 +306,7 @@ describe('MqttClient', function () {
               server2.destroy()
             }
 
-            c.suback({
-              messageId: packet.messageId,
-              granted: packet.subscriptions.map(function (e) {
-                return e.qos
-              })
-            })
+            c.puback({messageId: packet.messageId})
           }
         })
       })
