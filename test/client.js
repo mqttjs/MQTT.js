@@ -254,62 +254,61 @@ describe('MqttClient', function () {
       }, 2000)
     })
 
-    it('should not send the same subcribe multiple times on a flaky connection', function (done) {
+    it('should not send the same publish multiple times on a flaky connection', function (done) {
       this.timeout(3500)
 
       var KILL_COUNT = 4
       var killedConnections = 0
+      var ackedMessages = 0
       var subIds = {}
-      var client = mqtt.connect({
+      var publishingClient = mqtt.connect({
         port: port + 46,
         host: 'localhost',
         connectTimeout: 350,
         reconnectPeriod: 300
       })
 
-      var server2 = new Server(function (client) {
-        client.on('error', function () {})
-        client.on('connect', function (packet) {
+      var server = new Server(function (clientConnection) {
+        clientConnection.on('error', function () {})
+        clientConnection.on('connect', function (packet) {
           if (packet.clientId === 'invalid') {
-            client.connack({returnCode: 2})
+            clientConnection.connack({returnCode: 2})
           } else {
-            client.connack({returnCode: 0})
+            clientConnection.connack({returnCode: 0})
           }
         })
       }).listen(port + 46)
 
-      server2.on('client', function (c) {
-        client.subscribe('topic', function () {
-          done()
-          client.end(true)
-          c.destroy()
-          server2.close()
+      server.on('client', function (clientConnection) {
+        // Have the client publish to a topic when it connects to the server.
+        publishingClient.publish('topic', 'data', {qos: 1}, function () {
+          ackedMessages++
+          if (ackedMessages === KILL_COUNT) {
+            done()
+            publishingClient.end(true)
+            clientConnection.destroy()
+            server.destroy()
+          }
         })
-
-        c.on('subscribe', function (packet) {
+        clientConnection.on('publish', function onPublish (packet) {
           if (killedConnections < KILL_COUNT) {
             // Kill the first few sub attempts to simulate a flaky connection
             killedConnections++
-            c.destroy()
+            clientConnection.destroy()
+            clientConnection.removeListener('publish', onPublish)
           } else {
             // Keep track of acks
+            clientConnection.puback({messageId: packet.messageId})
             if (!subIds[packet.messageId]) {
               subIds[packet.messageId] = 0
             }
             subIds[packet.messageId]++
             if (subIds[packet.messageId] > 1) {
-              done(new Error('Multiple duplicate acked subscriptions received for messageId ' + packet.messageId))
-              client.end(true)
-              c.destroy()
-              server2.destroy()
+              done(new Error('Multiple duplicate acked publishes received for messageId ' + packet.messageId))
+              publishingClient.end(true)
+              clientConnection.destroy()
+              server.destroy()
             }
-
-            c.suback({
-              messageId: packet.messageId,
-              granted: packet.subscriptions.map(function (e) {
-                return e.qos
-              })
-            })
           }
         })
       })
