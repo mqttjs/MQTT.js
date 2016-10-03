@@ -74,7 +74,8 @@ function start (args) {
       host: 'localhost',
       qos: 0,
       retain: false,
-      topic: ''
+      topic: '',
+      message: ''
     }
   })
 
@@ -118,7 +119,7 @@ function start (args) {
   }
 
   args.topic = (args.topic || args._.shift()).toString()
-  args.message = (args.message || args._.shift() || '').toString() || ''
+  args.message = (args.message || args._.shift()).toString()
 
   if (!args.topic) {
     console.error('missing topic\n')
