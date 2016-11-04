@@ -10,7 +10,7 @@ var minimist = require('minimist')
 
 function start (args) {
   args = minimist(args, {
-    string: ['hostname', 'username', 'password', 'key', 'cert', 'ca'],
+    string: ['hostname', 'username', 'password', 'key', 'cert', 'ca', 'clientId', 'i', 'id'],
     integer: ['port', 'qos', 'keepAlive'],
     boolean: ['stdin', 'help', 'clean', 'insecure'],
     alias: {
