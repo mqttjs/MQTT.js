@@ -52,7 +52,6 @@ function multisend (args) {
 function start (args) {
   args = minimist(args, {
     string: ['hostname', 'username', 'password', 'key', 'cert', 'ca', 'message', 'clientId', 'i', 'id'],
-    integer: ['port', 'qos'],
     boolean: ['stdin', 'retain', 'help', 'insecure', 'multiline'],
     alias: {
       port: 'p',
