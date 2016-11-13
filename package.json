@@ -1,7 +1,7 @@
 {
   "name": "mqtt",
   "description": "A library for the MQTT protocol",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "contributors": [
     "Adam Rudd <adamvrr@gmail.com>",
     "Matteo Collina <matteo.collina@gmail.com> (https://github.com/mcollina)"
@@ -34,6 +34,16 @@
     "mqtt_sub": "./bin/sub.js",
     "mqtt": "./mqtt.js"
   },
+  "files": [
+    "dist/",
+    "CONTRIBUTING.md",
+    "doc",
+    "lib",
+    "bin",
+    "examples",
+    "test",
+    "mqtt.js"
+  ],
   "engines": {
     "node": ">=4.0.0"
   },
