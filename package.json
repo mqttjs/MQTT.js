@@ -21,6 +21,8 @@
   "scripts": {
     "test": "mocha --bail",
     "pretest": "standard",
+    "prepublish": "npm run browser-build",
+    "browser-build": "rm -rf dist/; mkdir dist/; browserify mqtt.js -s mqtt > dist/mqtt.js; uglifyjs --screw-ie8 < dist/mqtt.js > dist/mqtt.min.js",
     "browser-test": "zuul --server test/browser/server.js --local --open test/browser/test.js",
     "sauce-test": "zuul --server test/browser/server.js --tunnel ngrok -- test/browser/test.js"
   },
@@ -57,7 +59,7 @@
     "xtend": "^4.0.0"
   },
   "devDependencies": {
-    "browserify": "^13.0.0",
+    "browserify": "^13.1.1",
     "mocha": "*",
     "mqtt-connection": "^3.0.0",
     "pre-commit": "^1.1.3",
@@ -66,6 +68,7 @@
     "standard": "^8.0.0",
     "through2": "^2.0.0",
     "uglify": "^0.1.1",
+    "uglify-js": "^2.7.4",
     "ws": "^1.0.0",
     "zuul": "^3.4.0",
     "zuul-ngrok": "^4.0.0"

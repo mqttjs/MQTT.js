@@ -408,6 +408,13 @@ Closes the Store.
 <a name="browser"></a>
 ## Browser
 
+<a name="cdn"></a>
+### Via CDN
+
+The MQTT.js bundle is available through http://unpkg.com, specifically
+at https://unpkg.com/mqtt/dist/mqtt.min.js.
+See http://unpkg.com for the full documentation on version ranges.
+
 <a name="browserify"></a>
 ### Browserify
 
