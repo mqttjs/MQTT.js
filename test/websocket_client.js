@@ -18,6 +18,8 @@ function attachWebsocketServer (wsServer) {
     var connection = new Connection(stream)
 
     wsServer.emit('client', connection)
+    stream.on('error', function () {})
+    connection.on('error', function () {})
   })
 
   return wsServer

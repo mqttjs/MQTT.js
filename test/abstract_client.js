@@ -1375,6 +1375,7 @@ module.exports = function (server, config) {
           tryReconnect = false
         } else {
           offlineEvent.should.equal(true)
+          client.end()
           done()
         }
       })
@@ -1399,6 +1400,7 @@ module.exports = function (server, config) {
 
       client.once('close', function () {
         should.exist(client.reconnectTimer)
+        client.end()
         done()
       })
     })
@@ -1454,6 +1456,7 @@ module.exports = function (server, config) {
 
       function check () {
         if (serverPublished && clientCalledBack) {
+          client.end()
           done()
         }
       }
@@ -1465,6 +1468,8 @@ module.exports = function (server, config) {
       var clientCalledBack = false
 
       server.once('client', function (serverClient) {
+        // ignore errors
+        serverClient.on('error', function () {})
         serverClient.on('publish', function () {
           setImmediate(function () {
             serverClient.stream.destroy()
@@ -1486,6 +1491,7 @@ module.exports = function (server, config) {
 
       function check () {
         if (serverPublished && clientCalledBack) {
+          client.end()
           done()
         }
       }
