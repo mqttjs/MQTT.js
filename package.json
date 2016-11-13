@@ -33,7 +33,7 @@
     "mqtt": "./mqtt.js"
   },
   "engines": {
-    "node": ">=0.8.6"
+    "node": ">=4.0.0"
   },
   "browser": {
     "./mqtt.js": "./lib/connect/index.js",
