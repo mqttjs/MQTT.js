@@ -8,3 +8,4 @@ Session.vim
 *~
 npm-debug.log
 dist/
+yarn.lock
