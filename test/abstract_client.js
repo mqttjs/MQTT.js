@@ -343,6 +343,17 @@ module.exports = function (server, config) {
       })
     })
 
+    it('should return an error (via callbacks) for empty topic list', function (done) {
+      var client = connect()
+      client.subscribe([], function (err) {
+        client.end()
+        if (err) {
+          return done()
+        }
+        done(new Error('Validations do NOT work'))
+      })
+    })
+
     it('should return an error (via callbacks) for topic system/+/#/event', function (done) {
       var client = connect()
       client.subscribe('system/+/#/event', function (err) {
