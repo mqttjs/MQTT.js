@@ -315,7 +315,8 @@ Subscribe to a topic or topics
 
 * `topic` is a `String` topic to subscribe to or an `Array` of
   topics to subscribe to. It can also be an object, it has as object
-  keys the topic name and as value the QoS, like `{'test1': 0, 'test2': 1}`.
+  keys the topic name and as value the QoS, like `{'test1': 0, 'test2': 1}`. 
+  MQTT `topic` wildcard characters are supported (`+` - for single level and `#` - for multi level)
 * `options` is the options to subscribe with, including:
   * `qos` qos subscription level, default 0
 * `callback` - `function (err, granted)`
