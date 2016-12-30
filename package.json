@@ -1,7 +1,7 @@
 {
   "name": "mqtt",
   "description": "A library for the MQTT protocol",
-  "version": "1.10.0",
+  "version": "2.1.3",
   "contributors": [
     "Adam Rudd <adamvrr@gmail.com>",
     "Matteo Collina <matteo.collina@gmail.com> (https://github.com/mcollina)"
@@ -19,12 +19,10 @@
   },
   "main": "mqtt.js",
   "scripts": {
-    "test": "mocha",
-    "pretest": "npm run check-style",
-    "check-style:eslint": "eslint mqtt.js lib test test/browser test/helpers",
-    "check-style:jshint": "jshint mqtt.js lib test test/browser test/helpers",
-    "check-style:jscs": "jscs mqtt.js lib test test/browser test/helpers",
-    "check-style": "npm run check-style:jshint && npm run check-style:jscs && npm run check-style:eslint",
+    "test": "mocha --bail",
+    "pretest": "standard",
+    "prepublish": "npm run browser-build",
+    "browser-build": "rm -rf dist/; mkdir dist/; browserify mqtt.js -s mqtt > dist/mqtt.js; uglifyjs --screw-ie8 < dist/mqtt.js > dist/mqtt.min.js",
     "browser-test": "zuul --server test/browser/server.js --local --open test/browser/test.js",
     "sauce-test": "zuul --server test/browser/server.js --tunnel ngrok -- test/browser/test.js"
   },
@@ -36,8 +34,18 @@
     "mqtt_sub": "./bin/sub.js",
     "mqtt": "./mqtt.js"
   },
+  "files": [
+    "dist/",
+    "CONTRIBUTING.md",
+    "doc",
+    "lib",
+    "bin",
+    "examples",
+    "test",
+    "mqtt.js"
+  ],
   "engines": {
-    "node": ">=0.8.6"
+    "node": ">=4.0.0"
   },
   "browser": {
     "./mqtt.js": "./lib/connect/index.js",
@@ -49,31 +57,38 @@
     "commist": "^1.0.0",
     "concat-stream": "^1.4.7",
     "end-of-stream": "^1.1.0",
-    "help-me": "^0.1.0",
+    "help-me": "^1.0.0",
     "inherits": "^2.0.1",
     "minimist": "^1.1.0",
-    "mqtt-connection": "^2.0.0",
-    "mqtt-packet": "^3.2.0",
+    "mqtt-packet": "^5.0.0",
+    "readable-stream": "^2.1.0",
     "pump": "^1.0.1",
-    "readable-stream": "~1.0.2",
     "reinterval": "^1.0.1",
     "split2": "^2.0.1",
-    "websocket-stream": "^3.0.1",
+    "websocket-stream": "^3.3.2",
     "xtend": "^4.0.0"
   },
   "devDependencies": {
-    "browserify": "^11.0.1",
-    "eslint": "^1.3.1",
-    "jscs": "^2.1.1",
-    "jshint": "2.7.0",
+    "browserify": "^13.1.1",
     "mocha": "*",
-    "pre-commit": "1.1.1",
+    "mqtt-connection": "^3.0.0",
+    "pre-commit": "^1.1.3",
     "should": "*",
-    "sinon": "~1.10.0",
-    "through2": "^0.6.3",
+    "sinon": "~1.17.0",
+    "standard": "^8.0.0",
+    "through2": "^2.0.0",
     "uglify": "^0.1.1",
-    "ws": "^0.8.0",
+    "uglify-js": "^2.7.4",
+    "ws": "^1.0.0",
     "zuul": "^3.4.0",
-    "zuul-ngrok": "gnandretta/zuul-ngrok#upgrade-ngrok"
+    "zuul-ngrok": "^4.0.0"
+  },
+  "standard": {
+    "globals": [
+      "it",
+      "describe",
+      "beforeEach",
+      "afterEach"
+    ]
   }
 }

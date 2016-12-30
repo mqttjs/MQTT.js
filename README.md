@@ -19,13 +19,25 @@ in JavaScript for node.js and the browser.
 * [Command Line Tools](#cli)
 * [API](#api)
 * [Browser](#browser)
+* [About QoS](#qos)
 * [Contributing](#contributing)
 * [License](#license)
 
 MQTT.js is an OPEN Open Source Project, see the [Contributing](#contributing) section to find out what this means.
 
+[![JavaScript Style
+Guide](https://cdn.rawgit.com/feross/standard/master/badge.svg)](https://github.com/feross/standard)
+
+
 <a name="notes"></a>
 ## Important notes for existing users
+
+v2.0.0 removes support for node v0.8, v0.10 and v0.12, and it is 3x faster in sending
+packets. It also removes all the deprecated functionality in v1.0.0,
+mainly `mqtt.createConnection` and `mqtt.Server`. From v2.0.0,
+subscriptions are restored upon reconnection if `clean: true`.
+v1.x.x is now in *LTS*, and it will keep being supported as long as
+there are v0.8, v0.10 and v0.12 users.
 
 v1.0.0 improves the overall architecture of the project, which is now
 split into three components: MQTT.js keeps the Client,
@@ -58,19 +70,19 @@ npm install mqtt --save
 For the sake of simplicity, let's put the subscriber and the publisher in the same file:
 
 ```js
-var mqtt    = require('mqtt');
-var client  = mqtt.connect('mqtt://test.mosquitto.org');
+var mqtt = require('mqtt')
+var client  = mqtt.connect('mqtt://test.mosquitto.org')
 
 client.on('connect', function () {
-  client.subscribe('presence');
-  client.publish('presence', 'Hello mqtt');
-});
+  client.subscribe('presence')
+  client.publish('presence', 'Hello mqtt')
+})
 
 client.on('message', function (topic, message) {
   // message is Buffer
-  console.log(message.toString());
-  client.end();
-});
+  console.log(message.toString())
+  client.end()
+})
 ```
 
 output:
@@ -127,7 +139,8 @@ See `mqtt help <command>` for the command help.
   * <a href="#unsubscribe"><code>mqtt.Client#<b>unsubscribe()</b></code></a>
   * <a href="#end"><code>mqtt.Client#<b>end()</b></code></a>
   * <a href="#handleMessage"><code>mqtt.Client#<b>handleMessage()</b></code></a>
-  * <a href="#isConnected"><code>mqtt.Client#<b>connected</b></code></a>
+  * <a href="#connected"><code>mqtt.Client#<b>connected</b></code></a>
+  * <a href="#reconnecting"><code>mqtt.Client#<b>reconnecting</b></code></a>
   * <a href="#store"><code>mqtt.<b>Store()</b></code></a>
   * <a href="#put"><code>mqtt.Store#<b>put()</b></code></a>
   * <a href="#del"><code>mqtt.Store#<b>del()</b></code></a>
@@ -219,7 +232,7 @@ version 1.3 and 1.4 works fine without those.
 
 #### Event `'connect'`
 
-`function(connack) {}`
+`function (connack) {}`
 
 Emitted on successful (re)connection (i.e. connack rc=0). 
 * `connack` received connack packet. When `clean` connection option is `false` and server has a previous session 
@@ -228,38 +241,57 @@ you may rely on stored session and prefer not to send subscribe commands for the
 
 #### Event `'reconnect'`
 
-`function() {}`
+`function () {}`
 
 Emitted when a reconnect starts.
 
 #### Event `'close'`
 
-`function() {}`
+`function () {}`
 
 Emitted after a disconnection.
 
 #### Event `'offline'`
 
-`function() {}`
+`function () {}`
 
 Emitted when the client goes offline.
 
 #### Event `'error'`
 
-`function(error) {}`
+`function (error) {}`
 
 Emitted when the client cannot connect (i.e. connack rc != 0) or when a
 parsing error occurs.
 
 ### Event `'message'`
 
-`function(topic, message, packet) {}`
+`function (topic, message, packet) {}`
 
 Emitted when the client receives a publish packet
 * `topic` topic of the received packet
 * `message` payload of the received packet
 * `packet` received packet, as defined in
   [mqtt-packet](https://github.com/mcollina/mqtt-packet#publish)
+
+### Event `'packetsend'`
+
+`function (packet) {}`
+
+Emitted when the client sends any packet. This includes .published() packets
+as well as packets used by MQTT for managing subscriptions and connections
+* `packet` received packet, as defined in
+  [mqtt-packet](https://github.com/mcollina/mqtt-packet)
+
+### Event `'packetreceive'`
+
+`function (packet) {}`
+
+Emitted when the client receives any packet. This includes packets from
+subscribed topics as well as packets used by MQTT for managing subscriptions
+and connections
+* `packet` received packet, as defined in
+  [mqtt-packet](https://github.com/mcollina/mqtt-packet)
 
 -------------------------------------------------------
 <a name="publish"></a>
@@ -272,8 +304,8 @@ Publish a message to a topic
 * `options` is the options to publish with, including:
   * `qos` QoS level, `Number`, default `0`
   * `retain` retain flag, `Boolean`, default `false`
-* `callback` callback fired when the QoS handling completes,
-  or at the next tick if QoS 0.
+* `callback` - `function (err)`, fired when the QoS handling completes,
+  or at the next tick if QoS 0. An error occurs if client is disconnecting.
 
 -------------------------------------------------------
 <a name="subscribe"></a>
@@ -283,24 +315,25 @@ Subscribe to a topic or topics
 
 * `topic` is a `String` topic to subscribe to or an `Array` of
   topics to subscribe to. It can also be an object, it has as object
-  keys the topic name and as value the QoS, like `{'test1': 0, 'test2': 1}`.
+  keys the topic name and as value the QoS, like `{'test1': 0, 'test2': 1}`. 
+  MQTT `topic` wildcard characters are supported (`+` - for single level and `#` - for multi level)
 * `options` is the options to subscribe with, including:
   * `qos` qos subscription level, default 0
-* `callback` - `function(err, granted)`
+* `callback` - `function (err, granted)`
   callback fired on suback where:
-  * `err` a subscription error
+  * `err` a subscription error or an error that occurs when client is disconnecting
   * `granted` is an array of `{topic, qos}` where:
     * `topic` is a subscribed to topic
     * `qos` is the granted qos level on it
 
 -------------------------------------------------------
 <a name="unsubscribe"></a>
-### mqtt.Client#unsubscribe(topic/topic array, [options], [callback])
+### mqtt.Client#unsubscribe(topic/topic array, [callback])
 
 Unsubscribe from a topic or topics
 
 * `topic` is a `String` topic or an array of topics to unsubscribe from
-* `callback` fired on unsuback
+* `callback` - `function (err)`, fired on unsuback. An error occurs if client is disconnecting.
 
 -------------------------------------------------------
 <a name="end"></a>
@@ -327,6 +360,12 @@ will hang.
 ### mqtt.Client#connected
 
 Boolean : set to `true` if the client is connected. `false` otherwise.
+
+-------------------------------------------------------
+<a name="reconnecting"></a>
+### mqtt.Client#reconnecting
+
+Boolean : set to `true` if the client is trying to reconnect to the server. `false` otherwise.
 
 -------------------------------------------------------
 <a name="store"></a>
@@ -370,6 +409,13 @@ Closes the Store.
 <a name="browser"></a>
 ## Browser
 
+<a name="cdn"></a>
+### Via CDN
+
+The MQTT.js bundle is available through http://unpkg.com, specifically
+at https://unpkg.com/mqtt/dist/mqtt.min.js.
+See http://unpkg.com for the full documentation on version ranges.
+
 <a name="browserify"></a>
 ### Browserify
 
@@ -405,21 +451,32 @@ you can then use mqtt.js in the browser with the same api than node's one.
 <body>
 <script src="./browserMqtt.js"></script>
 <script>
-      var client = mqtt.connect(); // you add a ws:// url here
-      client.subscribe("mqtt/demo");
+      var client = mqtt.connect() // you add a ws:// url here
+      client.subscribe("mqtt/demo")
 
-      client.on("message", function(topic, payload) {
-        alert([topic, payload].join(": "));
-        client.end();
-      });
+      client.on("message", function (topic, payload) {
+        alert([topic, payload].join(": "))
+        client.end()
+      })
 
-      client.publish("mqtt/demo", "hello world!");
+      client.publish("mqtt/demo", "hello world!")
     </script>
 </body>
 </html>
 ```
 
 Your broker should accept websocket connection (see [MQTT over Websockets](https://github.com/mcollina/mosca/wiki/MQTT-over-Websockets) to setup [Mosca](http://mcollina.github.io/mosca/)).
+
+<a name="qos"></a>
+## About QoS
+
+Here is how QoS works:
+
+* QoS 0 : received **at most once** : The packet is sent, and that's it. There is no validation about whether it has been received.
+* QoS 1 : received **at least once** : The packet is sent and stored as long as the client has not received a confirmation from the server. MQTT ensures that it *will* be received, but there can be duplicates.
+* QoS 2 : received **exactly once** : Same as QoS 1 but there is no duplicates.
+
+About data consumption, obviously, QoS 2 > QoS 1 > QoS 0, if that's a concern to you.
 
 <a name="contributing"></a>
 ## Contributing

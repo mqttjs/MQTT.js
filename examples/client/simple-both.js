@@ -1,11 +1,13 @@
-var mqtt = require('../..')
-  , host = '192.168.1.100' // or localhost
-  , client = mqtt.connect();
-  // or , client = mqtt.connect({ port: 1883, host: host, keepalive: 10000});
+'use strict'
 
-client.subscribe('presence');
-client.publish('presence', 'bin hier');
+var mqtt = require('../..')
+var client = mqtt.connect()
+
+// or var client = mqtt.connect({ port: 1883, host: '192.168.1.100', keepalive: 10000});
+
+client.subscribe('presence')
+client.publish('presence', 'bin hier')
 client.on('message', function (topic, message) {
-  console.log(message);
-});
-client.end();
+  console.log(message)
+})
+client.end()

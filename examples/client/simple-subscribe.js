@@ -1,7 +1,9 @@
-var mqtt = require('../..')
-  , client = mqtt.connect();
+'use strict'
 
-client.subscribe('presence');
-client.on('message', function(topic, message) {
-  console.log(message);
-});
+var mqtt = require('../..')
+var client = mqtt.connect()
+
+client.subscribe('presence')
+client.on('message', function (topic, message) {
+  console.log(message)
+})

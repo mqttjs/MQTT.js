@@ -7,3 +7,5 @@ Session.vim
 .netrwhist
 *~
 npm-debug.log
+dist/
+yarn.lock
