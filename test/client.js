@@ -393,12 +393,12 @@ describe('MqttClient', function () {
       }, 500)
     })
 
-    it('should connect when the connect() function is called', function (done) {
+    it('should connect when the startConnection() function is called', function (done) {
       this.timeout(1000)
 
       var client = mqtt.connect({ port: port, host: 'localhost', keepalive: 1, delayConnection: true })
 
-      client.connect()
+      client.startConnection()
 
       client.once('connect', function () {
         client.streamIsSetup.should.equal(true)

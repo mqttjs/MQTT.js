@@ -137,7 +137,7 @@ See `mqtt help <command>` for the command help.
   * <a href="#publish"><code>mqtt.Client#<b>publish()</b></code></a>
   * <a href="#subscribe"><code>mqtt.Client#<b>subscribe()</b></code></a>
   * <a href="#unsubscribe"><code>mqtt.Client#<b>unsubscribe()</b></code></a>
-  * <a href="#connect"><code>mqtt.Client#<b>connect()</b></code></a>  
+  * <a href="#startConnection"><code>mqtt.Client#<b>startConnection()</b></code></a>  
   * <a href="#end"><code>mqtt.Client#<b>end()</b></code></a>
   * <a href="#handleMessage"><code>mqtt.Client#<b>handleMessage()</b></code></a>
   * <a href="#connected"><code>mqtt.Client#<b>connected</b></code></a>
@@ -338,8 +338,8 @@ Unsubscribe from a topic or topics
 * `callback` - `function (err)`, fired on unsuback. An error occurs if client is disconnecting.
 
 -------------------------------------------------------
-<a name="connect"></a>
-### mqtt.Client#connect()
+<a name="startConnection"></a>
+### mqtt.Client#startConnection()
 
 Manually starts the connection.
 Use it when `delayConnection` has been passed to the constructor.
