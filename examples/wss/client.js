@@ -40,7 +40,7 @@ client.subscribe('topic', { qos: 0 })
 
 client.publish('topic', 'wss secure connection demo...!', { qos: 0, retained: false })
 
-client.on('message', function (topic, message, pakcet) {
+client.on('message', function (topic, message, packet) {
   console.log('Received Message:= ' + message.toString() + '\nOn topic:= ' + topic)
 })
 
