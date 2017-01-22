@@ -114,14 +114,14 @@ describe('MqttClient', function () {
       client.end()
     })
 
-    it('should return 65535 for last id once the interal counter reached limit', function () {
+    it('should return 65535 for last message id once the interal counter reached limit', function () {
       var client = mqtt.connect(config)
       client.nextId = 65535
 
       client._nextId().should.equal(65535)
-      client.getLastId().should.equal(65535)
+      client.getLastMessageId().should.equal(65535)
       client._nextId().should.equal(1)
-      client.getLastId().should.equal(1)
+      client.getLastMessageId().should.equal(1)
       client.end()
     })
   })

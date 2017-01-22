@@ -365,10 +365,10 @@ will hang.
 Boolean : set to `true` if the client is connected. `false` otherwise.
 
 -------------------------------------------------------
-<a name="getLastId"></a>
-### mqtt.Client#getLastId
+<a name="getLastMessageId"></a>
+### mqtt.Client#getLastMessageId
 
-Number : get last message id.
+Number : get last message id. This is for sent messages only.
 
 -------------------------------------------------------
 <a name="reconnecting"></a>
