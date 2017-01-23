@@ -141,7 +141,7 @@ See `mqtt help <command>` for the command help.
   * <a href="#handleMessage"><code>mqtt.Client#<b>handleMessage()</b></code></a>
   * <a href="#connected"><code>mqtt.Client#<b>connected</b></code></a>
   * <a href="#reconnecting"><code>mqtt.Client#<b>reconnecting</b></code></a>
-  * <a href="#getLastId"><code>mqtt.Client#<b>getLastId</b></code></a>
+  * <a href="#getLastMessageId"><code>mqtt.Client#<b>getLastMessageId</b></code></a>
   * <a href="#store"><code>mqtt.<b>Store()</b></code></a>
   * <a href="#put"><code>mqtt.Store#<b>put()</b></code></a>
   * <a href="#del"><code>mqtt.Store#<b>del()</b></code></a>
