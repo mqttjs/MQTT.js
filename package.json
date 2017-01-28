@@ -20,7 +20,7 @@
   "main": "mqtt.js",
   "scripts": {
     "test": "mocha --bail",
-    "pretest": "standard",
+    "pretest": "standard && nsp",
     "prepublish": "npm run browser-build",
     "browser-build": "rimraf dist/ && mkdirp dist/ && browserify mqtt.js -s mqtt > dist/mqtt.js && uglifyjs --screw-ie8 < dist/mqtt.js > dist/mqtt.min.js",
     "browser-test": "zuul --server test/browser/server.js --local --open test/browser/test.js",
@@ -70,9 +70,10 @@
   },
   "devDependencies": {
     "browserify": "^13.1.1",
-    "mocha": "*",
     "mkdirp": "^0.5.1",
+    "mocha": "*",
     "mqtt-connection": "^3.0.0",
+    "nsp": "^2.6.2",
     "pre-commit": "^1.1.3",
     "rimraf": "^2.5.4",
     "should": "*",
@@ -86,11 +87,8 @@
     "zuul-ngrok": "^4.0.0"
   },
   "standard": {
-    "globals": [
-      "it",
-      "describe",
-      "beforeEach",
-      "afterEach"
+    "env": [
+      "mocha"
     ]
   }
 }
