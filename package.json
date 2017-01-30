@@ -20,8 +20,8 @@
   "main": "mqtt.js",
   "scripts": {
     "test": "mocha --bail",
-    "pretest": "snazzy && nsp",
-    "prepublish": "npm run browser-build",
+    "pretest": "standard | snazzy",
+    "prepublish": "nsp check && npm run browser-build",
     "browser-build": "rimraf dist/ && mkdirp dist/ && browserify mqtt.js -s mqtt > dist/mqtt.js && uglifyjs --screw-ie8 < dist/mqtt.js > dist/mqtt.min.js",
     "browser-test": "zuul --server test/browser/server.js --local --open test/browser/test.js",
     "sauce-test": "zuul --server test/browser/server.js --tunnel ngrok -- test/browser/test.js"
