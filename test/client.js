@@ -390,4 +390,32 @@ describe('MqttClient', function () {
       })
     })
   })
+
+  describe('delaying connection', function () {
+    it('should not connect on creation if the argument start is set to false', function (done) {
+      this.timeout(1000)
+
+      var client = mqtt.connect({ port: port, host: 'localhost', keepalive: 1, start: false })
+
+      setTimeout(function () {
+        client._started.should.equal(false)
+        client.connected.should.equal(false)
+        done()
+      }, 50)
+    })
+
+    it('should connect when the start() method is called', function (done) {
+      this.timeout(1000)
+
+      var client = mqtt.connect({ port: port, host: 'localhost', keepalive: 1, start: false })
+
+      client.start()
+
+      client.once('connect', function () {
+        client._started.should.equal(true)
+        client.connected.should.equal(true)
+        done()
+      })
+    })
+  })
 })

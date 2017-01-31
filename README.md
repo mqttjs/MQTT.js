@@ -137,6 +137,7 @@ See `mqtt help <command>` for the command help.
   * <a href="#publish"><code>mqtt.Client#<b>publish()</b></code></a>
   * <a href="#subscribe"><code>mqtt.Client#<b>subscribe()</b></code></a>
   * <a href="#unsubscribe"><code>mqtt.Client#<b>unsubscribe()</b></code></a>
+  * <a href="#start"><code>mqtt.Client#<b>start()</b></code></a>  
   * <a href="#end"><code>mqtt.Client#<b>end()</b></code></a>
   * <a href="#handleMessage"><code>mqtt.Client#<b>handleMessage()</b></code></a>
   * <a href="#connected"><code>mqtt.Client#<b>connected</b></code></a>
@@ -212,6 +213,7 @@ the `connect` event. Typically a `net.Socket`.
     * `payload`: the message to publish
     * `qos`: the QoS
     * `retain`: the retain flag
+  * `start`: `true`, tell the constructor to start the connection automatically
 
 In case mqtts (mqtt over tls) is required, the `options` object is
 passed through to
@@ -337,6 +339,13 @@ Unsubscribe from a topic or topics
 
 * `topic` is a `String` topic or an array of topics to unsubscribe from
 * `callback` - `function (err)`, fired on unsuback. An error occurs if client is disconnecting.
+
+-------------------------------------------------------
+<a name="start"></a>
+### mqtt.Client#start()
+
+Manually starts the connection.
+Use it when `start` option has been set to `false` to the constructor.
 
 -------------------------------------------------------
 <a name="end"></a>
