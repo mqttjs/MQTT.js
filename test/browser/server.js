@@ -103,8 +103,10 @@ function start (startPort, done) {
 
   wss.on('connection', function (ws) {
     var stream, connection
-    if (ws.protocol !== 'mqttv3.1') {
-      return ws.end()
+
+    if (!(ws.protocol === 'mqtt' ||
+          ws.protocol === 'mqttv3.1')) {
+      return ws.close()
     }
 
     stream = websocket(ws)
