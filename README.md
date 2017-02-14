@@ -7,6 +7,8 @@
 
 [![DefinitelyTyped](http://img.shields.io/badge/Definitely-Typed-blue.svg)](https://github.com/borisyankov/DefinitelyTyped/tree/master/mqtt)
 
+[![codecov](https://codecov.io/gh/mqttjs/MQTT.js/branch/master/graph/badge.svg)](https://codecov.io/gh/mqttjs/MQTT.js)
+
 [![NPM](https://nodei.co/npm/mqtt.png)](https://nodei.co/npm/mqtt/)
 [![NPM](https://nodei.co/npm-dl/mqtt.png)](https://nodei.co/npm/mqtt/)
 
@@ -188,8 +190,8 @@ The arguments are:
 * `streamBuilder` is a function that returns a subclass of the `Stream` class that supports
 the `connect` event. Typically a `net.Socket`.
 * `options` is the client connection options (see: the [connect packet](https://github.com/mcollina/mqtt-packet#connect)). Defaults:
-  * `wsOptions`: is the WebSocket connection options. Default is `{}`. 
-	 It's specific for WebSockets. For possible options have a look at: https://github.com/websockets/ws/blob/master/doc/ws.md. 
+  * `wsOptions`: is the WebSocket connection options. Default is `{}`.
+     It's specific for WebSockets. For possible options have a look at: https://github.com/websockets/ws/blob/master/doc/ws.md.
   * `keepalive`: `10` seconds, set to `0` to disable
   * `reschedulePings`: reschedule ping messages after sending packets (default `true`)
   * `clientId`: `'mqttjs_' + Math.random().toString(16).substr(2, 8)`
@@ -212,6 +214,9 @@ the `connect` event. Typically a `net.Socket`.
     * `payload`: the message to publish
     * `qos`: the QoS
     * `retain`: the retain flag
+  * `transformWsUrl` : optional `(url, options, client) => url` function
+        For ws/wss protocols only. Can be used to implement signing
+        urls which upon reconnect can have become expired.
 
 In case mqtts (mqtt over tls) is required, the `options` object is
 passed through to
@@ -237,9 +242,9 @@ version 1.3 and 1.4 works fine without those.
 
 `function (connack) {}`
 
-Emitted on successful (re)connection (i.e. connack rc=0). 
-* `connack` received connack packet. When `clean` connection option is `false` and server has a previous session 
-for `clientId` connection option, then `connack.sessionPresent` flag is `true`. When that is the case, 
+Emitted on successful (re)connection (i.e. connack rc=0).
+* `connack` received connack packet. When `clean` connection option is `false` and server has a previous session
+for `clientId` connection option, then `connack.sessionPresent` flag is `true`. When that is the case,
 you may rely on stored session and prefer not to send subscribe commands for the client.
 
 #### Event `'reconnect'`
@@ -318,7 +323,7 @@ Subscribe to a topic or topics
 
 * `topic` is a `String` topic to subscribe to or an `Array` of
   topics to subscribe to. It can also be an object, it has as object
-  keys the topic name and as value the QoS, like `{'test1': 0, 'test2': 1}`. 
+  keys the topic name and as value the QoS, like `{'test1': 0, 'test2': 1}`.
   MQTT `topic` wildcard characters are supported (`+` - for single level and `#` - for multi level)
 * `options` is the options to subscribe with, including:
   * `qos` qos subscription level, default 0
@@ -475,6 +480,29 @@ you can then use mqtt.js in the browser with the same api than node's one.
 ```
 
 Your broker should accept websocket connection (see [MQTT over Websockets](https://github.com/mcollina/mosca/wiki/MQTT-over-Websockets) to setup [Mosca](http://mcollina.github.io/mosca/)).
+
+<a name="signedurls"></a>
+### Signed WebSocket Urls
+
+If you need to sign an url, for example for [AWS IoT](http://docs.aws.amazon.com/iot/latest/developerguide/protocols.html#mqtt-ws),
+then you can pass in a `transformWsUrl` function to the <a href="#connect"><code>mqtt.<b>connect()</b></code></a> options
+This is needed because signed urls have an expiry and eventually upon reconnects, a new signed url needs to be created:
+
+```js
+// This module doesn't actually exist, just an example
+var awsIotUrlSigner = require('awsIotUrlSigner')
+mqtt.connect('wss://a2ukbzaqo9vbpb.iot.ap-southeast-1.amazonaws.com/mqtt', {
+  transformWsUrl: function (url, options, client) {
+    // It's possible to inspect some state on options(pre parsed url components)
+    // and the client (reconnect state etc)
+    return awsIotUrlSigner(url)
+  }
+})
+
+// Now every time a new WebSocket connection is opened (hopefully not that
+// often) we get a freshly signed url
+
+```
 
 <a name="qos"></a>
 ## About QoS

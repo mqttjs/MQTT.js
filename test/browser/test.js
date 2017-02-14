@@ -2,6 +2,7 @@
 
 var mqtt = require('../../lib/connect')
 var _URL = require('url')
+var xtend = require('xtend')
 var parsed = _URL.parse(document.URL)
 var isHttps = parsed.protocol === 'https:'
 var port = parsed.port || (isHttps ? 443 : 80)
@@ -44,38 +45,50 @@ function clientTests (buildClient) {
   })
 }
 
-describe('MqttClient', function () {
-  this.timeout(10000)
-
-  describe('specifying nothing', function () {
-    clientTests(function () {
-      return mqtt.connect()
-    })
-  })
-
-  if (parsed.host === 'localhost') {
-    describe('specifying a port', function () {
-      clientTests(function () {
-        return mqtt.connect({ protocol: protocol, port: port })
-      })
-    })
+function suiteFactory (configName, opts) {
+  function setVersion (base) {
+    return xtend(base || {}, opts)
   }
 
-  describe('specifying a port and host', function () {
-    clientTests(function () {
-      return mqtt.connect({ protocol: protocol, port: port, host: host })
-    })
-  })
+  var suiteName = 'MqttClient(' + configName + '=' + JSON.stringify(opts) + ')'
+  describe(suiteName, function () {
+    this.timeout(10000)
 
-  describe('specifying a URL', function () {
-    clientTests(function () {
-      return mqtt.connect(protocol + '://' + host + ':' + port)
+    describe('specifying nothing', function () {
+      clientTests(function () {
+        return mqtt.connect(setVersion())
+      })
     })
-  })
 
-  describe('specifying a URL with a path', function () {
-    clientTests(function () {
-      return mqtt.connect(protocol + '://' + host + ':' + port + '/mqtt')
+    if (parsed.host === 'localhost') {
+      describe('specifying a port', function () {
+        clientTests(function () {
+          return mqtt.connect(setVersion({ protocol: protocol, port: port }))
+        })
+      })
+    }
+
+    describe('specifying a port and host', function () {
+      clientTests(function () {
+        return mqtt.connect(setVersion(
+              { protocol: protocol, port: port, host: host }))
+      })
+    })
+
+    describe('specifying a URL', function () {
+      clientTests(function () {
+        return mqtt.connect(protocol + '://' + host + ':' + port, setVersion())
+      })
+    })
+
+    describe('specifying a URL with a path', function () {
+      clientTests(function () {
+        return mqtt.connect(protocol + '://' + host + ':' + port + '/mqtt',
+                            setVersion())
+      })
     })
   })
-})
+}
+
+suiteFactory('v3', {protocolId: 'MQIsdp', protocolVersion: 3})
+suiteFactory('default', {})

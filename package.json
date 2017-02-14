@@ -19,7 +19,7 @@
   },
   "main": "mqtt.js",
   "scripts": {
-    "test": "mocha --bail",
+    "test": "node_modules/.bin/istanbul cover ./node_modules/mocha/bin/_mocha --report lcovonly -- --bail",
     "pretest": "standard | snazzy",
     "prepublish": "nsp check && npm run browser-build",
     "browser-build": "rimraf dist/ && mkdirp dist/ && browserify mqtt.js -s mqtt > dist/mqtt.js && uglifyjs --screw-ie8 < dist/mqtt.js > dist/mqtt.min.js",
@@ -70,6 +70,8 @@
   },
   "devDependencies": {
     "browserify": "^13.1.1",
+    "codecov": "^1.0.1",
+    "istanbul": "^0.4.5",
     "mkdirp": "^0.5.1",
     "mocha": "^3.2.0",
     "mqtt-connection": "^3.0.0",
