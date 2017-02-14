@@ -69,7 +69,7 @@
     "xtend": "^4.0.0"
   },
   "devDependencies": {
-    "browserify": "^13.1.1",
+    "browserify": "^14.0.0",
     "codecov": "^1.0.1",
     "istanbul": "^0.4.5",
     "mkdirp": "^0.5.1",
