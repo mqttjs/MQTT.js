@@ -207,6 +207,7 @@ var MqttClient = (function (_super) {
         });
         function process() {
             var packet = packets.shift();
+            //noinspection UnnecessaryLocalVariableJS
             var done = completeParse;
             if (packet) {
                 that._handlePacket(packet, process);
@@ -400,6 +401,7 @@ var MqttClient = (function (_super) {
      * @example client.unsubscribe('topic', console.log);
      */
     MqttClient.prototype.unsubscribe = function (topic, callback) {
+        //noinspection SpellCheckingInspection
         var unsubscriptions;
         if (typeof topic === 'string') {
             unsubscriptions = [topic];
@@ -523,7 +525,6 @@ var MqttClient = (function (_super) {
     };
     /**
      * _sendPacket - send or queue a packet
-     * @param {String} type - packet type (see `protocol`)
      * @param {Object} packet - packet options
      * @param {Function} cb - callback when the packet is sent
      * @api private
@@ -700,8 +701,8 @@ var MqttClient = (function (_super) {
      * Handle messages with backpressure support, one at a time.
      * Override at will.
      *
-     * @param Packet packet the packet
-     * @param Function callback call when finished
+     * @param packet packet the packet
+     * @param callback callback call when finished
      * @api public
      */
     MqttClient.prototype.handleMessage = function (packet, callback) {
@@ -761,6 +762,7 @@ var MqttClient = (function (_super) {
      * _handlePubrel
      *
      * @param {Object} packet
+     * @param callback
      * @api private
      */
     MqttClient.prototype._handlePubrel = function (packet, callback) {
