@@ -5,17 +5,23 @@
  */
 import * as events from 'events'
 import * as eos from 'end-of-stream'
+import * as mqttPacket from 'mqtt-packet'
+import * as reInterval from 'reinterval'
+
+import {Writable} from 'readable-stream'
 
 import Store from './store'
-import * as mqttPacket from 'mqtt-packet'
-import {Writable} from 'readable-stream'
-import * as reInterval from 'reinterval'
 import validations from './validations'
-var setImmediate = global.setImmediate || function (callback: Function) {
+
+import {Url} from 'url' // just the type
+import ReadableStream = NodeJS.ReadableStream
+import EventEmitter = NodeJS.EventEmitter
+
+const setImmediate = global.setImmediate || function (callback: Function) {
   // works in node v0.8
   process.nextTick(callback)
 }
-var defaultConnectOptions = {
+const defaultConnectOptions = {
   keepalive: 60,
   reschedulePings: true,
   protocolId: 'MQTT',
@@ -29,10 +35,10 @@ function defaultId () {
   return 'mqttjs_' + Math.random().toString(16).substr(2, 8)
 }
 
-function sendPacket (client, packet: Packet, cb?: Function) {
+function sendPacket (client: MqttClient, packet: Packet, cb?: Function) {
   client.emit('packetsend', packet)
 
-  var result = mqttPacket.writeToStream(packet, client.stream)
+  const result = mqttPacket.writeToStream(packet, client.stream)
 
   if (!result && cb) {
     client.stream.once('drain', cb)
@@ -41,8 +47,8 @@ function sendPacket (client, packet: Packet, cb?: Function) {
   }
 }
 
-function storeAndSend (client, packet: Packet, cb?: Function) {
-  client.outgoingStore.put(packet, function storedPacket (err) {
+function storeAndSend (client: MqttClient, packet: Packet, cb?: Function) {
+  client.outgoingStore.put(packet, function storedPacket (err: Error) {
     if (err) {
       return cb && cb(err)
     }
@@ -52,12 +58,7 @@ function storeAndSend (client, packet: Packet, cb?: Function) {
 
 function nop () {}
 
-export interface IReinterval {clear: () => void, reschedule(ms: number)}
-
 /* --------------------------------- ADDONS --------------------------------- */
-
-import ReadableStream = NodeJS.ReadableStream
-import EventEmitter = NodeJS.EventEmitter
 
 export type QoS = 0 | 1 | 2
 export type PacketCmd = 'connack'
@@ -79,7 +80,8 @@ export interface IPacket {
     cmd: PacketCmd
     messageId?: number
     // packet length
-    length?: number
+    length?: number,
+
 }
 
 export interface ConnectPacket extends IPacket {
@@ -103,12 +105,9 @@ export interface PublishPacket extends IPacket {
     cmd: 'publish'
     qos: QoS,
     dup: boolean,
+    retain: boolean,
     topic: string,
     payload: string | Buffer
-    /**
-     * Should the bla bla
-     */
-    retain: boolean
 }
 
 export interface ConnackPacket extends IPacket {
@@ -135,39 +134,31 @@ export interface UnsubscribePacket extends IPacket {
     unsubscriptions: string[]
 }
 
-export interface UnsubackPacket extends IPacket {cmd: 'unsuback'
-}
-export interface PubackPacket extends IPacket {cmd: 'puback'
-}
-export interface PubcompPacket extends IPacket {cmd: 'pubcomp'
-}
-export interface PubrelPacket extends IPacket {cmd: 'pubrel'
-}
-export interface PubrecPacket extends IPacket {cmd: 'pubrec'
-}
-export interface PingreqPacket extends IPacket {cmd: 'pingreq'
-}
-export interface PingrespPacket extends IPacket {cmd: 'pingresp'
-}
-export interface DisconnectPacket extends IPacket {cmd: 'disconnect'
-}
+export interface UnsubackPacket extends IPacket {cmd: 'unsuback'}
+export interface PubackPacket extends IPacket {cmd: 'puback'}
+export interface PubcompPacket extends IPacket {cmd: 'pubcomp'}
+export interface PubrelPacket extends IPacket {cmd: 'pubrel'}
+export interface PubrecPacket extends IPacket {cmd: 'pubrec'}
+export interface PingreqPacket extends IPacket {cmd: 'pingreq'}
+export interface PingrespPacket extends IPacket {cmd: 'pingresp'}
+export interface DisconnectPacket extends IPacket {cmd: 'disconnect'}
 
 export type Packet = ConnectPacket
-    | PublishPacket
-    | ConnackPacket
-    | SubscribePacket
-    | SubackPacket
-    | UnsubscribePacket
-    | UnsubackPacket
-    | PubackPacket
-    | PubcompPacket
-    | PubrelPacket
-    | PingreqPacket
-    | PingrespPacket
-    | DisconnectPacket
-    | PubrecPacket
+          | PublishPacket
+          | ConnackPacket
+          | SubscribePacket
+          | SubackPacket
+          | UnsubscribePacket
+          | UnsubackPacket
+          | PubackPacket
+          | PubcompPacket
+          | PubrelPacket
+          | PingreqPacket
+          | PingrespPacket
+          | DisconnectPacket
+          | PubrecPacket
 
-export interface Granted {
+export interface SubscriptionGrant {
     /**
      *  is a subscribed to topic
      */
@@ -178,7 +169,18 @@ export interface Granted {
     qos: QoS | number
 }
 
-export interface Topic {
+export interface SubscriptionRequest {
+    /**
+     *  is a subscribed to topic
+     */
+    topic: string
+    /**
+     *  is the granted qos level on it
+     */
+    qos: QoS
+}
+
+export interface SubscriptionMap {
     /**
      * object which has topic names as object keys and as value the QoS, like {'test1': 0, 'test2': 1}.
      */
@@ -189,7 +191,9 @@ export interface Topic {
  * MQTT CLIENT
  */
 
-export interface ClientOptions extends SecureClientOptions {
+export interface ClientOptions extends SecureClientOptions, Url {
+    protocol?: 'wss' | 'ws' | 'mqtt' | 'mqtts' | 'tcp' | 'ssl'
+
     wsOptions?: {
         [x: string]: any
     }
@@ -241,9 +245,12 @@ export interface ClientOptions extends SecureClientOptions {
      */
     outgoingStore?: Store
 
-    queueQoSZero: boolean
+    queueQoSZero?: boolean
 
-    reschedulePings: boolean
+    reschedulePings?: boolean
+
+    servers?: Array<{host: string, port: number|string}>
+
     /**
      * a message that will sent by the broker automatically when the client disconnect badly.
      */
@@ -267,19 +274,19 @@ export interface ClientOptions extends SecureClientOptions {
         retain: boolean
     }
 
-    transformWsUrl: (url: string, options: ClientOptions, client: MqttClient) => string
+    transformWsUrl?: (url: string, options: ClientOptions, client: MqttClient) => string
 }
 
 export interface SecureClientOptions {
     /**
      * path to private key
      */
-    keyPath?: string
+    key?: string
     /**
      * path to corresponding public cert
      */
-    certPath?: string
-    caPath?: string
+    cert?: string
+    ca?: string
     rejectUnauthorized?: boolean
 }
 
@@ -301,16 +308,13 @@ export interface ClientSubscribeOptions {
     qos?: QoS
 }
 
-export interface ClientSubscribeCallback {
-    (err: Error, granted: Granted[]): void
-}
-
+export type ClientSubscribeCallback = (err: Error, granted: SubscriptionGrant[]) => void
 export type OnMessageCallback = (topic: string, payload: Buffer, packet: Packet) => void
 export type OnPacketCallback = (packet: Packet) => void
 export type OnErrorCallback = (error: Error) => void
-export type NodeCallback = (error: Error, ...args: any[]) => any
 export type PacketCallback = (error?: Error, packet?: Packet) => any
 
+export interface IReinterval {clear: () => void, reschedule(ms: number)}
 export interface IStream extends EventEmitter {
   pipe(to: any)
   destroy()
@@ -328,51 +332,49 @@ export interface IStream extends EventEmitter {
  */
 export class MqttClient extends events.EventEmitter {
   // connack timer
-  connackTimer : NodeJS.Timer = null
+  connackTimer: NodeJS.Timer = null
   // Reconnect timer
-  reconnectTimer : NodeJS.Timer = null
+  reconnectTimer: NodeJS.Timer = null
   // Ping timer, setup in _setupPingTimer
-  pingTimer : IReinterval = null
+  pingTimer: IReinterval = null
 
   // Is the client connected?
-  connected : boolean = false
+  connected: false
   // Are we disconnecting?
-  disconnecting : boolean = false
+  disconnecting = false
   disconnected: boolean = null
-  reconnecting : boolean = null
-  pingResp : boolean = false
+  reconnecting: boolean = null
+  pingResp = false
 
 
   // MessageIDs starting with 1
-  nextId : number = Math.floor(Math.random() * 65535)
+  nextId: number = Math.floor(Math.random() * 65535)
   // Packet queue
-  queue : Array<{packet: Packet, cb: PacketCallback}> = []
-  _subscribedTopics : any = {}
-  outgoing : {[x: number] : PacketCallback} = {}
+  queue: Array<{packet: Packet, cb: PacketCallback}> = []
+  _subscribedTopics: any = {}
+  outgoing: {[x: number]: PacketCallback} = {}
 
   // Configured in constructor by options
-  incomingStore : Store
-  outgoingStore : Store
-  stream : IStream // TODO stream
-  streamBuilder : (MqttClient) => IStream
-  options : ClientOptions
-  queueQoSZero : boolean
+  incomingStore: Store
+  outgoingStore: Store
+  stream: IStream // TODO stream
+  streamBuilder: (MqttClient) => IStream
+  options: ClientOptions
+  queueQoSZero: boolean
 
-  on(event: 'packetsend', cb: OnPacketCallback): this
-  on(event: 'packetreceive', cb: OnPacketCallback): this
-  on(event: 'error', cb: OnErrorCallback): this
   on(event: 'message', cb: OnMessageCallback): this
-  on(event: string, cb: Function): this
+  on(event: 'packetsend' | 'packetreceive', cb: OnPacketCallback): this
+  on(event: 'error', cb: OnErrorCallback): this
+  on(event: string, cb: Function)
   on(event: string, cb: Function) {
     super.on(event, cb)
     return this
   }
 
   once(event: 'message', cb: OnMessageCallback): this
-  once(event: 'packetsend', cb: OnPacketCallback): this
-  once(event: 'packetreceive', cb: OnPacketCallback): this
+  once(event: 'packetsend' | 'packetreceive', cb: OnPacketCallback): this
   once(event: 'error', cb: OnErrorCallback): this
-  once(event: string, cb: Function): this
+  once(event: string, cb: Function)
   once(event: string, cb: Function) {
     super.once(event, cb)
     return this
@@ -381,7 +383,7 @@ export class MqttClient extends events.EventEmitter {
   constructor (streamBuilder, options) {
     super()
     this.streamBuilder = streamBuilder
-    var that = this
+    const that = this
 
     // if (!(this instanceof MqttClient)) {
     //   return new MqttClient(streamBuilder, options)
@@ -389,7 +391,7 @@ export class MqttClient extends events.EventEmitter {
 
     this.options = options || {}
     // Defaults
-    for (let k in defaultConnectOptions) {
+    for (const k in defaultConnectOptions) {
       if (typeof this.options[k] === 'undefined') {
         this.options[k] = defaultConnectOptions[k]
       } else {
@@ -413,14 +415,14 @@ export class MqttClient extends events.EventEmitter {
       }
 
       this.connected = true
-      var outStore = null
+      let outStore = null
       outStore = this.outgoingStore.createStream()
 
       // Control of stored messages
       outStore.once('readable', function () {
         function storeDeliver () {
-          var packet = outStore.read(1) as Packet
-          var cb
+          const packet = outStore.read(1) as Packet
+          let cb
 
           if (!packet) {
             return
@@ -459,11 +461,11 @@ export class MqttClient extends events.EventEmitter {
 
     // Send queued packets
     this.on('connect', function () {
-      var queue = this.queue
+      const queue = this.queue
 
       function deliver () {
-        var entry = queue.shift()
-        var packet = null
+        const entry = queue.shift()
+        let packet = null
 
         if (!entry) {
           return
@@ -511,24 +513,24 @@ export class MqttClient extends events.EventEmitter {
    * @api private
    */
   _setupStream () {
-    var connectPacket
-    var that = this
-    var writable = new Writable()
-    var parser = mqttPacket.parser(this.options)
-    var completeParse = null
-    var packets = []
+    let connectPacket: ConnectPacket & ClientOptions
+    const that = this
+    const writable = new Writable()
+    const parser = mqttPacket.parser(this.options)
+    let completeParse: PacketCallback = null
+    const packets: Packet[] = []
 
     this._clearReconnect()
 
     this.stream = this.streamBuilder(this)
 
-    parser.on('packet', function (packet) {
+    parser.on('packet', function (packet: Packet) {
       packets.push(packet)
     })
 
     function process () {
-      var packet = packets.shift()
-      var done = completeParse
+      const packet = packets.shift()
+      const done = completeParse
 
       if (packet) {
         that._handlePacket(packet, process)
@@ -538,7 +540,7 @@ export class MqttClient extends events.EventEmitter {
       }
     }
 
-    writable._write = function (buf, enc, done) {
+    writable._write = function (buf: Buffer, enc: string, done: PacketCallback) {
       completeParse = done
       parser.parse(buf)
       process()
@@ -553,7 +555,7 @@ export class MqttClient extends events.EventEmitter {
     eos(this.stream, this.emit.bind(this, 'close'))
 
     // Send a connect packet
-    connectPacket = Object.create(this.options)
+    connectPacket = Object.create(this.options) as ConnectPacket & {cmd: ''}
     connectPacket.cmd = 'connect'
     // avoid message queue
     sendPacket(this, connectPacket)
@@ -570,7 +572,7 @@ export class MqttClient extends events.EventEmitter {
     }, this.options.connectTimeout)
   }
 
-  _handlePacket (packet: Packet, done) {
+  _handlePacket (packet: Packet, done: PacketCallback) {
     this.emit('packetreceive', packet)
 
     switch (packet.cmd) {
@@ -604,7 +606,7 @@ export class MqttClient extends events.EventEmitter {
     }
   }
 
-  _checkDisconnecting (callback) {
+  _checkDisconnecting (callback: PacketCallback) {
     if (this.disconnecting) {
       if (callback) {
         callback(new Error('client disconnecting'))
@@ -637,7 +639,7 @@ export class MqttClient extends events.EventEmitter {
    */
   publish(topic: string, message: string | Buffer, opts: ClientPublishOptions, callback?: PacketCallback): this
   publish(topic: string, message: string | Buffer, callback?: PacketCallback): this
-  publish(topic, message, opts?: ClientPublishOptions, callback?: PacketCallback) : this {
+  publish(topic: string, message: string | Buffer, opts?: ClientPublishOptions, callback?: PacketCallback): this {
     // .publish(topic, payload, cb);
     if (typeof opts === 'function') {
       callback = opts
@@ -653,7 +655,7 @@ export class MqttClient extends events.EventEmitter {
       return this
     }
 
-    var packet : PublishPacket = {
+    const packet: PublishPacket = {
       cmd: 'publish',
       topic: topic,
       payload: message,
@@ -696,16 +698,15 @@ export class MqttClient extends events.EventEmitter {
    * @example client.subscribe('topic', console.log);
    */
   subscribe(topic: string | string[],  options: ClientSubscribeOptions, callback?: ClientSubscribeCallback): this
-  subscribe(topic: string | string[],  callback?: ClientSubscribeCallback): this
-  subscribe(topic: string | string[] | Topic,  callback?: ClientSubscribeCallback): this
-  subscribe(...args) {
-    var packet
-    var subs : Granted[] = []
-    var obj = args.shift()
-    var callback = args.pop() || nop
-    var opts = args.pop()
-    var invalidTopic
-    var that = this
+  subscribe(topic: string | string[] | SubscriptionMap,  callback?: ClientSubscribeCallback): this
+  subscribe(...args: any[]) {
+    let packet: SubscribePacket
+    const subs: SubscriptionRequest[] = []
+    let obj = args.shift()
+    let callback = args.pop() || nop
+    let opts = args.pop()
+    let invalidTopic
+    const that = this
 
     if (typeof obj === 'string') {
       obj = [obj]
@@ -751,21 +752,21 @@ export class MqttClient extends events.EventEmitter {
     packet = {
       cmd: 'subscribe',
       subscriptions: subs,
-      qos: 1,
-      retain: false,
-      dup: false,
+      // qos: 1,
+      // retain: false,
+      // dup: false,
       messageId: this._nextId()
     }
 
-    this.outgoing[packet.messageId] = function (err, packet: SubackPacket) {
+    this.outgoing[packet.messageId] = function (err, subAck: SubackPacket) {
       if (!err) {
         subs.forEach(function (sub) {
           that._subscribedTopics[sub.topic] = sub.qos
         })
 
-        var granted = packet.granted
-        for (var i = 0; i < granted.length; i += 1) {
-          subs[i].qos = granted[i]
+        const granted = subAck.granted
+        for (let i = 0; i < granted.length; i += 1) {
+          subs[i].qos = (granted[i] as QoS)
         }
       }
 
@@ -788,28 +789,28 @@ export class MqttClient extends events.EventEmitter {
    * @example client.unsubscribe('topic', console.log);
    */
   unsubscribe (topic: string | string[], callback: PacketCallback) {
-    let unsubscriptions : string[]
+    let unsubscriptions: string[]
     if (typeof topic === 'string') {
       unsubscriptions = [topic]
     } else if (typeof topic === 'object' && topic.length) {
       unsubscriptions = topic
     }
 
-    var packet : UnsubscribePacket = {
+    const packet: UnsubscribePacket = {
       cmd: 'unsubscribe',
       // qos: 1, TODO:
       messageId: this._nextId(),
       unsubscriptions
     }
 
-    var that = this
+    const that = this
     callback = callback || nop
     if (this._checkDisconnecting(callback)) {
       return this
     }
 
-    packet.unsubscriptions.forEach(function (topic) {
-      delete that._subscribedTopics[topic]
+    packet.unsubscriptions.forEach(function (unsubscribedTopic) {
+      delete that._subscribedTopics[unsubscribedTopic]
     })
 
     this.outgoing[packet.messageId] = callback
@@ -829,7 +830,7 @@ export class MqttClient extends events.EventEmitter {
    * @api public
    */
   end (force?: boolean, cb?: boolean) {
-    var that = this
+    const that = this
 
     if (typeof force === 'function') {
       cb = force
@@ -881,7 +882,7 @@ export class MqttClient extends events.EventEmitter {
    * _setupReconnect - setup reconnect timer
    */
   private _setupReconnect () {
-    var that = this
+    const that = this
 
     if (!that.disconnecting && !that.reconnectTimer && (that.options.reconnectPeriod > 0)) {
       if (!this.reconnecting) {
@@ -945,7 +946,7 @@ export class MqttClient extends events.EventEmitter {
    */
   private _sendPacket (packet: Packet, cb?: PacketCallback) {
     if (!this.connected) {
-      if ((packet.cmd == 'publish' && packet.qos > 0) ||
+      if ((packet.cmd === 'publish' && packet.qos > 0) ||
          (packet.cmd !== 'publish') ||
           this.queueQoSZero) {
         this.queue.push({ packet: packet, cb: cb })
@@ -988,7 +989,7 @@ export class MqttClient extends events.EventEmitter {
    * @api private
    */
   private _setupPingTimer () {
-    var that = this
+    const that = this
 
     if (!this.pingTimer && this.options.keepalive) {
       this.pingResp = true
@@ -1029,7 +1030,7 @@ export class MqttClient extends events.EventEmitter {
    *
    * @api private
    */
-  private _handlePingresp (packet) {
+  private _handlePingresp (packet: PingrespPacket) {
     this.pingResp = true
   }
 
@@ -1040,9 +1041,9 @@ export class MqttClient extends events.EventEmitter {
    * @api private
    */
 
-  private _handleConnack (packet) {
-    var rc = packet.returnCode
-    var errors = [
+  private _handleConnack (packet: ConnackPacket) {
+    const rc = packet.returnCode
+    const errors = [
       '',
       'Unacceptable protocol version',
       'Identifier rejected',
@@ -1091,12 +1092,12 @@ export class MqttClient extends events.EventEmitter {
 
   for now i just suppressed the warnings
   */
-  private _handlePublish (packet : PublishPacket, done) {
-    var topic = packet.topic.toString()
-    var message = packet.payload
-    var qos = packet.qos
-    var mid = packet.messageId
-    var that = this
+  private _handlePublish (packet: PublishPacket, done: PacketCallback) {
+    const topic = packet.topic.toString()
+    const message = packet.payload
+    const qos = packet.qos
+    const mid = packet.messageId
+    const that = this
 
     switch (qos) {
       case 2:
@@ -1132,7 +1133,7 @@ export class MqttClient extends events.EventEmitter {
    * @param Function callback call when finished
    * @api public
    */
-  handleMessage (packet : Packet, callback : PacketCallback) {
+  handleMessage (packet: Packet, callback: PacketCallback) {
     callback()
   }
 
@@ -1143,13 +1144,13 @@ export class MqttClient extends events.EventEmitter {
    * @api private
    */
 
-  private _handleAck (packet : Packet) {
+  private _handleAck (packet: Packet) {
     /* eslint no-fallthrough: "off" */
-    var mid = packet.messageId
-    var type = packet.cmd
-    var response = null
-    var cb = this.outgoing[mid]
-    var that = this
+    const mid = packet.messageId
+    const type = packet.cmd
+    const cb = this.outgoing[mid]
+    const that = this
+    let response = null
 
     if (!cb) {
       // Server sent an ack in error, ignore it.
@@ -1199,16 +1200,16 @@ export class MqttClient extends events.EventEmitter {
    * @api private
    */
 
-  private _handlePubrel (packet : PubrelPacket, callback: PacketCallback) {
-    var mid = packet.messageId
-    var that = this
+  private _handlePubrel (packet: PubrelPacket, callback: PacketCallback) {
+    const mid = packet.messageId
+    const that = this
 
-    that.incomingStore.get(packet, function (err, pub : Packet) {
+    that.incomingStore.get(packet, function (err, pub: Packet) {
       if (err) {
         return that.emit('error', err)
       }
 
-      //TODO: check, I changed this while annotating
+      // TODO: check, I changed this while annotating
       // if (pub.cmd !== 'pubrel') {
       if (pub.cmd === 'publish') {
         that.emit('message', pub.topic, pub.payload, pub)
@@ -1223,7 +1224,7 @@ export class MqttClient extends events.EventEmitter {
    * _nextId
    */
   private _nextId () {
-    var id = this.nextId++
+    const id = this.nextId++
     // Ensure 16 bit unsigned int:
     if (id === 65535) {
       this.nextId = 1
@@ -1239,4 +1240,3 @@ export class MqttClient extends events.EventEmitter {
   }
 }
 
-export default MqttClient

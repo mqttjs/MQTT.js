@@ -1,7 +1,7 @@
 'use strict'
 
 import {Readable} from 'readable-stream'
-var streamsOpts = { objectMode: true }
+const streamsOpts = { objectMode: true }
 
 /**
  * In-memory implementation of the message store
@@ -9,7 +9,7 @@ var streamsOpts = { objectMode: true }
  *
  */
 class Store {
-  private _inflights : any
+  private _inflights: any
 
   constructor () {
     if (!(this instanceof Store)) {
@@ -39,11 +39,11 @@ class Store {
    *
    */
   createStream () {
-    var stream = new Readable(streamsOpts)
-    var inflights = this._inflights
-    var ids = Object.keys(this._inflights)
-    var destroyed = false
-    var i = 0
+    const stream = new Readable(streamsOpts)
+    const inflights = this._inflights
+    const ids = Object.keys(this._inflights)
+    let destroyed = false
+    let i = 0
 
     stream._read = function () {
       if (!destroyed && i < ids.length) {
@@ -58,7 +58,7 @@ class Store {
         return
       }
 
-      var self = this
+      const self = this
 
       destroyed = true
 

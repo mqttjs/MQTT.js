@@ -1,18 +1,18 @@
 'use strict'
 
-import MqttClient from '../client'
-import wsBuilder from './ws'
+import {MqttClient, ClientOptions} from '../client'
+import wsBuilder = require('./ws')
 import * as url from 'url'
 import * as xtend from 'xtend'
 
-var protocols : any = {}
+const protocols: any = {}
 
 if (process.title !== 'browser') {
-  protocols.mqtt = require('./tcp').default
-  protocols.tcp = require('./tcp').default
-  protocols.ssl = require('./tls').default
-  protocols.tls = require('./tls').default
-  protocols.mqtts = require('./tls').default
+  protocols.mqtt = require('./tcp')
+  protocols.tcp = require('./tcp')
+  protocols.ssl = require('./tls')
+  protocols.tls = require('./tls')
+  protocols.mqtts = require('./tls')
 }
 
 protocols.ws = wsBuilder
@@ -24,7 +24,7 @@ protocols.wss = wsBuilder
  * @param {Object} [opts] option object
  */
 function parseAuthOptions (opts) {
-  var matches
+  let matches
   if (opts.auth) {
     matches = opts.auth.match(/^(.+):(.+)$/)
     if (matches) {
@@ -36,13 +36,32 @@ function parseAuthOptions (opts) {
   }
 }
 
+function setProtocol(opts: ClientOptions, protocol: string) {
+  switch (protocol) {
+    case 'ws':
+    case 'wss':
+    case 'tcp':
+    case 'mqtt':
+    case 'ssl':
+    case 'mqtts':
+      opts.protocol = protocol
+      break;
+    default:
+      throw new Error(`unrecognised protocol ${protocol}`)
+  }
+}
+
+// function connect(brokerUrl: string, options?: ClientOptions): MqttClient
+// function connect(options?: ClientOptions): MqttClient
+// function connect(): MqttClient
 /**
  * connect - connect to an MQTT broker.
  *
  * @param {String} [brokerUrl] - url of the broker, optional
  * @param {Object} opts - see MqttClient#constructor
  */
-function connect (brokerUrl, opts) {
+
+function connect(brokerUrl?: string | any, opts?: ClientOptions)  {
   if ((typeof brokerUrl === 'object') && !opts) {
     opts = brokerUrl
     brokerUrl = null
@@ -50,12 +69,12 @@ function connect (brokerUrl, opts) {
 
   opts = opts || {}
 
-  if (brokerUrl) {
+  if (typeof brokerUrl === 'string') {
     opts = xtend(url.parse(brokerUrl, true), opts)
     if (opts.protocol === null) {
       throw new Error('Missing protocol')
     }
-    opts.protocol = opts.protocol.replace(/:$/, '')
+    setProtocol(opts, opts.protocol.replace(/:$/, ''))
   }
 
   // merge in the auth options if supplied
@@ -98,8 +117,8 @@ function connect (brokerUrl, opts) {
   }
 
   if (!protocols[opts.protocol]) {
-    var isSecure = ['mqtts', 'wss'].indexOf(opts.protocol) !== -1
-    opts.protocol = [
+    const isSecure = ['mqtts', 'wss'].indexOf(opts.protocol) !== -1
+    setProtocol(opts, [
       'mqtt',
       'mqtts',
       'ws',
@@ -110,7 +129,7 @@ function connect (brokerUrl, opts) {
         return false
       }
       return (typeof protocols[key] === 'function')
-    })[0]
+    })[0])
   }
 
   if (opts.clean === false && !opts.clientId) {
@@ -124,7 +143,7 @@ function connect (brokerUrl, opts) {
       }
 
       opts.host = opts.servers[client._reconnectCount].host
-      opts.port = opts.servers[client._reconnectCount].port
+      opts.port = '' + opts.servers[client._reconnectCount].port
       opts.hostname = opts.host
 
       client._reconnectCount++
@@ -136,7 +155,6 @@ function connect (brokerUrl, opts) {
   return new MqttClient(wrapper, opts)
 }
 
-export default connect
 export {connect}
 export {MqttClient}
 export {protocols}

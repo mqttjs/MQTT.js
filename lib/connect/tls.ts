@@ -1,14 +1,15 @@
 'use strict'
 import * as tls from 'tls'
+import {MqttClient, ClientOptions} from '../client'
 
-function buildBuilder (mqttClient, opts) {
-  var connection
-  opts.port = opts.port || 8883
+function buildBuilder (mqttClient: MqttClient, opts: ClientOptions) {
+  let connection: tls.ClearTextStream
+  opts.port = '' + (opts.port || 8883)
   opts.host = opts.hostname || opts.host || 'localhost'
 
   opts.rejectUnauthorized = opts.rejectUnauthorized !== false
 
-  connection = tls.connect(opts)
+  connection = tls.connect({...opts, port: +opts.port} as tls.ConnectionOptions)
   /* eslint no-use-before-define: [2, "nofunc"] */
   connection.on('secureConnect', function () {
     if (opts.rejectUnauthorized && !connection.authorized) {
@@ -18,7 +19,7 @@ function buildBuilder (mqttClient, opts) {
     }
   })
 
-  function handleTLSerrors (err) {
+  function handleTLSerrors (err: Error) {
     // How can I get verify this error is a tls error?
     if (opts.rejectUnauthorized) {
       mqttClient.emit('error', err)
@@ -36,4 +37,4 @@ function buildBuilder (mqttClient, opts) {
   return connection
 }
 
-export default buildBuilder
+export = buildBuilder
