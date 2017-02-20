@@ -8,16 +8,17 @@
  * See LICENSE for more information
  */
 
-var MqttClient = require('./lib/client')
-var connect = require('./lib/connect')
-var Store = require('./lib/store')
+import MqttClient from './lib/client'
 
-module.exports.connect = connect
+import connect from './lib/connect'
+import Store from './lib/store'
+export {connect}
 
 // Expose MqttClient
-module.exports.MqttClient = MqttClient
-module.exports.Client = MqttClient
-module.exports.Store = Store
+export {MqttClient}
+
+export {MqttClient as Client}
+export {Store}
 
 function cli () {
   var commist = require('commist')()

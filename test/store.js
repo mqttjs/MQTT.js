@@ -1,6 +1,6 @@
 'use strict'
 
-var Store = require('../lib/store')
+var Store = require('../').Store
 var abstractTest = require('../test/abstract_store')
 
 describe('in-memory store', function () {
