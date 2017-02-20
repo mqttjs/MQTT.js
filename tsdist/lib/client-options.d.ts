@@ -2,7 +2,6 @@
 import { Url } from 'url';
 import Store from './store';
 import { QoS } from './types';
-import { MqttClient } from './client';
 /**
  * MQTT CLIENT
  */
@@ -82,7 +81,7 @@ export interface ClientOptions extends SecureClientOptions, Url {
          */
         retain: boolean;
     };
-    transformWsUrl?: (url: string, options: ClientOptions, client: MqttClient) => string;
+    transformWsUrl?: (url: string, options: ClientOptions, client: any) => string;
 }
 export interface SecureClientOptions {
     /**
