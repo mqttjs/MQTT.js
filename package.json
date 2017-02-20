@@ -17,10 +17,9 @@
     "type": "git",
     "url": "git://github.com/mqttjs/MQTT.js.git"
   },
-  "main": "mqtt.js",
+  "main": "tsdist/mqtt.js",
   "scripts": {
     "test": "node_modules/.bin/babel-istanbul cover ./node_modules/mocha/bin/_mocha --report lcovonly -- --bail",
-    "pretest": "standard | snazzy",
     "prepublish": "nsp check && npm run browser-build",
     "browser-build": "rimraf dist/ && mkdirp dist/ && browserify mqtt.js -s mqtt > dist/mqtt.js && uglifyjs --screw-ie8 < dist/mqtt.js > dist/mqtt.min.js",
     "browser-test": "zuul --server test/browser/server.js --local --open test/browser/test.js",
@@ -67,10 +66,11 @@
     "inherits": "^2.0.1",
     "minimist": "^1.1.0",
     "mqtt-packet": "^5.0.0",
-    "readable-stream": "^2.1.0",
     "pump": "^1.0.1",
+    "readable-stream": "^2.1.0",
     "reinterval": "^1.0.1",
     "split2": "^2.0.1",
+    "ts-node": "^2.1.0",
     "websocket-stream": "^3.3.2",
     "xtend": "^4.0.0"
   },

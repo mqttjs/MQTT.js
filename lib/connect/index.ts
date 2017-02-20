@@ -2,10 +2,10 @@
 
 import MqttClient from '../client'
 import wsBuilder from './ws'
-import url from 'url'
-import xtend from 'xtend'
+import * as url from 'url'
+import * as xtend from 'xtend'
 
-var protocols = {}
+var protocols : any = {}
 
 if (process.title !== 'browser') {
   protocols.mqtt = require('./tcp').default
@@ -87,7 +87,6 @@ function connect (brokerUrl, opts) {
             break
           default:
             throw new Error('Unknown protocol for secure connection: "' + opts.protocol + '"!')
-            break
         }
         /* eslint no-unreachable:0 */
         /* jshint +W027 */

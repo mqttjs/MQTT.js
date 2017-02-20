@@ -1,5 +1,5 @@
 'use strict'
-import net from 'net'
+import * as net from 'net'
 
 /*
   variables port and host can be removed since

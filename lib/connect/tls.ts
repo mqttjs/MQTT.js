@@ -1,5 +1,5 @@
 'use strict'
-import tls from 'tls'
+import * as tls from 'tls'
 
 function buildBuilder (mqttClient, opts) {
   var connection

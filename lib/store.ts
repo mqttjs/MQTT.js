@@ -9,6 +9,8 @@ var streamsOpts = { objectMode: true }
  *
  */
 class Store {
+  private _inflights : any
+
   constructor () {
     if (!(this instanceof Store)) {
       return new Store()
@@ -22,7 +24,7 @@ class Store {
    * anything that has a messageId property.
    *
    */
-  put (packet, cb) {
+  put (packet, cb?) {
     this._inflights[packet.messageId] = packet
 
     if (cb) {

@@ -1,5 +1,4 @@
 --compilers js:babel-core/register
---compilers ts:ts-loader/register
 --growl
 --check-leaks
 --timeout 5000

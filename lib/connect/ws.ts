@@ -1,7 +1,7 @@
 'use strict'
 
-import websocket from 'websocket-stream'
-import urlModule from 'url'
+import * as websocket from 'websocket-stream'
+import * as urlModule from 'url'
 
 var WSS_OPTIONS = [
   'rejectUnauthorized',
@@ -86,7 +86,7 @@ function buildBuilderBrowser (client, opts) {
   return createWebSocket(client, opts)
 }
 
-export default IS_BROWSER ? buildBuilderBrowser : buildBuilder
+export default buildBuilder
 
 // if (IS_BROWSER) {
 //   module.exports = buildBuilderBrowser
