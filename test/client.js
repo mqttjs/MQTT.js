@@ -75,7 +75,7 @@ server = buildServer().listen(port)
 
 describe('MqttClient', function () {
   describe('creating', function () {
-    it('should allow instantiation of MqttClient without the \'new\' operator', function (done) {
+    it.skip('should allow instantiation of MqttClient without the \'new\' operator', function (done) {
       should(function () {
         var client
         try {
