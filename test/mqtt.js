@@ -57,7 +57,7 @@ describe('mqtt', function () {
       var c = mqtt.connect('tcp://user:pass@localhost:1883')
 
       c.options.should.have.property('hostname', 'localhost')
-      c.options.should.have.property('port', '1883')
+      c.options.should.have.property('port', 1883)
     })
 
     sslOpts = {
