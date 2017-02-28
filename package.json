@@ -17,15 +17,17 @@
     "type": "git",
     "url": "git://github.com/mqttjs/MQTT.js.git"
   },
-  "main": "mqtt.js",
+  "main": "tsdist/mqtt.js",
+  "typings": "tsdist/index.d.ts",
   "scripts": {
+    "pretest": "npm run compile-ts",
+    "compile-ts": "tsc && echo 'TypeScript compiled'",
     "test": "node_modules/.bin/istanbul cover ./node_modules/mocha/bin/_mocha --report lcovonly -- --bail",
-    "pretest": "standard | snazzy",
     "prepublish": "nsp check && npm run browser-build",
-    "browser-build": "rimraf dist/ && mkdirp dist/ && browserify mqtt.js -s mqtt > dist/mqtt.js && uglifyjs --screw-ie8 < dist/mqtt.js > dist/mqtt.min.js",
+    "browser-build": "npm run compile-ts && rimraf dist/ && mkdirp dist/ && browserify --debug tsdist/mqtt.js -s mqtt > dist/mqtt.js && uglifyjs --screw-ie8 < dist/mqtt.js > dist/mqtt.min.js",
     "browser-test": "zuul --server test/browser/server.js --local --open test/browser/test.js",
     "sauce-test": "zuul --server test/browser/server.js --tunnel ngrok -- test/browser/test.js",
-    "ci": "npm runt test && codecov"
+    "ci": "npm run test && codecov"
   },
   "pre-commit": [
     "test"
@@ -33,13 +35,13 @@
   "bin": {
     "mqtt_pub": "./bin/pub.js",
     "mqtt_sub": "./bin/sub.js",
-    "mqtt": "./mqtt.js"
+    "mqtt": "./tsdist/mqtt.js"
   },
   "files": [
     "dist/",
+    "tsdist/",
     "CONTRIBUTING.md",
     "doc",
-    "lib",
     "bin",
     "examples",
     "test",
@@ -47,6 +49,11 @@
   ],
   "engines": {
     "node": ">=4.0.0"
+  },
+  "babel": {
+    "presets": [
+      "es2015"
+    ]
   },
   "browser": {
     "./mqtt.js": "./lib/connect/index.js",
@@ -62,14 +69,17 @@
     "inherits": "^2.0.1",
     "minimist": "^1.1.0",
     "mqtt-packet": "^5.0.0",
-    "readable-stream": "^2.1.0",
     "pump": "^1.0.1",
+    "readable-stream": "^2.1.0",
     "reinterval": "^1.0.1",
     "split2": "^2.0.1",
+    "tslib": "^1.6.0",
     "websocket-stream": "^3.3.2",
     "xtend": "^4.0.0"
   },
   "devDependencies": {
+    "@types/mocha": "^2.2.39",
+    "@types/node": "^7.0.5",
     "browserify": "^14.0.0",
     "codecov": "^1.0.1",
     "istanbul": "^0.4.5",
@@ -84,6 +94,8 @@
     "snazzy": "^6.0.0",
     "standard": "^8.0.0",
     "through2": "^2.0.0",
+    "ts-node": "^2.1.0",
+    "typescript": "^2.1.6",
     "uglify": "^0.1.1",
     "uglify-js": "^2.7.4",
     "ws": "^1.0.0",

@@ -1,8 +1,10 @@
 'use strict'
 
-var websocket = require('websocket-stream')
-var urlModule = require('url')
-var WSS_OPTIONS = [
+import * as websocket from 'websocket-stream'
+import * as urlModule from 'url'
+import {MqttClient, ClientOptions} from '../client'
+
+const WSS_OPTIONS = [
   'rejectUnauthorized',
   'ca',
   'cert',
@@ -10,17 +12,17 @@ var WSS_OPTIONS = [
   'pfx',
   'passphrase'
 ]
-var IS_BROWSER = process.title === 'browser'
+const IS_BROWSER = process.title === 'browser'
 
-function buildUrl (opts, client) {
-  var url = opts.protocol + '://' + opts.hostname + ':' + opts.port + opts.path
+function buildUrl (opts: ClientOptions, client: MqttClient) {
+  let url = opts.protocol + '://' + opts.hostname + ':' + opts.port + opts.path
   if (typeof (opts.transformWsUrl) === 'function') {
     url = opts.transformWsUrl(url, opts, client)
   }
   return url
 }
 
-function setDefaultOpts (opts) {
+function setDefaultOpts (opts: ClientOptions) {
   if (!opts.hostname) {
     opts.hostname = 'localhost'
   }
@@ -42,24 +44,24 @@ function setDefaultOpts (opts) {
     // Add cert/key/ca etc options
     WSS_OPTIONS.forEach(function (prop) {
       if (opts.hasOwnProperty(prop) && !opts.wsOptions.hasOwnProperty(prop)) {
-        opts.wsOptions[prop] = opts[prop]
+        opts.wsOptions[prop] = (opts as any)[prop]
       }
     })
   }
 }
 
-function createWebSocket (client, opts) {
-  var websocketSubProtocol =
+function createWebSocket (client: MqttClient, opts: ClientOptions) {
+  const websocketSubProtocol =
     (opts.protocolId === 'MQIsdp') && (opts.protocolVersion === 3)
       ? 'mqttv3.1'
       : 'mqtt'
 
   setDefaultOpts(opts)
-  var url = buildUrl(opts, client)
+  const url = buildUrl(opts, client)
   return websocket(url, [websocketSubProtocol], opts.wsOptions)
 }
 
-function buildBuilder (client, opts) {
+function buildBuilder (client: MqttClient, opts: ClientOptions) {
   return createWebSocket(client, opts)
 }
 
@@ -75,7 +77,7 @@ function buildBuilderBrowser (client, opts) {
     if (typeof (document) === 'undefined') {
       throw new Error('Could not determine host. Specify host manually.')
     }
-    var parsed = urlModule.parse(document.URL)
+    const parsed = urlModule.parse(document.URL)
     opts.hostname = parsed.hostname
 
     if (!opts.port) {
@@ -85,8 +87,4 @@ function buildBuilderBrowser (client, opts) {
   return createWebSocket(client, opts)
 }
 
-if (IS_BROWSER) {
-  module.exports = buildBuilderBrowser
-} else {
-  module.exports = buildBuilder
-}
+export = buildBuilder

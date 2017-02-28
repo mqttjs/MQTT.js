@@ -1,9 +1,11 @@
 'use strict'
 
-var MqttClient = require('../client')
-var url = require('url')
-var xtend = require('xtend')
-var protocols = {}
+import {MqttClient, ClientOptions} from '../client'
+import wsBuilder = require('./ws')
+import * as url from 'url'
+import * as xtend from 'xtend'
+
+const protocols: any = {}
 
 if (process.title !== 'browser') {
   protocols.mqtt = require('./tcp')
@@ -13,8 +15,8 @@ if (process.title !== 'browser') {
   protocols.mqtts = require('./tls')
 }
 
-protocols.ws = require('./ws')
-protocols.wss = require('./ws')
+protocols.ws = wsBuilder
+protocols.wss = wsBuilder
 
 /**
  * Parse the auth attribute and merge username and password in the options object.
@@ -22,7 +24,7 @@ protocols.wss = require('./ws')
  * @param {Object} [opts] option object
  */
 function parseAuthOptions (opts) {
-  var matches
+  let matches
   if (opts.auth) {
     matches = opts.auth.match(/^(.+):(.+)$/)
     if (matches) {
@@ -34,13 +36,32 @@ function parseAuthOptions (opts) {
   }
 }
 
+function setProtocol(opts: ClientOptions, protocol: string) {
+  switch (protocol) {
+    case 'ws':
+    case 'wss':
+    case 'tcp':
+    case 'mqtt':
+    case 'ssl':
+    case 'mqtts':
+      opts.protocol = protocol
+      break;
+    default:
+      throw new Error(`unrecognised protocol ${protocol}`)
+  }
+}
+
+// function connect(brokerUrl: string, options?: ClientOptions): MqttClient
+// function connect(options?: ClientOptions): MqttClient
+// function connect(): MqttClient
 /**
  * connect - connect to an MQTT broker.
  *
  * @param {String} [brokerUrl] - url of the broker, optional
  * @param {Object} opts - see MqttClient#constructor
  */
-function connect (brokerUrl, opts) {
+
+function connect(brokerUrl?: string | any, opts?: ClientOptions)  {
   if ((typeof brokerUrl === 'object') && !opts) {
     opts = brokerUrl
     brokerUrl = null
@@ -48,12 +69,15 @@ function connect (brokerUrl, opts) {
 
   opts = opts || {}
 
-  if (brokerUrl) {
+  if (typeof brokerUrl === 'string') {
     opts = xtend(url.parse(brokerUrl, true), opts)
+    if (opts.port != null) {
+      opts.port = +opts.port
+    }
     if (opts.protocol === null) {
       throw new Error('Missing protocol')
     }
-    opts.protocol = opts.protocol.replace(/:$/, '')
+    setProtocol(opts, opts.protocol.replace(/:$/, ''))
   }
 
   // merge in the auth options if supplied
@@ -85,7 +109,6 @@ function connect (brokerUrl, opts) {
             break
           default:
             throw new Error('Unknown protocol for secure connection: "' + opts.protocol + '"!')
-            break
         }
         /* eslint no-unreachable:0 */
         /* jshint +W027 */
@@ -97,8 +120,8 @@ function connect (brokerUrl, opts) {
   }
 
   if (!protocols[opts.protocol]) {
-    var isSecure = ['mqtts', 'wss'].indexOf(opts.protocol) !== -1
-    opts.protocol = [
+    const isSecure = ['mqtts', 'wss'].indexOf(opts.protocol) !== -1
+    setProtocol(opts, [
       'mqtt',
       'mqtts',
       'ws',
@@ -109,7 +132,7 @@ function connect (brokerUrl, opts) {
         return false
       }
       return (typeof protocols[key] === 'function')
-    })[0]
+    })[0])
   }
 
   if (opts.clean === false && !opts.clientId) {
@@ -135,6 +158,6 @@ function connect (brokerUrl, opts) {
   return new MqttClient(wrapper, opts)
 }
 
-module.exports = connect
-module.exports.connect = connect
-module.exports.MqttClient = MqttClient
+export {connect}
+export {MqttClient}
+export {protocols}

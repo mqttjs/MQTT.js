@@ -2,6 +2,8 @@
 
 var fs = require('fs')
 var path = require('path')
+require('should')
+
 var mqtt = require('../')
 
 describe('mqtt', function () {
@@ -9,7 +11,6 @@ describe('mqtt', function () {
     var sslOpts, sslOpts2
     it('should return an MqttClient when connect is called with mqtt:/ url', function () {
       var c = mqtt.connect('mqtt://localhost:1883')
-
       c.should.be.instanceOf(mqtt.MqttClient)
     })
 
@@ -57,7 +58,7 @@ describe('mqtt', function () {
       var c = mqtt.connect('tcp://user:pass@localhost:1883')
 
       c.options.should.have.property('hostname', 'localhost')
-      c.options.should.have.property('port', '1883')
+      c.options.should.have.property('port', 1883)
     })
 
     sslOpts = {

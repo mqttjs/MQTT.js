@@ -79,8 +79,8 @@ describe('MqttClient', function () {
       should(function () {
         var client
         try {
-          client = mqtt.MqttClient(function () {
-            throw Error('break')
+          client = mqtt.MqttClient(function() {
+            throw new Error('break')
           }, {})
           client.end()
         } catch (err) {

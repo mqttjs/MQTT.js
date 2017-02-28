@@ -1,0 +1,21 @@
+{
+    "compilerOptions": {
+        "module": "commonjs",
+        "target": "es5",
+        "outDir": "tsdist",
+        "noImplicitAny": false,
+        "importHelpers": true,
+        "declaration" : true,
+        "sourceMap": true
+    },
+    "files" : [
+      "mqtt.ts",
+      "lib/client.ts",
+      "lib/connect/index.ts",
+      "lib/connect/tcp.ts",
+      "lib/connect/tls.ts",
+      "lib/connect/ws.ts",
+      "lib/store.ts",
+      "lib/validations.ts"
+    ]
+}
