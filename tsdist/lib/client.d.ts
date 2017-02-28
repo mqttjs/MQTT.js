@@ -4,7 +4,6 @@
  */
 import * as events from 'events';
 import Store from './store';
-import EventEmitter = NodeJS.EventEmitter;
 import { QoS, Packet } from './types';
 import { ClientOptions, ClientSubscribeOptions, ClientPublishOptions } from './client-options';
 export interface SubscriptionGrant {
@@ -42,7 +41,7 @@ export interface IReinterval {
     clear: () => void;
     reschedule(ms: number): any;
 }
-export interface IStream extends EventEmitter {
+export interface IStream extends events.EventEmitter {
     pipe(to: any): any;
     destroy(): any;
     end(): any;

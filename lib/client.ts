@@ -9,7 +9,6 @@ import * as reInterval from 'reinterval'
 import { Writable } from 'readable-stream'
 import Store from './store'
 import validations from './validations'
-import EventEmitter = NodeJS.EventEmitter
 
 import {
   QoS, Packet, PubrelPacket, PublishPacket,
@@ -102,7 +101,7 @@ export type OnErrorCallback = (error: Error) => void
 export type PacketCallback = (error?: Error, packet?: Packet) => any
 
 export interface IReinterval {clear: () => void, reschedule(ms: number)}
-export interface IStream extends EventEmitter {
+export interface IStream extends events.EventEmitter {
   pipe(to: any)
   destroy()
   end()
