@@ -4,6 +4,7 @@
         "target": "es5",
         "outDir": "tsdist",
         "noImplicitAny": false,
+        "importHelpers": true,
         "declaration" : true,
         "sourceMap": true
     },

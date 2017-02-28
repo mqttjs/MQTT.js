@@ -20,6 +20,7 @@
   "main": "tsdist/mqtt.js",
   "typings": "tsdist/index.d.ts",
   "scripts": {
+    "pretest": "tsc && echo 'TypeScript compiled'",
     "test": "node_modules/.bin/istanbul cover ./node_modules/mocha/bin/_mocha --report lcovonly -- --bail",
     "prepublish": "nsp check && npm run browser-build",
     "browser-build": "rimraf dist/ && mkdirp dist/ && browserify mqtt.js -s mqtt > dist/mqtt.js && uglifyjs --screw-ie8 < dist/mqtt.js > dist/mqtt.min.js",
@@ -71,6 +72,7 @@
     "readable-stream": "^2.1.0",
     "reinterval": "^1.0.1",
     "split2": "^2.0.1",
+    "tslib": "^1.6.0",
     "websocket-stream": "^3.3.2",
     "xtend": "^4.0.0"
   },

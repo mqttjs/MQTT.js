@@ -1,19 +1,12 @@
 'use strict';
-var __assign = (this && this.__assign) || Object.assign || function(t) {
-    for (var s, i = 1, n = arguments.length; i < n; i++) {
-        s = arguments[i];
-        for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
-            t[p] = s[p];
-    }
-    return t;
-};
+var tslib_1 = require("tslib");
 var tls = require("tls");
 function buildBuilder(mqttClient, opts) {
     var connection;
     opts.port = opts.port || 8883;
     opts.host = opts.hostname || opts.host || 'localhost';
     opts.rejectUnauthorized = opts.rejectUnauthorized !== false;
-    connection = tls.connect(__assign({}, opts, { port: opts.port }));
+    connection = tls.connect(tslib_1.__assign({}, opts, { port: opts.port }));
     /* eslint no-use-before-define: [2, "nofunc"] */
     connection.on('secureConnect', function () {
         if (opts.rejectUnauthorized && !connection.authorized) {
