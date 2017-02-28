@@ -9,7 +9,6 @@ import * as reInterval from 'reinterval'
 import { Writable } from 'readable-stream'
 import Store from './store'
 import validations from './validations'
-import ReadableStream = NodeJS.ReadableStream
 import EventEmitter = NodeJS.EventEmitter
 
 import {
