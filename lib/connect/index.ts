@@ -71,6 +71,9 @@ function connect(brokerUrl?: string | any, opts?: ClientOptions)  {
 
   if (typeof brokerUrl === 'string') {
     opts = xtend(url.parse(brokerUrl, true), opts)
+    if (opts.port != null) {
+      opts.port = +opts.port
+    }
     if (opts.protocol === null) {
       throw new Error('Missing protocol')
     }
@@ -143,7 +146,7 @@ function connect(brokerUrl?: string | any, opts?: ClientOptions)  {
       }
 
       opts.host = opts.servers[client._reconnectCount].host
-      opts.port = '' + opts.servers[client._reconnectCount].port
+      opts.port = opts.servers[client._reconnectCount].port
       opts.hostname = opts.host
 
       client._reconnectCount++

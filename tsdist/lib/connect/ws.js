@@ -23,10 +23,10 @@ function setDefaultOpts(opts) {
     }
     if (!opts.port) {
         if (opts.protocol === 'wss') {
-            opts.port = '' + 443;
+            opts.port = 443;
         }
         else {
-            opts.port = '' + 80;
+            opts.port = 80;
         }
     }
     if (!opts.path) {

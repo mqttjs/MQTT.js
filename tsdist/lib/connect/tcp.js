@@ -6,7 +6,7 @@ var net = require("net");
 */
 function buildBuilder(client, opts) {
     var port, host;
-    opts.port = '' + (opts.port || 1883);
+    opts.port = opts.port || 1883;
     opts.hostname = opts.hostname || opts.host || 'localhost';
     port = opts.port;
     host = opts.hostname;

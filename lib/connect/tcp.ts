@@ -8,7 +8,7 @@ import {MqttClient, ClientOptions} from '../client'
 */
 function buildBuilder (client: MqttClient, opts: ClientOptions) {
   let port, host
-  opts.port = '' + (opts.port || 1883)
+  opts.port = opts.port || 1883
   opts.hostname = opts.hostname || opts.host || 'localhost'
 
   port = opts.port

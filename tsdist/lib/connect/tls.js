@@ -10,10 +10,10 @@ var __assign = (this && this.__assign) || Object.assign || function(t) {
 var tls = require("tls");
 function buildBuilder(mqttClient, opts) {
     var connection;
-    opts.port = '' + (opts.port || 8883);
+    opts.port = opts.port || 8883;
     opts.host = opts.hostname || opts.host || 'localhost';
     opts.rejectUnauthorized = opts.rejectUnauthorized !== false;
-    connection = tls.connect(__assign({}, opts, { port: +opts.port }));
+    connection = tls.connect(__assign({}, opts, { port: opts.port }));
     /* eslint no-use-before-define: [2, "nofunc"] */
     connection.on('secureConnect', function () {
         if (opts.rejectUnauthorized && !connection.authorized) {

@@ -4,12 +4,12 @@ import {MqttClient, ClientOptions} from '../client'
 
 function buildBuilder (mqttClient: MqttClient, opts: ClientOptions) {
   let connection: tls.ClearTextStream
-  opts.port = '' + (opts.port || 8883)
+  opts.port = opts.port || 8883
   opts.host = opts.hostname || opts.host || 'localhost'
 
   opts.rejectUnauthorized = opts.rejectUnauthorized !== false
 
-  connection = tls.connect({...opts, port: +opts.port} as tls.ConnectionOptions)
+  connection = tls.connect({...opts, port: opts.port} as tls.ConnectionOptions)
   /* eslint no-use-before-define: [2, "nofunc"] */
   connection.on('secureConnect', function () {
     if (opts.rejectUnauthorized && !connection.authorized) {

@@ -1,10 +1,21 @@
 import { Url } from 'url'
 import Store from './store'
 import { QoS } from './types'
-/**
- * MQTT CLIENT
- */
-export interface ClientOptions extends SecureClientOptions, Url {
+
+export interface ClientOptions extends SecureClientOptions {
+  // From `url.parse(brokerUrl)`
+  href?: string;
+  auth?: string;
+  hostname?: string;
+  port?: number;
+  host?: string;
+  pathname?: string;
+  search?: string;
+  query?: string | any;
+  slashes?: boolean;
+  hash?: string;
+  path?: string;
+
   protocol?: 'wss' | 'ws' | 'mqtt' | 'mqtts' | 'tcp' | 'ssl'
 
   wsOptions?: {
@@ -62,7 +73,7 @@ export interface ClientOptions extends SecureClientOptions, Url {
 
   reschedulePings?: boolean
 
-  servers?: Array<{host: string, port: number|string}>
+  servers?: Array<{host: string, port: number}>
 
   /**
    * a message that will sent by the broker automatically when the client disconnect badly.

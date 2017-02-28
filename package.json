@@ -33,13 +33,13 @@
   "bin": {
     "mqtt_pub": "./bin/pub.js",
     "mqtt_sub": "./bin/sub.js",
-    "mqtt": "./mqtt.js"
+    "mqtt": "./tsdist/mqtt.js"
   },
   "files": [
     "dist/",
+    "tsdist/",
     "CONTRIBUTING.md",
     "doc",
-    "lib",
     "bin",
     "examples",
     "test",
