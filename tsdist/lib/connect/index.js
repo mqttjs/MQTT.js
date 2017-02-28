@@ -1,4 +1,5 @@
 'use strict';
+Object.defineProperty(exports, "__esModule", { value: true });
 var client_1 = require("../client");
 exports.MqttClient = client_1.MqttClient;
 var wsBuilder = require("./ws");
@@ -100,6 +101,8 @@ function connect(brokerUrl, opts) {
                     default:
                         throw new Error('Unknown protocol for secure connection: "' + opts.protocol + '"!');
                 }
+                /* eslint no-unreachable:0 */
+                /* jshint +W027 */
             }
         }
         else {

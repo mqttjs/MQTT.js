@@ -1,4 +1,5 @@
 'use strict';
+Object.defineProperty(exports, "__esModule", { value: true });
 var readable_stream_1 = require("readable-stream");
 var streamsOpts = { objectMode: true };
 /**
@@ -93,6 +94,5 @@ var Store = (function () {
     };
     return Store;
 }());
-Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = Store;
 //# sourceMappingURL=store.js.map

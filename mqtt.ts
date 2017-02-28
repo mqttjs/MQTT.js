@@ -22,10 +22,11 @@ function cli () {
   const commist = require('commist')()
   const helpMe = require('help-me')()
 
-  commist.register('publish', require('./bin/pub'))
-  commist.register('subscribe', require('./bin/sub'))
+  // Files are relative to tsdist
+  commist.register('publish', require('../bin/pub'))
+  commist.register('subscribe', require('../bin/sub'))
   commist.register('version', function () {
-    console.log('MQTT.js version:', require('./package.json').version)
+    console.log('MQTT.js version:', require('../package.json').version)
   })
   commist.register('help', helpMe.toStdout)
 

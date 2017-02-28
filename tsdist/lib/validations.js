@@ -1,4 +1,5 @@
 'use strict';
+Object.defineProperty(exports, "__esModule", { value: true });
 /**
  * Validate a topic to see if it's valid or not.
  * A topic is valid if it follow below rules:
@@ -40,7 +41,6 @@ function validateTopics(topics) {
     }
     return null;
 }
-Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = {
     validateTopics: validateTopics
 };

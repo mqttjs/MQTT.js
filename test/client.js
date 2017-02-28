@@ -75,12 +75,12 @@ server = buildServer().listen(port)
 
 describe('MqttClient', function () {
   describe('creating', function () {
-    it.skip('should allow instantiation of MqttClient without the \'new\' operator', function (done) {
+    it('should allow instantiation of MqttClient without the \'new\' operator', function (done) {
       should(function () {
         var client
         try {
-          client = mqtt.MqttClient(function () {
-            throw Error('break')
+          client = mqtt.MqttClient(function() {
+            throw new Error('break')
           }, {})
           client.end()
         } catch (err) {

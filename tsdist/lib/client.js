@@ -1,4 +1,5 @@
 'use strict';
+Object.defineProperty(exports, "__esModule", { value: true });
 var tslib_1 = require("tslib");
 /**
  * Module dependencies
@@ -56,6 +57,7 @@ function nop() { }
 var MqttClient = (function (_super) {
     tslib_1.__extends(MqttClient, _super);
     function MqttClient(streamBuilder, options) {
+        var _newTarget = this.constructor;
         var _this = _super.call(this) || this;
         // connack timer
         _this.connackTimer = null;
@@ -74,6 +76,9 @@ var MqttClient = (function (_super) {
         _this.queue = [];
         _this._subscribedTopics = {};
         _this.outgoing = {};
+        if (!(_newTarget === MqttClient)) {
+            return new MqttClient(streamBuilder, options);
+        }
         _this.streamBuilder = streamBuilder;
         var that = _this;
         // if (!(this instanceof MqttClient)) {

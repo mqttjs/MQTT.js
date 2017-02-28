@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 'use strict';
+Object.defineProperty(exports, "__esModule", { value: true });
 /*
  * Copyright (c) 2015-2015 MQTT.js contributors.
  * Copyright (c) 2011-2014 Adam Rudd.
@@ -16,10 +17,11 @@ exports.Store = store_1.default;
 function cli() {
     var commist = require('commist')();
     var helpMe = require('help-me')();
-    commist.register('publish', require('./bin/pub'));
-    commist.register('subscribe', require('./bin/sub'));
+    // Files are relative to tsdist
+    commist.register('publish', require('../bin/pub'));
+    commist.register('subscribe', require('../bin/sub'));
     commist.register('version', function () {
-        console.log('MQTT.js version:', require('./package.json').version);
+        console.log('MQTT.js version:', require('../package.json').version);
     });
     commist.register('help', helpMe.toStdout);
     if (commist.parse(process.argv.slice(2)) !== null) {

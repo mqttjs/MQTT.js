@@ -168,6 +168,10 @@ export class MqttClient extends events.EventEmitter {
 
   constructor (streamBuilder, options) {
     super()
+    if (!(new.target === MqttClient)) {
+      return new MqttClient(streamBuilder, options)
+    }
+
     this.streamBuilder = streamBuilder
     const that = this
 
