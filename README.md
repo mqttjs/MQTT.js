@@ -460,16 +460,16 @@ you can then use mqtt.js in the browser with the same api than node's one.
 <body>
 <script src="./browserMqtt.js"></script>
 <script>
-      var client = mqtt.connect() // you add a ws:// url here
-      client.subscribe("mqtt/demo")
+  var client = mqtt.connect() // you add a ws:// url here
+  client.subscribe("mqtt/demo")
 
-      client.on("message", function (topic, payload) {
-        alert([topic, payload].join(": "))
-        client.end()
-      })
+  client.on("message", function (topic, payload) {
+    alert([topic, payload].join(": "))
+    client.end()
+  })
 
-      client.publish("mqtt/demo", "hello world!")
-    </script>
+  client.publish("mqtt/demo", "hello world!")
+</script>
 </body>
 </html>
 ```
