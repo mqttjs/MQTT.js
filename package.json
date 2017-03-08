@@ -18,6 +18,7 @@
     "url": "git://github.com/mqttjs/MQTT.js.git"
   },
   "main": "mqtt.js",
+  "types" : "types/index.d.ts",
   "scripts": {
     "test": "node_modules/.bin/istanbul cover ./node_modules/mocha/bin/_mocha --report lcovonly -- --bail",
     "pretest": "standard | snazzy",
