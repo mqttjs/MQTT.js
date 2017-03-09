@@ -18,7 +18,7 @@
     "url": "git://github.com/mqttjs/MQTT.js.git"
   },
   "main": "mqtt.js",
-  "types" : "types/index.d.ts",
+  "types": "types/index.d.ts",
   "scripts": {
     "test": "node_modules/.bin/istanbul cover ./node_modules/mocha/bin/_mocha --report lcovonly -- --bail",
     "pretest": "standard | snazzy",
@@ -85,6 +85,7 @@
     "snazzy": "^6.0.0",
     "standard": "^8.6.0",
     "through2": "^2.0.3",
+    "typescript": "^2.2.1",
     "uglify": "^0.1.5",
     "uglify-js": "^2.7.5",
     "ws": "^1.0.0",
