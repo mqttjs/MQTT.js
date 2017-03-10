@@ -4,29 +4,34 @@
  *
  */
 declare class Store {
-    constructor();
-    /**
-     * Adds a packet to the store, a packet is
-     * anything that has a messageId property.
-     *
-     */
-    put(packet: any, cb?: any): this;
-    /**
-     * Creates a stream with all the packets in the store
-     *
-     */
-    createStream(): any;
-    /**
-     * deletes a packet from the store.
-     */
-    del(packet: any, cb: any): this;
-    /**
-     * get a packet from the store.
-     */
-    get(packet: any, cb: any): this;
-    /**
-     * Close the store
-     */
-    close(cb: any): void;
+  constructor ()
+
+  /**
+   * Adds a packet to the store, a packet is
+   * anything that has a messageId property.
+   *
+   */
+  public put (packet: any, cb?: Function): this
+
+  /**
+   * Creates a stream with all the packets in the store
+   *
+   */
+  public createStream (): any
+
+  /**
+   * deletes a packet from the store.
+   */
+  public del (packet: any, cb: Function): this
+
+  /**
+   * get a packet from the store.
+   */
+  public get (packet: any, cb: Function): this
+
+  /**
+   * Close the store
+   */
+  public close (cb: Function): void
 }
-export { Store };
+export { Store }

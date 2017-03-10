@@ -22,11 +22,12 @@
   "scripts": {
     "test": "node_modules/.bin/istanbul cover ./node_modules/mocha/bin/_mocha --report lcovonly -- --bail",
     "pretest": "standard | snazzy",
+    "tslint": "tslint types/**/*.d.ts",
     "prepublish": "nsp check && npm run browser-build",
     "browser-build": "rimraf dist/ && mkdirp dist/ && browserify mqtt.js -s mqtt > dist/mqtt.js && uglifyjs --screw-ie8 < dist/mqtt.js > dist/mqtt.min.js",
     "browser-test": "zuul --server test/browser/server.js --local --open test/browser/test.js",
     "sauce-test": "zuul --server test/browser/server.js --tunnel ngrok -- test/browser/test.js",
-    "ci": "npm run test && codecov"
+    "ci": "npm run tslint && npm run test && codecov"
   },
   "pre-commit": [
     "test"
@@ -85,6 +86,8 @@
     "snazzy": "^6.0.0",
     "standard": "^8.6.0",
     "through2": "^2.0.3",
+    "tslint": "^4.5.1",
+    "tslint-config-standard": "^4.0.0",
     "typescript": "^2.2.1",
     "uglify": "^0.1.5",
     "uglify-js": "^2.7.5",
