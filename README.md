@@ -101,6 +101,11 @@ run the example.
 
 to use MQTT.js in the browser see the [browserify](#browserify) section
 
+<a name="promises"></a>
+## Promise support
+
+If you want to use the new [async-await](https://blog.risingstack.com/async-await-node-js-7-nightly/) functionality in JavaScript, or just prefer using Promises instead of callbacks, [async-mqtt](https://github.com/mqttjs/async-mqtt) is a wrapper over MQTT.js which uses promises instead of callbacks when possible.
+
 <a name="cli"></a>
 ## Command Line Tools
 
