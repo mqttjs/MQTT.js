@@ -56,7 +56,7 @@ describe('mqtt', function () {
     it('should return an MqttClient with correct host when called with a host and port', function () {
       var c = mqtt.connect('tcp://user:pass@localhost:1883')
 
-      c.options.should.have.property('hostname', 'localhost')
+      c.options.should.have.property('host', 'localhost')
       c.options.should.have.property('port', 1883)
     })
 

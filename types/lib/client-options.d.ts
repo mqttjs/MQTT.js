@@ -4,9 +4,8 @@ import { QoS } from './types'
 
 export interface IClientOptions extends ISecureClientOptions {
   // The options are extended by url.parse() fields in connect() function
-  hostname?: string
   port?: number // port is made into a number subsequently
-  host?: string
+  host?: string // host does NOT include port
   path?: string
   protocol?: 'wss' | 'ws' | 'mqtt' | 'mqtts' | 'tcp' | 'ssl'
 
