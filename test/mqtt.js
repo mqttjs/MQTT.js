@@ -13,6 +13,25 @@ describe('mqtt', function () {
       c.should.be.instanceOf(mqtt.MqttClient)
     })
 
+    it('should warn that `hostname` is deprecated, while still honouring it', function () {
+      var oldWarn = console.warn
+      try {
+        var asserted = false
+        console.warn = function (s) {
+          asserted = true
+          s.split('\n')[0].should.be.equal(
+            'Use of mqtt.Client `opts.hostname` is deprecated. Use `opts.host`.')
+        }
+        var c = mqtt.connect('mqtt://localhost:1883', {hostname: 'test'})
+        asserted.should.be.equal(true)
+        c.should.be.instanceOf(mqtt.MqttClient)
+        c.options.hostname.should.be.equal('test')
+        c.options.host.should.be.equal('test')
+      } finally {
+        console.warn = oldWarn
+      }
+    })
+
     it('should throw an error when called with no protocol specified', function () {
       (function () {
         mqtt.connect('foo.bar.com')
@@ -56,7 +75,7 @@ describe('mqtt', function () {
     it('should return an MqttClient with correct host when called with a host and port', function () {
       var c = mqtt.connect('tcp://user:pass@localhost:1883')
 
-      c.options.should.have.property('hostname', 'localhost')
+      c.options.should.have.property('host', 'localhost')
       c.options.should.have.property('port', 1883)
     })
 

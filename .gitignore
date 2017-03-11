@@ -10,3 +10,4 @@ npm-debug.log
 dist/
 yarn.lock
 coverage
+.idea/
