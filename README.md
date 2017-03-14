@@ -17,6 +17,7 @@ in JavaScript for node.js and the browser.
 * [API](#api)
 * [Browser](#browser)
 * [About QoS](#qos)
+* [TypeScript](#typescript)
 * [Contributing](#contributing)
 * [License](#license)
 
@@ -514,6 +515,16 @@ Here is how QoS works:
 * QoS 2 : received **exactly once** : Same as QoS 1 but there is no duplicates.
 
 About data consumption, obviously, QoS 2 > QoS 1 > QoS 0, if that's a concern to you.
+
+<a name="typescript"></a>
+## Usage with TypeScript
+This repo bundles TypeScript definition files for use in TypeScript projects and to support tools that can read `.d.ts` files.
+
+### Pre-requisites
+Before you can begin using these TypeScript definitions with your project, you need to make sure your project meets a few of these requirements:
+ * TypeScript >= 2.1
+ * Includes the TypeScript definitions for node. You can use npm to install this by typing the following into a terminal window:
+   `npm install --save-dev @types/node`
 
 <a name="contributing"></a>
 ## Contributing
