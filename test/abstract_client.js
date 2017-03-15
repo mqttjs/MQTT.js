@@ -1536,5 +1536,34 @@ module.exports = function (server, config) {
         }
       })
     })
+
+    it('should resubscribe even if disconnect is before suback', function (done) {
+      var client = mqtt.connect(Object.assign({ reconnectPeriod: 100 }, config))
+      var subscribeCount = 0
+      var connectCount = 0
+
+      server.removeAllListeners('client')
+      server.on('client', function (serverClient) {
+        serverClient.on('connect', function () {
+          connectCount++
+          serverClient.connack({returnCode: 0})
+        })
+
+        serverClient.on('subscribe', function () {
+          subscribeCount++
+          if (subscribeCount === 1) {
+            // disconnect before sending the suback on the first subscribe
+            client.stream.end()
+          }
+
+          if (connectCount === 2) {
+            subscribeCount.should.equal(2)
+            client.end(true, done)
+          }
+        })
+      })
+
+      client.subscribe('hello')
+    })
   })
 }
