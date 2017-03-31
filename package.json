@@ -45,6 +45,7 @@
     "bin",
     "examples",
     "test",
+    "types",
     "mqtt.js"
   ],
   "engines": {
