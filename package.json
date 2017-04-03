@@ -74,7 +74,7 @@
   },
   "devDependencies": {
     "browserify": "^14.1.0",
-    "codecov": "^1.0.1",
+    "codecov": "^2.0.0",
     "istanbul": "^0.4.5",
     "mkdirp": "^0.5.1",
     "mocha": "^3.2.0",
@@ -85,7 +85,7 @@
     "should": "*",
     "sinon": "~1.17.7",
     "snazzy": "^6.0.0",
-    "standard": "^8.6.0",
+    "standard": "^9.0.0",
     "through2": "^2.0.3",
     "tslint": "^4.5.1",
     "tslint-config-standard": "^4.0.0",

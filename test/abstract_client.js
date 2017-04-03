@@ -126,7 +126,7 @@ module.exports = function (server, config) {
 
       server.once('client', function (serverClient) {
         serverClient.once('connect', function (packet) {
-          packet.clean.should.be.true
+          packet.clean.should.be.true()
           serverClient.disconnect()
           done()
         })
@@ -157,7 +157,7 @@ module.exports = function (server, config) {
       server.once('client', function (serverClient) {
         serverClient.once('connect', function (packet) {
           packet.clientId.should.match(/testclient/)
-          packet.clean.should.be.false
+          packet.clean.should.be.false()
           serverClient.disconnect()
           done()
         })
