@@ -137,7 +137,7 @@ export declare class MqttClient extends events.EventEmitter {
    * @example client.unsubscribe('topic')
    * @example client.unsubscribe('topic', console.log)
    */
-  public unsubscribe (topic: string | string[], callback: PacketCallback): this
+  public unsubscribe (topic: string | string[], callback?: PacketCallback): this
 
   /**
    * end - close connection
@@ -148,7 +148,7 @@ export declare class MqttClient extends events.EventEmitter {
    *
    * @api public
    */
-  public end (force?: boolean, cb?: boolean): this
+  public end (force?: boolean, cb?: Function): this
 
   /**
    * Handle messages with backpressure support, one at a time.
