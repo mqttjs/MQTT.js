@@ -64,7 +64,7 @@ export declare class MqttClient extends events.EventEmitter {
   public options: IClientOptions
   public queueQoSZero: boolean
 
-  constructor (streamBuilder: (MqttClient) => IStream, options: IClientOptions)
+  constructor (streamBuilder: (client: MqttClient) => IStream, options: IClientOptions)
 
   public on (event: 'message', cb: OnMessageCallback): this
   public on (event: 'packetsend' | 'packetreceive', cb: OnPacketCallback): this
