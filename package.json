@@ -78,6 +78,7 @@
   },
   "devDependencies": {
     "browserify": "^14.4.0",
+    "@types/node": "*",
     "codecov": "^2.0.0",
     "istanbul": "^0.4.5",
     "mkdirp": "^0.5.1",
