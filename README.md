@@ -523,6 +523,7 @@ This repo bundles TypeScript definition files for use in TypeScript projects and
 ### Pre-requisites
 Before you can begin using these TypeScript definitions with your project, you need to make sure your project meets a few of these requirements:
  * TypeScript >= 2.1
+ * Set tsconfig.json: `{"compilerOptions" : {"moduleResolution" : "node"}, ...}`
  * Includes the TypeScript definitions for node. You can use npm to install this by typing the following into a terminal window:
    `npm install --save-dev @types/node`
 
