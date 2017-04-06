@@ -41,6 +41,7 @@ export declare type OnMessageCallback = (topic: string, payload: Buffer, packet:
 export declare type OnPacketCallback = (packet: Packet) => void
 export declare type OnErrorCallback = (error: Error) => void
 export declare type PacketCallback = (error?: Error, packet?: Packet) => any
+export declare type CloseCallback = () => void
 
 export interface IStream extends events.EventEmitter {
   pipe (to: any): any
@@ -148,7 +149,7 @@ export declare class MqttClient extends events.EventEmitter {
    *
    * @api public
    */
-  public end (force?: boolean, cb?: Function): this
+  public end (force?: boolean, cb?: CloseCallback): this
 
   /**
    * Handle messages with backpressure support, one at a time.
