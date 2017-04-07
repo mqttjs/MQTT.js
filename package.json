@@ -69,7 +69,7 @@
     "pump": "^1.0.2",
     "reinterval": "^1.1.0",
     "split2": "^2.1.1",
-    "websocket-stream": "^3.3.3",
+    "websocket-stream": "^4.0.0",
     "xtend": "^4.0.1"
   },
   "devDependencies": {
@@ -85,14 +85,14 @@
     "should": "*",
     "sinon": "~1.17.7",
     "snazzy": "^6.0.0",
-    "standard": "^9.0.0",
+    "standard": "^10.0.0",
     "through2": "^2.0.3",
     "tslint": "^4.5.1",
     "tslint-config-standard": "^4.0.0",
     "typescript": "^2.2.1",
     "uglify": "^0.1.5",
     "uglify-js": "^2.7.5",
-    "ws": "^1.0.0",
+    "ws": "^2.0.0",
     "zuul": "^3.11.1",
     "zuul-ngrok": "^4.0.0"
   },
