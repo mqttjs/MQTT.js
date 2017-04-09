@@ -65,7 +65,7 @@
     "inherits": "^2.0.3",
     "minimist": "^1.2.0",
     "mqtt-packet": "^5.2.1",
-    "readable-stream": "^2.2.3",
+    "readable-stream": "^2.2.9",
     "pump": "^1.0.2",
     "reinterval": "^1.1.0",
     "split2": "^2.1.1",
