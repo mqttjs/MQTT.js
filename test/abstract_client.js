@@ -237,10 +237,8 @@ module.exports = function (server, config) {
       client.once('connect', function () {
         done(new Error('Should not emit connect'))
       })
-      client.once('error', function (/* error */) {
-        // to do
-        // check for error message
-        // and validate it is the expected one
+      client.once('error', function (error) {
+        should(error.code).be.equal(2) // code for clientID identifer rejected
         client.end()
         done()
       })
