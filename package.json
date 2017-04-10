@@ -84,7 +84,7 @@
     "rimraf": "^2.6.1",
     "should": "*",
     "sinon": "~1.17.7",
-    "snazzy": "^6.0.0",
+    "snazzy": "^7.0.0",
     "standard": "^10.0.0",
     "through2": "^2.0.3",
     "tslint": "^4.5.1",
