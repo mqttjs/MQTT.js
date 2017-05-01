@@ -531,6 +531,32 @@ module.exports = function (server, config) {
           packet.payload.toString().should.equal(payload)
           packet.qos.should.equal(opts.qos, 'incorrect qos')
           packet.retain.should.equal(opts.retain, 'incorrect ret')
+          packet.dup.should.equal(false, 'incorrect dup')
+          client.end()
+          done()
+        })
+      })
+    })
+
+    it('should mark a message as  duplicate when "dup" option is set', function (done) {
+      var client = connect()
+      var payload = 'duplicated-test'
+      var topic = 'test'
+      var opts = {
+        retain: true,
+        qos: 1,
+        dup: true
+      }
+
+      client.once('connect', function () {
+        client.publish(topic, payload, opts)
+      })
+
+      server.once('client', function (serverClient) {
+        serverClient.once('publish', function (packet) {
+          packet.topic.should.equal(topic)
+          packet.payload.toString().should.equal(payload)
+          packet.dup.should.equal(opts.dup, 'incorrect dup')
           client.end()
           done()
         })

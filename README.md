@@ -313,6 +313,7 @@ Publish a message to a topic
 * `options` is the options to publish with, including:
   * `qos` QoS level, `Number`, default `0`
   * `retain` retain flag, `Boolean`, default `false`
+  * `dup` mark as duplicate flag, `Boolean`, default `false`
 * `callback` - `function (err)`, fired when the QoS handling completes,
   or at the next tick if QoS 0. An error occurs if client is disconnecting.
 
