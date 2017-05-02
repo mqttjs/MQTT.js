@@ -106,6 +106,10 @@ export interface IClientPublishOptions {
    * the retain flag
    */
   retain?: boolean
+  /**
+   * whether or not mark a message as duplicate
+   */
+  dup?: boolean
 }
 export interface IClientSubscribeOptions {
   /**
