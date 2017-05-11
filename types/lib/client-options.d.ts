@@ -87,14 +87,17 @@ export interface IClientOptions extends ISecureClientOptions {
 }
 export interface ISecureClientOptions {
   /**
-   * path to private key
+   * optional private keys in PEM format
    */
-  key?: string
+  key?: string | string[] | Buffer | Buffer[] | Object[]
   /**
-   * path to corresponding public cert
+   * optional cert chains in PEM format
    */
-  cert?: string
-  ca?: string
+  cert?: string | string[] | Buffer | Buffer[]
+  /**
+   * Optionally override the trusted CA certificates in PEM format
+   */
+  ca?: string | string[] | Buffer | Buffer[]
   rejectUnauthorized?: boolean
 }
 export interface IClientPublishOptions {
