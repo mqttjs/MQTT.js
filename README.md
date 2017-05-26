@@ -95,10 +95,7 @@ You can also use a test instance: test.mosquitto.org and test.mosca.io
 are both public.
 
 If you do not want to install a separate broker, you can try using the
-[server/orig](https://github.com/adamvr/MQTT.js/blob/master/examples/server/orig.js)
-example.
-It implements enough of the semantics of the MQTT protocol to
-run the example.
+[mqtt-connection](https://www.npmjs.com/package/mqtt-connection).
 
 to use MQTT.js in the browser see the [browserify](#browserify) section
 
