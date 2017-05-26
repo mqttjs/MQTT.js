@@ -69,7 +69,7 @@
     "pump": "^1.0.2",
     "reinterval": "^1.1.0",
     "split2": "^2.1.1",
-    "websocket-stream": "^4.0.0",
+    "websocket-stream": "^5.0.0",
     "xtend": "^4.0.1"
   },
   "devDependencies": {
@@ -92,7 +92,7 @@
     "typescript": "^2.2.1",
     "uglify": "^0.1.5",
     "uglify-js": "^2.7.5",
-    "ws": "^2.0.0",
+    "ws": "^3.0.0",
     "zuul": "^3.11.1",
     "zuul-ngrok": "^4.0.0"
   },
