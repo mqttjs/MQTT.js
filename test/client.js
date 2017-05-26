@@ -326,6 +326,39 @@ describe('MqttClient', function () {
       })
     })
 
+    it('should not fill the queue of subscribes if it cannot connect', function (done) {
+      this.timeout(2500)
+
+      var port2 = port + 48
+
+      var server2 = net.createServer(function (stream) {
+        var client = new Connection(stream)
+
+        client.on('error', function () {})
+        client.on('connect', function (packet) {
+          client.connack({returnCode: 0})
+          client.destroy()
+        })
+      })
+
+      server2.listen(port2, function () {
+        var client = mqtt.connect({
+          port: port2,
+          host: 'localhost',
+          connectTimeout: 350,
+          reconnectPeriod: 300
+        })
+
+        client.subscribe('hello')
+
+        setTimeout(function () {
+          client.queue.length.should.equal(1)
+          client.end()
+          done()
+        }, 1000)
+      })
+    })
+
     it('should not send the same publish multiple times on a flaky connection', function (done) {
       this.timeout(3500)
 
