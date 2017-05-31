@@ -99,10 +99,8 @@ export declare class MqttClient extends events.EventEmitter {
    *     client.publish('topic', 'message', {qos: 1, retain: true})
    * @example client.publish('topic', 'message', console.log)
    */
-  public publish (topic: string, message: string | Buffer,
-                 opts: IClientPublishOptions, callback?: PacketCallback): this
-  public publish (topic: string, message: string | Buffer,
-                 callback?: PacketCallback): this
+  public publish (topic: string, message: string | Buffer, opts?: IClientPublishOptions, callback?: PacketCallback): this
+  public publish (topic: string, message: string | Buffer, callback?: PacketCallback): this
 
   /**
    * subscribe - subscribe to <topic>
@@ -120,13 +118,8 @@ export declare class MqttClient extends events.EventEmitter {
    * @example client.subscribe({'topic': 0, 'topic2': 1}, console.log)
    * @example client.subscribe('topic', console.log)
    */
-  public subscribe (topic:
-                     string
-                     | string[], opts: IClientSubscribeOptions, callback?: ClientSubscribeCallback): this
-  public subscribe (topic:
-                     string
-                     | string[]
-                     | ISubscriptionMap, callback?: ClientSubscribeCallback): this
+  public subscribe (topic: string | string[], opts?: IClientSubscribeOptions, callback?: ClientSubscribeCallback): this
+  public subscribe (topic: string | string[] | ISubscriptionMap, callback?: ClientSubscribeCallback): this
 
   /**
    * unsubscribe - unsubscribe from topic(s)
