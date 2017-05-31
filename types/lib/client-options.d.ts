@@ -101,7 +101,7 @@ export interface IClientPublishOptions {
   /**
    * the QoS
    */
-  qos: QoS;
+  qos: QoS
   /**
    * the retain flag
    */
