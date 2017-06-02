@@ -6,6 +6,7 @@ node_js:
 - '4.3.2'
 - '6'
 - '7'
+- '8'
 env:
 # For compiling optional extensions
 addons:
