@@ -1,0 +1,26 @@
+{
+  "name": "mqtt",
+  "description": "A library for the MQTT protocol",
+  "main": "mqtt.js",
+  "authors": [
+    "Adam Rudd <adamvrr@gmail.com>",
+    "Matteo Collina <matteo.collina@gmail.com> (https://github.com/mcollina)"
+  ],
+  "license": "MIT",
+  "keywords": [
+    "mqtt",
+    "publish/subscribe",
+    "publish",
+    "subscribe"
+  ],
+  "homepage": "https://github.com/mqttjs/MQTT.js",
+  "moduleType": [],
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ]
+}
