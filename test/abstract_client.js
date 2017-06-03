@@ -387,14 +387,14 @@ module.exports = function (server, config) {
       client.end(true, done)
     })
 
-    it('should still queue qos != 0 messages if queueQoSZero is false', function (done) {
+    it('should not queue qos != 0 messages', function (done) {
       var client = connect({queueQoSZero: false})
 
       client.publish('test', 'test', {qos: 1})
       client.publish('test', 'test', {qos: 2})
       client.subscribe('test')
       client.unsubscribe('test')
-      client.queue.length.should.equal(4)
+      client.queue.length.should.equal(2)
       client.end(true, done)
     })
 
