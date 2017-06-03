@@ -386,10 +386,14 @@ Boolean : set to `true` if the client is trying to reconnect to the server. `fal
 
 In-memory implementation of the message store.
 
-Another implementaion is
-[mqtt-level-store](http://npm.im/mqtt-level-store) which uses
-[Level-browserify](http://npm.im/level-browserify) to store the inflight
-data, making it usable both in Node and the Browser.
+Other implementations of `mqtt.Store`:
+
+* [mqtt-level-store](http://npm.im/mqtt-level-store) which uses
+  [Level-browserify](http://npm.im/level-browserify) to store the inflight
+  data, making it usable both in Node and the Browser.
+* [mqtt-nedbb-store](https://github.com/behrad/mqtt-nedb-store) which
+  uses [nedb](https://www.npmjs.com/package/nedb) to store the inflight
+  data.
 
 -------------------------------------------------------
 <a name="put"></a>
