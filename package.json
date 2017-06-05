@@ -30,7 +30,8 @@
     "ci": "npm run tslint && npm run test && codecov"
   },
   "pre-commit": [
-    "test"
+    "test",
+    "tslint"
   ],
   "bin": {
     "mqtt_pub": "./bin/pub.js",
