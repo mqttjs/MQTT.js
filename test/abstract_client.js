@@ -493,6 +493,29 @@ module.exports = function (server, config) {
       })
     })
 
+    it('should publish a message (retain, offline)', function (done) {
+      var client = connect({ queueQoSZero: true })
+      var payload = 'test'
+      var topic = 'test'
+      var called = false
+
+      client.publish(topic, payload, { retain: true }, function () {
+        called = true
+      })
+
+      server.once('client', function (serverClient) {
+        serverClient.once('publish', function (packet) {
+          packet.topic.should.equal(topic)
+          packet.payload.toString().should.equal(payload)
+          packet.qos.should.equal(0)
+          packet.retain.should.equal(true)
+          called.should.equal(true)
+          client.end()
+          done()
+        })
+      })
+    })
+
     it('should emit a packetsend event', function (done) {
       var client = connect()
       var payload = 'test_payload'
