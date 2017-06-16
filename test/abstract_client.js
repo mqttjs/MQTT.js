@@ -308,6 +308,22 @@ module.exports = function (server, config) {
       })
     })
 
+    it('should return an empty array for duplicate subs', function (done) {
+      var client = connect()
+      client.subscribe('event', function (err, granted1) {
+        if (err) {
+          return done()
+        }
+        client.subscribe('event', function (err, granted2) {
+          if (err) {
+            return done()
+          }
+          granted2.should.Array([])
+          done()
+        })
+      })
+    })
+
     it('should return an error (via callbacks) for topic #/event', function (done) {
       var client = connect()
       client.subscribe('#/event', function (err) {
@@ -1622,6 +1638,34 @@ module.exports = function (server, config) {
             // subscribes have taken place, then cleanup and exit
             if (connectCount >= 2) {
               subscribeCount.should.equal(2)
+              client.end(true, done)
+            }
+          })
+        })
+
+        client.subscribe('hello')
+      })
+
+      it('should resubscribe exactly once', function (done) {
+        var client = mqtt.connect(Object.assign({ reconnectPeriod: 100 }, config))
+        var subscribeCount = 0
+
+        server.on('client', function (serverClient) {
+          serverClient.on('connect', function () {
+            serverClient.connack({returnCode: 0})
+          })
+
+          serverClient.on('subscribe', function () {
+            subscribeCount++
+
+            // disconnect before sending the suback on the first subscribe
+            if (subscribeCount === 1) {
+              client.stream.end()
+            }
+
+            // after the second connection, only two subs
+            // subscribes have taken place, then cleanup and exit
+            if (subscribeCount === 2) {
               client.end(true, done)
             }
           })
