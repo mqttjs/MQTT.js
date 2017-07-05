@@ -577,6 +577,29 @@ module.exports = function (server, config) {
       })
     })
 
+    it('should publish with the default options for an empty parameter', function (done) {
+      var client = connect()
+      var payload = 'test'
+      var topic = 'test'
+      var defaultOpts = {qos: 0, retain: false, dup: false}
+
+      client.once('connect', function () {
+        client.publish(topic, payload, {})
+      })
+
+      server.once('client', function (serverClient) {
+        serverClient.once('publish', function (packet) {
+          packet.topic.should.equal(topic)
+          packet.payload.toString().should.equal(payload)
+          packet.qos.should.equal(defaultOpts.qos, 'incorrect qos')
+          packet.retain.should.equal(defaultOpts.retain, 'incorrect ret')
+          packet.dup.should.equal(defaultOpts.dup, 'incorrect dup')
+          client.end()
+          done()
+        })
+      })
+    })
+
     it('should mark a message as  duplicate when "dup" option is set', function (done) {
       var client = connect()
       var payload = 'duplicated-test'
@@ -1077,6 +1100,26 @@ module.exports = function (server, config) {
           }]
 
           packet.subscriptions.should.eql(expected)
+          done()
+        })
+      })
+    })
+
+    it('should subscribe with the default options for an empty options parameter', function (done) {
+      var client = connect()
+      var topic = 'test'
+      var defaultOpts = {qos: 0}
+
+      client.once('connect', function () {
+        client.subscribe(topic, {})
+      })
+
+      server.once('client', function (serverClient) {
+        serverClient.once('subscribe', function (packet) {
+          packet.subscriptions.should.containEql({
+            topic: topic,
+            qos: defaultOpts.qos
+          })
           done()
         })
       })
