@@ -124,6 +124,30 @@ describe('MqttClient', function () {
       client.getLastMessageId().should.equal(1)
       client.end()
     })
+
+    it('should not throw an error if packet\'s messageId is not found when receiving a pubrel packet', function (done) {
+      var server2 = new Server(function (c) {
+        c.on('connect', function (packet) {
+          c.connack({returnCode: 0})
+          c.pubrel({ messageId: Math.floor(Math.random() * 9000) + 1000 })
+        })
+      })
+
+      server2.listen(port + 49, function () {
+        var client = mqtt.connect({
+          port: port + 49,
+          host: 'localhost'
+        })
+
+        client.on('packetsend', function (packet) {
+          if (packet.cmd === 'pubcomp') {
+            client.end()
+            server2.close()
+            done()
+          }
+        })
+      })
+    })
   })
 
   describe('reconnecting', function () {
