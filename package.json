@@ -27,7 +27,6 @@
     "typescript-compile-execute": "node test/typescript/*.js",
     "typescript-test": "npm run typescript-compile-test && npm run typescript-compile-execute",
     "prepare": "nsp check && npm run browser-build",
-    "prepublishOnly": "npm run prepare",
     "browser-build": "rimraf dist/ && mkdirp dist/ && browserify mqtt.js -s mqtt > dist/mqtt.js && uglifyjs < dist/mqtt.js > dist/mqtt.min.js",
     "browser-test": "zuul --server test/browser/server.js --local --open test/browser/test.js",
     "sauce-test": "zuul --server test/browser/server.js --tunnel ngrok -- test/browser/test.js",
