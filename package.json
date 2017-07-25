@@ -1,7 +1,7 @@
 {
   "name": "mqtt",
   "description": "A library for the MQTT protocol",
-  "version": "2.9.2",
+  "version": "2.9.3",
   "contributors": [
     "Adam Rudd <adamvrr@gmail.com>",
     "Matteo Collina <matteo.collina@gmail.com> (https://github.com/mcollina)"
@@ -77,7 +77,7 @@
     "xtend": "^4.0.1"
   },
   "devDependencies": {
-    "@types/node": "*",
+    "@types/node": "^8.0.16",
     "browserify": "^14.4.0",
     "codecov": "^2.0.0",
     "istanbul": "^0.4.5",
@@ -95,7 +95,7 @@
     "tslint": "^5.0.0",
     "tslint-config-standard": "^6.0.0",
     "typescript": "^2.4.2",
-    "uglify-js": "^3.0.0",
+    "uglify-js": "^3.0.26",
     "ws": "^3.0.0",
     "zuul": "^3.11.1",
     "zuul-ngrok": "^4.0.0"
