@@ -403,7 +403,7 @@ module.exports = function (server, config) {
       client.end(true, done)
     })
 
-    it('should not queue qos != 0 messages', function (done) {
+    it('should queue qos != 0 messages', function (done) {
       var client = connect({queueQoSZero: false})
 
       client.publish('test', 'test', {qos: 1})
