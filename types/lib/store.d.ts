@@ -25,11 +25,6 @@ declare class Store {
   public del (packet: any, cb: Function): this
 
   /**
-   * deletes a packet from the store by messageId.
-   */
-  public delByMessageId (messageId: any): this
-
-  /**
    * get a packet from the store.
    */
   public get (packet: any, cb: Function): this
