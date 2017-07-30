@@ -360,10 +360,11 @@ Close the client, accepts the following options:
 ### mqtt.Client#removeOutgoingMessage(mid)
 
 Remove a message from the outgoingStore.
+The outgoing callback will be called withe Error('Message removed') if the message is removed.
 
 After this function is called, the messageId is released and becomes reusable.
 
-* `mid`: The messageId of the packet in the outgoingStore.
+* `mid`: The messageId of the message in the outgoingStore.
 
 -------------------------------------------------------
 <a name="handleMessage"></a>

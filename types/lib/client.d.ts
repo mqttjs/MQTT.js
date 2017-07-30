@@ -153,6 +153,7 @@ export declare class MqttClient extends events.EventEmitter {
 
   /**
    * removeOutgoingMessage - remove a message in outgoing store
+   * the outgoing callback will be called withe Error('Message removed') if the message is removed
    *
    * @param {Number} mid - messageId to remove message
    * @returns {MqttClient} this - for chaining

@@ -1616,6 +1616,7 @@ module.exports = function (server, config) {
 
     it('should not resend in-flight QoS 1 removed publish messages from the client', function (done) {
       var client = connect({reconnectPeriod: 200})
+      var clientCalledBack = false
 
       server.once('client', function (serverClient) {
         serverClient.on('connect', function () {
@@ -1632,21 +1633,23 @@ module.exports = function (server, config) {
         })
       })
 
-      client.publish('hello', 'world', { qos: 1 }, function () {
-        should.fail()
-        done()
+      client.publish('hello', 'world', { qos: 1 }, function (err) {
+        clientCalledBack = true
+        should(err.message).be.equal('Message removed')
       })
       should(Object.keys(client.outgoing).length).be.equal(1)
       should(Object.keys(client.outgoingStore._inflights).length).be.equal(1)
       client.removeOutgoingMessage(client.getLastMessageId())
       should(Object.keys(client.outgoing).length).be.equal(0)
       should(Object.keys(client.outgoingStore._inflights).length).be.equal(0)
+      clientCalledBack.should.be.true()
       client.end()
       done()
     })
 
     it('should not resend in-flight QoS 2 removed publish messages from the client', function (done) {
       var client = connect({reconnectPeriod: 200})
+      var clientCalledBack = false
 
       server.once('client', function (serverClient) {
         serverClient.on('connect', function () {
@@ -1663,15 +1666,16 @@ module.exports = function (server, config) {
         })
       })
 
-      client.publish('hello', 'world', { qos: 2 }, function () {
-        should.fail()
-        done()
+      client.publish('hello', 'world', { qos: 2 }, function (err) {
+        clientCalledBack = true
+        should(err.message).be.equal('Message removed')
       })
       should(Object.keys(client.outgoing).length).be.equal(1)
       should(Object.keys(client.outgoingStore._inflights).length).be.equal(1)
       client.removeOutgoingMessage(client.getLastMessageId())
       should(Object.keys(client.outgoing).length).be.equal(0)
       should(Object.keys(client.outgoingStore._inflights).length).be.equal(0)
+      clientCalledBack.should.be.true()
       client.end()
       done()
     })
