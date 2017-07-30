@@ -154,13 +154,13 @@ export declare class MqttClient extends events.EventEmitter {
   /**
    * removeOutgoingStore - remove a message in outgoing store
    *
-   * @param {Number} messageId - messageId to remove message
+   * @param {Number} mid - messageId to remove message
    * @returns {MqttClient} this - for chaining
    * @api public
    *
    * @example client.removeOutgoingStore(client.getLastMessageId());
    */
-  public removeOutgoingStore (messageId: number): this
+  public removeOutgoingStore (mid: number): this
 
   /**
    * Handle messages with backpressure support, one at a time.

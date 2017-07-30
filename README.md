@@ -357,13 +357,13 @@ Close the client, accepts the following options:
 
 -------------------------------------------------------
 <a name="removeOutgoingStore"></a>
-### mqtt.Client#removeOutgoingStore(messageId)
+### mqtt.Client#removeOutgoingStore(mid)
 
 Remove a message from the outgoingStore.
 
 After this function is called, the messageId is released and becomes reusable.
 
-* `messageId`: The messageId of the packet in the outgoingStore.
+* `mid`: The messageId of the packet in the outgoingStore.
 
 -------------------------------------------------------
 <a name="handleMessage"></a>
