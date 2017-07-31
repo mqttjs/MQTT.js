@@ -138,6 +138,7 @@ See `mqtt help <command>` for the command help.
   * <a href="#subscribe"><code>mqtt.Client#<b>subscribe()</b></code></a>
   * <a href="#unsubscribe"><code>mqtt.Client#<b>unsubscribe()</b></code></a>
   * <a href="#end"><code>mqtt.Client#<b>end()</b></code></a>
+  * <a href="#removeOutgoingMessage"><code>mqtt.Client#<b>removeOutgoingMessage()</b></code></a>
   * <a href="#handleMessage"><code>mqtt.Client#<b>handleMessage()</b></code></a>
   * <a href="#connected"><code>mqtt.Client#<b>connected</b></code></a>
   * <a href="#reconnecting"><code>mqtt.Client#<b>reconnecting</b></code></a>
@@ -353,6 +354,17 @@ Close the client, accepts the following options:
   optional.
 * `cb`: will be called when the client is closed. This parameter is
   optional.
+
+-------------------------------------------------------
+<a name="removeOutgoingMessage"></a>
+### mqtt.Client#removeOutgoingMessage(mid)
+
+Remove a message from the outgoingStore.
+The outgoing callback will be called withe Error('Message removed') if the message is removed.
+
+After this function is called, the messageId is released and becomes reusable.
+
+* `mid`: The messageId of the message in the outgoingStore.
 
 -------------------------------------------------------
 <a name="handleMessage"></a>
