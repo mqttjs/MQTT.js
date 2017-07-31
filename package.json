@@ -1,7 +1,7 @@
 {
   "name": "mqtt",
   "description": "A library for the MQTT protocol",
-  "version": "2.9.3",
+  "version": "2.10.0",
   "contributors": [
     "Adam Rudd <adamvrr@gmail.com>",
     "Matteo Collina <matteo.collina@gmail.com> (https://github.com/mcollina)"
@@ -73,18 +73,18 @@
     "readable-stream": "^2.3.3",
     "reinterval": "^1.1.0",
     "split2": "^2.1.1",
-    "websocket-stream": "^5.0.0",
+    "websocket-stream": "^5.0.1",
     "xtend": "^4.0.1"
   },
   "devDependencies": {
-    "@types/node": "^8.0.16",
+    "@types/node": "^8.0.17",
     "browserify": "^14.4.0",
     "codecov": "^2.0.0",
     "istanbul": "^0.4.5",
     "mkdirp": "^0.5.1",
     "mocha": "^3.2.0",
     "mqtt-connection": "^3.0.0",
-    "nsp": "^2.6.2",
+    "nsp": "^2.7.0",
     "pre-commit": "^1.2.2",
     "rimraf": "^2.6.1",
     "should": "*",
@@ -95,8 +95,8 @@
     "tslint": "^5.0.0",
     "tslint-config-standard": "^6.0.0",
     "typescript": "^2.4.2",
-    "uglify-js": "^3.0.26",
-    "ws": "^3.0.0",
+    "uglify-js": "^3.0.27",
+    "ws": "^3.1.0",
     "zuul": "^3.11.1",
     "zuul-ngrok": "^4.0.0"
   },
