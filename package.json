@@ -29,7 +29,8 @@
     "prepare": "nsp check && npm run browser-build",
     "browser-build": "rimraf dist/ && mkdirp dist/ && browserify mqtt.js -s mqtt > dist/mqtt.js && uglifyjs < dist/mqtt.js > dist/mqtt.min.js",
     "browser-test": "zuul --server test/browser/server.js --local --open test/browser/test.js",
-    "sauce-test": "zuul --server test/browser/server.js --tunnel ngrok -- test/browser/test.js",
+    "weapp-test": "zuul --server test/browser/server.js --local --open test/browser/wx.js",
+    "sauce-test": "zuul --no-coverage --server test/browser/server.js --tunnel ngrok -- test/browser/wx.js",
     "ci": "npm run tslint && npm run typescript-test && npm run test && codecov"
   },
   "pre-commit": [
@@ -80,6 +81,7 @@
     "@types/node": "*",
     "browserify": "^14.4.0",
     "codecov": "^2.0.0",
+    "global": "^4.3.2",
     "istanbul": "^0.4.5",
     "mkdirp": "^0.5.1",
     "mocha": "^3.2.0",
