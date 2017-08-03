@@ -16,6 +16,7 @@ in JavaScript for node.js and the browser.
 * [Command Line Tools](#cli)
 * [API](#api)
 * [Browser](#browser)
+* [Weapp](#weapp)
 * [About QoS](#qos)
 * [TypeScript](#typescript)
 * [Contributing](#contributing)
@@ -444,6 +445,25 @@ Closes the Store.
 The MQTT.js bundle is available through http://unpkg.com, specifically
 at https://unpkg.com/mqtt/dist/mqtt.min.js.
 See http://unpkg.com for the full documentation on version ranges.
+
+<a name="weapp"></a>
+## Wexin App
+Surport [Weixin App](https://mp.weixin.qq.com/). See [Doc](https://mp.weixin.qq.com/debug/wxadoc/dev/api/network-socket.html).
+<a name="example"></a>
+
+## Example(js)
+
+```js
+var mqtt = require('mqtt')
+var client  = mqtt.connect('wxs://test.mosquitto.org')
+```
+
+## Example(ts)
+
+```ts
+import { connect } from 'mqtt';
+const client  = connect('wxs://test.mosquitto.org');
+```
 
 <a name="browserify"></a>
 ### Browserify

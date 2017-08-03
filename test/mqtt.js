@@ -3,6 +3,7 @@
 var fs = require('fs')
 var path = require('path')
 var mqtt = require('../')
+require('./helpers/wx')
 
 describe('mqtt', function () {
   describe('#connect', function () {
@@ -106,6 +107,30 @@ describe('mqtt', function () {
       c.should.be.instanceOf(mqtt.MqttClient)
     })
 
+    it('should return an MqttClient when connect is called with wx:/ url', function () {
+      (function () {
+        var c = mqtt.connect('wx://localhost', sslOpts)
+
+        c.options.should.have.property('protocol', 'wx')
+
+        c.on('error', function () {})
+
+        c.should.be.instanceOf(mqtt.MqttClient)
+      }).should.throw()
+    })
+
+    it('should return an MqttClient when connect is called with wxs:/ url', function () {
+      (function () {
+        var c = mqtt.connect('wxs://localhost', sslOpts)
+
+        c.options.should.have.property('protocol', 'wxs')
+
+        c.on('error', function () {})
+
+        c.should.be.instanceOf(mqtt.MqttClient)
+      }).should.throw()
+    })
+
     sslOpts2 = {
       key: fs.readFileSync(path.join(__dirname, 'helpers', 'private-key.pem')),
       cert: fs.readFileSync(path.join(__dirname, 'helpers', 'public-cert.pem')),
@@ -120,7 +145,7 @@ describe('mqtt', function () {
       }).should.throw('Missing secure protocol key')
     })
 
-    it('should throw an error when it is called with cert and key set and protocol other than allowed: mqtt,mqtts,ws,wss', function () {
+    it('should throw an error when it is called with cert and key set and protocol other than allowed: mqtt,mqtts,ws,wss,wxs', function () {
       (function () {
         sslOpts2.protocol = 'UNKNOWNPROTOCOL'
         var c = mqtt.connect(sslOpts2)
