@@ -3,7 +3,6 @@
 var fs = require('fs')
 var path = require('path')
 var mqtt = require('../')
-require('./helpers/wx')
 
 describe('mqtt', function () {
   describe('#connect', function () {
@@ -105,30 +104,6 @@ describe('mqtt', function () {
       c.on('error', function () {})
 
       c.should.be.instanceOf(mqtt.MqttClient)
-    })
-
-    it('should return an MqttClient when connect is called with wx:/ url', function () {
-      (function () {
-        var c = mqtt.connect('wx://localhost', sslOpts)
-
-        c.options.should.have.property('protocol', 'wx')
-
-        c.on('error', function () {})
-
-        c.should.be.instanceOf(mqtt.MqttClient)
-      }).should.throw()
-    })
-
-    it('should return an MqttClient when connect is called with wxs:/ url', function () {
-      (function () {
-        var c = mqtt.connect('wxs://localhost', sslOpts)
-
-        c.options.should.have.property('protocol', 'wxs')
-
-        c.on('error', function () {})
-
-        c.should.be.instanceOf(mqtt.MqttClient)
-      }).should.throw()
     })
 
     sslOpts2 = {
