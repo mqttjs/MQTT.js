@@ -17,6 +17,5 @@
   "mocha": true,
   "indent": 2,
   "latedef": true,
-  "immed": true,
   "shadow": false
 }
