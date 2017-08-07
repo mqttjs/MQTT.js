@@ -1709,6 +1709,36 @@ module.exports = function (server, config) {
       })
     })
 
+    it('should not resubscribe when reconnecting if resubscribe is disabled', function (done) {
+      var client = connect({ reconnectPeriod: 100, resubscribe: false })
+      var tryReconnect = true
+      var reconnectEvent = false
+
+      client.on('reconnect', function () {
+        reconnectEvent = true
+      })
+
+      client.on('connect', function () {
+        if (tryReconnect) {
+          client.subscribe('hello', function () {
+            client.stream.end()
+
+            server.once('client', function (serverClient) {
+              serverClient.on('subscribe', function () {
+                should.fail()
+              })
+            })
+          })
+
+          tryReconnect = false
+        } else {
+          reconnectEvent.should.equal(true)
+          should(Object.keys(client._resubscribeTopics).length).be.equal(0)
+          done()
+        }
+      })
+    })
+
     context('with alternate server client', function () {
       var cachedClientListeners
 

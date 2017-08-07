@@ -217,6 +217,8 @@ the `connect` event. Typically a `net.Socket`.
   * `transformWsUrl` : optional `(url, options, client) => url` function
         For ws/wss protocols only. Can be used to implement signing
         urls which upon reconnect can have become expired.
+  * `resubscribe` : if connection is broken and reconnects,
+     subscribed topics are automatically subscribed again (default `true`)
 
 In case mqtts (mqtt over tls) is required, the `options` object is
 passed through to
