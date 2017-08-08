@@ -7,6 +7,8 @@ var should = require('should')
 var sinon = require('sinon')
 var mqtt = require('../')
 var xtend = require('xtend')
+var Server = require('./server')
+var port = 9876
 
 module.exports = function (server, config) {
   function connect (opts) {
@@ -1736,6 +1738,57 @@ module.exports = function (server, config) {
           should(Object.keys(client._resubscribeTopics).length).be.equal(0)
           done()
         }
+      })
+    })
+
+    it('should not resubscribe when reconnecting if suback is error', function (done) {
+      var tryReconnect = true
+      var reconnectEvent = false
+      var server2 = new Server(function (c) {
+        c.on('connect', function (packet) {
+          c.connack({returnCode: 0})
+        })
+        c.on('subscribe', function (packet) {
+          c.suback({
+            messageId: packet.messageId,
+            granted: packet.subscriptions.map(function (e) {
+              return e.qos | 0x80
+            })
+          })
+          c.pubrel({ messageId: Math.floor(Math.random() * 9000) + 1000 })
+        })
+      })
+
+      server2.listen(port + 49, function () {
+        var client = mqtt.connect({
+          port: port + 49,
+          host: 'localhost',
+          reconnectPeriod: 100
+        })
+
+        client.on('reconnect', function () {
+          reconnectEvent = true
+        })
+
+        client.on('connect', function () {
+          if (tryReconnect) {
+            client.subscribe('hello', function () {
+              client.stream.end()
+
+              server.once('client', function (serverClient) {
+                serverClient.on('subscribe', function () {
+                  should.fail()
+                })
+              })
+            })
+            tryReconnect = false
+          } else {
+            reconnectEvent.should.equal(true)
+            should(Object.keys(client._resubscribeTopics).length).be.equal(0)
+            server2.close()
+            done()
+          }
+        })
       })
     })
 
