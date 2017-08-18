@@ -63,6 +63,10 @@ export interface IClientOptions extends ISecureClientOptions {
     port: number;
   }>
   /**
+   * true, set to false to disable re-subscribe functionality
+   */
+  resubscribe?: boolean
+  /**
    * a message that will sent by the broker automatically when the client disconnect badly.
    */
   will?: {
