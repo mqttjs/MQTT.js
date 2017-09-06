@@ -130,7 +130,7 @@ function start (args) {
       multisend(args)
     } else {
       process.stdin.pipe(concat(function (data) {
-        args.message = data.toString().trim()
+        args.message = data
         send(args)
       }))
     }
