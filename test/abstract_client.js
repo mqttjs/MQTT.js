@@ -1838,6 +1838,43 @@ module.exports = function (server, config) {
         client.subscribe('hello')
       })
 
+      it('should resubscribe once even if client subscribe retry', function (done) {
+        var client = mqtt.connect(Object.assign({ reconnectPeriod: 100, resubscribe: false }, config))
+        var subscribeCount = 0
+        var connectCount = 0
+
+        server.on('client', function (serverClient) {
+          serverClient.on('connect', function () {
+            connectCount++
+            serverClient.connack({returnCode: 0})
+          })
+
+          serverClient.on('subscribe', function () {
+            subscribeCount++
+
+            // disconnect before sending the suback on the first subscribe
+            if (subscribeCount === 1) {
+              client.stream.end()
+            }
+
+            // after the second connection, confirm that the only two
+            // subscribes have taken place, then cleanup and exit
+            if (connectCount >= 2) {
+              subscribeCount.should.equal(2)
+              client.end(true, done)
+            }
+          })
+        })
+
+        // client subscribe init
+        client.subscribe('hello')
+
+        // client subscribe retry on every reconnect
+        client.on('connect', function () {
+          client.subscribe('hello')
+        })
+      })
+
       it('should resubscribe exactly once', function (done) {
         var client = mqtt.connect(Object.assign({ reconnectPeriod: 100 }, config))
         var subscribeCount = 0
