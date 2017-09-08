@@ -1,6 +1,6 @@
 // relative path uses package.json {"types":"types/index.d.ts", ...}
 import {IClientOptions, Client, connect, IConnackPacket} from '../..'
-const BROKER = 'broker.mqttdashboard.com'
+const BROKER = 'test.mosquitto.org'
 
 const PAYLOAD = 'hello from TS'
 const TOPIC = 'typescript-test-' + Math.random().toString(16).substr(2)
