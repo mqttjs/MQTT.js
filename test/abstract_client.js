@@ -731,7 +731,7 @@ module.exports = function (server, config) {
           handleMessageCount++
           // next message event should not emit until handleMessage completes
           handleMessageCount.should.equal(messageEventCount)
-          if (10 === handleMessageCount) {
+          if (handleMessageCount === 10) {
             setTimeout(function () {
               client.end()
               done()
