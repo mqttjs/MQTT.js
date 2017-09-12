@@ -684,7 +684,7 @@ module.exports = function (server, config) {
       })
     })
 
-    it('Publish 10 QoS 2 and receive them', function (done) {
+    it('should publish 10 QoS 2 and receive them', function (done) {
       var client = connect()
       var count = 0
 
@@ -718,6 +718,67 @@ module.exports = function (server, config) {
           count++
         })
       })
+    })
+
+    function testQosHandleMessage (qos, done) {
+      var client = connect()
+
+      var messageEventCount = 0
+      var handleMessageCount = 0
+
+      client.handleMessage = function (packet, callback) {
+        setTimeout(function () {
+          handleMessageCount++
+          // next message event should not emit until handleMessage completes
+          handleMessageCount.should.equal(messageEventCount)
+          if (handleMessageCount === 10) {
+            setTimeout(function () {
+              client.end()
+              done()
+            })
+          }
+
+          callback()
+        }, 100)
+      }
+
+      client.on('message', function (topic, message, packet) {
+        messageEventCount++
+      })
+
+      client.on('connect', function () {
+        client.subscribe('test')
+      })
+
+      server.once('client', function (serverClient) {
+        serverClient.on('offline', function () {
+          client.end()
+          done('error went offline... didnt see this happen')
+        })
+
+        serverClient.on('subscribe', function () {
+          for (var i = 0; i < 10; i++) {
+            serverClient.publish({
+              messageId: i,
+              topic: 'test',
+              payload: 'test' + i,
+              qos: qos
+            })
+          }
+        })
+      })
+    }
+
+    it('should publish 10 QoS 0 and receive them only when `handleMessage` finishes', function (done) {
+      testQosHandleMessage(0, done)
+    })
+
+    it('should publish 10 QoS 1 and receive them only when `handleMessage` finishes', function (done) {
+      testQosHandleMessage(1, done)
+    })
+
+    it('should publish 10 QoS 2 and receive them only when `handleMessage` finishes', function (done) {
+      testQosHandleMessage(2, done)
     })
   })
 

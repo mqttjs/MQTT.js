@@ -20,7 +20,7 @@
   "main": "mqtt.js",
   "types": "types/index.d.ts",
   "scripts": {
-    "test": "node_modules/.bin/istanbul cover ./node_modules/mocha/bin/_mocha --report lcovonly -- --bail",
+    "test": "node_modules/.bin/istanbul cover ./node_modules/mocha/bin/_mocha --report lcovonly --",
     "pretest": "standard | snazzy",
     "tslint": "tslint types/**/*.d.ts",
     "typescript-compile-test": "tsc -p test/typescript/tsconfig.json",
