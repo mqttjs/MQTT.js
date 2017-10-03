@@ -320,7 +320,7 @@ module.exports = function (server, config) {
           if (err) {
             return done()
           }
-          granted2.should.Array([])
+          granted2.should.Array()
           done()
         })
       })
