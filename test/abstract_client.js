@@ -8,6 +8,7 @@ var sinon = require('sinon')
 var mqtt = require('../')
 var xtend = require('xtend')
 var Server = require('./server')
+var pify = require('pify')
 var port = 9876
 
 module.exports = function (server, config) {
@@ -1925,6 +1926,38 @@ module.exports = function (server, config) {
         })
 
         client.subscribe('hello')
+      })
+    })
+  })
+
+  describe('when promisified', function () {
+    var asyncClient
+
+    beforeEach(function (done) {
+      asyncClient = pify(connect(), {
+        includes: ['subscribe', 'unsubscribe', 'publish', 'end']
+      })
+      asyncClient.on('connect', function () {
+        done()
+      })
+    })
+
+    afterEach(function () {
+      return asyncClient.end(true)
+    })
+
+    describe('end()', function () {
+      describe('when not forced', function () {
+        it('should fulfill', function () {
+          return asyncClient.end()
+        })
+
+        it('should set `connected` prop to `false`', function () {
+          return asyncClient.end()
+            .then(function () {
+              asyncClient.connected.should.be(false)
+            })
+        })
       })
     })
   })

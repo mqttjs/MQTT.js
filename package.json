@@ -87,6 +87,7 @@
     "mocha": "^3.5.3",
     "mqtt-connection": "^3.0.0",
     "nsp": "^2.8.0",
+    "pify": "^3.0.0",
     "pre-commit": "^1.2.2",
     "rimraf": "^2.6.2",
     "should": "^13.0.1",
