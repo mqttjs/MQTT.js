@@ -738,7 +738,6 @@ module.exports = function (server, config) {
               done()
             })
           }
-
           callback()
         }, 100)
       }
@@ -780,6 +779,44 @@ module.exports = function (server, config) {
 
     it('should publish 10 QoS 2 and receive them only when `handleMessage` finishes', function (done) {
       testQosHandleMessage(2, done)
+    })
+
+    it('should not send a `puback` if the execution of `handleMessage` fails', function (done) {
+      var client = connect()
+
+      var messageId = Math.floor(65535 * Math.random())
+      var payload = 'test'
+      var topic = 'test'
+      var qos = 1
+
+      var pubackReceived = false
+
+      client.handleMessage = function (packet, callback) {
+        callback(new Error('Error thrown by the application'))
+      }
+
+      client.on('connect', function () {
+        client.subscribe(topic)
+      })
+
+      server.once('client', function (serverClient) {
+        serverClient.on('subscribe', function () {
+          serverClient.publish({
+            messageId: messageId,
+            topic: topic,
+            payload: payload,
+            qos: qos
+          })
+          setTimeout(
+            function () {
+              (pubackReceived === true) ? done('Unexpected `puback` received') : done()
+            }, 1000)
+        })
+
+        serverClient.on('puback', function () {
+          pubackReceived = true
+        })
+      })
     })
   })
 
