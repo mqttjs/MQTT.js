@@ -7,6 +7,7 @@ var should = require('should')
 var sinon = require('sinon')
 var mqtt = require('../')
 var xtend = require('xtend')
+var assert = require('assert')
 var Server = require('./server')
 var port = 9876
 
@@ -781,15 +782,35 @@ module.exports = function (server, config) {
       testQosHandleMessage(2, done)
     })
 
-    it('should not send a `puback` if the execution of `handleMessage` fails', function (done) {
+    it('should not send a `puback` if the execution of `handleMessage` fails for messages with QoS `1`', function (done) {
+      var client = connect()
+
+      client.handleMessage = function (packet, callback) {
+        callback(new Error('Error thrown by the application'))
+      }
+
+      client._sendPacket = sinon.spy()
+
+      client._handlePublish({
+        messageId: Math.floor(65535 * Math.random()),
+        topic: 'test',
+        payload: 'test',
+        qos: 1}, function (err) {
+        assert.equal((err !== null), true)
+      })
+
+      client._sendPacket.callCount.should.equal(0)
+      client.end()
+      done()
+    })
+
+    it('should not send a `pubrel` if the execution of `handleMessage` fails for messages with QoS `2`', function (done) {
       var client = connect()
 
       var messageId = Math.floor(65535 * Math.random())
-      var payload = 'test'
       var topic = 'test'
-      var qos = 1
-
-      var pubackReceived = false
+      var payload = 'test'
+      var qos = 2
 
       client.handleMessage = function (packet, callback) {
         callback(new Error('Error thrown by the application'))
@@ -797,6 +818,20 @@ module.exports = function (server, config) {
 
       client.on('connect', function () {
         client.subscribe(topic)
+
+        client.on('packetreceive', function (packet) {
+          if (packet.cmd && packet.cmd === 'pubrel') {
+            client._sendPacket = sinon.spy()
+
+            client._handlePubrel(packet, function (err) {
+              assert.equal((err !== null), true)
+            })
+
+            client._sendPacket.callCount.should.equal(0)
+            client.end()
+            done()
+          }
+        })
       })
 
       server.once('client', function (serverClient) {
@@ -807,14 +842,9 @@ module.exports = function (server, config) {
             payload: payload,
             qos: qos
           })
-          setTimeout(
-            function () {
-              (pubackReceived === true) ? done('Unexpected `puback` received') : done()
-            }, 1000)
         })
-
         serverClient.on('puback', function () {
-          pubackReceived = true
+          done('Unexpected `puback` received.')
         })
       })
     })
