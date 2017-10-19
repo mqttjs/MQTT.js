@@ -321,6 +321,7 @@ module.exports = function (server, config) {
             return done()
           }
           granted2.should.Array()
+          granted2.should.be.empty()
           done()
         })
       })
@@ -737,7 +738,6 @@ module.exports = function (server, config) {
               done()
             })
           }
-
           callback()
         }, 100)
       }
@@ -779,6 +779,73 @@ module.exports = function (server, config) {
 
     it('should publish 10 QoS 2 and receive them only when `handleMessage` finishes', function (done) {
       testQosHandleMessage(2, done)
+    })
+
+    it('should not send a `puback` if the execution of `handleMessage` fails for messages with QoS `1`', function (done) {
+      var client = connect()
+
+      client.handleMessage = function (packet, callback) {
+        callback(new Error('Error thrown by the application'))
+      }
+
+      client._sendPacket = sinon.spy()
+
+      client._handlePublish({
+        messageId: Math.floor(65535 * Math.random()),
+        topic: 'test',
+        payload: 'test',
+        qos: 1}, function (err) {
+        should.exist(err)
+      })
+
+      client._sendPacket.callCount.should.equal(0)
+      client.end()
+      done()
+    })
+
+    it('should not send a `pubrel` if the execution of `handleMessage` fails for messages with QoS `2`', function (done) {
+      var client = connect()
+
+      var messageId = Math.floor(65535 * Math.random())
+      var topic = 'test'
+      var payload = 'test'
+      var qos = 2
+
+      client.handleMessage = function (packet, callback) {
+        callback(new Error('Error thrown by the application'))
+      }
+
+      client.on('connect', function () {
+        client.subscribe(topic)
+
+        client.on('packetreceive', function (packet) {
+          if (packet.cmd && packet.cmd === 'pubrel') {
+            client._sendPacket = sinon.spy()
+
+            client._handlePubrel(packet, function (err) {
+              should.exist(err)
+            })
+
+            client._sendPacket.callCount.should.equal(0)
+            client.end()
+            done()
+          }
+        })
+      })
+
+      server.once('client', function (serverClient) {
+        serverClient.on('subscribe', function () {
+          serverClient.publish({
+            messageId: messageId,
+            topic: topic,
+            payload: payload,
+            qos: qos
+          })
+        })
+        serverClient.on('puback', function () {
+          done('Unexpected `puback` received.')
+        })
+      })
     })
   })
 
