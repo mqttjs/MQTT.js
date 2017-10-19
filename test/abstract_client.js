@@ -7,7 +7,6 @@ var should = require('should')
 var sinon = require('sinon')
 var mqtt = require('../')
 var xtend = require('xtend')
-var assert = require('assert')
 var Server = require('./server')
 var port = 9876
 
@@ -796,7 +795,7 @@ module.exports = function (server, config) {
         topic: 'test',
         payload: 'test',
         qos: 1}, function (err) {
-        assert.equal((err !== null), true)
+        should.exist(err)
       })
 
       client._sendPacket.callCount.should.equal(0)
@@ -824,7 +823,7 @@ module.exports = function (server, config) {
             client._sendPacket = sinon.spy()
 
             client._handlePubrel(packet, function (err) {
-              assert.equal((err !== null), true)
+              should.exist(err)
             })
 
             client._sendPacket.callCount.should.equal(0)
