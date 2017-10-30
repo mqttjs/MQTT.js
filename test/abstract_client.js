@@ -1920,6 +1920,60 @@ module.exports = function (server, config) {
       })
     })
 
+    it('should preserved incomingStore after disconnecting if clean is false', function (done) {
+      var reconnect = false
+      var client = {}
+      var server2 = new Server(function (c) {
+        c.on('connect', function (packet) {
+          c.connack({returnCode: 0})
+          if (reconnect) {
+            c.pubrel({ messageId: 1 })
+          }
+        })
+        c.on('subscribe', function (packet) {
+          c.suback({
+            messageId: packet.messageId,
+            granted: packet.subscriptions.map(function (e) {
+              return e.qos
+            })
+          })
+          c.publish({ topic: 'topic', payload: 'payload', qos: 2, messageId: 1, retain: false })
+        })
+        c.on('pubrec', function (packet) {
+          client.end(false, function () {
+            client.reconnect()
+          })
+        })
+        c.on('pubcomp', function (packet) {
+          client.end()
+          server2.close()
+          done()
+        })
+      })
+
+      server2.listen(port + 50, function () {
+        client = mqtt.connect({
+          port: port + 50,
+          host: 'localhost',
+          clean: false,
+          clientId: 'cid1',
+          reconnectPeriod: 0
+        })
+
+        client.on('connect', function () {
+          if (!reconnect) {
+            client.subscribe('test', {qos: 2}, function () {
+            })
+            reconnect = true
+          }
+        })
+        client.on('message', function (topic, message) {
+          topic.should.equal('topic')
+          message.toString().should.equal('payload')
+        })
+      })
+    })
+
     context('with alternate server client', function () {
       var cachedClientListeners
 

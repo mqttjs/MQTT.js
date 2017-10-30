@@ -140,6 +140,7 @@ See `mqtt help <command>` for the command help.
   * <a href="#unsubscribe"><code>mqtt.Client#<b>unsubscribe()</b></code></a>
   * <a href="#end"><code>mqtt.Client#<b>end()</b></code></a>
   * <a href="#removeOutgoingMessage"><code>mqtt.Client#<b>removeOutgoingMessage()</b></code></a>
+  * <a href="#reconnect"><code>mqtt.Client#<b>reconnect()</b></code></a>
   * <a href="#handleMessage"><code>mqtt.Client#<b>handleMessage()</b></code></a>
   * <a href="#connected"><code>mqtt.Client#<b>connected</b></code></a>
   * <a href="#reconnecting"><code>mqtt.Client#<b>reconnecting</b></code></a>
@@ -368,6 +369,12 @@ The outgoing callback will be called withe Error('Message removed') if the messa
 After this function is called, the messageId is released and becomes reusable.
 
 * `mid`: The messageId of the message in the outgoingStore.
+
+-------------------------------------------------------
+<a name="reconnect"></a>
+### mqtt.Client#reconnect()
+
+Connect again using the same options.
 
 -------------------------------------------------------
 <a name="handleMessage"></a>
