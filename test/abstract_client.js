@@ -803,7 +803,7 @@ module.exports = function (server, config) {
       done()
     })
 
-    it('should not send a `pubrel` if the execution of `handleMessage` fails for messages with QoS `2`', function (done) {
+    it('should not send a `pubcomp` if the execution of `handleMessage` fails for messages with QoS `2`', function (done) {
       var client = connect()
 
       var messageId = Math.floor(65535 * Math.random())
