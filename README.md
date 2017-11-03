@@ -404,9 +404,12 @@ Boolean : set to `true` if the client is trying to reconnect to the server. `fal
 
 -------------------------------------------------------
 <a name="store"></a>
-### mqtt.Store()
+### mqtt.Store(options)
 
 In-memory implementation of the message store.
+
+* `options` is the store options:
+  * `clean`: `true`, clean inflight messages when close is called (default `true`)
 
 Other implementations of `mqtt.Store`:
 

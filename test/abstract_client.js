@@ -1957,7 +1957,9 @@ module.exports = function (server, config) {
           host: 'localhost',
           clean: false,
           clientId: 'cid1',
-          reconnectPeriod: 0
+          reconnectPeriod: 0,
+          incomingStore: new mqtt.Store({ clean: false }),
+          outgoingStore: new mqtt.Store({ clean: false })
         })
 
         client.on('connect', function () {
