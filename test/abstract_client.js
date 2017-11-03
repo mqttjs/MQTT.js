@@ -800,7 +800,7 @@ module.exports = function (server, config) {
 
       client._sendPacket.callCount.should.equal(0)
       client.end()
-      done()
+      client.on('connect', function () { done() })
     })
 
     it('should not send a `pubcomp` if the execution of `handleMessage` fails for messages with QoS `2`', function (done) {
