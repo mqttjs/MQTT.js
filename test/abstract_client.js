@@ -805,6 +805,28 @@ module.exports = function (server, config) {
       client.on('connect', function () { done() })
     })
 
+    it('should silently ignore errors thrown by `handleMessage` and return when no callback is passed ' +
+      'into `handlePublish` method', function (done) {
+      var client = connect()
+
+      client.handleMessage = function (packet, callback) {
+        callback(new Error('Error thrown by the application'))
+      }
+
+      try {
+        client._handlePublish({
+          messageId: Math.floor(65535 * Math.random()),
+          topic: 'test',
+          payload: 'test',
+          qos: 1
+        })
+      } catch (err) {
+        done(err)
+      }
+
+      client.on('connect', function () { done() })
+    })
+
     it('should not send a `pubcomp` if the execution of `handleMessage` fails for messages with QoS `2`', function (done) {
       var store = new Store()
       var client = connect({incomingStore: store})
@@ -837,6 +859,43 @@ module.exports = function (server, config) {
           })
           client._sendPacket.callCount.should.equal(0)
           done()
+        })
+      })
+    })
+
+    it('should silently ignore errors thrown by `handleMessage` and return when no callback is passed ' +
+      'into `handlePubrel` method', function (done) {
+      var store = new Store()
+      var client = connect({incomingStore: store})
+
+      var messageId = Math.floor(65535 * Math.random())
+      var topic = 'test'
+      var payload = 'test'
+      var qos = 2
+
+      client.handleMessage = function (packet, callback) {
+        callback(new Error('Error thrown by the application'))
+      }
+
+      client.once('connect', function () {
+        client.subscribe(topic, {qos: 2})
+
+        store.put({
+          messageId: messageId,
+          topic: topic,
+          payload: payload,
+          qos: qos,
+          cmd: 'publish'
+        }, function () {
+          // cleans up the client
+          client.end()
+
+          try {
+            client._handlePubrel({cmd: 'pubrel', messageId: messageId})
+            done()
+          } catch (err) {
+            done(err)
+          }
         })
       })
     })
