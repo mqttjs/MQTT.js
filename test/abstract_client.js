@@ -820,11 +820,12 @@ module.exports = function (server, config) {
           payload: 'test',
           qos: 1
         })
+        done()
       } catch (err) {
         done(err)
+      } finally {
+        client.end()
       }
-
-      client.on('connect', function () { done() })
     })
 
     it('should not send a `pubcomp` if the execution of `handleMessage` fails for messages with QoS `2`', function (done) {
@@ -887,14 +888,13 @@ module.exports = function (server, config) {
           qos: qos,
           cmd: 'publish'
         }, function () {
-          // cleans up the client
-          client.end()
-
           try {
             client._handlePubrel({cmd: 'pubrel', messageId: messageId})
             done()
           } catch (err) {
             done(err)
+          } finally {
+            client.end()
           }
         })
       })
