@@ -1,10 +1,19 @@
+import {
+  IStoreOptions
+} from './store-options'
+
 /**
  * In-memory implementation of the message store
  * This can actually be saved into files.
  *
  */
 declare class Store {
-  constructor ()
+  /**
+   * Store constructor
+   *
+   * @param {Object} [options] - store options
+   */
+  constructor (options: IStoreOptions)
 
   /**
    * Adds a packet to the store, a packet is

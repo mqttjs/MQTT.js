@@ -164,6 +164,15 @@ export declare class MqttClient extends events.EventEmitter {
   public removeOutgoingMessage (mid: number): this
 
   /**
+   * reconnect - connect again using the same options
+   *
+   * @returns {MqttClient} this - for chaining
+   *
+   * @api public
+   */
+  public reconnect (): this
+
+  /**
    * Handle messages with backpressure support, one at a time.
    * Override at will.
    *
