@@ -808,7 +808,7 @@ module.exports = function (server, config) {
     it('should not send a `pubcomp` if the execution of `handleMessage` fails for messages with QoS `2`', function (done) {
       var store = new Store()
       var client = connect({incomingStore: store})
-      
+
       var messageId = Math.floor(65535 * Math.random())
       var topic = 'test'
       var payload = 'test'
