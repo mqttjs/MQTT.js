@@ -8,6 +8,7 @@ var sinon = require('sinon')
 var mqtt = require('../')
 var xtend = require('xtend')
 var Server = require('./server')
+var Store = require('./../lib/store')
 var port = 9876
 
 module.exports = function (server, config) {
@@ -794,7 +795,8 @@ module.exports = function (server, config) {
         messageId: Math.floor(65535 * Math.random()),
         topic: 'test',
         payload: 'test',
-        qos: 1}, function (err) {
+        qos: 1
+      }, function (err) {
         should.exist(err)
       })
 
@@ -803,8 +805,32 @@ module.exports = function (server, config) {
       client.on('connect', function () { done() })
     })
 
-    it('should not send a `pubcomp` if the execution of `handleMessage` fails for messages with QoS `2`', function (done) {
+    it('should silently ignore errors thrown by `handleMessage` and return when no callback is passed ' +
+      'into `handlePublish` method', function (done) {
       var client = connect()
+
+      client.handleMessage = function (packet, callback) {
+        callback(new Error('Error thrown by the application'))
+      }
+
+      try {
+        client._handlePublish({
+          messageId: Math.floor(65535 * Math.random()),
+          topic: 'test',
+          payload: 'test',
+          qos: 1
+        })
+        done()
+      } catch (err) {
+        done(err)
+      } finally {
+        client.end()
+      }
+    })
+
+    it('should not send a `pubcomp` if the execution of `handleMessage` fails for messages with QoS `2`', function (done) {
+      var store = new Store()
+      var client = connect({incomingStore: store})
 
       var messageId = Math.floor(65535 * Math.random())
       var topic = 'test'
@@ -815,35 +841,61 @@ module.exports = function (server, config) {
         callback(new Error('Error thrown by the application'))
       }
 
-      client.on('connect', function () {
-        client.subscribe(topic)
+      client.once('connect', function () {
+        client.subscribe(topic, {qos: 2})
 
-        client.on('packetreceive', function (packet) {
-          if (packet.cmd && packet.cmd === 'pubrel') {
-            client._sendPacket = sinon.spy()
+        store.put({
+          messageId: messageId,
+          topic: topic,
+          payload: payload,
+          qos: qos,
+          cmd: 'publish'
+        }, function () {
+          // cleans up the client
+          client.end()
 
-            client._handlePubrel(packet, function (err) {
-              should.exist(err)
-            })
-
-            client._sendPacket.callCount.should.equal(0)
-            client.end()
-            done()
-          }
+          client._sendPacket = sinon.spy()
+          client._handlePubrel({cmd: 'pubrel', messageId: messageId}, function (err) {
+            should.exist(err)
+          })
+          client._sendPacket.callCount.should.equal(0)
+          done()
         })
       })
+    })
 
-      server.once('client', function (serverClient) {
-        serverClient.on('subscribe', function () {
-          serverClient.publish({
-            messageId: messageId,
-            topic: topic,
-            payload: payload,
-            qos: qos
-          })
-        })
-        serverClient.on('puback', function () {
-          done('Unexpected `puback` received.')
+    it('should silently ignore errors thrown by `handleMessage` and return when no callback is passed ' +
+      'into `handlePubrel` method', function (done) {
+      var store = new Store()
+      var client = connect({incomingStore: store})
+
+      var messageId = Math.floor(65535 * Math.random())
+      var topic = 'test'
+      var payload = 'test'
+      var qos = 2
+
+      client.handleMessage = function (packet, callback) {
+        callback(new Error('Error thrown by the application'))
+      }
+
+      client.once('connect', function () {
+        client.subscribe(topic, {qos: 2})
+
+        store.put({
+          messageId: messageId,
+          topic: topic,
+          payload: payload,
+          qos: qos,
+          cmd: 'publish'
+        }, function () {
+          try {
+            client._handlePubrel({cmd: 'pubrel', messageId: messageId})
+            done()
+          } catch (err) {
+            done(err)
+          } finally {
+            client.end()
+          }
         })
       })
     })
