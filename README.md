@@ -419,6 +419,9 @@ Other implementations of `mqtt.Store`:
 * [mqtt-nedbb-store](https://github.com/behrad/mqtt-nedb-store) which
   uses [nedb](https://www.npmjs.com/package/nedb) to store the inflight
   data.
+* [mqtt-localforage-store](http://npm.im/mqtt-localforage-store) which uses
+  [localForage](http://npm.im/localforage) to store the inflight
+  data, making it usable in the Browser without browserify.
 
 -------------------------------------------------------
 <a name="put"></a>
