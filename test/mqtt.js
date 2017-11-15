@@ -11,17 +11,20 @@ describe('mqtt', function () {
       var c = mqtt.connect('mqtt://localhost:1883')
 
       c.should.be.instanceOf(mqtt.MqttClient)
+      c.end()
     })
 
     it('should throw an error when called with no protocol specified', function () {
       (function () {
-        mqtt.connect('foo.bar.com')
+        var c = mqtt.connect('foo.bar.com')
+        c.end()
       }).should.throw('Missing protocol')
     })
 
     it('should throw an error when called with no protocol specified - with options', function () {
       (function () {
-        mqtt.connect('tcp://foo.bar.com', { protocol: null })
+        var c = mqtt.connect('tcp://foo.bar.com', { protocol: null })
+        c.end()
       }).should.throw('Missing protocol')
     })
 
@@ -31,6 +34,7 @@ describe('mqtt', function () {
       c.should.be.instanceOf(mqtt.MqttClient)
       c.options.should.have.property('username', 'user')
       c.options.should.have.property('password', 'pass')
+      c.end()
     })
 
     it('should return an MqttClient with username and password options set', function () {
@@ -38,6 +42,7 @@ describe('mqtt', function () {
 
       c.should.be.instanceOf(mqtt.MqttClient)
       c.options.should.have.property('username', 'user')
+      c.end()
     })
 
     it('should return an MqttClient with the clientid with random value', function () {
@@ -45,6 +50,7 @@ describe('mqtt', function () {
 
       c.should.be.instanceOf(mqtt.MqttClient)
       c.options.should.have.property('clientId')
+      c.end()
     })
 
     it('should return an MqttClient with the clientid with empty string', function () {
@@ -52,6 +58,7 @@ describe('mqtt', function () {
 
       c.should.be.instanceOf(mqtt.MqttClient)
       c.options.should.have.property('clientId', '')
+      c.end()
     })
 
     it('should return an MqttClient with the clientid option set', function () {
@@ -59,12 +66,14 @@ describe('mqtt', function () {
 
       c.should.be.instanceOf(mqtt.MqttClient)
       c.options.should.have.property('clientId', '123')
+      c.end()
     })
 
     it('should return an MqttClient when connect is called with tcp:/ url', function () {
       var c = mqtt.connect('tcp://localhost')
 
       c.should.be.instanceOf(mqtt.MqttClient)
+      c.end()
     })
 
     it('should return an MqttClient with correct host when called with a host and port', function () {
@@ -72,6 +81,7 @@ describe('mqtt', function () {
 
       c.options.should.have.property('hostname', 'localhost')
       c.options.should.have.property('port', 1883)
+      c.end()
     })
 
     sslOpts = {
@@ -88,6 +98,7 @@ describe('mqtt', function () {
       c.on('error', function () {})
 
       c.should.be.instanceOf(mqtt.MqttClient)
+      c.end()
     })
 
     it('should return an MqttClient when connect is called with ssl:/ url', function () {
@@ -98,6 +109,7 @@ describe('mqtt', function () {
       c.on('error', function () {})
 
       c.should.be.instanceOf(mqtt.MqttClient)
+      c.end()
     })
 
     it('should return an MqttClient when connect is called with ws:/ url', function () {
@@ -108,6 +120,7 @@ describe('mqtt', function () {
       c.on('error', function () {})
 
       c.should.be.instanceOf(mqtt.MqttClient)
+      c.end()
     })
 
     it('should return an MqttClient when connect is called with wss:/ url', function () {
@@ -118,6 +131,7 @@ describe('mqtt', function () {
       c.on('error', function () {})
 
       c.should.be.instanceOf(mqtt.MqttClient)
+      c.end()
     })
 
     sslOpts2 = {
@@ -200,6 +214,7 @@ describe('mqtt', function () {
 
       c.should.be.instanceOf(mqtt.MqttClient)
       c.options.should.have.property('clientId')
+      c.end()
     })
 
     it('should return an MqttClient with the clientid with option of with specific clientId', function () {
@@ -209,6 +224,7 @@ describe('mqtt', function () {
 
       c.should.be.instanceOf(mqtt.MqttClient)
       c.options.should.have.property('clientId', '123')
+      c.end()
     })
   })
 })
