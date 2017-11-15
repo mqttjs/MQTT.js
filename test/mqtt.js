@@ -40,6 +40,20 @@ describe('mqtt', function () {
       c.options.should.have.property('username', 'user')
     })
 
+    it('should return an MqttClient with the clientid with random value', function () {
+      var c = mqtt.connect('mqtt://user@localhost:1883')
+
+      c.should.be.instanceOf(mqtt.MqttClient)
+      c.options.should.have.property('clientId')
+    })
+
+    it('should return an MqttClient with the clientid with empty string', function () {
+      var c = mqtt.connect('mqtt://user@localhost:1883?clientId=')
+
+      c.should.be.instanceOf(mqtt.MqttClient)
+      c.options.should.have.property('clientId', '')
+    })
+
     it('should return an MqttClient with the clientid option set', function () {
       var c = mqtt.connect('mqtt://user@localhost:1883?clientId=123')
 
@@ -170,6 +184,31 @@ describe('mqtt', function () {
       c.on('error', function () {})
 
       c.should.be.instanceOf(mqtt.MqttClient)
+    })
+
+    it('should return an MqttClient with the clientid with option of clientId as empty string', function () {
+      var c = mqtt.connect('mqtt://localhost:1883', {
+        clientId: ''
+      })
+
+      c.should.be.instanceOf(mqtt.MqttClient)
+      c.options.should.have.property('clientId', '')
+    })
+
+    it('should return an MqttClient with the clientid with option of clientId empty', function () {
+      var c = mqtt.connect('mqtt://localhost:1883')
+
+      c.should.be.instanceOf(mqtt.MqttClient)
+      c.options.should.have.property('clientId')
+    })
+
+    it('should return an MqttClient with the clientid with option of with specific clientId', function () {
+      var c = mqtt.connect('mqtt://localhost:1883', {
+        clientId: '123'
+      })
+
+      c.should.be.instanceOf(mqtt.MqttClient)
+      c.options.should.have.property('clientId', '123')
     })
   })
 })
