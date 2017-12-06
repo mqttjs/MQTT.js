@@ -164,7 +164,8 @@ export declare class MqttClient extends events.EventEmitter {
   public removeOutgoingMessage (mid: number): this
 
   /**
-   * reconnect - connect again using the same options
+   * reconnect - connect again using the same options as connect()
+   * `incomingStore` and `outgoingStore` need to be ready before `reconnect()` calling.
    *
    * @returns {MqttClient} this - for chaining
    *

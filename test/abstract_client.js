@@ -2029,7 +2029,13 @@ module.exports = function (server, config) {
     })
 
     it('should be able to pub/sub if reconnect() is called at close handler', function (done) {
-      var client = connect({ reconnectPeriod: 0 })
+      var client = connect({
+        clean: false,
+        clientId: 'cid1',
+        reconnectPeriod: 0,
+        incomingStore: new mqtt.Store({ clean: false }),
+        outgoingStore: new mqtt.Store({ clean: false })
+      })
       var tryReconnect = true
       var reconnectEvent = false
 
@@ -2059,7 +2065,13 @@ module.exports = function (server, config) {
     })
 
     it('should be able to pub/sub if reconnect() is called at out of close handler', function (done) {
-      var client = connect({ reconnectPeriod: 0 })
+      var client = connect({
+        clean: false,
+        clientId: 'cid1',
+        reconnectPeriod: 0,
+        incomingStore: new mqtt.Store({ clean: false }),
+        outgoingStore: new mqtt.Store({ clean: false })
+      })
       var tryReconnect = true
       var reconnectEvent = false
 
@@ -2087,6 +2099,59 @@ module.exports = function (server, config) {
             client.end()
           })
         }
+      })
+    })
+
+    it('should be able to pub/sub if connect() is called at close handler', function (done) {
+      var client = connect({ reconnectPeriod: 0 })
+      var reconnectEvent = false
+      client.on('close', function () {
+        client = connect({ reconnectPeriod: 0 })
+        client.on('connect', function () {
+          client.subscribe('hello', function () {
+            client.end()
+          })
+        })
+        client.on('close', function () {
+          reconnectEvent.should.equal(false)
+          done()
+        })
+      })
+
+      client.on('reconnect', function () {
+        reconnectEvent = true
+      })
+
+      client.on('connect', function () {
+        client.end()
+      })
+    })
+
+    it('should be able to pub/sub if connect() is called at out of close handler', function (done) {
+      var client = connect({ reconnectPeriod: 0 })
+      var reconnectEvent = false
+
+      client.on('close', function () {
+        setTimeout(function () {
+          client = connect({ reconnectPeriod: 0 })
+          client.on('connect', function () {
+            client.subscribe('hello', function () {
+              client.end()
+            })
+          })
+          client.on('close', function () {
+            reconnectEvent.should.equal(false)
+            done()
+          })
+        }, 100)
+      })
+
+      client.on('reconnect', function () {
+        reconnectEvent = true
+      })
+
+      client.on('connect', function () {
+        client.end()
       })
     })
 
