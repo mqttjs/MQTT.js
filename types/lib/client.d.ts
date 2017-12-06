@@ -165,7 +165,11 @@ export declare class MqttClient extends events.EventEmitter {
 
   /**
    * reconnect - connect again using the same options as connect()
-   * `incomingStore` and `outgoingStore` need to be ready before `reconnect()` calling.
+   *
+   * @param {Object} [opts] - reconnect options, includes:
+   *    {Object} incomingStore - a store for the incoming packets
+   *    {Object} outgoingStore - a store for the outgoing packets
+   *    if opts is not given, current stores are used
    *
    * @returns {MqttClient} this - for chaining
    *
