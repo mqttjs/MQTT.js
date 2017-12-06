@@ -2028,6 +2028,36 @@ module.exports = function (server, config) {
       })
     })
 
+    it('should be able to pub/sub if reconnect() is called at close handler', function (done) {
+      var client = connect({ reconnectPeriod: 0 })
+      var tryReconnect = true
+      var reconnectEvent = false
+
+      client.on('close', function () {
+        if (tryReconnect) {
+          tryReconnect = false
+          client.reconnect()
+        } else {
+          reconnectEvent.should.equal(true)
+          done()
+        }
+      })
+
+      client.on('reconnect', function () {
+        reconnectEvent = true
+      })
+
+      client.on('connect', function () {
+        if (tryReconnect) {
+          client.end()
+        } else {
+          client.subscribe('hello', function () {
+            client.end()
+          })
+        }
+      })
+    })
+
     context('with alternate server client', function () {
       var cachedClientListeners
 
