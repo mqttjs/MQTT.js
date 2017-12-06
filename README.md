@@ -131,7 +131,7 @@ mqtt pub -t 'hello' -h 'test.mosquitto.org' -m 'from MQTT.js'
 See `mqtt help <command>` for the command help.
 
 <a name="api"></a>
-## API
+## API
 
   * <a href="#connect"><code>mqtt.<b>connect()</b></code></a>
   * <a href="#client"><code>mqtt.<b>Client()</b></code></a>
@@ -275,7 +275,7 @@ Emitted when the client goes offline.
 Emitted when the client cannot connect (i.e. connack rc != 0) or when a
 parsing error occurs.
 
-### Event `'message'`
+#### Event `'message'`
 
 `function (topic, message, packet) {}`
 
@@ -285,7 +285,7 @@ Emitted when the client receives a publish packet
 * `packet` received packet, as defined in
   [mqtt-packet](https://github.com/mcollina/mqtt-packet#publish)
 
-### Event `'packetsend'`
+#### Event `'packetsend'`
 
 `function (packet) {}`
 
@@ -294,7 +294,7 @@ as well as packets used by MQTT for managing subscriptions and connections
 * `packet` received packet, as defined in
   [mqtt-packet](https://github.com/mcollina/mqtt-packet)
 
-### Event `'packetreceive'`
+#### Event `'packetreceive'`
 
 `function (packet) {}`
 
