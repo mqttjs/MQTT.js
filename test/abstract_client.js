@@ -291,11 +291,12 @@ module.exports = function (server, config) {
           'system/registry/event/new_device', 'system/+/+/new_device'
         ],
         function (err) {
-          client.end()
-          if (err) {
-            return done(new Error(err))
-          }
-          done()
+          client.end(function () {
+            if (err) {
+              return done(new Error(err))
+            }
+            done()
+          })
         }
       )
     })
@@ -303,11 +304,12 @@ module.exports = function (server, config) {
     it('should return an error (via callbacks) for topic #/event', function (done) {
       var client = connect()
       client.subscribe(['#/event', 'event#', 'event+'], function (err) {
-        client.end()
-        if (err) {
-          return done()
-        }
-        done(new Error('Validations do NOT work'))
+        client.end(false, function () {
+          if (err) {
+            return done()
+          }
+          done(new Error('Validations do NOT work'))
+        })
       })
     })
 
@@ -315,11 +317,11 @@ module.exports = function (server, config) {
       var client = connect()
       client.subscribe('event', function (err, granted1) {
         if (err) {
-          return done()
+          return done(err)
         }
         client.subscribe('event', function (err, granted2) {
           if (err) {
-            return done()
+            return done(err)
           }
           granted2.should.Array()
           granted2.should.be.empty()
@@ -331,33 +333,36 @@ module.exports = function (server, config) {
     it('should return an error (via callbacks) for topic #/event', function (done) {
       var client = connect()
       client.subscribe('#/event', function (err) {
-        client.end()
-        if (err) {
-          return done()
-        }
-        done(new Error('Validations do NOT work'))
+        client.end(function () {
+          if (err) {
+            return done()
+          }
+          done(new Error('Validations do NOT work'))
+        })
       })
     })
 
     it('should return an error (via callbacks) for topic event#', function (done) {
       var client = connect()
       client.subscribe('event#', function (err) {
-        client.end()
-        if (err) {
-          return done()
-        }
-        done(new Error('Validations do NOT work'))
+        client.end(function () {
+          if (err) {
+            return done()
+          }
+          done(new Error('Validations do NOT work'))
+        })
       })
     })
 
     it('should return an error (via callbacks) for topic system/#/event', function (done) {
       var client = connect()
       client.subscribe('system/#/event', function (err) {
-        client.end()
-        if (err) {
-          return done()
-        }
-        done(new Error('Validations do NOT work'))
+        client.end(function () {
+          if (err) {
+            return done()
+          }
+          done(new Error('Validations do NOT work'))
+        })
       })
     })
 
@@ -375,11 +380,12 @@ module.exports = function (server, config) {
     it('should return an error (via callbacks) for topic system/+/#/event', function (done) {
       var client = connect()
       client.subscribe('system/+/#/event', function (err) {
-        client.end()
-        if (err) {
-          return done()
-        }
-        done(new Error('Validations do NOT work'))
+        client.end(true, function () {
+          if (err) {
+            return done()
+          }
+          done(new Error('Validations do NOT work'))
+        })
       })
     })
   })
@@ -395,7 +401,9 @@ module.exports = function (server, config) {
 
       client.once('connect', function () {
         client.queue.length.should.equal(0)
-        client.end(true, done)
+        setTimeout(function () {
+          client.end(true, done)
+        }, 10)
       })
     })
 
@@ -404,10 +412,14 @@ module.exports = function (server, config) {
 
       client.publish('test', 'test', {qos: 0})
       client.queue.length.should.equal(0)
-      client.end(true, done)
+      client.on('connect', function () {
+        setTimeout(function () {
+          client.end(true, done)
+        }, 10)
+      })
     })
 
-    it('should not queue qos != 0 messages', function (done) {
+    it('should queue qos != 0 messages', function (done) {
       var client = connect({queueQoSZero: false})
 
       client.publish('test', 'test', {qos: 1})
@@ -415,61 +427,79 @@ module.exports = function (server, config) {
       client.subscribe('test')
       client.unsubscribe('test')
       client.queue.length.should.equal(2)
-      client.end(true, done)
+      client.on('connect', function () {
+        setTimeout(function () {
+          client.end(true, done)
+        }, 10)
+      })
     })
 
     it('should call cb if an outgoing QoS 0 message is not sent', function (done) {
       var client = connect({queueQoSZero: false})
+      var called = false
 
       client.publish('test', 'test', {qos: 0}, function () {
-        client.end(true, done)
+        called = true
+      })
+
+      client.on('connect', function () {
+        called.should.equal(true)
+        setTimeout(function () {
+          client.end(true, done)
+        }, 10)
       })
     })
 
-    if (!process.env.TRAVIS) {
-      it('should delay ending up until all inflight messages are delivered', function (done) {
-        var client = connect()
+    it('should delay ending up until all inflight messages are delivered', function (done) {
+      var client = connect()
+      var subscribeCalled = false
 
-        client.on('connect', function () {
-          client.subscribe('test', function () {
-            done()
-          })
-          client.publish('test', 'test', function () {
-            client.end()
-          })
+      client.on('connect', function () {
+        client.subscribe('test', function () {
+          subscribeCalled = true
         })
-      })
-
-      it('wait QoS 1 publish messages', function (done) {
-        var client = connect()
-
-        client.on('connect', function () {
-          client.subscribe('test')
-          client.publish('test', 'test', { qos: 1 }, function () {
-            client.end()
-          })
-          client.on('message', function () {
+        client.publish('test', 'test', function () {
+          client.end(false, function () {
+            subscribeCalled.should.be.equal(true)
             done()
           })
         })
+      })
+    })
 
-        server.once('client', function (serverClient) {
-          serverClient.on('subscribe', function () {
-            serverClient.on('publish', function (packet) {
-              serverClient.publish(packet)
-            })
+    it('wait QoS 1 publish messages', function (done) {
+      var client = connect()
+      var messageReceived = false
+
+      client.on('connect', function () {
+        client.subscribe('test')
+        client.publish('test', 'test', { qos: 1 }, function () {
+          client.end(false, function () {
+            messageReceived.should.equal(true)
+            done()
           })
+        })
+        client.on('message', function () {
+          messageReceived = true
         })
       })
 
-      it('does not wait acks when force-closing', function (done) {
-        // non-running broker
-        var client = connect('mqtt://localhost:8993')
-
-        client.publish('test', 'test', { qos: 1 })
-        client.end(true, done)
+      server.once('client', function (serverClient) {
+        serverClient.on('subscribe', function () {
+          serverClient.on('publish', function (packet) {
+            serverClient.publish(packet)
+          })
+        })
       })
-    }
+    })
+
+    it('does not wait acks when force-closing', function (done) {
+      // non-running broker
+      var client = connect('mqtt://localhost:8993')
+
+      client.publish('test', 'test', { qos: 1 })
+      client.end(true, done)
+    })
   })
 
   describe('publishing', function () {
@@ -480,16 +510,21 @@ module.exports = function (server, config) {
 
       client.publish(topic, payload)
 
-      server.once('client', function (serverClient) {
+      server.on('client', onClient)
+
+      function onClient (serverClient) {
+        serverClient.once('connect', function () {
+          server.removeListener('client', onClient)
+        })
+
         serverClient.once('publish', function (packet) {
           packet.topic.should.equal(topic)
           packet.payload.toString().should.equal(payload)
           packet.qos.should.equal(0)
           packet.retain.should.equal(false)
-          client.end()
-          done()
+          client.end(true, done)
         })
-      })
+      }
     })
 
     it('should publish a message (online)', function (done) {
