@@ -374,7 +374,7 @@ After this function is called, the messageId is released and becomes reusable.
 <a name="reconnect"></a>
 ### mqtt.Client#reconnect()
 
-Connect again using the same options.
+Connect again using the same options as connect()
 
 -------------------------------------------------------
 <a name="handleMessage"></a>

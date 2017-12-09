@@ -1975,6 +1975,8 @@ module.exports = function (server, config) {
     it('should preserved incomingStore after disconnecting if clean is false', function (done) {
       var reconnect = false
       var client = {}
+      var incomingStore = new mqtt.Store({ clean: false })
+      var outgoingStore = new mqtt.Store({ clean: false })
       var server2 = new Server(function (c) {
         c.on('connect', function (packet) {
           c.connack({returnCode: 0})
@@ -1993,7 +1995,10 @@ module.exports = function (server, config) {
         })
         c.on('pubrec', function (packet) {
           client.end(false, function () {
-            client.reconnect()
+            client.reconnect({
+              incomingStore: incomingStore,
+              outgoingStore: outgoingStore
+            })
           })
         })
         c.on('pubcomp', function (packet) {
@@ -2010,8 +2015,8 @@ module.exports = function (server, config) {
           clean: false,
           clientId: 'cid1',
           reconnectPeriod: 0,
-          incomingStore: new mqtt.Store({ clean: false }),
-          outgoingStore: new mqtt.Store({ clean: false })
+          incomingStore: incomingStore,
+          outgoingStore: outgoingStore
         })
 
         client.on('connect', function () {
@@ -2025,6 +2030,68 @@ module.exports = function (server, config) {
           topic.should.equal('topic')
           message.toString().should.equal('payload')
         })
+      })
+    })
+
+    it('should be able to pub/sub if reconnect() is called at close handler', function (done) {
+      var client = connect({ reconnectPeriod: 0 })
+      var tryReconnect = true
+      var reconnectEvent = false
+
+      client.on('close', function () {
+        if (tryReconnect) {
+          tryReconnect = false
+          client.reconnect()
+        } else {
+          reconnectEvent.should.equal(true)
+          done()
+        }
+      })
+
+      client.on('reconnect', function () {
+        reconnectEvent = true
+      })
+
+      client.on('connect', function () {
+        if (tryReconnect) {
+          client.end()
+        } else {
+          client.subscribe('hello', function () {
+            client.end()
+          })
+        }
+      })
+    })
+
+    it('should be able to pub/sub if reconnect() is called at out of close handler', function (done) {
+      var client = connect({ reconnectPeriod: 0 })
+      var tryReconnect = true
+      var reconnectEvent = false
+
+      client.on('close', function () {
+        if (tryReconnect) {
+          tryReconnect = false
+          setTimeout(function () {
+            client.reconnect()
+          }, 100)
+        } else {
+          reconnectEvent.should.equal(true)
+          done()
+        }
+      })
+
+      client.on('reconnect', function () {
+        reconnectEvent = true
+      })
+
+      client.on('connect', function () {
+        if (tryReconnect) {
+          client.end()
+        } else {
+          client.subscribe('hello', function () {
+            client.end()
+          })
+        }
       })
     })
 
