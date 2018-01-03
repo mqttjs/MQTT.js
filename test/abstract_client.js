@@ -420,9 +420,21 @@ module.exports = function (server, config) {
 
     it('should call cb if an outgoing QoS 0 message is not sent', function (done) {
       var client = connect({queueQoSZero: false})
-
       client.publish('test', 'test', {qos: 0}, function () {
         client.end(true, done)
+      })
+    })
+
+    it('should call cb if store.put fails', function (done) {
+      const store = new Store()
+      store.put = function (packet, cb) {
+        process.nextTick(cb, new Error('oops there is an error'))
+      }
+      var client = connect({ incomingStore: store, outgoingStore: store })
+      client.publish('test', 'test', { qos: 2 }, function (err) {
+        if (err) {
+          client.end(true, done)
+        }
       })
     })
 

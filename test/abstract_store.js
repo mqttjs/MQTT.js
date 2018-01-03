@@ -130,18 +130,4 @@ module.exports = function abstractStoreTest (build) {
       })
     })
   })
-
-  it('Store.put should return error to cb if it fails', function (done) {
-    var Store = require('../lib/store')
-    const store = new Store()
-    store.put = function (packet, cb) {
-      process.nextTick(cb, new Error('oops there is an error'))
-    }
-
-    store.put({messageId: 43}, function (err) {
-      if (err) {
-        done()
-      }
-    })
-  })
 }
