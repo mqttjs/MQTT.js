@@ -131,7 +131,7 @@ mqtt pub -t 'hello' -h 'test.mosquitto.org' -m 'from MQTT.js'
 See `mqtt help <command>` for the command help.
 
 <a name="api"></a>
-## API
+## API
 
   * <a href="#connect"><code>mqtt.<b>connect()</b></code></a>
   * <a href="#client"><code>mqtt.<b>Client()</b></code></a>
@@ -275,7 +275,7 @@ Emitted when the client goes offline.
 Emitted when the client cannot connect (i.e. connack rc != 0) or when a
 parsing error occurs.
 
-### Event `'message'`
+#### Event `'message'`
 
 `function (topic, message, packet) {}`
 
@@ -285,7 +285,7 @@ Emitted when the client receives a publish packet
 * `packet` received packet, as defined in
   [mqtt-packet](https://github.com/mcollina/mqtt-packet#publish)
 
-### Event `'packetsend'`
+#### Event `'packetsend'`
 
 `function (packet) {}`
 
@@ -294,7 +294,7 @@ as well as packets used by MQTT for managing subscriptions and connections
 * `packet` received packet, as defined in
   [mqtt-packet](https://github.com/mcollina/mqtt-packet)
 
-### Event `'packetreceive'`
+#### Event `'packetreceive'`
 
 `function (packet) {}`
 
@@ -374,7 +374,7 @@ After this function is called, the messageId is released and becomes reusable.
 <a name="reconnect"></a>
 ### mqtt.Client#reconnect()
 
-Connect again using the same options.
+Connect again using the same options as connect()
 
 -------------------------------------------------------
 <a name="handleMessage"></a>
@@ -419,6 +419,9 @@ Other implementations of `mqtt.Store`:
 * [mqtt-nedbb-store](https://github.com/behrad/mqtt-nedb-store) which
   uses [nedb](https://www.npmjs.com/package/nedb) to store the inflight
   data.
+* [mqtt-localforage-store](http://npm.im/mqtt-localforage-store) which uses
+  [localForage](http://npm.im/localforage) to store the inflight
+  data, making it usable in the Browser without browserify.
 
 -------------------------------------------------------
 <a name="put"></a>
