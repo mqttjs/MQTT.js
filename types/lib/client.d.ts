@@ -4,8 +4,7 @@ import * as events from 'events'
 import {
   IClientOptions,
   IClientPublishOptions,
-  IClientSubscribeOptions,
-  IClientReconnectOptions
+  IClientSubscribeOptions
 } from './client-options'
 import { Store } from './store'
 import { Packet, QoS } from './types'
@@ -165,18 +164,13 @@ export declare class MqttClient extends events.EventEmitter {
   public removeOutgoingMessage (mid: number): this
 
   /**
-   * reconnect - connect again using the same options as connect()
-   *
-   * @param {Object} [opts] - optional reconnect options, includes:
-   *    {Store} incomingStore - a store for the incoming packets
-   *    {Store} outgoingStore - a store for the outgoing packets
-   *    if opts is not given, current stores are used
+   * reconnect - connect again using the same options
    *
    * @returns {MqttClient} this - for chaining
    *
    * @api public
    */
-  public reconnect (opts?: IClientReconnectOptions): this
+  public reconnect (): this
 
   /**
    * Handle messages with backpressure support, one at a time.

@@ -124,13 +124,3 @@ export interface IClientSubscribeOptions {
    */
   qos: QoS
 }
-export interface IClientReconnectOptions {
-  /**
-   * a Store for the incoming packets
-   */
-  incomingStore?: Store
-  /**
-   * a Store for the outgoing packets
-   */
-  outgoingStore?: Store
-}

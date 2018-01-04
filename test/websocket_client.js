@@ -16,7 +16,12 @@ function attachWebsocketServer (wsServer) {
 
   wss.on('connection', function (ws) {
     var stream = websocket(ws)
+    stream.pause()
     var connection = new Connection(stream)
+
+    setImmediate(() => {
+      stream.resume()
+    })
 
     wsServer.emit('client', connection)
     stream.on('error', function () {})

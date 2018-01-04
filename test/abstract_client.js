@@ -291,12 +291,11 @@ module.exports = function (server, config) {
           'system/registry/event/new_device', 'system/+/+/new_device'
         ],
         function (err) {
-          client.end(function () {
-            if (err) {
-              return done(new Error(err))
-            }
-            done()
-          })
+          client.end()
+          if (err) {
+            return done(new Error(err))
+          }
+          done()
         }
       )
     })
@@ -304,12 +303,11 @@ module.exports = function (server, config) {
     it('should return an error (via callbacks) for topic #/event', function (done) {
       var client = connect()
       client.subscribe(['#/event', 'event#', 'event+'], function (err) {
-        client.end(false, function () {
-          if (err) {
-            return done()
-          }
-          done(new Error('Validations do NOT work'))
-        })
+        client.end()
+        if (err) {
+          return done()
+        }
+        done(new Error('Validations do NOT work'))
       })
     })
 
@@ -317,11 +315,11 @@ module.exports = function (server, config) {
       var client = connect()
       client.subscribe('event', function (err, granted1) {
         if (err) {
-          return done(err)
+          return done()
         }
         client.subscribe('event', function (err, granted2) {
           if (err) {
-            return done(err)
+            return done()
           }
           granted2.should.Array()
           granted2.should.be.empty()
@@ -333,36 +331,33 @@ module.exports = function (server, config) {
     it('should return an error (via callbacks) for topic #/event', function (done) {
       var client = connect()
       client.subscribe('#/event', function (err) {
-        client.end(function () {
-          if (err) {
-            return done()
-          }
-          done(new Error('Validations do NOT work'))
-        })
+        client.end()
+        if (err) {
+          return done()
+        }
+        done(new Error('Validations do NOT work'))
       })
     })
 
     it('should return an error (via callbacks) for topic event#', function (done) {
       var client = connect()
       client.subscribe('event#', function (err) {
-        client.end(function () {
-          if (err) {
-            return done()
-          }
-          done(new Error('Validations do NOT work'))
-        })
+        client.end()
+        if (err) {
+          return done()
+        }
+        done(new Error('Validations do NOT work'))
       })
     })
 
     it('should return an error (via callbacks) for topic system/#/event', function (done) {
       var client = connect()
       client.subscribe('system/#/event', function (err) {
-        client.end(function () {
-          if (err) {
-            return done()
-          }
-          done(new Error('Validations do NOT work'))
-        })
+        client.end()
+        if (err) {
+          return done()
+        }
+        done(new Error('Validations do NOT work'))
       })
     })
 
@@ -380,12 +375,11 @@ module.exports = function (server, config) {
     it('should return an error (via callbacks) for topic system/+/#/event', function (done) {
       var client = connect()
       client.subscribe('system/+/#/event', function (err) {
-        client.end(true, function () {
-          if (err) {
-            return done()
-          }
-          done(new Error('Validations do NOT work'))
-        })
+        client.end()
+        if (err) {
+          return done()
+        }
+        done(new Error('Validations do NOT work'))
       })
     })
   })
@@ -401,9 +395,7 @@ module.exports = function (server, config) {
 
       client.once('connect', function () {
         client.queue.length.should.equal(0)
-        setTimeout(function () {
-          client.end(true, done)
-        }, 10)
+        client.end(true, done)
       })
     })
 
@@ -412,14 +404,10 @@ module.exports = function (server, config) {
 
       client.publish('test', 'test', {qos: 0})
       client.queue.length.should.equal(0)
-      client.on('connect', function () {
-        setTimeout(function () {
-          client.end(true, done)
-        }, 10)
-      })
+      client.end(true, done)
     })
 
-    it('should queue qos != 0 messages', function (done) {
+    it('should not queue qos != 0 messages', function (done) {
       var client = connect({queueQoSZero: false})
 
       client.publish('test', 'test', {qos: 1})
@@ -427,25 +415,13 @@ module.exports = function (server, config) {
       client.subscribe('test')
       client.unsubscribe('test')
       client.queue.length.should.equal(2)
-      client.on('connect', function () {
-        setTimeout(function () {
-          client.end(true, done)
-        }, 10)
-      })
+      client.end(true, done)
     })
 
     it('should call cb if an outgoing QoS 0 message is not sent', function (done) {
       var client = connect({queueQoSZero: false})
-      var called = false
       client.publish('test', 'test', {qos: 0}, function () {
-        called = true
-      })
-
-      client.on('connect', function () {
-        called.should.equal(true)
-        setTimeout(function () {
-          client.end(true, done)
-        }, 10)
+        client.end(true, done)
       })
     })
 
@@ -465,34 +441,27 @@ module.exports = function (server, config) {
     if (!process.env.TRAVIS) {
       it('should delay ending up until all inflight messages are delivered', function (done) {
         var client = connect()
-        var subscribeCalled = false
+
         client.on('connect', function () {
           client.subscribe('test', function () {
-            subscribeCalled = true
+            done()
           })
           client.publish('test', 'test', function () {
-            client.end(false, function () {
-              subscribeCalled.should.be.equal(true)
-              done()
-            })
+            client.end()
           })
         })
       })
 
       it('wait QoS 1 publish messages', function (done) {
         var client = connect()
-        var messageReceived = false
 
         client.on('connect', function () {
           client.subscribe('test')
           client.publish('test', 'test', { qos: 1 }, function () {
-            client.end(false, function () {
-              messageReceived.should.equal(true)
-              done()
-            })
+            client.end()
           })
           client.on('message', function () {
-            messageReceived = true
+            done()
           })
         })
 
@@ -523,21 +492,16 @@ module.exports = function (server, config) {
 
       client.publish(topic, payload)
 
-      server.on('client', onClient)
-
-      function onClient (serverClient) {
-        serverClient.once('connect', function () {
-          server.removeListener('client', onClient)
-        })
-
+      server.once('client', function (serverClient) {
         serverClient.once('publish', function (packet) {
           packet.topic.should.equal(topic)
           packet.payload.toString().should.equal(payload)
           packet.qos.should.equal(0)
           packet.retain.should.equal(false)
-          client.end(true, done)
+          client.end()
+          done()
         })
-      }
+      })
     })
 
     it('should publish a message (online)', function (done) {
@@ -2023,8 +1987,6 @@ module.exports = function (server, config) {
     it('should preserved incomingStore after disconnecting if clean is false', function (done) {
       var reconnect = false
       var client = {}
-      var incomingStore = new mqtt.Store({ clean: false })
-      var outgoingStore = new mqtt.Store({ clean: false })
       var server2 = new Server(function (c) {
         c.on('connect', function (packet) {
           c.connack({returnCode: 0})
@@ -2043,10 +2005,7 @@ module.exports = function (server, config) {
         })
         c.on('pubrec', function (packet) {
           client.end(false, function () {
-            client.reconnect({
-              incomingStore: incomingStore,
-              outgoingStore: outgoingStore
-            })
+            client.reconnect()
           })
         })
         c.on('pubcomp', function (packet) {
@@ -2063,8 +2022,8 @@ module.exports = function (server, config) {
           clean: false,
           clientId: 'cid1',
           reconnectPeriod: 0,
-          incomingStore: incomingStore,
-          outgoingStore: outgoingStore
+          incomingStore: new mqtt.Store({ clean: false }),
+          outgoingStore: new mqtt.Store({ clean: false })
         })
 
         client.on('connect', function () {
@@ -2078,68 +2037,6 @@ module.exports = function (server, config) {
           topic.should.equal('topic')
           message.toString().should.equal('payload')
         })
-      })
-    })
-
-    it('should be able to pub/sub if reconnect() is called at close handler', function (done) {
-      var client = connect({ reconnectPeriod: 0 })
-      var tryReconnect = true
-      var reconnectEvent = false
-
-      client.on('close', function () {
-        if (tryReconnect) {
-          tryReconnect = false
-          client.reconnect()
-        } else {
-          reconnectEvent.should.equal(true)
-          done()
-        }
-      })
-
-      client.on('reconnect', function () {
-        reconnectEvent = true
-      })
-
-      client.on('connect', function () {
-        if (tryReconnect) {
-          client.end()
-        } else {
-          client.subscribe('hello', function () {
-            client.end()
-          })
-        }
-      })
-    })
-
-    it('should be able to pub/sub if reconnect() is called at out of close handler', function (done) {
-      var client = connect({ reconnectPeriod: 0 })
-      var tryReconnect = true
-      var reconnectEvent = false
-
-      client.on('close', function () {
-        if (tryReconnect) {
-          tryReconnect = false
-          setTimeout(function () {
-            client.reconnect()
-          }, 100)
-        } else {
-          reconnectEvent.should.equal(true)
-          done()
-        }
-      })
-
-      client.on('reconnect', function () {
-        reconnectEvent = true
-      })
-
-      client.on('connect', function () {
-        if (tryReconnect) {
-          client.end()
-        } else {
-          client.subscribe('hello', function () {
-            client.end()
-          })
-        }
       })
     })
 
