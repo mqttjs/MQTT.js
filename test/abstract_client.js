@@ -496,9 +496,21 @@ module.exports = function (server, config) {
     it('does not wait acks when force-closing', function (done) {
       // non-running broker
       var client = connect('mqtt://localhost:8993')
-
       client.publish('test', 'test', { qos: 1 })
       client.end(true, done)
+    })
+
+    it('should call cb if store.put fails', function (done) {
+      const store = new Store()
+      store.put = function (packet, cb) {
+        process.nextTick(cb, new Error('oops there is an error'))
+      }
+      var client = connect({ incomingStore: store, outgoingStore: store })
+      client.publish('test', 'test', { qos: 2 }, function (err) {
+        if (err) {
+          client.end(true, done)
+        }
+      })
     })
   })
 
