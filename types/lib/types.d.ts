@@ -29,10 +29,10 @@ export interface IConnectPacket extends IPacket {
   username?: string
   password?: Buffer
   will?: {
-    topic: string;
-    payload: Buffer;
-    qos?: QoS;
-    retain?: boolean;
+    topic: string
+    payload: Buffer
+    qos?: QoS
+    retain?: boolean
   }
 }
 export interface IPublishPacket extends IPacket {
@@ -51,8 +51,8 @@ export interface IConnackPacket extends IPacket {
 export interface ISubscribePacket extends IPacket {
   cmd: 'subscribe'
   subscriptions: Array<{
-    topic: string;
-    qos: QoS;
+    topic: string
+    qos: QoS
   }>
 }
 export interface ISubackPacket extends IPacket {
