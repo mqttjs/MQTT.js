@@ -10,7 +10,7 @@ export interface IClientOptions extends ISecureClientOptions {
   protocol?: 'wss' | 'ws' | 'mqtt' | 'mqtts' | 'tcp' | 'ssl' | 'wx' | 'wxs'
 
   wsOptions?: {
-    [x: string]: any;
+    [x: string]: any
   }
   /**
    *  10 seconds, set to 0 to disable
@@ -59,8 +59,8 @@ export interface IClientOptions extends ISecureClientOptions {
   queueQoSZero?: boolean
   reschedulePings?: boolean
   servers?: Array<{
-    host: string;
-    port: number;
+    host: string
+    port: number
   }>
   /**
    * true, set to false to disable re-subscribe functionality
@@ -73,19 +73,19 @@ export interface IClientOptions extends ISecureClientOptions {
     /**
      * the topic to publish
      */
-    topic: string;
+    topic: string
     /**
      * the message to publish
      */
-    payload: string;
+    payload: string
     /**
      * the QoS
      */
-    qos: QoS;
+    qos: QoS
     /**
      * the retain flag
      */
-    retain: boolean;
+    retain: boolean
   }
   transformWsUrl?: (url: string, options: IClientOptions, client: MqttClient) => string
 }
