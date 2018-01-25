@@ -1,0 +1,46 @@
+[
+  {
+    "name": "mosca",
+    "command": "docker run --rm -d --name mosca -p 2001:1883 -p 2002:80 -v /var/db/mosca:/db matteocollina/mosca",
+    "protocols": [
+      {
+        "name": "tcp",
+        "port": "2001"
+      },
+      {
+        "name": "ws",
+        "port": "2002"
+      }
+    ],
+    "NO_QOS2": true
+  },
+  {
+    "name": "mosquitto",
+    "command": "docker run --rm --name mosquitto -d -p 2011:1883 -p 2012:9001 toke/mosquitto",
+    "protocols": [
+      {
+        "name": "tcp",
+        "port": "2011"
+      },
+      {
+        "name": "ws",
+        "port": "2012"
+      }
+    ]
+  },
+  {
+    "name": "emq",
+    "command": "docker run --rm -d --name emq -p 2022:18083 -p 2021:1883 sneck/emqttd:latest",
+    "protocols": [
+      {
+        "name": "tcp",
+        "port": "2021"
+      },
+      {
+        "name": "ws",
+        "port": "2022",
+        "route": "/mqtt"
+      }
+    ]
+  }
+]
