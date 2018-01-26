@@ -32,7 +32,7 @@
     "weapp-test": "zuul --server test/browser/server.js --local --open test/browser/wx.js",
     "sauce-test": "zuul --server test/browser/server.js --tunnel ngrok -- test/browser/test.js",
     "brokers-test": "mocha test/brokers/brokers.js",
-    "ci": "npm run tslint && npm run typescript-test && npm run test && codecov && npm run broker-test"
+    "ci": "npm run tslint && npm run typescript-test && npm run test && codecov && npm run brokers-test"
   },
   "pre-commit": [
     "test",

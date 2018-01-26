@@ -174,7 +174,6 @@ if (process.env.RUN_BROKER_TESTS) {
               Promise.all([dyingConnected, clientConnected])
               .then(() => {
                 client.on('message', (topic, content) => {
-                  console.log('message received')
                   topic.should.equal(pretopic + '/lwt')
                   content.toString().should.equal('byebye')
                   done()
