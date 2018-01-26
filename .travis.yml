@@ -8,6 +8,18 @@ node_js:
 - '7'
 - '8'
 - '9'
+
+services:
+  - docker
+
+before_install:
+- docker pull matteocollina/mosca
+- docker pull toke/mosquitto
+- docker pull sneck/emqttd:latest
+- docker run --rm -d --name mosca -p 2001:1883 -p 2002:80 -v /var/db/mosca:/db matteocollina/mosca
+- docker run --rm -d --name mosquitto -p 2011:1883 -p 2012:9001 toke/mosquitto
+- docker run --rm -d --name emq -p 2021:1883 -p 2022:8083 sneck/emqttd:latest
+
 env:
 # For compiling optional extensions
 addons:
@@ -17,6 +29,8 @@ addons:
     packages:
       - g++-4.8
 env:
+  - RUN_BROKER_TESTS=true
+
   global:
   - secure: ODwb1nuf12e0Ja/HgPwZh4aU01G8tTYZliSHI7ZWmYzGv3Yde6UnATeFG8sxGnWPRXTmaZelZfzhq7Aco1fEUnPm31af3z/iaV60iNmz6E1ifTR+oX7jxIvCDtHwBrgevrmIH8vrEUm/kQqDnFNrGG8Cc2xw/LjsNUG1wuWD+I4=
   - secure: buYrn01nPzsiduIQ5oqYTlBdDtM9WKP6gqoyq7IsutHb9sfwh9I6pUYsLibUo4Fq2um9QeXRZ4h1JLKK9xzDVSBpIGGaVzI4ClenfNt9O20IBGBnXcmEKPiRNYF4DkrqZzgx/OVWa6xzcRQI2R1ASQfoyfdpPAnqWXbfalSNkzs=
