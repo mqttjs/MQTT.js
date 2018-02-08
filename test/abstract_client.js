@@ -97,6 +97,21 @@ module.exports = function (server, config) {
         done()
       })
     })
+
+    it('should be able to end even on a failed connection', function (done) {
+      var client = connect({host: 'this_hostname_should_not_exist'})
+
+      var timeout = setTimeout(function () {
+        done(new Error('Failed to end a disconnected client'))
+      }, 500)
+
+      setTimeout(function () {
+        client.end(function () {
+          clearTimeout(timeout)
+          done()
+        })
+      }, 200)
+    })
   })
 
   describe('connecting', function () {
