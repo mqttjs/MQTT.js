@@ -46,7 +46,7 @@ includes the protocol parser and generator. The new Client improves
 performance by a 30% factor, embeds Websocket support
 ([MOWS](http://npm.im/mows) is now deprecated), and it has a better
 support for QoS 1 and 2. The previous API is still supported but
-deprecated, as such, it id not documented in this README.
+deprecated, as such, it is not documented in this README.
 
 As a __breaking change__, the `encoding` option in the old client is
 removed, and now everything is UTF-8 with the exception of the
