@@ -73,6 +73,45 @@ module.exports = function (server, config) {
       })
     })
 
+    it('should emit end after end called and client must be disconnected', function (done) {
+      var client = connect()
+
+      client.once('end', function () {
+        if (client.disconnected) {
+          return done()
+        }
+        done(new Error('client must be disconnected'))
+      })
+
+      client.once('connect', function () {
+        client.end()
+      })
+    })
+
+    it('should pass store close error to end callback but not to end listeners', function (done) {
+      var store = new Store()
+      var client = connect({outgoingStore: store})
+
+      store.close = function (cb) {
+        cb(new Error('test'))
+      }
+      client.once('end', function () {
+        if (arguments.length === 0) {
+          return done()
+        }
+        throw new Error('no argument shoould be passed to event')
+      })
+
+      client.once('connect', function () {
+        client.end(function (test) {
+          if (test && test.message === 'test') {
+            return
+          }
+          throw new Error('bad argument passed to callback')
+        })
+      })
+    })
+
     it('should return `this` if end called twice', function (done) {
       var client = connect()
 
@@ -85,6 +124,21 @@ module.exports = function (server, config) {
           done(new Error('Not returning client.'))
         }
       })
+    })
+
+    it('should emit end only on first client end', function (done) {
+      var client = connect()
+
+      client.once('end', function () {
+        var timeout = setTimeout(done.bind(null), 200)
+        client.once('end', function () {
+          clearTimeout(timeout)
+          done(new Error('end was emitted twice'))
+        })
+        client.end()
+      })
+
+      client.once('connect', client.end.bind(client))
     })
 
     it('should stop ping timer after end called', function (done) {
@@ -111,6 +165,35 @@ module.exports = function (server, config) {
           done()
         })
       }, 200)
+    })
+
+    it('should emit end even on a failed connection', function (done) {
+      var client = connect({host: 'this_hostname_should_not_exist'})
+
+      var timeout = setTimeout(function () {
+        done(new Error('Disconnected client has failed to emit end'))
+      }, 500)
+
+      client.once('end', function () {
+        clearTimeout(timeout)
+        done()
+      })
+
+      setTimeout(client.end.bind(client), 200)
+    })
+
+    it('should emit end only once for a reconnecting client', function (done) {
+      var client = connect({host: 'this_hostname_should_not_exist', connectTimeout: 10, reconnectPeriod: 10})
+
+      client.once('end', function () {
+        var timeout = setTimeout(done.bind(null))
+        client.once('end', function () {
+          clearTimeout(timeout)
+          done(new Error('end emitted twice'))
+        })
+      })
+
+      setTimeout(client.end.bind(client), 300)
     })
   })
 
