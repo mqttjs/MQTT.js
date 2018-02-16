@@ -1790,6 +1790,11 @@ module.exports = function (server, config) {
       })
     })
 
+    it('should always cleanup successfully on reconnection', function (done) {
+      var client = connect({host: 'this_hostname_should_not_exist', connectTimeout: 0, reconnectPeriod: 1})
+      setTimeout(client.end.bind(client, done), 50)
+    })
+
     it('should resend in-flight QoS 1 publish messages from the client', function (done) {
       var client = connect({reconnectPeriod: 200})
       var serverPublished = false
