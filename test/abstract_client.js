@@ -50,13 +50,15 @@ module.exports = function (server, config) {
       var client = connect()
 
       client.once('close', function () {
-        should.not.exist(client.pingTimer)
+        should.not.exist(client.sendPingTimer)
+        should.not.exist(client.checkPingTimer)
         client.end()
         done()
       })
 
       client.once('connect', function () {
-        should.exist(client.pingTimer)
+        should.exist(client.sendPingTimer)
+        should.exist(client.checkPingTimer)
         client.stream.end()
       })
     })
@@ -87,13 +89,15 @@ module.exports = function (server, config) {
       })
     })
 
-    it('should stop ping timer after end called', function (done) {
+    it('should stop ping timers after end called', function (done) {
       var client = connect()
 
       client.once('connect', function () {
-        should.exist(client.pingTimer)
+        should.exist(client.sendPingTimer)
+        should.exist(client.checkPingTimer)
         client.end()
-        should.not.exist(client.pingTimer)
+        should.not.exist(client.sendPingTimer)
+        should.not.exist(client.checkPingTimer)
         done()
       })
     })
@@ -1109,18 +1113,18 @@ module.exports = function (server, config) {
       })
     })
 
-    it('should not checkPing if publishing at a higher rate than keepalive', function (done) {
+    it('should not sendPing if publishing at a higher rate than keepalive', function (done) {
       var intervalMs = 3000
       var client = connect({keepalive: intervalMs / 1000})
 
-      client._checkPing = sinon.spy()
+      client._sendPing = sinon.spy()
 
       client.once('connect', function () {
         client.publish('foo', 'bar')
         clock.tick(intervalMs - 1)
         client.publish('foo', 'bar')
         clock.tick(2)
-        client._checkPing.callCount.should.equal(0)
+        client._sendPing.callCount.should.equal(0)
         client.end()
         done()
       })
@@ -1151,7 +1155,7 @@ module.exports = function (server, config) {
     it('should set a ping timer', function (done) {
       var client = connect({keepalive: 3})
       client.once('connect', function () {
-        should.exist(client.pingTimer)
+        should.exist(client.sendPingTimer)
         client.end()
         done()
       })
@@ -1160,7 +1164,7 @@ module.exports = function (server, config) {
     it('should not set a ping timer keepalive=0', function (done) {
       var client = connect({keepalive: 0})
       client.on('connect', function () {
-        should.not.exist(client.pingTimer)
+        should.not.exist(client.sendPingTimer)
         client.end()
         done()
       })
@@ -1193,22 +1197,25 @@ module.exports = function (server, config) {
 
       client.once('connect', function () {
         client._checkPing = sinon.spy()
+        client._sendPing = sinon.spy()
 
-        client.publish('foo', 'bar')
+        // send a message at T=200
         setTimeout(function () {
-          client._checkPing.callCount.should.equal(0)
           client.publish('foo', 'bar')
+        }, 200)
 
-          setTimeout(function () {
-            client._checkPing.callCount.should.equal(0)
-            client.publish('foo', 'bar')
+        // at T=1000 we should have checked but not send a ping until T=1200
+        setTimeout(function () {
+          client._checkPing.callCount.should.equal(1)
+          client._sendPing.callCount.should.equal(0)
+        }, 1100)
 
-            setTimeout(function () {
-              client._checkPing.callCount.should.equal(0)
-              done()
-            }, 75)
-          }, 75)
-        }, 75)
+        // at T=1200 we should send a ping
+        setTimeout(function () {
+          client._checkPing.callCount.should.equal(1)
+          client._sendPing.callCount.should.equal(1)
+          done()
+        }, 1250)
       })
     })
   })
