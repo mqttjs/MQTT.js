@@ -70,8 +70,7 @@ function suiteFactory (configName, opts) {
 
     describe('specifying a port and host', function () {
       clientTests(function () {
-        return mqtt.connect(setVersion(
-              { protocol: protocol, port: port, host: host }))
+        return mqtt.connect(setVersion({ protocol: protocol, port: port, host: host }))
       })
     })
 
@@ -83,8 +82,7 @@ function suiteFactory (configName, opts) {
 
     describe('specifying a URL with a path', function () {
       clientTests(function () {
-        return mqtt.connect(protocol + '://' + host + ':' + port + '/mqtt',
-                            setVersion())
+        return mqtt.connect(protocol + '://' + host + ':' + port + '/mqtt', setVersion())
       })
     })
   })
