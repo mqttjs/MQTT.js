@@ -275,6 +275,14 @@ Emitted when the client goes offline.
 Emitted when the client cannot connect (i.e. connack rc != 0) or when a
 parsing error occurs.
 
+#### Event `'end'`
+
+`function () {}`
+
+Emitted when <a href="#end"><code>mqtt.Client#<b>end()</b></code></a> is called.
+If a callback was passed to `mqtt.Client#end()`, this event is emitted once the
+callback returns.
+
 #### Event `'message'`
 
 `function (topic, message, packet) {}`
