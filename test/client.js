@@ -15,6 +15,14 @@ var Server = require('./server')
 var port = 9876
 var server
 
+function connOnlyServer () {
+  return new Server(function (client) {
+    client.on('connect', function (packet) {
+      client.connack({returnCode: 0})
+    })
+  })
+}
+
 /**
  * Test server
  */
@@ -108,7 +116,7 @@ describe('MqttClient', function () {
       client.end()
     })
 
-    it('should return 1 once the interal counter reached limit', function () {
+    it('should return 1 once the internal counter reached limit', function () {
       var client = mqtt.connect(config)
       client.nextId = 65535
 
@@ -117,7 +125,7 @@ describe('MqttClient', function () {
       client.end()
     })
 
-    it('should return 65535 for last message id once the interal counter reached limit', function () {
+    it('should return 65535 for last message id once the internal counter reached limit', function () {
       var client = mqtt.connect(config)
       client.nextId = 65535
 
@@ -201,6 +209,39 @@ describe('MqttClient', function () {
     })
   })
 
+  describe('flushing', function () {
+    it('should attempt to complete pending unsub and send on ping timeout', function (done) {
+      this.timeout(10000)
+      var server3 = connOnlyServer().listen(port + 72)
+      var pubCallbackCalled = false
+      var unsubscribeCallbackCalled = false
+      var client = mqtt.connect({
+        port: port + 72,
+        host: 'localhost',
+        keepalive: 1,
+        connectTimeout: 350,
+        reconnectPeriod: 0
+      })
+      client.once('connect', () => {
+        client.publish('fakeTopic', 'fakeMessage', {qos: 1}, (err, result) => {
+          should.exist(err)
+          pubCallbackCalled = true
+        })
+        client.unsubscribe('fakeTopic', (err, result) => {
+          should.exist(err)
+          unsubscribeCallbackCalled = true
+        })
+        setTimeout(() => {
+          client.end(() => {
+            should.equal(pubCallbackCalled && unsubscribeCallbackCalled, true, 'callbacks not invoked')
+            server3.close()
+            done()
+          })
+        }, 5000)
+      })
+    })
+  })
+
   describe('reconnecting', function () {
     it('should attempt to reconnect once server is down', function (done) {
       this.timeout(15000)
@@ -280,7 +321,7 @@ describe('MqttClient', function () {
       })
     })
 
-    it('shoud not be cleared by the connack timer', function (done) {
+    it('should not be cleared by the connack timer', function (done) {
       this.timeout(4000)
 
       var server2 = net.createServer().listen(port + 44)
@@ -311,7 +352,7 @@ describe('MqttClient', function () {
       })
     })
 
-    it('shoud not keep requeueing the first message when offline', function (done) {
+    it('should not keep requeueing the first message when offline', function (done) {
       this.timeout(2500)
 
       var server2 = buildServer().listen(port + 45)
@@ -340,7 +381,7 @@ describe('MqttClient', function () {
       }, 2000)
     })
 
-    it('should not send the same subcribe multiple times on a flaky connection', function (done) {
+    it('should not send the same subscribe multiple times on a flaky connection', function (done) {
       this.timeout(3500)
 
       var KILL_COUNT = 4
@@ -367,7 +408,7 @@ describe('MqttClient', function () {
       server2.on('client', function (c) {
         client.subscribe('topic', function () {
           done()
-          client.end(true)
+          client.end()
           c.destroy()
           server2.close()
         })
@@ -464,7 +505,7 @@ describe('MqttClient', function () {
       server2.on('client', function (c) {
         client.publish('topic', 'data', { qos: 1 }, function () {
           done()
-          client.end(true)
+          client.end()
           c.destroy()
           server2.destroy()
         })
