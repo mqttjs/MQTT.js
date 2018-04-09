@@ -61,6 +61,7 @@ export interface IClientOptions extends ISecureClientOptions {
   servers?: Array<{
     host: string
     port: number
+    protocol?: 'wss' | 'ws' | 'mqtt' | 'mqtts' | 'tcp' | 'ssl' | 'wx' | 'wxs'
   }>
   /**
    * true, set to false to disable re-subscribe functionality
