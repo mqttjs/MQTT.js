@@ -1,7 +1,7 @@
 {
   "name": "mqtt",
   "description": "A library for the MQTT protocol",
-  "version": "2.4.0",
+  "version": "2.17.0",
   "contributors": [
     "Adam Rudd <adamvrr@gmail.com>",
     "Matteo Collina <matteo.collina@gmail.com> (https://github.com/mcollina)"
@@ -18,17 +18,24 @@
     "url": "git://github.com/mqttjs/MQTT.js.git"
   },
   "main": "mqtt.js",
+  "types": "types/index.d.ts",
   "scripts": {
-    "test": "node_modules/.bin/istanbul cover ./node_modules/mocha/bin/_mocha --report lcovonly -- --bail",
+    "test": "node_modules/.bin/istanbul cover ./node_modules/mocha/bin/_mocha --report lcovonly --",
     "pretest": "standard | snazzy",
-    "prepublish": "nsp check && npm run browser-build",
-    "browser-build": "rimraf dist/ && mkdirp dist/ && browserify mqtt.js -s mqtt > dist/mqtt.js && uglifyjs --screw-ie8 < dist/mqtt.js > dist/mqtt.min.js",
+    "tslint": "tslint types/**/*.d.ts",
+    "typescript-compile-test": "tsc -p test/typescript/tsconfig.json",
+    "typescript-compile-execute": "node test/typescript/*.js",
+    "typescript-test": "npm run typescript-compile-test && npm run typescript-compile-execute",
+    "prepare": "nsp check && npm run browser-build",
+    "browser-build": "rimraf dist/ && mkdirp dist/ && browserify mqtt.js -s mqtt > dist/mqtt.js && uglifyjs < dist/mqtt.js > dist/mqtt.min.js",
     "browser-test": "zuul --server test/browser/server.js --local --open test/browser/test.js",
+    "weapp-test": "zuul --server test/browser/server.js --local --open test/browser/wx.js",
     "sauce-test": "zuul --server test/browser/server.js --tunnel ngrok -- test/browser/test.js",
-    "ci": "npm run test && codecov"
+    "ci": "npm run tslint && npm run typescript-test && npm run test && codecov"
   },
   "pre-commit": [
-    "test"
+    "test",
+    "tslint"
   ],
   "bin": {
     "mqtt_pub": "./bin/pub.js",
@@ -43,6 +50,7 @@
     "bin",
     "examples",
     "test",
+    "types",
     "mqtt.js"
   ],
   "engines": {
@@ -56,37 +64,42 @@
   },
   "dependencies": {
     "commist": "^1.0.0",
-    "concat-stream": "^1.6.0",
-    "end-of-stream": "^1.1.0",
+    "concat-stream": "^1.6.2",
+    "end-of-stream": "^1.4.1",
     "help-me": "^1.0.1",
     "inherits": "^2.0.3",
     "minimist": "^1.2.0",
-    "mqtt-packet": "^5.2.1",
-    "readable-stream": "^2.2.3",
-    "pump": "^1.0.2",
+    "mqtt-packet": "^5.5.0",
+    "pump": "^3.0.0",
+    "readable-stream": "^2.3.5",
     "reinterval": "^1.1.0",
     "split2": "^2.1.1",
-    "websocket-stream": "^3.3.3",
+    "websocket-stream": "^5.1.2",
     "xtend": "^4.0.1"
   },
   "devDependencies": {
-    "browserify": "^14.1.0",
-    "codecov": "^1.0.1",
+    "@types/node": "^8.10.0",
+    "browserify": "^16.1.1",
+    "codecov": "^3.0.0",
+    "global": "^4.3.2",
     "istanbul": "^0.4.5",
     "mkdirp": "^0.5.1",
-    "mocha": "^3.2.0",
+    "mocha": "^4.1.0",
     "mqtt-connection": "^3.0.0",
-    "nsp": "^2.6.2",
+    "nsp": "^3.2.1",
     "pre-commit": "^1.2.2",
-    "rimraf": "^2.6.1",
-    "should": "*",
+    "rimraf": "^2.6.2",
+    "safe-buffer": "^5.1.1",
+    "should": "^13.2.1",
     "sinon": "~1.17.7",
-    "snazzy": "^6.0.0",
-    "standard": "^8.6.0",
+    "snazzy": "^7.1.1",
+    "standard": "^11.0.1",
     "through2": "^2.0.3",
-    "uglify": "^0.1.5",
-    "uglify-js": "^2.7.5",
-    "ws": "^1.0.0",
+    "tslint": "^5.9.1",
+    "tslint-config-standard": "^7.0.0",
+    "typescript": "^2.7.2",
+    "uglify-js": "^3.3.16",
+    "ws": "^3.3.3",
     "zuul": "^3.11.1",
     "zuul-ngrok": "^4.0.0"
   },

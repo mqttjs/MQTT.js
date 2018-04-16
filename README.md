@@ -1,7 +1,7 @@
 ![mqtt.js](https://raw.githubusercontent.com/mqttjs/MQTT.js/137ee0e3940c1f01049a30248c70f24dc6e6f829/MQTT.js.png)
 =======
 
-[![Build Status](https://travis-ci.org/mqttjs/MQTT.js.svg)](https://travis-ci.org/mqttjs/MQTT.js) [![codecov](https://codecov.io/gh/mqttjs/MQTT.js/branch/master/graph/badge.svg)](https://codecov.io/gh/mqttjs/MQTT.js) [![DefinitelyTyped](http://img.shields.io/badge/Definitely-Typed-blue.svg)](https://github.com/borisyankov/DefinitelyTyped/tree/master/mqtt)
+[![Build Status](https://travis-ci.org/mqttjs/MQTT.js.svg)](https://travis-ci.org/mqttjs/MQTT.js) [![codecov](https://codecov.io/gh/mqttjs/MQTT.js/branch/master/graph/badge.svg)](https://codecov.io/gh/mqttjs/MQTT.js)
 
 [![NPM](https://nodei.co/npm-dl/mqtt.png)](https://nodei.co/npm/mqtt/) [![NPM](https://nodei.co/npm/mqtt.png)](https://nodei.co/npm/mqtt/)
 
@@ -16,7 +16,9 @@ in JavaScript for node.js and the browser.
 * [Command Line Tools](#cli)
 * [API](#api)
 * [Browser](#browser)
+* [Weapp](#weapp)
 * [About QoS](#qos)
+* [TypeScript](#typescript)
 * [Contributing](#contributing)
 * [License](#license)
 
@@ -44,7 +46,7 @@ includes the protocol parser and generator. The new Client improves
 performance by a 30% factor, embeds Websocket support
 ([MOWS](http://npm.im/mows) is now deprecated), and it has a better
 support for QoS 1 and 2. The previous API is still supported but
-deprecated, as such, it id not documented in this README.
+deprecated, as such, it is not documented in this README.
 
 As a __breaking change__, the `encoding` option in the old client is
 removed, and now everything is UTF-8 with the exception of the
@@ -94,12 +96,14 @@ You can also use a test instance: test.mosquitto.org and test.mosca.io
 are both public.
 
 If you do not want to install a separate broker, you can try using the
-[server/orig](https://github.com/adamvr/MQTT.js/blob/master/examples/server/orig.js)
-example.
-It implements enough of the semantics of the MQTT protocol to
-run the example.
+[mqtt-connection](https://www.npmjs.com/package/mqtt-connection).
 
 to use MQTT.js in the browser see the [browserify](#browserify) section
+
+<a name="promises"></a>
+## Promise support
+
+If you want to use the new [async-await](https://blog.risingstack.com/async-await-node-js-7-nightly/) functionality in JavaScript, or just prefer using Promises instead of callbacks, [async-mqtt](https://github.com/mqttjs/async-mqtt) is a wrapper over MQTT.js which uses promises instead of callbacks when possible.
 
 <a name="cli"></a>
 ## Command Line Tools
@@ -127,7 +131,7 @@ mqtt pub -t 'hello' -h 'test.mosquitto.org' -m 'from MQTT.js'
 See `mqtt help <command>` for the command help.
 
 <a name="api"></a>
-## API
+## API
 
   * <a href="#connect"><code>mqtt.<b>connect()</b></code></a>
   * <a href="#client"><code>mqtt.<b>Client()</b></code></a>
@@ -135,6 +139,8 @@ See `mqtt help <command>` for the command help.
   * <a href="#subscribe"><code>mqtt.Client#<b>subscribe()</b></code></a>
   * <a href="#unsubscribe"><code>mqtt.Client#<b>unsubscribe()</b></code></a>
   * <a href="#end"><code>mqtt.Client#<b>end()</b></code></a>
+  * <a href="#removeOutgoingMessage"><code>mqtt.Client#<b>removeOutgoingMessage()</b></code></a>
+  * <a href="#reconnect"><code>mqtt.Client#<b>reconnect()</b></code></a>
   * <a href="#handleMessage"><code>mqtt.Client#<b>handleMessage()</b></code></a>
   * <a href="#connected"><code>mqtt.Client#<b>connected</b></code></a>
   * <a href="#reconnecting"><code>mqtt.Client#<b>reconnecting</b></code></a>
@@ -187,7 +193,7 @@ the `connect` event. Typically a `net.Socket`.
 * `options` is the client connection options (see: the [connect packet](https://github.com/mcollina/mqtt-packet#connect)). Defaults:
   * `wsOptions`: is the WebSocket connection options. Default is `{}`.
      It's specific for WebSockets. For possible options have a look at: https://github.com/websockets/ws/blob/master/doc/ws.md.
-  * `keepalive`: `10` seconds, set to `0` to disable
+  * `keepalive`: `60` seconds, set to `0` to disable
   * `reschedulePings`: reschedule ping messages after sending packets (default `true`)
   * `clientId`: `'mqttjs_' + Math.random().toString(16).substr(2, 8)`
   * `protocolId`: `'MQTT'`
@@ -212,6 +218,8 @@ the `connect` event. Typically a `net.Socket`.
   * `transformWsUrl` : optional `(url, options, client) => url` function
         For ws/wss protocols only. Can be used to implement signing
         urls which upon reconnect can have become expired.
+  * `resubscribe` : if connection is broken and reconnects,
+     subscribed topics are automatically subscribed again (default `true`)
 
 In case mqtts (mqtt over tls) is required, the `options` object is
 passed through to
@@ -267,7 +275,15 @@ Emitted when the client goes offline.
 Emitted when the client cannot connect (i.e. connack rc != 0) or when a
 parsing error occurs.
 
-### Event `'message'`
+#### Event `'end'`
+
+`function () {}`
+
+Emitted when <a href="#end"><code>mqtt.Client#<b>end()</b></code></a> is called.
+If a callback was passed to `mqtt.Client#end()`, this event is emitted once the
+callback returns.
+
+#### Event `'message'`
 
 `function (topic, message, packet) {}`
 
@@ -277,7 +293,7 @@ Emitted when the client receives a publish packet
 * `packet` received packet, as defined in
   [mqtt-packet](https://github.com/mcollina/mqtt-packet#publish)
 
-### Event `'packetsend'`
+#### Event `'packetsend'`
 
 `function (packet) {}`
 
@@ -286,7 +302,7 @@ as well as packets used by MQTT for managing subscriptions and connections
 * `packet` received packet, as defined in
   [mqtt-packet](https://github.com/mcollina/mqtt-packet)
 
-### Event `'packetreceive'`
+#### Event `'packetreceive'`
 
 `function (packet) {}`
 
@@ -307,6 +323,7 @@ Publish a message to a topic
 * `options` is the options to publish with, including:
   * `qos` QoS level, `Number`, default `0`
   * `retain` retain flag, `Boolean`, default `false`
+  * `dup` mark as duplicate flag, `Boolean`, default `false`
 * `callback` - `function (err)`, fired when the QoS handling completes,
   or at the next tick if QoS 0. An error occurs if client is disconnecting.
 
@@ -351,6 +368,23 @@ Close the client, accepts the following options:
   optional.
 
 -------------------------------------------------------
+<a name="removeOutgoingMessage"></a>
+### mqtt.Client#removeOutgoingMessage(mid)
+
+Remove a message from the outgoingStore.
+The outgoing callback will be called withe Error('Message removed') if the message is removed.
+
+After this function is called, the messageId is released and becomes reusable.
+
+* `mid`: The messageId of the message in the outgoingStore.
+
+-------------------------------------------------------
+<a name="reconnect"></a>
+### mqtt.Client#reconnect()
+
+Connect again using the same options as connect()
+
+-------------------------------------------------------
 <a name="handleMessage"></a>
 ### mqtt.Client#handleMessage(packet, callback)
 
@@ -378,14 +412,24 @@ Boolean : set to `true` if the client is trying to reconnect to the server. `fal
 
 -------------------------------------------------------
 <a name="store"></a>
-### mqtt.Store()
+### mqtt.Store(options)
 
 In-memory implementation of the message store.
 
-Another implementaion is
-[mqtt-level-store](http://npm.im/mqtt-level-store) which uses
-[Level-browserify](http://npm.im/level-browserify) to store the inflight
-data, making it usable both in Node and the Browser.
+* `options` is the store options:
+  * `clean`: `true`, clean inflight messages when close is called (default `true`)
+
+Other implementations of `mqtt.Store`:
+
+* [mqtt-level-store](http://npm.im/mqtt-level-store) which uses
+  [Level-browserify](http://npm.im/level-browserify) to store the inflight
+  data, making it usable both in Node and the Browser.
+* [mqtt-nedbb-store](https://github.com/behrad/mqtt-nedb-store) which
+  uses [nedb](https://www.npmjs.com/package/nedb) to store the inflight
+  data.
+* [mqtt-localforage-store](http://npm.im/mqtt-localforage-store) which uses
+  [localForage](http://npm.im/localforage) to store the inflight
+  data, making it usable in the Browser without browserify.
 
 -------------------------------------------------------
 <a name="put"></a>
@@ -424,6 +468,25 @@ Closes the Store.
 The MQTT.js bundle is available through http://unpkg.com, specifically
 at https://unpkg.com/mqtt/dist/mqtt.min.js.
 See http://unpkg.com for the full documentation on version ranges.
+
+<a name="weapp"></a>
+## Wexin App
+Surport [Weixin App](https://mp.weixin.qq.com/). See [Doc](https://mp.weixin.qq.com/debug/wxadoc/dev/api/network-socket.html).
+<a name="example"></a>
+
+## Example(js)
+
+```js
+var mqtt = require('mqtt')
+var client  = mqtt.connect('wxs://test.mosquitto.org')
+```
+
+## Example(ts)
+
+```ts
+import { connect } from 'mqtt';
+const client  = connect('wxs://test.mosquitto.org');
+```
 
 <a name="browserify"></a>
 ### Browserify
@@ -509,6 +572,17 @@ Here is how QoS works:
 * QoS 2 : received **exactly once** : Same as QoS 1 but there is no duplicates.
 
 About data consumption, obviously, QoS 2 > QoS 1 > QoS 0, if that's a concern to you.
+
+<a name="typescript"></a>
+## Usage with TypeScript
+This repo bundles TypeScript definition files for use in TypeScript projects and to support tools that can read `.d.ts` files.
+
+### Pre-requisites
+Before you can begin using these TypeScript definitions with your project, you need to make sure your project meets a few of these requirements:
+ * TypeScript >= 2.1
+ * Set tsconfig.json: `{"compilerOptions" : {"moduleResolution" : "node"}, ...}`
+ * Includes the TypeScript definitions for node. You can use npm to install this by typing the following into a terminal window:
+   `npm install --save-dev @types/node`
 
 <a name="contributing"></a>
 ## Contributing

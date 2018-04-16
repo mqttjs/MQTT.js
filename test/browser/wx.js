@@ -7,7 +7,8 @@ var parsed = _URL.parse(document.URL)
 var isHttps = parsed.protocol === 'https:'
 var port = parsed.port || (isHttps ? 443 : 80)
 var host = parsed.hostname
-var protocol = isHttps ? 'wss' : 'ws'
+var protocol = isHttps ? 'wxs' : 'wx'
+require('../helpers/wx')
 
 function clientTests (buildClient) {
   var client

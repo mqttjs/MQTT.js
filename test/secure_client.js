@@ -93,6 +93,36 @@ describe('MqttSecureClient', function () {
       })
     })
 
+    it('should validate successfully the CA using URI', function (done) {
+      var client = mqtt.connect('mqtts://localhost:' + port, {
+        ca: [fs.readFileSync(CERT)],
+        rejectUnauthorized: true
+      })
+
+      client.on('error', function (err) {
+        done(err)
+      })
+
+      server.once('connect', function () {
+        done()
+      })
+    })
+
+    it('should validate successfully the CA using URI with path', function (done) {
+      var client = mqtt.connect('mqtts://localhost:' + port + '/', {
+        ca: [fs.readFileSync(CERT)],
+        rejectUnauthorized: true
+      })
+
+      client.on('error', function (err) {
+        done(err)
+      })
+
+      server.once('connect', function () {
+        done()
+      })
+    })
+
     it('should validate unsuccessfully the CA', function (done) {
       var client = mqtt.connect({
         protocol: 'mqtts',

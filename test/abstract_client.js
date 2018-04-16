@@ -7,6 +7,9 @@ var should = require('should')
 var sinon = require('sinon')
 var mqtt = require('../')
 var xtend = require('xtend')
+var Server = require('./server')
+var Store = require('./../lib/store')
+var port = 9876
 
 module.exports = function (server, config) {
   function connect (opts) {
@@ -70,6 +73,45 @@ module.exports = function (server, config) {
       })
     })
 
+    it('should emit end after end called and client must be disconnected', function (done) {
+      var client = connect()
+
+      client.once('end', function () {
+        if (client.disconnected) {
+          return done()
+        }
+        done(new Error('client must be disconnected'))
+      })
+
+      client.once('connect', function () {
+        client.end()
+      })
+    })
+
+    it('should pass store close error to end callback but not to end listeners', function (done) {
+      var store = new Store()
+      var client = connect({outgoingStore: store})
+
+      store.close = function (cb) {
+        cb(new Error('test'))
+      }
+      client.once('end', function () {
+        if (arguments.length === 0) {
+          return done()
+        }
+        throw new Error('no argument shoould be passed to event')
+      })
+
+      client.once('connect', function () {
+        client.end(function (test) {
+          if (test && test.message === 'test') {
+            return
+          }
+          throw new Error('bad argument passed to callback')
+        })
+      })
+    })
+
     it('should return `this` if end called twice', function (done) {
       var client = connect()
 
@@ -84,6 +126,21 @@ module.exports = function (server, config) {
       })
     })
 
+    it('should emit end only on first client end', function (done) {
+      var client = connect()
+
+      client.once('end', function () {
+        var timeout = setTimeout(done.bind(null), 200)
+        client.once('end', function () {
+          clearTimeout(timeout)
+          done(new Error('end was emitted twice'))
+        })
+        client.end()
+      })
+
+      client.once('connect', client.end.bind(client))
+    })
+
     it('should stop ping timer after end called', function (done) {
       var client = connect()
 
@@ -93,6 +150,50 @@ module.exports = function (server, config) {
         should.not.exist(client.pingTimer)
         done()
       })
+    })
+
+    it('should be able to end even on a failed connection', function (done) {
+      var client = connect({host: 'this_hostname_should_not_exist'})
+
+      var timeout = setTimeout(function () {
+        done(new Error('Failed to end a disconnected client'))
+      }, 500)
+
+      setTimeout(function () {
+        client.end(function () {
+          clearTimeout(timeout)
+          done()
+        })
+      }, 200)
+    })
+
+    it('should emit end even on a failed connection', function (done) {
+      var client = connect({host: 'this_hostname_should_not_exist'})
+
+      var timeout = setTimeout(function () {
+        done(new Error('Disconnected client has failed to emit end'))
+      }, 500)
+
+      client.once('end', function () {
+        clearTimeout(timeout)
+        done()
+      })
+
+      setTimeout(client.end.bind(client), 200)
+    })
+
+    it('should emit end only once for a reconnecting client', function (done) {
+      var client = connect({host: 'this_hostname_should_not_exist', connectTimeout: 10, reconnectPeriod: 10})
+
+      client.once('end', function () {
+        var timeout = setTimeout(done.bind(null))
+        client.once('end', function () {
+          clearTimeout(timeout)
+          done(new Error('end emitted twice'))
+        })
+      })
+
+      setTimeout(client.end.bind(client), 300)
     })
   })
 
@@ -126,7 +227,7 @@ module.exports = function (server, config) {
 
       server.once('client', function (serverClient) {
         serverClient.once('connect', function (packet) {
-          packet.clean.should.be.true
+          packet.clean.should.be.true()
           serverClient.disconnect()
           done()
         })
@@ -157,7 +258,7 @@ module.exports = function (server, config) {
       server.once('client', function (serverClient) {
         serverClient.once('connect', function (packet) {
           packet.clientId.should.match(/testclient/)
-          packet.clean.should.be.false
+          packet.clean.should.be.false()
           serverClient.disconnect()
           done()
         })
@@ -237,10 +338,8 @@ module.exports = function (server, config) {
       client.once('connect', function () {
         done(new Error('Should not emit connect'))
       })
-      client.once('error', function (/* error */) {
-        // to do
-        // check for error message
-        // and validate it is the expected one
+      client.once('error', function (error) {
+        should(error.code).be.equal(2) // code for clientID identifer rejected
         client.end()
         done()
       })
@@ -290,11 +389,12 @@ module.exports = function (server, config) {
           'system/registry/event/new_device', 'system/+/+/new_device'
         ],
         function (err) {
-          client.end()
-          if (err) {
-            return done(new Error(err))
-          }
-          done()
+          client.end(function () {
+            if (err) {
+              return done(new Error(err))
+            }
+            done()
+          })
         }
       )
     })
@@ -302,44 +402,65 @@ module.exports = function (server, config) {
     it('should return an error (via callbacks) for topic #/event', function (done) {
       var client = connect()
       client.subscribe(['#/event', 'event#', 'event+'], function (err) {
-        client.end()
+        client.end(false, function () {
+          if (err) {
+            return done()
+          }
+          done(new Error('Validations do NOT work'))
+        })
+      })
+    })
+
+    it('should return an empty array for duplicate subs', function (done) {
+      var client = connect()
+      client.subscribe('event', function (err, granted1) {
         if (err) {
-          return done()
+          return done(err)
         }
-        done(new Error('Validations do NOT work'))
+        client.subscribe('event', function (err, granted2) {
+          if (err) {
+            return done(err)
+          }
+          granted2.should.Array()
+          granted2.should.be.empty()
+          done()
+        })
       })
     })
 
     it('should return an error (via callbacks) for topic #/event', function (done) {
       var client = connect()
       client.subscribe('#/event', function (err) {
-        client.end()
-        if (err) {
-          return done()
-        }
-        done(new Error('Validations do NOT work'))
+        client.end(function () {
+          if (err) {
+            return done()
+          }
+          done(new Error('Validations do NOT work'))
+        })
       })
     })
 
     it('should return an error (via callbacks) for topic event#', function (done) {
       var client = connect()
       client.subscribe('event#', function (err) {
-        client.end()
-        if (err) {
-          return done()
-        }
-        done(new Error('Validations do NOT work'))
+        client.end(function () {
+          if (err) {
+            return done()
+          }
+          done(new Error('Validations do NOT work'))
+        })
       })
     })
 
     it('should return an error (via callbacks) for topic system/#/event', function (done) {
       var client = connect()
       client.subscribe('system/#/event', function (err) {
-        client.end()
-        if (err) {
-          return done()
-        }
-        done(new Error('Validations do NOT work'))
+        client.end(function () {
+          if (err) {
+            return done()
+          }
+          done(new Error('Validations do NOT work'))
+        })
       })
     })
 
@@ -357,11 +478,12 @@ module.exports = function (server, config) {
     it('should return an error (via callbacks) for topic system/+/#/event', function (done) {
       var client = connect()
       client.subscribe('system/+/#/event', function (err) {
-        client.end()
-        if (err) {
-          return done()
-        }
-        done(new Error('Validations do NOT work'))
+        client.end(true, function () {
+          if (err) {
+            return done()
+          }
+          done(new Error('Validations do NOT work'))
+        })
       })
     })
   })
@@ -377,7 +499,9 @@ module.exports = function (server, config) {
 
       client.once('connect', function () {
         client.queue.length.should.equal(0)
-        client.end(true, done)
+        setTimeout(function () {
+          client.end(true, done)
+        }, 10)
       })
     })
 
@@ -386,72 +510,106 @@ module.exports = function (server, config) {
 
       client.publish('test', 'test', {qos: 0})
       client.queue.length.should.equal(0)
-      client.end(true, done)
+      client.on('connect', function () {
+        setTimeout(function () {
+          client.end(true, done)
+        }, 10)
+      })
     })
 
-    it('should still queue qos != 0 messages if queueQoSZero is false', function (done) {
+    it('should queue qos != 0 messages', function (done) {
       var client = connect({queueQoSZero: false})
 
       client.publish('test', 'test', {qos: 1})
       client.publish('test', 'test', {qos: 2})
       client.subscribe('test')
       client.unsubscribe('test')
-      client.queue.length.should.equal(4)
-      client.end(true, done)
+      client.queue.length.should.equal(2)
+      client.on('connect', function () {
+        setTimeout(function () {
+          client.end(true, done)
+        }, 10)
+      })
     })
 
     it('should call cb if an outgoing QoS 0 message is not sent', function (done) {
       var client = connect({queueQoSZero: false})
+      var called = false
 
       client.publish('test', 'test', {qos: 0}, function () {
-        client.end(true, done)
+        called = true
+      })
+
+      client.on('connect', function () {
+        called.should.equal(true)
+        setTimeout(function () {
+          client.end(true, done)
+        }, 10)
       })
     })
 
-    if (!process.env.TRAVIS) {
-      it('should delay ending up until all inflight messages are delivered', function (done) {
-        var client = connect()
+    it('should delay ending up until all inflight messages are delivered', function (done) {
+      var client = connect()
+      var subscribeCalled = false
 
-        client.on('connect', function () {
-          client.subscribe('test', function () {
-            done()
-          })
-          client.publish('test', 'test', function () {
-            client.end()
-          })
+      client.on('connect', function () {
+        client.subscribe('test', function () {
+          subscribeCalled = true
         })
-      })
-
-      it('wait QoS 1 publish messages', function (done) {
-        var client = connect()
-
-        client.on('connect', function () {
-          client.subscribe('test')
-          client.publish('test', 'test', { qos: 1 }, function () {
-            client.end()
-          })
-          client.on('message', function () {
+        client.publish('test', 'test', function () {
+          client.end(false, function () {
+            subscribeCalled.should.be.equal(true)
             done()
           })
         })
+      })
+    })
 
-        server.once('client', function (serverClient) {
-          serverClient.on('subscribe', function () {
-            serverClient.on('publish', function (packet) {
-              serverClient.publish(packet)
-            })
+    it('wait QoS 1 publish messages', function (done) {
+      var client = connect()
+      var messageReceived = false
+
+      client.on('connect', function () {
+        client.subscribe('test')
+        client.publish('test', 'test', { qos: 1 }, function () {
+          client.end(false, function () {
+            messageReceived.should.equal(true)
+            done()
           })
+        })
+        client.on('message', function () {
+          messageReceived = true
         })
       })
 
-      it('does not wait acks when force-closing', function (done) {
-        // non-running broker
-        var client = connect('mqtt://localhost:8993')
-
-        client.publish('test', 'test', { qos: 1 })
-        client.end(true, done)
+      server.once('client', function (serverClient) {
+        serverClient.on('subscribe', function () {
+          serverClient.on('publish', function (packet) {
+            serverClient.publish(packet)
+          })
+        })
       })
-    }
+    })
+
+    it('does not wait acks when force-closing', function (done) {
+      // non-running broker
+      var client = connect('mqtt://localhost:8993')
+      client.publish('test', 'test', { qos: 1 })
+      client.end(true, done)
+    })
+
+    it('should call cb if store.put fails', function (done) {
+      const store = new Store()
+      store.put = function (packet, cb) {
+        process.nextTick(cb, new Error('oops there is an error'))
+      }
+      var client = connect({ incomingStore: store, outgoingStore: store })
+      client.publish('test', 'test', { qos: 2 }, function (err) {
+        if (err) {
+          client.end(true, done)
+        }
+      })
+    })
   })
 
   describe('publishing', function () {
@@ -462,16 +620,21 @@ module.exports = function (server, config) {
 
       client.publish(topic, payload)
 
-      server.once('client', function (serverClient) {
+      server.on('client', onClient)
+
+      function onClient (serverClient) {
+        serverClient.once('connect', function () {
+          server.removeListener('client', onClient)
+        })
+
         serverClient.once('publish', function (packet) {
           packet.topic.should.equal(topic)
           packet.payload.toString().should.equal(payload)
           packet.qos.should.equal(0)
           packet.retain.should.equal(false)
-          client.end()
-          done()
+          client.end(true, done)
         })
-      })
+      }
     })
 
     it('should publish a message (online)', function (done) {
@@ -489,6 +652,29 @@ module.exports = function (server, config) {
           packet.payload.toString().should.equal(payload)
           packet.qos.should.equal(0)
           packet.retain.should.equal(false)
+          client.end()
+          done()
+        })
+      })
+    })
+
+    it('should publish a message (retain, offline)', function (done) {
+      var client = connect({ queueQoSZero: true })
+      var payload = 'test'
+      var topic = 'test'
+      var called = false
+
+      client.publish(topic, payload, { retain: true }, function () {
+        called = true
+      })
+
+      server.once('client', function (serverClient) {
+        serverClient.once('publish', function (packet) {
+          packet.topic.should.equal(topic)
+          packet.payload.toString().should.equal(payload)
+          packet.qos.should.equal(0)
+          packet.retain.should.equal(true)
+          called.should.equal(true)
           client.end()
           done()
         })
@@ -533,6 +719,55 @@ module.exports = function (server, config) {
           packet.payload.toString().should.equal(payload)
           packet.qos.should.equal(opts.qos, 'incorrect qos')
           packet.retain.should.equal(opts.retain, 'incorrect ret')
+          packet.dup.should.equal(false, 'incorrect dup')
+          client.end()
+          done()
+        })
+      })
+    })
+
+    it('should publish with the default options for an empty parameter', function (done) {
+      var client = connect()
+      var payload = 'test'
+      var topic = 'test'
+      var defaultOpts = {qos: 0, retain: false, dup: false}
+
+      client.once('connect', function () {
+        client.publish(topic, payload, {})
+      })
+
+      server.once('client', function (serverClient) {
+        serverClient.once('publish', function (packet) {
+          packet.topic.should.equal(topic)
+          packet.payload.toString().should.equal(payload)
+          packet.qos.should.equal(defaultOpts.qos, 'incorrect qos')
+          packet.retain.should.equal(defaultOpts.retain, 'incorrect ret')
+          packet.dup.should.equal(defaultOpts.dup, 'incorrect dup')
+          client.end()
+          done()
+        })
+      })
+    })
+
+    it('should mark a message as  duplicate when "dup" option is set', function (done) {
+      var client = connect()
+      var payload = 'duplicated-test'
+      var topic = 'test'
+      var opts = {
+        retain: true,
+        qos: 1,
+        dup: true
+      }
+
+      client.once('connect', function () {
+        client.publish(topic, payload, opts)
+      })
+
+      server.once('client', function (serverClient) {
+        serverClient.once('publish', function (packet) {
+          packet.topic.should.equal(topic)
+          packet.payload.toString().should.equal(payload)
+          packet.dup.should.equal(opts.dup, 'incorrect dup')
           client.end()
           done()
         })
@@ -596,7 +831,7 @@ module.exports = function (server, config) {
       })
     })
 
-    it('Publish 10 QoS 2 and receive them', function (done) {
+    it('should publish 10 QoS 2 and receive them', function (done) {
       var client = connect()
       var count = 0
 
@@ -628,6 +863,184 @@ module.exports = function (server, config) {
 
         serverClient.on('pubrel', function () {
           count++
+        })
+      })
+    })
+
+    function testQosHandleMessage (qos, done) {
+      var client = connect()
+
+      var messageEventCount = 0
+      var handleMessageCount = 0
+
+      client.handleMessage = function (packet, callback) {
+        setTimeout(function () {
+          handleMessageCount++
+          // next message event should not emit until handleMessage completes
+          handleMessageCount.should.equal(messageEventCount)
+          if (handleMessageCount === 10) {
+            setTimeout(function () {
+              client.end()
+              done()
+            })
+          }
+          callback()
+        }, 100)
+      }
+
+      client.on('message', function (topic, message, packet) {
+        messageEventCount++
+      })
+
+      client.on('connect', function () {
+        client.subscribe('test')
+      })
+
+      server.once('client', function (serverClient) {
+        serverClient.on('offline', function () {
+          client.end()
+          done('error went offline... didnt see this happen')
+        })
+
+        serverClient.on('subscribe', function () {
+          for (var i = 0; i < 10; i++) {
+            serverClient.publish({
+              messageId: i,
+              topic: 'test',
+              payload: 'test' + i,
+              qos: qos
+            })
+          }
+        })
+      })
+    }
+
+    it('should publish 10 QoS 0 and receive them only when `handleMessage` finishes', function (done) {
+      testQosHandleMessage(0, done)
+    })
+
+    it('should publish 10 QoS 1 and receive them only when `handleMessage` finishes', function (done) {
+      testQosHandleMessage(1, done)
+    })
+
+    it('should publish 10 QoS 2 and receive them only when `handleMessage` finishes', function (done) {
+      testQosHandleMessage(2, done)
+    })
+
+    it('should not send a `puback` if the execution of `handleMessage` fails for messages with QoS `1`', function (done) {
+      var client = connect()
+
+      client.handleMessage = function (packet, callback) {
+        callback(new Error('Error thrown by the application'))
+      }
+
+      client._sendPacket = sinon.spy()
+
+      client._handlePublish({
+        messageId: Math.floor(65535 * Math.random()),
+        topic: 'test',
+        payload: 'test',
+        qos: 1
+      }, function (err) {
+        should.exist(err)
+      })
+
+      client._sendPacket.callCount.should.equal(0)
+      client.end()
+      client.on('connect', function () { done() })
+    })
+
+    it('should silently ignore errors thrown by `handleMessage` and return when no callback is passed ' +
+      'into `handlePublish` method', function (done) {
+      var client = connect()
+
+      client.handleMessage = function (packet, callback) {
+        callback(new Error('Error thrown by the application'))
+      }
+
+      try {
+        client._handlePublish({
+          messageId: Math.floor(65535 * Math.random()),
+          topic: 'test',
+          payload: 'test',
+          qos: 1
+        })
+        done()
+      } catch (err) {
+        done(err)
+      } finally {
+        client.end()
+      }
+    })
+
+    it('should not send a `pubcomp` if the execution of `handleMessage` fails for messages with QoS `2`', function (done) {
+      var store = new Store()
+      var client = connect({incomingStore: store})
+
+      var messageId = Math.floor(65535 * Math.random())
+      var topic = 'test'
+      var payload = 'test'
+      var qos = 2
+
+      client.handleMessage = function (packet, callback) {
+        callback(new Error('Error thrown by the application'))
+      }
+
+      client.once('connect', function () {
+        client.subscribe(topic, {qos: 2})
+
+        store.put({
+          messageId: messageId,
+          topic: topic,
+          payload: payload,
+          qos: qos,
+          cmd: 'publish'
+        }, function () {
+          // cleans up the client
+          client.end()
+
+          client._sendPacket = sinon.spy()
+          client._handlePubrel({cmd: 'pubrel', messageId: messageId}, function (err) {
+            should.exist(err)
+          })
+          client._sendPacket.callCount.should.equal(0)
+          done()
+        })
+      })
+    })
+
+    it('should silently ignore errors thrown by `handleMessage` and return when no callback is passed ' +
+      'into `handlePubrel` method', function (done) {
+      var store = new Store()
+      var client = connect({incomingStore: store})
+
+      var messageId = Math.floor(65535 * Math.random())
+      var topic = 'test'
+      var payload = 'test'
+      var qos = 2
+
+      client.handleMessage = function (packet, callback) {
+        callback(new Error('Error thrown by the application'))
+      }
+
+      client.once('connect', function () {
+        client.subscribe(topic, {qos: 2})
+
+        store.put({
+          messageId: messageId,
+          topic: topic,
+          payload: payload,
+          qos: qos,
+          cmd: 'publish'
+        }, function () {
+          try {
+            client._handlePubrel({cmd: 'pubrel', messageId: messageId})
+            done()
+          } catch (err) {
+            done(err)
+          } finally {
+            client.end()
+          }
         })
       })
     })
@@ -1014,6 +1427,26 @@ module.exports = function (server, config) {
           }]
 
           packet.subscriptions.should.eql(expected)
+          done()
+        })
+      })
+    })
+
+    it('should subscribe with the default options for an empty options parameter', function (done) {
+      var client = connect()
+      var topic = 'test'
+      var defaultOpts = {qos: 0}
+
+      client.once('connect', function () {
+        client.subscribe(topic, {})
+      })
+
+      server.once('client', function (serverClient) {
+        serverClient.once('subscribe', function (packet) {
+          packet.subscriptions.should.containEql({
+            topic: topic,
+            qos: defaultOpts.qos
+          })
           done()
         })
       })
@@ -1440,6 +1873,11 @@ module.exports = function (server, config) {
       })
     })
 
+    it('should always cleanup successfully on reconnection', function (done) {
+      var client = connect({host: 'this_hostname_should_not_exist', connectTimeout: 0, reconnectPeriod: 1})
+      setTimeout(client.end.bind(client, done), 50)
+    })
+
     it('should resend in-flight QoS 1 publish messages from the client', function (done) {
       var client = connect({reconnectPeriod: 200})
       var serverPublished = false
@@ -1508,6 +1946,72 @@ module.exports = function (server, config) {
       }
     })
 
+    it('should not resend in-flight QoS 1 removed publish messages from the client', function (done) {
+      var client = connect({reconnectPeriod: 200})
+      var clientCalledBack = false
+
+      server.once('client', function (serverClient) {
+        serverClient.on('connect', function () {
+          setImmediate(function () {
+            serverClient.stream.destroy()
+          })
+        })
+
+        server.once('client', function (serverClientNew) {
+          serverClientNew.on('publish', function () {
+            should.fail()
+            done()
+          })
+        })
+      })
+
+      client.publish('hello', 'world', { qos: 1 }, function (err) {
+        clientCalledBack = true
+        should(err.message).be.equal('Message removed')
+      })
+      should(Object.keys(client.outgoing).length).be.equal(1)
+      should(Object.keys(client.outgoingStore._inflights).length).be.equal(1)
+      client.removeOutgoingMessage(client.getLastMessageId())
+      should(Object.keys(client.outgoing).length).be.equal(0)
+      should(Object.keys(client.outgoingStore._inflights).length).be.equal(0)
+      clientCalledBack.should.be.true()
+      client.end()
+      done()
+    })
+
+    it('should not resend in-flight QoS 2 removed publish messages from the client', function (done) {
+      var client = connect({reconnectPeriod: 200})
+      var clientCalledBack = false
+
+      server.once('client', function (serverClient) {
+        serverClient.on('connect', function () {
+          setImmediate(function () {
+            serverClient.stream.destroy()
+          })
+        })
+
+        server.once('client', function (serverClientNew) {
+          serverClientNew.on('publish', function () {
+            should.fail()
+            done()
+          })
+        })
+      })
+
+      client.publish('hello', 'world', { qos: 2 }, function (err) {
+        clientCalledBack = true
+        should(err.message).be.equal('Message removed')
+      })
+      should(Object.keys(client.outgoing).length).be.equal(1)
+      should(Object.keys(client.outgoingStore._inflights).length).be.equal(1)
+      client.removeOutgoingMessage(client.getLastMessageId())
+      should(Object.keys(client.outgoing).length).be.equal(0)
+      should(Object.keys(client.outgoingStore._inflights).length).be.equal(0)
+      clientCalledBack.should.be.true()
+      client.end()
+      done()
+    })
+
     it('should resubscribe when reconnecting', function (done) {
       var client = connect({ reconnectPeriod: 100 })
       var tryReconnect = true
@@ -1534,6 +2038,285 @@ module.exports = function (server, config) {
         } else {
           reconnectEvent.should.equal(true)
         }
+      })
+    })
+
+    it('should not resubscribe when reconnecting if resubscribe is disabled', function (done) {
+      var client = connect({ reconnectPeriod: 100, resubscribe: false })
+      var tryReconnect = true
+      var reconnectEvent = false
+
+      client.on('reconnect', function () {
+        reconnectEvent = true
+      })
+
+      client.on('connect', function () {
+        if (tryReconnect) {
+          client.subscribe('hello', function () {
+            client.stream.end()
+
+            server.once('client', function (serverClient) {
+              serverClient.on('subscribe', function () {
+                should.fail()
+              })
+            })
+          })
+
+          tryReconnect = false
+        } else {
+          reconnectEvent.should.equal(true)
+          should(Object.keys(client._resubscribeTopics).length).be.equal(0)
+          done()
+        }
+      })
+    })
+
+    it('should not resubscribe when reconnecting if suback is error', function (done) {
+      var tryReconnect = true
+      var reconnectEvent = false
+      var server2 = new Server(function (c) {
+        c.on('connect', function (packet) {
+          c.connack({returnCode: 0})
+        })
+        c.on('subscribe', function (packet) {
+          c.suback({
+            messageId: packet.messageId,
+            granted: packet.subscriptions.map(function (e) {
+              return e.qos | 0x80
+            })
+          })
+          c.pubrel({ messageId: Math.floor(Math.random() * 9000) + 1000 })
+        })
+      })
+
+      server2.listen(port + 49, function () {
+        var client = mqtt.connect({
+          port: port + 49,
+          host: 'localhost',
+          reconnectPeriod: 100
+        })
+
+        client.on('reconnect', function () {
+          reconnectEvent = true
+        })
+
+        client.on('connect', function () {
+          if (tryReconnect) {
+            client.subscribe('hello', function () {
+              client.stream.end()
+
+              server.once('client', function (serverClient) {
+                serverClient.on('subscribe', function () {
+                  should.fail()
+                })
+              })
+            })
+            tryReconnect = false
+          } else {
+            reconnectEvent.should.equal(true)
+            should(Object.keys(client._resubscribeTopics).length).be.equal(0)
+            server2.close()
+            done()
+          }
+        })
+      })
+    })
+
+    it('should preserved incomingStore after disconnecting if clean is false', function (done) {
+      var reconnect = false
+      var client = {}
+      var incomingStore = new mqtt.Store({ clean: false })
+      var outgoingStore = new mqtt.Store({ clean: false })
+      var server2 = new Server(function (c) {
+        c.on('connect', function (packet) {
+          c.connack({returnCode: 0})
+          if (reconnect) {
+            c.pubrel({ messageId: 1 })
+          }
+        })
+        c.on('subscribe', function (packet) {
+          c.suback({
+            messageId: packet.messageId,
+            granted: packet.subscriptions.map(function (e) {
+              return e.qos
+            })
+          })
+          c.publish({ topic: 'topic', payload: 'payload', qos: 2, messageId: 1, retain: false })
+        })
+        c.on('pubrec', function (packet) {
+          client.end(false, function () {
+            client.reconnect({
+              incomingStore: incomingStore,
+              outgoingStore: outgoingStore
+            })
+          })
+        })
+        c.on('pubcomp', function (packet) {
+          client.end()
+          server2.close()
+          done()
+        })
+      })
+
+      server2.listen(port + 50, function () {
+        client = mqtt.connect({
+          port: port + 50,
+          host: 'localhost',
+          clean: false,
+          clientId: 'cid1',
+          reconnectPeriod: 0,
+          incomingStore: incomingStore,
+          outgoingStore: outgoingStore
+        })
+
+        client.on('connect', function () {
+          if (!reconnect) {
+            client.subscribe('test', {qos: 2}, function () {
+            })
+            reconnect = true
+          }
+        })
+        client.on('message', function (topic, message) {
+          topic.should.equal('topic')
+          message.toString().should.equal('payload')
+        })
+      })
+    })
+
+    it('should be able to pub/sub if reconnect() is called at close handler', function (done) {
+      var client = connect({ reconnectPeriod: 0 })
+      var tryReconnect = true
+      var reconnectEvent = false
+
+      client.on('close', function () {
+        if (tryReconnect) {
+          tryReconnect = false
+          client.reconnect()
+        } else {
+          reconnectEvent.should.equal(true)
+          done()
+        }
+      })
+
+      client.on('reconnect', function () {
+        reconnectEvent = true
+      })
+
+      client.on('connect', function () {
+        if (tryReconnect) {
+          client.end()
+        } else {
+          client.subscribe('hello', function () {
+            client.end()
+          })
+        }
+      })
+    })
+
+    it('should be able to pub/sub if reconnect() is called at out of close handler', function (done) {
+      var client = connect({ reconnectPeriod: 0 })
+      var tryReconnect = true
+      var reconnectEvent = false
+
+      client.on('close', function () {
+        if (tryReconnect) {
+          tryReconnect = false
+          setTimeout(function () {
+            client.reconnect()
+          }, 100)
+        } else {
+          reconnectEvent.should.equal(true)
+          done()
+        }
+      })
+
+      client.on('reconnect', function () {
+        reconnectEvent = true
+      })
+
+      client.on('connect', function () {
+        if (tryReconnect) {
+          client.end()
+        } else {
+          client.subscribe('hello', function () {
+            client.end()
+          })
+        }
+      })
+    })
+
+    context('with alternate server client', function () {
+      var cachedClientListeners
+
+      beforeEach(function () {
+        cachedClientListeners = server.listeners('client')
+        server.removeAllListeners('client')
+      })
+
+      afterEach(function () {
+        server.removeAllListeners('client')
+        cachedClientListeners.forEach(function (listener) {
+          server.on('client', listener)
+        })
+      })
+
+      it('should resubscribe even if disconnect is before suback', function (done) {
+        var client = mqtt.connect(Object.assign({ reconnectPeriod: 100 }, config))
+        var subscribeCount = 0
+        var connectCount = 0
+
+        server.on('client', function (serverClient) {
+          serverClient.on('connect', function () {
+            connectCount++
+            serverClient.connack({returnCode: 0})
+          })
+
+          serverClient.on('subscribe', function () {
+            subscribeCount++
+
+            // disconnect before sending the suback on the first subscribe
+            if (subscribeCount === 1) {
+              client.stream.end()
+            }
+
+            // after the second connection, confirm that the only two
+            // subscribes have taken place, then cleanup and exit
+            if (connectCount >= 2) {
+              subscribeCount.should.equal(2)
+              client.end(true, done)
+            }
+          })
+        })
+
+        client.subscribe('hello')
+      })
+
+      it('should resubscribe exactly once', function (done) {
+        var client = mqtt.connect(Object.assign({ reconnectPeriod: 100 }, config))
+        var subscribeCount = 0
+
+        server.on('client', function (serverClient) {
+          serverClient.on('connect', function () {
+            serverClient.connack({returnCode: 0})
+          })
+
+          serverClient.on('subscribe', function () {
+            subscribeCount++
+
+            // disconnect before sending the suback on the first subscribe
+            if (subscribeCount === 1) {
+              client.stream.end()
+            }
+
+            // after the second connection, only two subs
+            // subscribes have taken place, then cleanup and exit
+            if (subscribeCount === 2) {
+              client.end(true, done)
+            }
+          })
+        })
+
+        client.subscribe('hello')
       })
     })
   })
