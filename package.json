@@ -58,6 +58,7 @@
   },
   "browser": {
     "./mqtt.js": "./lib/connect/index.js",
+    "process": "./lib/process.js",
     "fs": false,
     "tls": false,
     "net": false
