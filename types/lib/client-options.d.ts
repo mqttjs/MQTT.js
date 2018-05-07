@@ -1,6 +1,6 @@
 import { MqttClient } from './client'
 import { Store } from './store'
-import { QoS } from './types'
+import { QoS } from 'mqtt-packet'
 
 export interface IClientOptions extends ISecureClientOptions {
   port?: number // port is made into a number subsequently

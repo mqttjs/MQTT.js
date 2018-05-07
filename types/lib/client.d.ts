@@ -8,7 +8,7 @@ import {
   IClientReconnectOptions
 } from './client-options'
 import { Store } from './store'
-import { Packet, QoS } from './types'
+import { Packet, QoS } from 'mqtt-packet'
 
 export interface ISubscriptionGrant {
   /**
