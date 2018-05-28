@@ -12,6 +12,7 @@ var Store = require('./../lib/store')
 var port = 9876
 
 module.exports = function (server, config) {
+  var version = config.protocolVersion || 4
   function connect (opts) {
     opts = xtend(config, opts)
     return mqtt.connect(opts)
@@ -302,11 +303,13 @@ module.exports = function (server, config) {
     })
 
     it('should provide connack packet with connect event', function (done) {
+      var connack = version === 5 ? {reasonCode: 0} : {returnCode: 0}
       server.once('client', function (serverClient) {
-        serverClient.connack({returnCode: 0, sessionPresent: true})
-
+        connack.sessionPresent = true
+        serverClient.connack(connack)
         server.once('client', function (serverClient) {
-          serverClient.connack({returnCode: 0, sessionPresent: false})
+          connack.sessionPresent = false
+          serverClient.connack(connack)
         })
       })
 
@@ -339,7 +342,8 @@ module.exports = function (server, config) {
         done(new Error('Should not emit connect'))
       })
       client.once('error', function (error) {
-        should(error.code).be.equal(2) // code for clientID identifer rejected
+        var value = version === 5 ? 128 : 2
+        should(error.code).be.equal(value) // code for clientID identifer rejected
         client.end()
         done()
       })
@@ -1319,10 +1323,16 @@ module.exports = function (server, config) {
 
       server.once('client', function (serverClient) {
         serverClient.once('subscribe', function (packet) {
-          packet.subscriptions.should.containEql({
+          var result = {
             topic: topic,
             qos: 0
-          })
+          }
+          if (version === 5) {
+            result.nl = false
+            result.rap = false
+            result.rh = 0
+          }
+          packet.subscriptions.should.containEql(result)
           done()
         })
       })
@@ -1370,7 +1380,13 @@ module.exports = function (server, config) {
         serverClient.once('subscribe', function (packet) {
           // i.e. [{topic: 'a', qos: 0}, {topic: 'b', qos: 0}]
           var expected = subs.map(function (i) {
-            return {topic: i, qos: 0}
+            var result = {topic: i, qos: 0}
+            if (version === 5) {
+              result.nl = false
+              result.rap = false
+              result.rh = 0
+            }
+            return result
           })
 
           packet.subscriptions.should.eql(expected)
@@ -1382,8 +1398,8 @@ module.exports = function (server, config) {
     it('should accept an hash of subscriptions', function (done) {
       var client = connect()
       var topics = {
-        test1: 0,
-        test2: 1
+        test1: {qos: 0},
+        test2: {qos: 1}
       }
 
       client.once('connect', function () {
@@ -1397,10 +1413,16 @@ module.exports = function (server, config) {
 
           for (k in topics) {
             if (topics.hasOwnProperty(k)) {
-              expected.push({
+              var result = {
                 topic: k,
-                qos: topics[k]
-              })
+                qos: topics[k].qos
+              }
+              if (version === 5) {
+                result.nl = false
+                result.rap = false
+                result.rh = 0
+              }
+              expected.push(result)
             }
           }
 
@@ -1426,6 +1448,12 @@ module.exports = function (server, config) {
             qos: 1
           }]
 
+          if (version === 5) {
+            expected[0].nl = false
+            expected[0].rap = false
+            expected[0].rh = 0
+          }
+
           packet.subscriptions.should.eql(expected)
           done()
         })
@@ -1443,10 +1471,16 @@ module.exports = function (server, config) {
 
       server.once('client', function (serverClient) {
         serverClient.once('subscribe', function (packet) {
-          packet.subscriptions.should.containEql({
+          var result = {
             topic: topic,
             qos: defaultOpts.qos
-          })
+          }
+          if (version === 5) {
+            result.nl = false
+            result.rap = false
+            result.rh = 0
+          }
+          packet.subscriptions.should.containEql(result)
           done()
         })
       })
@@ -1462,7 +1496,13 @@ module.exports = function (server, config) {
             done(err)
           } else {
             should.exist(granted, 'granted not given')
-            granted.should.containEql({topic: 'test', qos: 2})
+            var result = {topic: 'test', qos: 2}
+            if (version === 5) {
+              result.nl = false
+              result.rap = false
+              result.rh = 0
+            }
+            granted.should.containEql(result)
             done()
           }
         })
@@ -1508,10 +1548,16 @@ module.exports = function (server, config) {
 
       server.once('client', function (serverClient) {
         serverClient.once('subscribe', function (packet) {
-          packet.subscriptions.should.containEql({
+          var result = {
             topic: topic,
             qos: 0
-          })
+          }
+          if (version === 5) {
+            result.nl = false
+            result.rap = false
+            result.rh = 0
+          }
+          packet.subscriptions.should.containEql(result)
           done()
         })
       })
@@ -2247,6 +2293,7 @@ module.exports = function (server, config) {
 
     context('with alternate server client', function () {
       var cachedClientListeners
+      var connack = version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
 
       beforeEach(function () {
         cachedClientListeners = server.listeners('client')
@@ -2268,7 +2315,7 @@ module.exports = function (server, config) {
         server.on('client', function (serverClient) {
           serverClient.on('connect', function () {
             connectCount++
-            serverClient.connack({returnCode: 0})
+            serverClient.connack(connack)
           })
 
           serverClient.on('subscribe', function () {
@@ -2297,7 +2344,7 @@ module.exports = function (server, config) {
 
         server.on('client', function (serverClient) {
           serverClient.on('connect', function () {
-            serverClient.connack({returnCode: 0})
+            serverClient.connack(connack)
           })
 
           serverClient.on('subscribe', function () {

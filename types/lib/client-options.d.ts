@@ -85,9 +85,32 @@ export interface IClientOptions extends ISecureClientOptions {
     /**
      * the retain flag
      */
-    retain: boolean
+    retain: boolean,
+    /*
+    *  properies object of will
+    * */
+    properties?: {
+      willDelayInterval?: number,
+      payloadFormatIndicator?: number,
+      messageExpiryInterval?: number,
+      contentType?: string,
+      responseTopic?: string,
+      correlationData?: Buffer,
+      userProperties?: Object
+    }
   }
-  transformWsUrl?: (url: string, options: IClientOptions, client: MqttClient) => string
+  transformWsUrl?: (url: string, options: IClientOptions, client: MqttClient) => string,
+  properties?: {
+    sessionExpiryInterval?: number,
+    receiveMaximum?: number,
+    maximumPacketSize?: number,
+    topicAliasMaximum?: number,
+    requestResponseInformation?: boolean,
+    requestProblemInformation?: boolean,
+    userProperties?: Object,
+    authenticationMethod?: string,
+    authenticationData?: Buffer
+  }
 }
 export interface ISecureClientOptions {
   /**
@@ -122,7 +145,19 @@ export interface IClientSubscribeOptions {
   /**
    * the QoS
    */
-  qos: QoS
+  qos: QoS,
+  /*
+  * no local flag
+  * */
+  nl?: boolean,
+  /*
+  * Retain As Published flag
+  * */
+  rap?: boolean,
+  /*
+  * Retain Handling option
+  * */
+  rh?: number
 }
 export interface IClientReconnectOptions {
   /**

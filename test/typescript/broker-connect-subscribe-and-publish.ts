@@ -9,7 +9,7 @@ const opts: IClientOptions = {}
 console.log(`connect(${JSON.stringify(BROKER)})`)
 const client:Client = connect(`mqtt://${BROKER}`, opts)
 
-client.subscribe({[TOPIC]: 2}, (err, granted) => {
+client.subscribe({[TOPIC]: {qos: 2}}, (err, granted) => {
     granted.forEach(({topic, qos}) => {
         console.log(`subscribed to ${topic} with qos=${qos}`)
     })

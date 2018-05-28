@@ -19,6 +19,18 @@ export interface ISubscriptionGrant {
    *  is the granted qos level on it, may return 128 on error
    */
   qos: QoS | number
+  /*
+  * no local flag
+  * */
+  nl?: boolean,
+  /*
+  * Retain As Published flag
+  * */
+  rap?: boolean,
+  /*
+  * Retain Handling option
+  * */
+  rh?: number
 }
 export interface ISubscriptionRequest {
   /**
@@ -29,12 +41,29 @@ export interface ISubscriptionRequest {
    *  is the granted qos level on it
    */
   qos: QoS
+  /*
+  * no local flag
+  * */
+  nl?: boolean,
+  /*
+  * Retain As Published flag
+  * */
+  rap?: boolean,
+  /*
+  * Retain Handling option
+  * */
+  rh?: number
 }
 export interface ISubscriptionMap {
   /**
-   * object which has topic names as object keys and as value the QoS, like {'test1': 0, 'test2': 1}.
+   * object which has topic names as object keys and as value the options, like {'test1': {qos: 0}, 'test2': {qos: 2}}.
    */
-  [topic: string]: QoS
+  [topic: string]: {
+    qos: QoS,
+    nl?: boolean,
+    rap?: boolean,
+    rh?: number
+  }
 }
 
 export declare type ClientSubscribeCallback = (err: Error, granted: ISubscriptionGrant[]) => void
@@ -133,24 +162,27 @@ export declare class MqttClient extends events.EventEmitter {
    * unsubscribe - unsubscribe from topic(s)
    *
    * @param {String, Array} topic - topics to unsubscribe from
+   * @param {Object} opts - opts of unsubscribe
    * @param {Function} [callback] - callback fired on unsuback
    * @returns {MqttClient} this - for chaining
    * @api public
    * @example client.unsubscribe('topic')
    * @example client.unsubscribe('topic', console.log)
+   * @example client.unsubscribe('topic', opts, console.log)
    */
-  public unsubscribe (topic: string | string[], callback?: PacketCallback): this
+  public unsubscribe (topic: string | string[], opts?: Object, callback?: PacketCallback): this
 
   /**
    * end - close connection
    *
    * @returns {MqttClient} this - for chaining
    * @param {Boolean} force - do not wait for all in-flight messages to be acked
+   * @param {Object} opts - opts disconnect
    * @param {Function} cb - called when the client has been closed
    *
    * @api public
    */
-  public end (force?: boolean, cb?: CloseCallback): this
+  public end (force?: boolean, opts?: Object, cb?: CloseCallback): this
 
   /**
    * removeOutgoingMessage - remove a message in outgoing store

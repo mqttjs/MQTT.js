@@ -28,11 +28,33 @@ function connOnlyServer () {
  */
 function buildServer () {
   return new Server(function (client) {
+    client.on('auth', function (packet) {
+      var rc = 'reasonCode'
+      var connack = {}
+      connack[rc] = 0
+      client.connack(connack)
+    })
     client.on('connect', function (packet) {
-      if (packet.clientId === 'invalid') {
-        client.connack({returnCode: 2})
+      var rc = 'returnCode'
+      var connack = {}
+      if (client.options && client.options.protocolVersion === 5) {
+        rc = 'reasonCode'
+        if (packet.clientId === 'invalid') {
+          connack[rc] = 128
+        } else {
+          connack[rc] = 0
+        }
       } else {
-        client.connack({returnCode: 0})
+        if (packet.clientId === 'invalid') {
+          connack[rc] = 2
+        } else {
+          connack[rc] = 0
+        }
+      }
+      if (packet.properties && packet.properties.authenticationMethod) {
+        return false
+      } else {
+        client.connack(connack)
       }
     })
 
@@ -73,6 +95,7 @@ function buildServer () {
     })
 
     client.on('unsubscribe', function (packet) {
+      packet.granted = packet.unsubscriptions.map(function () { return 0 })
       client.unsuback(packet)
     })
 
@@ -266,7 +289,6 @@ describe('MqttClient', function () {
       var server2 = buildServer().listen(port + 42)
 
       server2.on('client', function (c) {
-        c.stream.destroy()
         server2.close()
       })
 
@@ -537,6 +559,32 @@ describe('MqttClient', function () {
           }
         })
       })
+    })
+  })
+
+  describe('MQTT 5.0', function () {
+    var server = buildServer().listen(port + 115)
+    var config = { protocol: 'mqtt', port: port + 115, protocolVersion: 5, properties: { maximumPacketSize: 200 } }
+    abstractClientTests(server, config)
+    it('should has Auth method with Auth data', function (done) {
+      this.timeout(5000)
+      var opts = {host: 'localhost', port: port + 115, protocolVersion: 5, properties: { authenticationData: Buffer.from([1, 2, 3, 4]) }}
+      try {
+        mqtt.connect(opts)
+      } catch (error) {
+        should(error.message).be.equal('Packet has no Authentication Method')
+      }
+      done()
+    })
+    it('auth packet', function (done) {
+      this.timeout(15000)
+      server.once('client', function (client) {
+        client.on('auth', function (packet) {
+          done()
+        })
+      })
+      var opts = {host: 'localhost', port: port + 115, protocolVersion: 5, properties: { authenticationMethod: 'json' }, authPacket: {}}
+      mqtt.connect(opts)
     })
   })
 })

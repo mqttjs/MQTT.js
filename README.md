@@ -348,22 +348,24 @@ Subscribe to a topic or topics
 
 -------------------------------------------------------
 <a name="unsubscribe"></a>
-### mqtt.Client#unsubscribe(topic/topic array, [callback])
+### mqtt.Client#unsubscribe(topic/topic array, [options], [callback])
 
 Unsubscribe from a topic or topics
 
 * `topic` is a `String` topic or an array of topics to unsubscribe from
+* `options`: options of unsubscribe.
 * `callback` - `function (err)`, fired on unsuback. An error occurs if client is disconnecting.
 
 -------------------------------------------------------
 <a name="end"></a>
-### mqtt.Client#end([force], [cb])
+### mqtt.Client#end([force], [options], [cb])
 
 Close the client, accepts the following options:
 
 * `force`: passing it to true will close the client right away, without
   waiting for the in-flight messages to be acked. This parameter is
   optional.
+* `options`: options of disconnect.
 * `cb`: will be called when the client is closed. This parameter is
   optional.
 

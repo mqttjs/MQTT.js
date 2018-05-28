@@ -8,8 +8,10 @@ var MqttServer
 var MqttSecureServer
 
 function setupConnection (duplex) {
-  var connection = new Connection(duplex)
-  this.emit('client', connection)
+  var that = this
+  var connection = new Connection(duplex, function () {
+    that.emit('client', connection)
+  })
 }
 
 /*
