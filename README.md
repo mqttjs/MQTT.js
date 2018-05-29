@@ -220,6 +220,7 @@ the `connect` event. Typically a `net.Socket`.
     * `userProperties`: The User Property is allowed to appear multiple times to represent multiple name, value pairs `object`,
     * `authenticationMethod`: the name of the authentication method used for extended authentication `string`,
     * `authenticationData`: Binary Data containing authentication data `binary`
+  * `authPacket`: settings for auth packet `object`
   * `will`: a message that will sent by the broker automatically when
      the client disconnect badly. The format is:
     * `topic`: the topic to publish
