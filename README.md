@@ -209,12 +209,31 @@ the `connect` event. Typically a `net.Socket`.
   * `incomingStore`: a [Store](#store) for the incoming packets
   * `outgoingStore`: a [Store](#store) for the outgoing packets
   * `queueQoSZero`: if connection is broken, queue outgoing QoS zero messages (default `true`)
+  * `properties`: properties MQTT 5.0.
+  `object` that supports the following properties:
+    * `sessionExpiryInterval`: representing the Session Expiry Interval in seconds `number`,
+    * `receiveMaximum`: representing the Receive Maximum value `number`,
+    * `maximumPacketSize`: representing the Maximum Packet Size the Client is willing to accept `number`,
+    * `topicAliasMaximum`: representing the Topic Alias Maximum value indicates the highest value that the Client will accept as a Topic Alias sent by the Server `number`,
+    * `requestResponseInformation`: The Client uses this value to request the Server to return Response Information in the CONNACK `boolean`,
+    * `requestProblemInformation`: The Client uses this value to indicate whether the Reason String or User Properties are sent in the case of failures `boolean`,
+    * `userProperties`: The User Property is allowed to appear multiple times to represent multiple name, value pairs `object`,
+    * `authenticationMethod`: the name of the authentication method used for extended authentication `string`,
+    * `authenticationData`: Binary Data containing authentication data `binary`
   * `will`: a message that will sent by the broker automatically when
      the client disconnect badly. The format is:
     * `topic`: the topic to publish
     * `payload`: the message to publish
     * `qos`: the QoS
     * `retain`: the retain flag
+    * `properties`: properties of will by MQTT 5.0:
+      * `willDelayInterval`: representing the Will Delay Interval in seconds `number`,
+      * `payloadFormatIndicator`: Will Message is UTF-8 Encoded Character Data or not `boolean`,
+      * `messageExpiryInterval`: value is the lifetime of the Will Message in seconds and is sent as the Publication Expiry Interval when the Server publishes the Will Message `number`,
+      * `contentType`: describing the content of the Will Message `string`,
+      * `responseTopic`: String which is used as the Topic Name for a response message `string`,
+      * `correlationData`: The Correlation Data is used by the sender of the Request Message to identify which request the Response Message is for when it is received `binary`,
+      * `userProperties`: The User Property is allowed to appear multiple times to represent multiple name, value pairs `object`
   * `transformWsUrl` : optional `(url, options, client) => url` function
         For ws/wss protocols only. Can be used to implement signing
         urls which upon reconnect can have become expired.
@@ -324,6 +343,15 @@ Publish a message to a topic
   * `qos` QoS level, `Number`, default `0`
   * `retain` retain flag, `Boolean`, default `false`
   * `dup` mark as duplicate flag, `Boolean`, default `false`
+  * `properties`: MQTT 5.0 properties `object`
+    * `payloadFormatIndicator`: Payload is UTF-8 Encoded Character Data or not `boolean`,
+    * `messageExpiryInterval`: the lifetime of the Application Message in seconds `number`,
+    * `topicAlias`: value that is used to identify the Topic instead of using the Topic Name `number`,
+    * `responseTopic`: String which is used as the Topic Name for a response message `string`,
+    * `correlationData`: used by the sender of the Request Message to identify which request the Response Message is for when it is received `binary`,
+    * `userProperties`: The User Property is allowed to appear multiple times to represent multiple name, value pairs `object`,
+    * `subscriptionIdentifier`: representing the identifier of the subscription `number`,
+    * `contentType`: String describing the content of the Application Message `string`
 * `callback` - `function (err)`, fired when the QoS handling completes,
   or at the next tick if QoS 0. An error occurs if client is disconnecting.
 
@@ -339,6 +367,9 @@ Subscribe to a topic or topics
   MQTT `topic` wildcard characters are supported (`+` - for single level and `#` - for multi level)
 * `options` is the options to subscribe with, including:
   * `qos` qos subscription level, default 0
+  * `properties`: `object`
+    * `subscriptionIdentifier`:  representing the identifier of the subscription `number`,
+    * `userProperties`: The User Property is allowed to appear multiple times to represent multiple name, value pairs `object`
 * `callback` - `function (err, granted)`
   callback fired on suback where:
   * `err` a subscription error or an error that occurs when client is disconnecting
@@ -354,6 +385,8 @@ Unsubscribe from a topic or topics
 
 * `topic` is a `String` topic or an array of topics to unsubscribe from
 * `options`: options of unsubscribe.
+  * `properties`: `object`
+      * `userProperties`: The User Property is allowed to appear multiple times to represent multiple name, value pairs `object`
 * `callback` - `function (err)`, fired on unsuback. An error occurs if client is disconnecting.
 
 -------------------------------------------------------
@@ -366,6 +399,12 @@ Close the client, accepts the following options:
   waiting for the in-flight messages to be acked. This parameter is
   optional.
 * `options`: options of disconnect.
+  * `reasonCode`: Disconnect Reason Code `number`
+  * `properties`: `object`
+    * `sessionExpiryInterval`: representing the Session Expiry Interval in seconds `number`,
+    * `reasonString`: representing the reason for the disconnect `string`,
+    * `userProperties`: The User Property is allowed to appear multiple times to represent multiple name, value pairs `object`,
+    * `serverReference`: String which can be used by the Client to identify another Server to use `string`
 * `cb`: will be called when the client is closed. This parameter is
   optional.
 

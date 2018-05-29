@@ -586,5 +586,78 @@ describe('MqttClient', function () {
       var opts = {host: 'localhost', port: port + 115, protocolVersion: 5, properties: { authenticationMethod: 'json' }, authPacket: {}}
       mqtt.connect(opts)
     })
+    it('Maximum Packet Size', function (done) {
+      this.timeout(15000)
+      var opts = {host: 'localhost', port: port + 115, protocolVersion: 5, properties: { maximumPacketSize: 1 }}
+      var client = mqtt.connect(opts)
+      client.on('error', function (error) { should(error.message).be.equal('exceeding packets size connack'); done() })
+    })
+    describe('Topic Alias', function () {
+      it('topicAlias > topicAliasMaximum', function (done) {
+        this.timeout(15000)
+        var maximum = 15
+        var current = 22
+        server.once('client', function (client) {
+          client.on('publish', function (packet) {
+            if (packet.properties && packet.properties.topicAlias) {
+              done(new Error('Packet should not have topicAlias'))
+              return false
+            }
+            done()
+          })
+        })
+        var opts = {host: 'localhost', port: port + 115, protocolVersion: 5, properties: { topicAliasMaximum: maximum }}
+        var client = mqtt.connect(opts)
+        client.publish('t/h', 'Message', { properties: { topicAlias: current } })
+      })
+      it('topicAlias w/o topicAliasMaximum in settings', function (done) {
+        this.timeout(15000)
+        server.once('client', function (client) {
+          client.on('publish', function (packet) {
+            if (packet.properties && packet.properties.topicAlias) {
+              done(new Error('Packet should not have topicAlias'))
+              return false
+            }
+            done()
+          })
+        })
+        var opts = {host: 'localhost', port: port + 115, protocolVersion: 5}
+        var client = mqtt.connect(opts)
+        client.publish('t/h', 'Message', { properties: { topicAlias: 22 } })
+      })
+    })
+    it('Change values of some properties by server response', function (done) {
+      this.timeout(15000)
+      var server116 = new Server(function (client) {
+        client.on('connect', function (packet) {
+          client.connack({
+            reasonCode: 0,
+            properties: {
+              topicAliasMaximum: 15,
+              serverKeepAlive: 16,
+              maximumPacketSize: 95
+            }
+          })
+        })
+      }).listen(port + 116)
+      var opts = {
+        host: 'localhost',
+        port: port + 116,
+        protocolVersion: 5,
+        properties: {
+          topicAliasMaximum: 10,
+          serverKeepAlive: 11,
+          maximumPacketSize: 100
+        }
+      }
+      var client = mqtt.connect(opts)
+      client.on('connect', function () {
+        should(client.options.keepalive).be.equal(16)
+        should(client.options.properties.topicAliasMaximum).be.equal(15)
+        should(client.options.properties.maximumPacketSize).be.equal(95)
+        server116.close()
+        done()
+      })
+    })
   })
 })
