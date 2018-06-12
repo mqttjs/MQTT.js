@@ -562,6 +562,40 @@ describe('MqttClient', function () {
     })
   })
 
+  it('check emit error on checkDisconnection w/o callback', function (done) {
+    this.timeout(15000)
+    var server118 = new Server(function (client) {
+      client.on('connect', function (packet) {
+        client.connack({
+          reasonCode: 0
+        })
+      })
+      client.on('publish', function (packet) {
+        setImmediate(function () {
+          packet.reasonCode = 0
+          client.puback(packet)
+        })
+      })
+    }).listen(port + 118)
+    var opts = {
+      host: 'localhost',
+      port: port + 118,
+      protocolVersion: 5
+    }
+    var client = mqtt.connect(opts)
+    client.on('error', function (error) {
+      should(error.message).be.equal('client disconnecting')
+      server118.close()
+      done()
+    })
+    client.on('connect', function () {
+      client.end(function () {
+        client._checkDisconnecting()
+      })
+      server118.close()
+    })
+  })
+
   describe('MQTT 5.0', function () {
     var server = buildServer().listen(port + 115)
     var config = { protocol: 'mqtt', port: port + 115, protocolVersion: 5, properties: { maximumPacketSize: 200 } }
@@ -590,7 +624,10 @@ describe('MqttClient', function () {
       this.timeout(15000)
       var opts = {host: 'localhost', port: port + 115, protocolVersion: 5, properties: { maximumPacketSize: 1 }}
       var client = mqtt.connect(opts)
-      client.on('error', function (error) { should(error.message).be.equal('exceeding packets size connack'); done() })
+      client.on('error', function (error) {
+        should(error.message).be.equal('exceeding packets size connack')
+        done()
+      })
     })
     describe('Topic Alias', function () {
       it('topicAlias > topicAliasMaximum', function (done) {
@@ -656,6 +693,58 @@ describe('MqttClient', function () {
         should(client.options.properties.topicAliasMaximum).be.equal(15)
         should(client.options.properties.maximumPacketSize).be.equal(95)
         server116.close()
+        done()
+      })
+    })
+    it('puback/pubrec handling errors check', function (done) {
+      this.timeout(15000)
+      var server117 = new Server(function (client) {
+        client.on('connect', function (packet) {
+          client.connack({
+            reasonCode: 0
+          })
+        })
+        client.on('publish', function (packet) {
+          setImmediate(function () {
+            switch (packet.qos) {
+              case 0:
+                break
+              case 1:
+                packet.reasonCode = 142
+                delete packet.cmd
+                client.puback(packet)
+                break
+              case 2:
+                packet.reasonCode = 142
+                delete packet.cmd
+                client.pubrec(packet)
+                break
+            }
+          })
+        })
+
+        client.on('pubrel', function (packet) {
+          packet.reasonCode = 142
+          delete packet.cmd
+          client.pubcomp(packet)
+        })
+      }).listen(port + 117)
+      var opts = {
+        host: 'localhost',
+        port: port + 117,
+        protocolVersion: 5
+      }
+      var client = mqtt.connect(opts)
+      client.once('connect', () => {
+        client.publish('a/b', 'message', {qos: 1}, function (err, packet) {
+          should(err.message).be.equal('Publish error: Session taken over')
+          should(err.code).be.equal(142)
+        })
+        client.publish('a/b', 'message', {qos: 2}, function (err, packet) {
+          should(err.message).be.equal('Publish error: Session taken over')
+          should(err.code).be.equal(142)
+        })
+        server117.close()
         done()
       })
     })
