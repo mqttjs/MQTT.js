@@ -696,39 +696,40 @@ describe('MqttClient', function () {
         done()
       })
     })
-    it('puback/pubrec handling errors check', function (done) {
-      this.timeout(15000)
-      var server117 = new Server(function (client) {
-        client.on('connect', function (packet) {
-          client.connack({
-            reasonCode: 0
-          })
+    var serverErr = new Server(function (client) {
+      client.on('connect', function (packet) {
+        client.connack({
+          reasonCode: 0
         })
-        client.on('publish', function (packet) {
-          setImmediate(function () {
-            switch (packet.qos) {
-              case 0:
-                break
-              case 1:
-                packet.reasonCode = 142
-                delete packet.cmd
-                client.puback(packet)
-                break
-              case 2:
-                packet.reasonCode = 142
-                delete packet.cmd
-                client.pubrec(packet)
-                break
-            }
-          })
+      })
+      client.on('publish', function (packet) {
+        setImmediate(function () {
+          switch (packet.qos) {
+            case 0:
+              break
+            case 1:
+              packet.reasonCode = 142
+              delete packet.cmd
+              client.puback(packet)
+              break
+            case 2:
+              packet.reasonCode = 142
+              delete packet.cmd
+              client.pubrec(packet)
+              break
+          }
         })
+      })
 
-        client.on('pubrel', function (packet) {
-          packet.reasonCode = 142
-          delete packet.cmd
-          client.pubcomp(packet)
-        })
-      }).listen(port + 117)
+      client.on('pubrel', function (packet) {
+        packet.reasonCode = 142
+        delete packet.cmd
+        client.pubcomp(packet)
+      })
+    })
+    it('puback handling errors check', function (done) {
+      this.timeout(15000)
+      serverErr.listen(port + 117)
       var opts = {
         host: 'localhost',
         port: port + 117,
@@ -740,11 +741,25 @@ describe('MqttClient', function () {
           should(err.message).be.equal('Publish error: Session taken over')
           should(err.code).be.equal(142)
         })
+        serverErr.close()
+        done()
+      })
+    })
+    it('pubrec handling errors check', function (done) {
+      this.timeout(15000)
+      serverErr.listen(port + 118)
+      var opts = {
+        host: 'localhost',
+        port: port + 118,
+        protocolVersion: 5
+      }
+      var client = mqtt.connect(opts)
+      client.once('connect', () => {
         client.publish('a/b', 'message', {qos: 2}, function (err, packet) {
           should(err.message).be.equal('Publish error: Session taken over')
           should(err.code).be.equal(142)
         })
-        server117.close()
+        serverErr.close()
         done()
       })
     })
