@@ -260,26 +260,28 @@ describe('MqttClient', function () {
       })
     })
 
-    it('should reconnect to multiple host-ports combination if servers is passed', function (done) {
+    it('should reconnect to multiple host-ports-protocol combinations if servers is passed', function (done) {
       this.timeout(15000)
 
       var server2 = buildServer().listen(port + 42)
 
-      server2.on('client', function (c) {
-        c.stream.destroy()
-        server2.close()
-      })
-
       server2.on('listening', function () {
         var client = mqtt.connect({
+          protocol: 'wss',
           servers: [
-            { port: port + 42, host: 'localhost' },
+            { port: port + 42, host: 'localhost', protocol: 'ws' },
             { port: port, host: 'localhost' }
           ],
           keepalive: 50
         })
+        server2.on('client', function (c) {
+          should.equal(client.stream.socket.url, 'ws://localhost:9918/', 'Protocol for first connection should use ws.')
+          c.stream.destroy()
+          server2.close()
+        })
 
         server.once('client', function () {
+          should.equal(client.stream.socket.url, 'wss://localhost:9876/', 'Protocol for second client should use the default protocol: wss, on port: port + 42.')
           client.end()
           done()
         })
