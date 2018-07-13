@@ -209,6 +209,10 @@ the `connect` event. Typically a `net.Socket`.
   * `incomingStore`: a [Store](#store) for the incoming packets
   * `outgoingStore`: a [Store](#store) for the outgoing packets
   * `queueQoSZero`: if connection is broken, queue outgoing QoS zero messages (default `true`)
+  * `customHandleAcks`: MQTT 5 feature of custom handling puback and pubrec packets. Its callback:
+      ```js
+        customHandleAcks: function(topic, message, packet, done) {*some logic wit colling done(reasonCode)*}
+      ```
   * `properties`: properties MQTT 5.0.
   `object` that supports the following properties:
     * `sessionExpiryInterval`: representing the Session Expiry Interval in seconds `number`,

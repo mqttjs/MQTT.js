@@ -290,26 +290,27 @@ describe('MqttClient', function () {
 
       server2.on('listening', function () {
         var client = mqtt.connect({
-          protocol: 'wss',
+          protocol: 'mqtt',
           servers: [
             { port: port + 42, host: 'localhost', protocol: 'ws' },
             { port: port, host: 'localhost' }
           ],
           keepalive: 50
         })
+
+        client.once('connect', function () {
+          client.stream.destroy()
+        })
+
         server2.on('client', function (c) {
           should.equal(client.stream.socket.url, 'ws://localhost:9918/', 'Protocol for first connection should use ws.')
+          client.stream.destroy()
           server2.close()
         })
 
         server.once('client', function () {
-          should.equal(client.stream.socket.url, 'wss://localhost:9876/', 'Protocol for second client should use the default protocol: wss, on port: port + 42.')
           client.end()
           done()
-        })
-
-        client.once('connect', function () {
-          client.stream.destroy()
         })
       })
     })
@@ -763,6 +764,76 @@ describe('MqttClient', function () {
         })
         serverErr.close()
         done()
+      })
+    })
+    it('puback handling custom reason code', function (done) {
+      this.timeout(15000)
+      serverErr.listen(port + 117)
+      var opts = {
+        host: 'localhost',
+        port: port + 117,
+        protocolVersion: 5,
+        customHandleAcks: function (topic, message, packet, cb) {
+          var code = 0
+          if (topic === 'a/b') {
+            code = 128
+          }
+          cb(code)
+        }
+      }
+
+      serverErr.once('client', function (c) {
+        c.once('subscribe', function () {
+          c.publish({ topic: 'a/b', payload: 'payload', qos: 1, messageId: 1 })
+        })
+
+        c.on('puback', function (packet) {
+          should(packet.reasonCode).be.equal(128)
+          client.end()
+          c.destroy()
+          serverErr.close()
+          done()
+        })
+      })
+
+      var client = mqtt.connect(opts)
+      client.once('connect', function () {
+        client.subscribe('a/b', {qos: 1})
+      })
+    })
+    it('pubrec handling custom reason code', function (done) {
+      this.timeout(15000)
+      serverErr.listen(port + 117)
+      var opts = {
+        host: 'localhost',
+        port: port + 117,
+        protocolVersion: 5,
+        customHandleAcks: function (topic, message, packet, cb) {
+          var code = 0
+          if (topic === 'a/b') {
+            code = 128
+          }
+          cb(code)
+        }
+      }
+
+      serverErr.once('client', function (c) {
+        c.once('subscribe', function () {
+          c.publish({ topic: 'a/b', payload: 'payload', qos: 2, messageId: 1 })
+        })
+
+        c.on('pubrec', function (packet) {
+          should(packet.reasonCode).be.equal(128)
+          client.end()
+          c.destroy()
+          serverErr.close()
+          done()
+        })
+      })
+
+      var client = mqtt.connect(opts)
+      client.once('connect', function () {
+        client.subscribe('a/b', {qos: 1})
       })
     })
   })
