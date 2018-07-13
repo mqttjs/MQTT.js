@@ -512,7 +512,7 @@ at https://unpkg.com/mqtt/dist/mqtt.min.js.
 See http://unpkg.com for the full documentation on version ranges.
 
 <a name="weapp"></a>
-## Wexin App
+## Weixin App
 Surport [Weixin App](https://mp.weixin.qq.com/). See [Doc](https://mp.weixin.qq.com/debug/wxadoc/dev/api/network-socket.html).
 <a name="example"></a>
 
