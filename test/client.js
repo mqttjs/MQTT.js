@@ -297,20 +297,18 @@ describe('MqttClient', function () {
           ],
           keepalive: 50
         })
-
-        client.once('connect', function () {
-          client.stream.destroy()
-        })
-
         server2.on('client', function (c) {
           should.equal(client.stream.socket.url, 'ws://localhost:9918/', 'Protocol for first connection should use ws.')
-          client.stream.destroy()
           server2.close()
         })
 
         server.once('client', function () {
           client.end()
           done()
+        })
+
+        client.once('connect', function () {
+          client.stream.destroy()
         })
       })
     })
