@@ -12,6 +12,7 @@ var Buffer = require('safe-buffer').Buffer
 var Duplex = require('readable-stream').Duplex
 var Connection = require('mqtt-connection')
 var Server = require('./server')
+var FastServer = require('./server').FastMqttServer
 var port = 9876
 var server
 
@@ -26,8 +27,8 @@ function connOnlyServer () {
 /**
  * Test server
  */
-function buildServer () {
-  return new Server(function (client) {
+function buildServer (fastFlag) {
+  var handler = function (client) {
     client.on('auth', function (packet) {
       var rc = 'reasonCode'
       var connack = {}
@@ -102,7 +103,12 @@ function buildServer () {
     client.on('pingreq', function () {
       client.pingresp()
     })
-  })
+  }
+  if (fastFlag) {
+    return new FastServer(handler)
+  } else {
+    return new Server(handler)
+  }
 }
 
 server = buildServer().listen(port)
@@ -286,23 +292,26 @@ describe('MqttClient', function () {
     it('should reconnect to multiple host-ports-protocol combinations if servers is passed', function (done) {
       this.timeout(15000)
 
-      var server2 = buildServer().listen(port + 42)
+      var server = buildServer(true).listen(port + 41)
+      var server2 = buildServer(true).listen(port + 42)
 
       server2.on('listening', function () {
         var client = mqtt.connect({
-          protocol: 'mqtt',
+          protocol: 'wss',
           servers: [
             { port: port + 42, host: 'localhost', protocol: 'ws' },
-            { port: port, host: 'localhost' }
+            { port: port + 41, host: 'localhost' }
           ],
           keepalive: 50
         })
         server2.on('client', function (c) {
           should.equal(client.stream.socket.url, 'ws://localhost:9918/', 'Protocol for first connection should use ws.')
+          c.stream.destroy()
           server2.close()
         })
 
         server.once('client', function () {
+          should.equal(client.stream.socket.url, 'wss://localhost:9917/', 'Protocol for second client should use the default protocol: wss, on port: port + 42.')
           client.end()
           done()
         })
