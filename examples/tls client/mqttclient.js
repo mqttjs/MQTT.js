@@ -32,7 +32,7 @@ var options = {
   rejectUnauthorized: true,
   // The CA list will be used to determine if server is authorized
   ca: TRUSTED_CA_LIST,
-  protocol: 'ssl'
+  protocol: 'mqtts'
 }
 
 var client = mqtt.connect(options)
