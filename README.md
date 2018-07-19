@@ -211,7 +211,7 @@ the `connect` event. Typically a `net.Socket`.
   * `queueQoSZero`: if connection is broken, queue outgoing QoS zero messages (default `true`)
   * `customHandleAcks`: MQTT 5 feature of custom handling puback and pubrec packets. Its callback:
       ```js
-        customHandleAcks: function(topic, message, packet, done) {*some logic wit colling done(reasonCode)*}
+        customHandleAcks: function(topic, message, packet, done) {*some logic wit colling done(error, reasonCode)*}
       ```
   * `properties`: properties MQTT 5.0.
   `object` that supports the following properties:
@@ -372,6 +372,9 @@ Subscribe to a topic or topics
   MQTT `topic` wildcard characters are supported (`+` - for single level and `#` - for multi level)
 * `options` is the options to subscribe with, including:
   * `qos` qos subscription level, default 0
+  * `nl` No Local MQTT 5.0 flag (If the value is true, Application Messages MUST NOT be forwarded to a connection with a ClientID equal to the ClientID of the publishing connection)
+  * `rap` Retain as Published MQTT 5.0 flag (If true, Application Messages forwarded using this subscription keep the RETAIN flag they were published with. If false, Application Messages forwarded using this subscription have the RETAIN flag set to 0.)
+  * `rh` Retain Handling MQTT 5.0 (This option specifies whether retained messages are sent when the subscription is established.)
   * `properties`: `object`
     * `subscriptionIdentifier`:  representing the identifier of the subscription `number`,
     * `userProperties`: The User Property is allowed to appear multiple times to represent multiple name, value pairs `object`

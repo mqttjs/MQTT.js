@@ -843,5 +843,137 @@ describe('MqttClient', function () {
         client.subscribe('a/b', {qos: 1})
       })
     })
+    it('puback handling custom reason code with error', function (done) {
+      this.timeout(15000)
+      serverErr.listen(port + 117)
+      var opts = {
+        host: 'localhost',
+        port: port + 117,
+        protocolVersion: 5,
+        customHandleAcks: function (topic, message, packet, cb) {
+          var code = 0
+          if (topic === 'a/b') {
+            cb(new Error('a/b is not valid'))
+          }
+          cb(code)
+        }
+      }
+
+      serverErr.once('client', function (c) {
+        c.once('subscribe', function () {
+          c.publish({ topic: 'a/b', payload: 'payload', qos: 1, messageId: 1 })
+        })
+      })
+
+      var client = mqtt.connect(opts)
+      client.on('error', function (error) {
+        should(error.message).be.equal('a/b is not valid')
+        client.end()
+        serverErr.close()
+        done()
+      })
+      client.once('connect', function () {
+        client.subscribe('a/b', {qos: 1})
+      })
+    })
+    it('pubrec handling custom reason code with error', function (done) {
+      this.timeout(15000)
+      serverErr.listen(port + 117)
+      var opts = {
+        host: 'localhost',
+        port: port + 117,
+        protocolVersion: 5,
+        customHandleAcks: function (topic, message, packet, cb) {
+          var code = 0
+          if (topic === 'a/b') {
+            cb(new Error('a/b is not valid'))
+          }
+          cb(code)
+        }
+      }
+
+      serverErr.once('client', function (c) {
+        c.once('subscribe', function () {
+          c.publish({ topic: 'a/b', payload: 'payload', qos: 2, messageId: 1 })
+        })
+      })
+
+      var client = mqtt.connect(opts)
+      client.on('error', function (error) {
+        should(error.message).be.equal('a/b is not valid')
+        client.end()
+        serverErr.close()
+        done()
+      })
+      client.once('connect', function () {
+        client.subscribe('a/b', {qos: 1})
+      })
+    })
+    it('puback handling custom invalid reason code', function (done) {
+      this.timeout(15000)
+      serverErr.listen(port + 117)
+      var opts = {
+        host: 'localhost',
+        port: port + 117,
+        protocolVersion: 5,
+        customHandleAcks: function (topic, message, packet, cb) {
+          var code = 0
+          if (topic === 'a/b') {
+            code = 124124
+          }
+          cb(code)
+        }
+      }
+
+      serverErr.once('client', function (c) {
+        c.once('subscribe', function () {
+          c.publish({ topic: 'a/b', payload: 'payload', qos: 1, messageId: 1 })
+        })
+      })
+
+      var client = mqtt.connect(opts)
+      client.on('error', function (error) {
+        should(error.message).be.equal('Wrong reason code for puback')
+        client.end()
+        serverErr.close()
+        done()
+      })
+      client.once('connect', function () {
+        client.subscribe('a/b', {qos: 1})
+      })
+    })
+    it('pubrec handling custom invalid reason code', function (done) {
+      this.timeout(15000)
+      serverErr.listen(port + 117)
+      var opts = {
+        host: 'localhost',
+        port: port + 117,
+        protocolVersion: 5,
+        customHandleAcks: function (topic, message, packet, cb) {
+          var code = 0
+          if (topic === 'a/b') {
+            code = 34535
+          }
+          cb(code)
+        }
+      }
+
+      serverErr.once('client', function (c) {
+        c.once('subscribe', function () {
+          c.publish({ topic: 'a/b', payload: 'payload', qos: 2, messageId: 1 })
+        })
+      })
+
+      var client = mqtt.connect(opts)
+      client.on('error', function (error) {
+        should(error.message).be.equal('Wrong reason code for pubrec')
+        client.end()
+        serverErr.close()
+        done()
+      })
+      client.once('connect', function () {
+        client.subscribe('a/b', {qos: 1})
+      })
+    })
   })
 })
