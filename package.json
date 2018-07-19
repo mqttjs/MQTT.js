@@ -22,7 +22,7 @@
   "scripts": {
     "test": "node_modules/.bin/istanbul cover ./node_modules/mocha/bin/_mocha --report lcovonly --",
     "pretest": "standard | snazzy",
-    "tslint": "tslint types/**/*.d.ts",
+    "tslint": "if [[ \"`node -v`\" != \"v4.3.2\" ]]; then tslint types/**/*.d.ts; fi",
     "typescript-compile-test": "tsc -p test/typescript/tsconfig.json",
     "typescript-compile-execute": "node test/typescript/*.js",
     "typescript-test": "npm run typescript-compile-test && npm run typescript-compile-execute",
@@ -78,9 +78,9 @@
     "xtend": "^4.0.1"
   },
   "devDependencies": {
-    "@types/node": "^8.10.14",
+    "@types/node": "^8.10.21",
     "browserify": "^16.2.2",
-    "codecov": "^3.0.2",
+    "codecov": "^3.0.4",
     "global": "^4.3.2",
     "istanbul": "^0.4.5",
     "mkdirp": "^0.5.1",
@@ -95,12 +95,12 @@
     "snazzy": "^7.1.1",
     "standard": "^11.0.1",
     "through2": "^2.0.3",
-    "tslint": "^5.10.0",
-    "tslint-config-standard": "^7.0.0",
-    "typescript": "^2.8.3",
-    "uglify-js": "^3.3.24",
+    "tslint": "^5.11.0",
+    "tslint-config-standard": "^7.1.0",
+    "typescript": "^2.9.2",
+    "uglify-js": "^3.4.5",
     "ws": "^3.3.3",
-    "zuul": "^3.11.1",
+    "zuul": "^3.12.0",
     "zuul-ngrok": "^4.0.0"
   },
   "standard": {
