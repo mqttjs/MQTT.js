@@ -1768,6 +1768,16 @@ module.exports = function (server, config) {
       client.disconnecting.should.eql(true)
     })
 
+    it('should ignore packets when disconnecting', function (done) {
+      var client = connect()
+
+      client.end()
+      client._handlePacket({}, done)
+      client.on('packetreceive', function () {
+        done(new Error('packet should be ignored while disconnecting'))
+      })
+    })
+
     it('should reconnect after stream disconnect', function (done) {
       var client = connect()
       var tryReconnect = true
