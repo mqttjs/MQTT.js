@@ -2183,6 +2183,146 @@ module.exports = function (server, config) {
       })
     })
 
+    it('should resend in-flight QoS 1 publish messages from the client if clean is false', function (done) {
+      var reconnect = false
+      var client = {}
+      var incomingStore = new mqtt.Store({ clean: false })
+      var outgoingStore = new mqtt.Store({ clean: false })
+      var server2 = new Server(function (c) {
+        c.on('connect', function (packet) {
+          c.connack({returnCode: 0})
+        })
+        c.on('publish', function (packet) {
+          if (reconnect) {
+            server2.close()
+            done()
+          } else {
+            client.end(true, function () {
+              client.reconnect({
+                incomingStore: incomingStore,
+                outgoingStore: outgoingStore
+              })
+              reconnect = true
+            })
+          }
+        })
+      })
+
+      server2.listen(port + 50, function () {
+        client = mqtt.connect({
+          port: port + 50,
+          host: 'localhost',
+          clean: false,
+          clientId: 'cid1',
+          reconnectPeriod: 0,
+          incomingStore: incomingStore,
+          outgoingStore: outgoingStore
+        })
+
+        client.on('connect', function () {
+          if (!reconnect) {
+            client.publish('topic', 'payload', {qos: 1})
+          }
+        })
+        client.on('error', function () {})
+      })
+    })
+
+    it('should resend in-flight QoS 2 publish messages from the client if clean is false', function (done) {
+      var reconnect = false
+      var client = {}
+      var incomingStore = new mqtt.Store({ clean: false })
+      var outgoingStore = new mqtt.Store({ clean: false })
+      var server2 = new Server(function (c) {
+        c.on('connect', function (packet) {
+          c.connack({returnCode: 0})
+        })
+        c.on('publish', function (packet) {
+          if (reconnect) {
+            server2.close()
+            done()
+          } else {
+            client.end(true, function () {
+              client.reconnect({
+                incomingStore: incomingStore,
+                outgoingStore: outgoingStore
+              })
+              reconnect = true
+            })
+          }
+        })
+      })
+
+      server2.listen(port + 50, function () {
+        client = mqtt.connect({
+          port: port + 50,
+          host: 'localhost',
+          clean: false,
+          clientId: 'cid1',
+          reconnectPeriod: 0,
+          incomingStore: incomingStore,
+          outgoingStore: outgoingStore
+        })
+
+        client.on('connect', function () {
+          if (!reconnect) {
+            client.publish('topic', 'payload', {qos: 2})
+          }
+        })
+        client.on('error', function () {})
+      })
+    })
+
+    it('should resend in-flight QoS 2 pubrel messages from the client if clean is false', function (done) {
+      var reconnect = false
+      var client = {}
+      var incomingStore = new mqtt.Store({ clean: false })
+      var outgoingStore = new mqtt.Store({ clean: false })
+      var server2 = new Server(function (c) {
+        c.on('connect', function (packet) {
+          c.connack({returnCode: 0})
+        })
+        c.on('publish', function (packet) {
+          if (!reconnect) {
+            c.pubrec({messageId: packet.messageId})
+          }
+        })
+        c.on('pubrel', function () {
+          if (reconnect) {
+            server2.close()
+            done()
+          } else {
+            client.end(true, function () {
+              client.reconnect({
+                incomingStore: incomingStore,
+                outgoingStore: outgoingStore
+              })
+              reconnect = true
+            })
+          }
+        })
+      })
+
+      server2.listen(port + 50, function () {
+        client = mqtt.connect({
+          port: port + 50,
+          host: 'localhost',
+          clean: false,
+          clientId: 'cid1',
+          reconnectPeriod: 0,
+          incomingStore: incomingStore,
+          outgoingStore: outgoingStore
+        })
+
+        client.on('connect', function () {
+          if (!reconnect) {
+            client.publish('topic', 'payload', {qos: 2})
+          }
+        })
+        client.on('error', function () {})
+      })
+    })
+
     it('should be able to pub/sub if reconnect() is called at close handler', function (done) {
       var client = connect({ reconnectPeriod: 0 })
       var tryReconnect = true
