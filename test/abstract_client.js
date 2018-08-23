@@ -1970,10 +1970,10 @@ module.exports = function (server, config) {
         should(err.message).be.equal('Message removed')
       })
       should(Object.keys(client.outgoing).length).be.equal(1)
-      should(Object.keys(client.outgoingStore._inflights).length).be.equal(1)
+      should(client.outgoingStore._inflights.size).be.equal(1)
       client.removeOutgoingMessage(client.getLastMessageId())
       should(Object.keys(client.outgoing).length).be.equal(0)
-      should(Object.keys(client.outgoingStore._inflights).length).be.equal(0)
+      should(client.outgoingStore._inflights.size).be.equal(0)
       clientCalledBack.should.be.true()
       client.end()
       done()
@@ -2003,10 +2003,10 @@ module.exports = function (server, config) {
         should(err.message).be.equal('Message removed')
       })
       should(Object.keys(client.outgoing).length).be.equal(1)
-      should(Object.keys(client.outgoingStore._inflights).length).be.equal(1)
+      should(client.outgoingStore._inflights.size).be.equal(1)
       client.removeOutgoingMessage(client.getLastMessageId())
       should(Object.keys(client.outgoing).length).be.equal(0)
-      should(Object.keys(client.outgoingStore._inflights).length).be.equal(0)
+      should(client.outgoingStore._inflights.size).be.equal(0)
       clientCalledBack.should.be.true()
       client.end()
       done()
@@ -2317,6 +2317,72 @@ module.exports = function (server, config) {
         client.on('connect', function () {
           if (!reconnect) {
             client.publish('topic', 'payload', {qos: 2})
+          }
+        })
+        client.on('error', function () {})
+      })
+    })
+
+    it('should resend in-flight publish messages by published order', function (done) {
+      var publishCount = 0
+      var reconnect = false
+      var disconnectOnce = true
+      var client = {}
+      var incomingStore = new mqtt.Store({ clean: false })
+      var outgoingStore = new mqtt.Store({ clean: false })
+      var server2 = new Server(function (c) {
+        c.on('connect', function (packet) {
+          c.connack({returnCode: 0})
+        })
+        c.on('publish', function (packet) {
+          c.puback({messageId: packet.messageId})
+          if (reconnect) {
+            switch (publishCount++) {
+              case 0:
+                packet.payload.toString().should.equal('payload1')
+                break
+              case 1:
+                packet.payload.toString().should.equal('payload2')
+                break
+              case 2:
+                packet.payload.toString().should.equal('payload3')
+                server2.close()
+                done()
+                break
+            }
+          } else {
+            if (disconnectOnce) {
+              client.end(true, function () {
+                reconnect = true
+                client.reconnect({
+                  incomingStore: incomingStore,
+                  outgoingStore: outgoingStore
+                })
+              })
+              disconnectOnce = false
+            }
+          }
+        })
+      })
+
+      server2.listen(port + 50, function () {
+        client = mqtt.connect({
+          port: port + 50,
+          host: 'localhost',
+          clean: false,
+          clientId: 'cid1',
+          reconnectPeriod: 0,
+          incomingStore: incomingStore,
+          outgoingStore: outgoingStore
+        })
+
+        client.nextId = 65535
+
+        client.on('connect', function () {
+          if (!reconnect) {
+            client.publish('topic', 'payload1', {qos: 1})
+            client.publish('topic', 'payload2', {qos: 1})
+            client.publish('topic', 'payload3', {qos: 1})
           }
         })
         client.on('error', function () {})

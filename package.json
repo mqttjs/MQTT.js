@@ -66,6 +66,7 @@
     "commist": "^1.0.0",
     "concat-stream": "^1.6.2",
     "end-of-stream": "^1.4.1",
+    "es6-map": "^0.1.5",
     "help-me": "^1.0.1",
     "inherits": "^2.0.3",
     "minimist": "^1.2.0",
