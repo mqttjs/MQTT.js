@@ -2331,6 +2331,10 @@ module.exports = function (server, config) {
       var incomingStore = new mqtt.Store({ clean: false })
       var outgoingStore = new mqtt.Store({ clean: false })
       var server2 = new Server(function (c) {
+        // errors are not interesting for this test
+        // but they might happen on some platforms
+        c.on('error', function () {})
+
         c.on('connect', function (packet) {
           c.connack({returnCode: 0})
         })
