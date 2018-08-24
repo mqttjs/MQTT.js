@@ -1911,6 +1911,34 @@ module.exports = function (server, config) {
       }
     })
 
+    it('should not resend in-flight publish messages if disconnecting', function (done) {
+      var client = connect({reconnectPeriod: 200})
+      var serverPublished = false
+      var clientCalledBack = false
+
+      server.once('client', function (serverClient) {
+        serverClient.on('connect', function () {
+          setImmediate(function () {
+            serverClient.stream.destroy()
+            client.end()
+            serverPublished.should.be.false()
+            clientCalledBack.should.be.false()
+            done()
+          })
+        })
+
+        server.once('client', function (serverClientNew) {
+          serverClientNew.on('publish', function () {
+            serverPublished = true
+          })
+        })
+      })
+
+      client.publish('hello', 'world', { qos: 1 }, function () {
+        clientCalledBack = true
+      })
+    })
+
     it('should resend in-flight QoS 2 publish messages from the client', function (done) {
       var client = connect({reconnectPeriod: 200})
       var serverPublished = false
