@@ -130,4 +130,30 @@ module.exports = function abstractStoreTest (build) {
       })
     })
   })
+
+  it('should replace a packet when doing put with the same messageId', function (done) {
+    var packet1 = {
+      cmd: 'publish', // added
+      topic: 'hello',
+      payload: 'world',
+      qos: 2,
+      messageId: 42
+    }
+    var packet2 = {
+      cmd: 'pubrel', // added
+      qos: 2,
+      messageId: 42
+    }
+
+    store.put(packet1, function () {
+      store.put(packet2, function () {
+        store
+          .createStream()
+          .on('data', function (data) {
+            data.should.eql(packet2)
+            done()
+          })
+      })
+    })
+  })
 }
