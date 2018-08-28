@@ -73,8 +73,11 @@ var mqtt = require('mqtt')
 var client  = mqtt.connect('mqtt://test.mosquitto.org')
 
 client.on('connect', function () {
-  client.subscribe('presence')
-  client.publish('presence', 'Hello mqtt')
+  client.subscribe('presence', function (err) {
+    if (!err) {
+      client.publish('presence', 'Hello mqtt')
+    }
+  })
 })
 
 client.on('message', function (topic, message) {
@@ -421,7 +424,7 @@ Close the client, accepts the following options:
 ### mqtt.Client#removeOutgoingMessage(mid)
 
 Remove a message from the outgoingStore.
-The outgoing callback will be called withe Error('Message removed') if the message is removed.
+The outgoing callback will be called with Error('Message removed') if the message is removed.
 
 After this function is called, the messageId is released and becomes reusable.
 
