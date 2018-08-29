@@ -980,9 +980,9 @@ module.exports = function (server, config) {
         }
       }
       AsyncStore.prototype.put = function (packet, cb) {
-        setTimeout(function () {
+        process.nextTick(function () {
           cb(new Error('Error'))
-        }, 200)
+        })
       }
       var store = new AsyncStore()
       var client = connect({incomingStore: store})
@@ -1005,14 +1005,14 @@ module.exports = function (server, config) {
         }
       }
       AsyncStore.prototype.put = function (packet, cb) {
-        setTimeout(function () {
+        process.nextTick(function () {
           cb(new Error('Error'))
-        }, 200)
+        })
       }
       AsyncStore.prototype.get = function (packet, cb) {
-        setTimeout(function () {
+        process.nextTick(function () {
           cb(null, {cmd: 'publish'})
-        }, 200)
+        })
       }
       var store = new AsyncStore()
       var client = connect({incomingStore: store})
@@ -1034,15 +1034,15 @@ module.exports = function (server, config) {
         }
       }
       AsyncStore.prototype.put = function (packet, cb) {
-        setTimeout(function () {
+        process.nextTick(function () {
           putComplete = true
           cb(null)
-        }, 200)
+        })
       }
       AsyncStore.prototype.get = function (packet, cb) {
-        setTimeout(function () {
+        process.nextTick(function () {
           cb(null, {cmd: 'publish'})
-        }, 200)
+        })
       }
       var store = new AsyncStore()
       var client = connect({incomingStore: store})
@@ -1064,9 +1064,9 @@ module.exports = function (server, config) {
         }
       }
       AsyncStore.prototype.put = function (packet, cb) {
-        setTimeout(function () {
+        process.nextTick(function () {
           cb(null, 'Error')
-        }, 200)
+        })
       }
       var store = new AsyncStore()
       var client = connect({incomingStore: store})
