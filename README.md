@@ -56,6 +56,8 @@ which are `Buffer`.
 Another __breaking change__ is that MQTT.js now defaults to MQTT v3.1.1,
 so to support old brokers, please read the [client options doc](#client).
 
+MQTT v5 support is experimental as it has not been implemented by brokers yet.
+
 <a name="install"></a>
 ## Installation
 
