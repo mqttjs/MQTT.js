@@ -973,6 +973,115 @@ module.exports = function (server, config) {
       }
     })
 
+    it('should handle error with async incoming store in QoS 2 `handlePublish` method', function (done) {
+      function AsyncStore () {
+        if (!(this instanceof AsyncStore)) {
+          return new AsyncStore()
+        }
+      }
+      AsyncStore.prototype.put = function (packet, cb) {
+        process.nextTick(function () {
+          cb(new Error('Error'))
+        })
+      }
+      var store = new AsyncStore()
+      var client = connect({incomingStore: store})
+
+      client._handlePublish({
+        messageId: 1,
+        topic: 'test',
+        payload: 'test',
+        qos: 2
+      }, function () {
+        done()
+        client.end()
+      })
+    })
+
+    it('should handle error with async incoming store in QoS 2 `handlePubrel` method', function (done) {
+      function AsyncStore () {
+        if (!(this instanceof AsyncStore)) {
+          return new AsyncStore()
+        }
+      }
+      AsyncStore.prototype.put = function (packet, cb) {
+        process.nextTick(function () {
+          cb(new Error('Error'))
+        })
+      }
+      AsyncStore.prototype.get = function (packet, cb) {
+        process.nextTick(function () {
+          cb(null, {cmd: 'publish'})
+        })
+      }
+      var store = new AsyncStore()
+      var client = connect({incomingStore: store})
+
+      client._handlePubrel({
+        messageId: 1,
+        qos: 2
+      }, function () {
+        done()
+        client.end()
+      })
+    })
+
+    it('should handle success with async incoming store in QoS 2 `handlePubrel` method', function (done) {
+      var putComplete = false
+      function AsyncStore () {
+        if (!(this instanceof AsyncStore)) {
+          return new AsyncStore()
+        }
+      }
+      AsyncStore.prototype.put = function (packet, cb) {
+        process.nextTick(function () {
+          putComplete = true
+          cb(null)
+        })
+      }
+      AsyncStore.prototype.get = function (packet, cb) {
+        process.nextTick(function () {
+          cb(null, {cmd: 'publish'})
+        })
+      }
+      var store = new AsyncStore()
+      var client = connect({incomingStore: store})
+
+      client._handlePubrel({
+        messageId: 1,
+        qos: 2
+      }, function () {
+        putComplete.should.equal(true)
+        done()
+        client.end()
+      })
+    })
+
+    it('should handle error with async incoming store in QoS 1 `handlePublish` method', function (done) {
+      function AsyncStore () {
+        if (!(this instanceof AsyncStore)) {
+          return new AsyncStore()
+        }
+      }
+      AsyncStore.prototype.put = function (packet, cb) {
+        process.nextTick(function () {
+          cb(null, 'Error')
+        })
+      }
+      var store = new AsyncStore()
+      var client = connect({incomingStore: store})
+
+      client._handlePublish({
+        messageId: 1,
+        topic: 'test',
+        payload: 'test',
+        qos: 1
+      }, function () {
+        done()
+        client.end()
+      })
+    })
+
     it('should not send a `pubcomp` if the execution of `handleMessage` fails for messages with QoS `2`', function (done) {
       var store = new Store()
       var client = connect({incomingStore: store})
