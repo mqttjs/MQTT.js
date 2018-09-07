@@ -5,11 +5,14 @@ var tls = require('tls')
 var inherits = require('inherits')
 var Connection = require('mqtt-connection')
 var MqttServer
+var FastMqttServer
 var MqttSecureServer
 
 function setupConnection (duplex) {
-  var connection = new Connection(duplex)
-  this.emit('client', connection)
+  var that = this
+  var connection = new Connection(duplex, function () {
+    that.emit('client', connection)
+  })
 }
 
 /*
@@ -33,6 +36,31 @@ MqttServer = module.exports = function Server (listener) {
   return this
 }
 inherits(MqttServer, net.Server)
+
+/*
+ * FastMqttServer(w/o waiting for initialization)
+ *
+ * @param {Function} listener - fired on client connection
+ */
+FastMqttServer = module.exports.FastMqttServer = function Server (listener) {
+  if (!(this instanceof Server)) {
+    return new Server(listener)
+  }
+
+  net.Server.call(this)
+
+  this.on('connection', function (duplex) {
+    var connection = new Connection(duplex)
+    this.emit('client', connection)
+  })
+
+  if (listener) {
+    this.on('client', listener)
+  }
+
+  return this
+}
+inherits(FastMqttServer, net.Server)
 
 /**
  * MqttSecureServer

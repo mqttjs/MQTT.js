@@ -4,7 +4,8 @@
   "version": "2.18.8",
   "contributors": [
     "Adam Rudd <adamvrr@gmail.com>",
-    "Matteo Collina <matteo.collina@gmail.com> (https://github.com/mcollina)"
+    "Matteo Collina <matteo.collina@gmail.com> (https://github.com/mcollina)",
+    "Siarhei Buntsevich <scarry0506@gmail.com> (https://github.com/scarry1992)"
   ],
   "keywords": [
     "mqtt",
@@ -70,7 +71,7 @@
     "help-me": "^1.0.1",
     "inherits": "^2.0.3",
     "minimist": "^1.2.0",
-    "mqtt-packet": "^5.6.0",
+    "mqtt-packet": "^6.0.0",
     "pump": "^3.0.0",
     "readable-stream": "^2.3.6",
     "reinterval": "^1.1.0",
@@ -86,7 +87,7 @@
     "istanbul": "^0.4.5",
     "mkdirp": "^0.5.1",
     "mocha": "^4.1.0",
-    "mqtt-connection": "^3.0.0",
+    "mqtt-connection": "^4.0.0",
     "pre-commit": "^1.2.2",
     "rimraf": "^2.6.2",
     "safe-buffer": "^5.1.2",

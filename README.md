@@ -56,6 +56,8 @@ which are `Buffer`.
 Another __breaking change__ is that MQTT.js now defaults to MQTT v3.1.1,
 so to support old brokers, please read the [client options doc](#client).
 
+MQTT v5 support is experimental as it has not been implemented by brokers yet.
+
 <a name="install"></a>
 ## Installation
 
@@ -212,12 +214,36 @@ the `connect` event. Typically a `net.Socket`.
   * `incomingStore`: a [Store](#store) for the incoming packets
   * `outgoingStore`: a [Store](#store) for the outgoing packets
   * `queueQoSZero`: if connection is broken, queue outgoing QoS zero messages (default `true`)
+  * `customHandleAcks`: MQTT 5 feature of custom handling puback and pubrec packets. Its callback:
+      ```js
+        customHandleAcks: function(topic, message, packet, done) {*some logic wit colling done(error, reasonCode)*}
+      ```
+  * `properties`: properties MQTT 5.0.
+  `object` that supports the following properties:
+    * `sessionExpiryInterval`: representing the Session Expiry Interval in seconds `number`,
+    * `receiveMaximum`: representing the Receive Maximum value `number`,
+    * `maximumPacketSize`: representing the Maximum Packet Size the Client is willing to accept `number`,
+    * `topicAliasMaximum`: representing the Topic Alias Maximum value indicates the highest value that the Client will accept as a Topic Alias sent by the Server `number`,
+    * `requestResponseInformation`: The Client uses this value to request the Server to return Response Information in the CONNACK `boolean`,
+    * `requestProblemInformation`: The Client uses this value to indicate whether the Reason String or User Properties are sent in the case of failures `boolean`,
+    * `userProperties`: The User Property is allowed to appear multiple times to represent multiple name, value pairs `object`,
+    * `authenticationMethod`: the name of the authentication method used for extended authentication `string`,
+    * `authenticationData`: Binary Data containing authentication data `binary`
+  * `authPacket`: settings for auth packet `object`
   * `will`: a message that will sent by the broker automatically when
      the client disconnect badly. The format is:
     * `topic`: the topic to publish
     * `payload`: the message to publish
     * `qos`: the QoS
     * `retain`: the retain flag
+    * `properties`: properties of will by MQTT 5.0:
+      * `willDelayInterval`: representing the Will Delay Interval in seconds `number`,
+      * `payloadFormatIndicator`: Will Message is UTF-8 Encoded Character Data or not `boolean`,
+      * `messageExpiryInterval`: value is the lifetime of the Will Message in seconds and is sent as the Publication Expiry Interval when the Server publishes the Will Message `number`,
+      * `contentType`: describing the content of the Will Message `string`,
+      * `responseTopic`: String which is used as the Topic Name for a response message `string`,
+      * `correlationData`: The Correlation Data is used by the sender of the Request Message to identify which request the Response Message is for when it is received `binary`,
+      * `userProperties`: The User Property is allowed to appear multiple times to represent multiple name, value pairs `object`
   * `transformWsUrl` : optional `(url, options, client) => url` function
         For ws/wss protocols only. Can be used to implement signing
         urls which upon reconnect can have become expired.
@@ -327,6 +353,15 @@ Publish a message to a topic
   * `qos` QoS level, `Number`, default `0`
   * `retain` retain flag, `Boolean`, default `false`
   * `dup` mark as duplicate flag, `Boolean`, default `false`
+  * `properties`: MQTT 5.0 properties `object`
+    * `payloadFormatIndicator`: Payload is UTF-8 Encoded Character Data or not `boolean`,
+    * `messageExpiryInterval`: the lifetime of the Application Message in seconds `number`,
+    * `topicAlias`: value that is used to identify the Topic instead of using the Topic Name `number`,
+    * `responseTopic`: String which is used as the Topic Name for a response message `string`,
+    * `correlationData`: used by the sender of the Request Message to identify which request the Response Message is for when it is received `binary`,
+    * `userProperties`: The User Property is allowed to appear multiple times to represent multiple name, value pairs `object`,
+    * `subscriptionIdentifier`: representing the identifier of the subscription `number`,
+    * `contentType`: String describing the content of the Application Message `string`
 * `callback` - `function (err)`, fired when the QoS handling completes,
   or at the next tick if QoS 0. An error occurs if client is disconnecting.
 
@@ -342,6 +377,12 @@ Subscribe to a topic or topics
   MQTT `topic` wildcard characters are supported (`+` - for single level and `#` - for multi level)
 * `options` is the options to subscribe with, including:
   * `qos` qos subscription level, default 0
+  * `nl` No Local MQTT 5.0 flag (If the value is true, Application Messages MUST NOT be forwarded to a connection with a ClientID equal to the ClientID of the publishing connection)
+  * `rap` Retain as Published MQTT 5.0 flag (If true, Application Messages forwarded using this subscription keep the RETAIN flag they were published with. If false, Application Messages forwarded using this subscription have the RETAIN flag set to 0.)
+  * `rh` Retain Handling MQTT 5.0 (This option specifies whether retained messages are sent when the subscription is established.)
+  * `properties`: `object`
+    * `subscriptionIdentifier`:  representing the identifier of the subscription `number`,
+    * `userProperties`: The User Property is allowed to appear multiple times to represent multiple name, value pairs `object`
 * `callback` - `function (err, granted)`
   callback fired on suback where:
   * `err` a subscription error or an error that occurs when client is disconnecting
@@ -351,22 +392,32 @@ Subscribe to a topic or topics
 
 -------------------------------------------------------
 <a name="unsubscribe"></a>
-### mqtt.Client#unsubscribe(topic/topic array, [callback])
+### mqtt.Client#unsubscribe(topic/topic array, [options], [callback])
 
 Unsubscribe from a topic or topics
 
 * `topic` is a `String` topic or an array of topics to unsubscribe from
+* `options`: options of unsubscribe.
+  * `properties`: `object`
+      * `userProperties`: The User Property is allowed to appear multiple times to represent multiple name, value pairs `object`
 * `callback` - `function (err)`, fired on unsuback. An error occurs if client is disconnecting.
 
 -------------------------------------------------------
 <a name="end"></a>
-### mqtt.Client#end([force], [cb])
+### mqtt.Client#end([force], [options], [cb])
 
 Close the client, accepts the following options:
 
 * `force`: passing it to true will close the client right away, without
   waiting for the in-flight messages to be acked. This parameter is
   optional.
+* `options`: options of disconnect.
+  * `reasonCode`: Disconnect Reason Code `number`
+  * `properties`: `object`
+    * `sessionExpiryInterval`: representing the Session Expiry Interval in seconds `number`,
+    * `reasonString`: representing the reason for the disconnect `string`,
+    * `userProperties`: The User Property is allowed to appear multiple times to represent multiple name, value pairs `object`,
+    * `serverReference`: String which can be used by the Client to identify another Server to use `string`
 * `cb`: will be called when the client is closed. This parameter is
   optional.
 
@@ -604,6 +655,7 @@ MQTT.js is only possible due to the excellent work of the following contributors
 <tr><th align="left">Adam Rudd</th><td><a href="https://github.com/adamvr">GitHub/adamvr</a></td><td><a href="http://twitter.com/adam_vr">Twitter/@adam_vr</a></td></tr>
 <tr><th align="left">Matteo Collina</th><td><a href="https://github.com/mcollina">GitHub/mcollina</a></td><td><a href="http://twitter.com/matteocollina">Twitter/@matteocollina</a></td></tr>
 <tr><th align="left">Maxime Agor</th><td><a href="https://github.com/4rzael">GitHub/4rzael</a></td><td><a href="http://twitter.com/4rzael">Twitter/@4rzael</a></td></tr>
+<tr><th align="left">Siarhei Buntsevich</th><td><a href="https://github.com/scarry1992">GitHub/scarry1992</a></td></tr>
 </tbody></table>
 
 <a name="license"></a>
