@@ -977,6 +977,115 @@ module.exports = function (server, config) {
       }
     })
 
+    it('should handle error with async incoming store in QoS 2 `handlePublish` method', function (done) {
+      function AsyncStore () {
+        if (!(this instanceof AsyncStore)) {
+          return new AsyncStore()
+        }
+      }
+      AsyncStore.prototype.put = function (packet, cb) {
+        process.nextTick(function () {
+          cb(new Error('Error'))
+        })
+      }
+      var store = new AsyncStore()
+      var client = connect({incomingStore: store})
+
+      client._handlePublish({
+        messageId: 1,
+        topic: 'test',
+        payload: 'test',
+        qos: 2
+      }, function () {
+        done()
+        client.end()
+      })
+    })
+
+    it('should handle error with async incoming store in QoS 2 `handlePubrel` method', function (done) {
+      function AsyncStore () {
+        if (!(this instanceof AsyncStore)) {
+          return new AsyncStore()
+        }
+      }
+      AsyncStore.prototype.put = function (packet, cb) {
+        process.nextTick(function () {
+          cb(new Error('Error'))
+        })
+      }
+      AsyncStore.prototype.get = function (packet, cb) {
+        process.nextTick(function () {
+          cb(null, {cmd: 'publish'})
+        })
+      }
+      var store = new AsyncStore()
+      var client = connect({incomingStore: store})
+
+      client._handlePubrel({
+        messageId: 1,
+        qos: 2
+      }, function () {
+        done()
+        client.end()
+      })
+    })
+
+    it('should handle success with async incoming store in QoS 2 `handlePubrel` method', function (done) {
+      var putComplete = false
+      function AsyncStore () {
+        if (!(this instanceof AsyncStore)) {
+          return new AsyncStore()
+        }
+      }
+      AsyncStore.prototype.put = function (packet, cb) {
+        process.nextTick(function () {
+          putComplete = true
+          cb(null)
+        })
+      }
+      AsyncStore.prototype.get = function (packet, cb) {
+        process.nextTick(function () {
+          cb(null, {cmd: 'publish'})
+        })
+      }
+      var store = new AsyncStore()
+      var client = connect({incomingStore: store})
+
+      client._handlePubrel({
+        messageId: 1,
+        qos: 2
+      }, function () {
+        putComplete.should.equal(true)
+        done()
+        client.end()
+      })
+    })
+
+    it('should handle error with async incoming store in QoS 1 `handlePublish` method', function (done) {
+      function AsyncStore () {
+        if (!(this instanceof AsyncStore)) {
+          return new AsyncStore()
+        }
+      }
+      AsyncStore.prototype.put = function (packet, cb) {
+        process.nextTick(function () {
+          cb(null, 'Error')
+        })
+      }
+      var store = new AsyncStore()
+      var client = connect({incomingStore: store})
+
+      client._handlePublish({
+        messageId: 1,
+        topic: 'test',
+        payload: 'test',
+        qos: 1
+      }, function () {
+        done()
+        client.end()
+      })
+    })
+
     it('should not send a `pubcomp` if the execution of `handleMessage` fails for messages with QoS `2`', function (done) {
       var store = new Store()
       var client = connect({incomingStore: store})
@@ -1044,6 +1153,73 @@ module.exports = function (server, config) {
             done(err)
           } finally {
             client.end()
+          }
+        })
+      })
+    })
+
+    it('should keep message order', function (done) {
+      var publishCount = 0
+      var reconnect = false
+      var client = {}
+      var incomingStore = new mqtt.Store({ clean: false })
+      var outgoingStore = new mqtt.Store({ clean: false })
+      var server2 = new Server(function (c) {
+        // errors are not interesting for this test
+        // but they might happen on some platforms
+        c.on('error', function () {})
+
+        c.on('connect', function (packet) {
+          c.connack({returnCode: 0})
+        })
+        c.on('publish', function (packet) {
+          c.puback({messageId: packet.messageId})
+          if (reconnect) {
+            switch (publishCount++) {
+              case 0:
+                packet.payload.toString().should.equal('payload1')
+                break
+              case 1:
+                packet.payload.toString().should.equal('payload2')
+                break
+              case 2:
+                packet.payload.toString().should.equal('payload3')
+                server2.close()
+                done()
+                break
+            }
+          }
+        })
+      })
+
+      server2.listen(port + 50, function () {
+        client = mqtt.connect({
+          port: port + 50,
+          host: 'localhost',
+          clean: false,
+          clientId: 'cid1',
+          reconnectPeriod: 0,
+          incomingStore: incomingStore,
+          outgoingStore: outgoingStore
+        })
+
+        client.on('connect', function () {
+          if (!reconnect) {
+            client.publish('topic', 'payload1', {qos: 1})
+            client.publish('topic', 'payload2', {qos: 1})
+            client.end(true)
+          } else {
+            client.publish('topic', 'payload3', {qos: 1})
+          }
+        })
+        client.on('close', function () {
+          if (!reconnect) {
+            client.reconnect({
+              clean: false,
+              incomingStore: incomingStore,
+              outgoingStore: outgoingStore
+            })
+            reconnect = true
           }
         })
       })
