@@ -343,7 +343,7 @@ and connections
 
 -------------------------------------------------------
 <a name="publish"></a>
-### mqtt.Client#publish(topic, message, [options], [callback])
+### mqtt.Client#publish(topic, message, [options], [callback], [cbStorePut])
 
 Publish a message to a topic
 
@@ -364,6 +364,7 @@ Publish a message to a topic
     * `contentType`: String describing the content of the Application Message `string`
 * `callback` - `function (err)`, fired when the QoS handling completes,
   or at the next tick if QoS 0. An error occurs if client is disconnecting.
+* `cbStorePut` - `function ()`, fired when message is put into `outgoingStore` if QoS is `1` or `2`.
 
 -------------------------------------------------------
 <a name="subscribe"></a>

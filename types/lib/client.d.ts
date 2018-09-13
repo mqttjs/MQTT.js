@@ -71,6 +71,7 @@ export declare type OnMessageCallback = (topic: string, payload: Buffer, packet:
 export declare type OnPacketCallback = (packet: Packet) => void
 export declare type OnErrorCallback = (error: Error) => void
 export declare type PacketCallback = (error?: Error, packet?: Packet) => any
+export declare type StorePutCallback = () => void
 export declare type CloseCallback = () => void
 
 export interface IStream extends events.EventEmitter {
@@ -121,6 +122,9 @@ export declare class MqttClient extends events.EventEmitter {
    *
    * @param {Function} [callback] - function(err){}
    *    called when publish succeeds or fails
+   *
+   * @param {Function} [cbStorePut] - function(){}
+   *    called when message is put into outgoingStore
    * @returns {Client} this - for chaining
    * @api public
    *
@@ -130,9 +134,9 @@ export declare class MqttClient extends events.EventEmitter {
    * @example client.publish('topic', 'message', console.log)
    */
   public publish (topic: string, message: string | Buffer,
-                 opts: IClientPublishOptions, callback?: PacketCallback): this
+                 opts: IClientPublishOptions, callback?: PacketCallback, cbStorePut?: StorePutCallback): this
   public publish (topic: string, message: string | Buffer,
-                 callback?: PacketCallback): this
+                 callback?: PacketCallback, cbStorePut?: StorePutCallback): this
 
   /**
    * subscribe - subscribe to <topic>
