@@ -1232,14 +1232,17 @@ module.exports = function (server, config) {
       })
 
       var callbacks = []
+
+      function cbStorePut () {
+        callbacks.push('storeput')
+      }
+
       client.on('connect', function () {
-        client.publish('test', 'test', {qos: qos}, function (err) {
+        client.publish('test', 'test', {qos: qos, cbStorePut: cbStorePut}, function (err) {
           if (err) done(err)
           callbacks.push('publish')
           should.deepEqual(callbacks, expected)
           done()
-        }, function () {
-          callbacks.push('storeput') // do not call
         })
         client.end()
       })
