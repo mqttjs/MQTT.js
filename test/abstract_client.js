@@ -1220,6 +1220,48 @@ module.exports = function (server, config) {
         })
       })
     })
+
+    function testCallbackStorePutByQoS (qos, clean, expected, done) {
+      var client = connect({
+        clean: clean,
+        clientId: 'testId'
+      })
+
+      var callbacks = []
+
+      function cbStorePut () {
+        callbacks.push('storeput')
+      }
+
+      client.on('connect', function () {
+        client.publish('test', 'test', {qos: qos, cbStorePut: cbStorePut}, function (err) {
+          if (err) done(err)
+          callbacks.push('publish')
+          should.deepEqual(callbacks, expected)
+          done()
+        })
+        client.end()
+      })
+    }
+
+    it('should not call cbStorePut when publishing message with QoS `0` and clean `true`', function (done) {
+      testCallbackStorePutByQoS(0, true, ['publish'], done)
+    })
+    it('should not call cbStorePut when publishing message with QoS `0` and clean `false`', function (done) {
+      testCallbackStorePutByQoS(0, false, ['publish'], done)
+    })
+    it('should call cbStorePut before publish completes when publishing message with QoS `1` and clean `true`', function (done) {
+      testCallbackStorePutByQoS(1, true, ['storeput', 'publish'], done)
+    })
+    it('should call cbStorePut before publish completes when publishing message with QoS `1` and clean `false`', function (done) {
+      testCallbackStorePutByQoS(1, false, ['storeput', 'publish'], done)
+    })
+    it('should call cbStorePut before publish completes when publishing message with QoS `2` and clean `true`', function (done) {
+      testCallbackStorePutByQoS(2, true, ['storeput', 'publish'], done)
+    })
+    it('should call cbStorePut before publish completes when publishing message with QoS `2` and clean `false`', function (done) {
+      testCallbackStorePutByQoS(2, false, ['storeput', 'publish'], done)
+    })
   })
 
   describe('unsubscribing', function () {
