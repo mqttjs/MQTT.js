@@ -737,6 +737,33 @@ describe('MqttClient', function () {
         client.pubcomp(packet)
       })
     })
+    it('Subscribe properties', function (done) {
+      this.timeout(15000)
+      var opts = {
+        host: 'localhost',
+        port: port + 119,
+        protocolVersion: 5
+      }
+      var subOptions = { properties: { subscriptionIdentifier: 1234 } }
+      var server119 = new Server(function (client) {
+        client.on('connect', function (packet) {
+          client.connack({
+            reasonCode: 0
+          })
+        })
+        client.on('subscribe', function (packet) {
+          should(packet.properties.subscriptionIdentifier).be.equal(subOptions.properties.subscriptionIdentifier)
+          server119.close()
+          done()
+        })
+      }).listen(port + 119)
+
+      var client = mqtt.connect(opts)
+      client.on('connect', function () {
+        client.subscribe('a/b', subOptions)
+      })
+    })
+
     it('puback handling errors check', function (done) {
       this.timeout(15000)
       serverErr.listen(port + 117)
