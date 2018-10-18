@@ -2,6 +2,8 @@ import { MqttClient } from './client'
 import { Store } from './store'
 import { QoS } from 'mqtt-packet'
 
+export declare type StorePutCallback = () => void
+
 export interface IClientOptions extends ISecureClientOptions {
   port?: number // port is made into a number subsequently
   host?: string // host does NOT include port
@@ -118,6 +120,10 @@ export interface IClientPublishOptions {
    * whether or not mark a message as duplicate
    */
   dup?: boolean
+  /**
+   * callback called when message is put into `outgoingStore`
+   */
+  cbStorePut?: StorePutCallback
 }
 export interface IClientSubscribeOptions {
   /**
