@@ -1008,7 +1008,7 @@ module.exports = function (server, config) {
           return new AsyncStore()
         }
       }
-      AsyncStore.prototype.put = function (packet, cb) {
+      AsyncStore.prototype.del = function (packet, cb) {
         process.nextTick(function () {
           cb(new Error('Error'))
         })
@@ -1031,15 +1031,15 @@ module.exports = function (server, config) {
     })
 
     it('should handle success with async incoming store in QoS 2 `handlePubrel` method', function (done) {
-      var putComplete = false
+      var delComplete = false
       function AsyncStore () {
         if (!(this instanceof AsyncStore)) {
           return new AsyncStore()
         }
       }
-      AsyncStore.prototype.put = function (packet, cb) {
+      AsyncStore.prototype.del = function (packet, cb) {
         process.nextTick(function () {
-          putComplete = true
+          delComplete = true
           cb(null)
         })
       }
@@ -1055,7 +1055,7 @@ module.exports = function (server, config) {
         messageId: 1,
         qos: 2
       }, function () {
-        putComplete.should.equal(true)
+        delComplete.should.equal(true)
         done()
         client.end()
       })
