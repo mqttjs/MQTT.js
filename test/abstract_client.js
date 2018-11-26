@@ -2002,9 +2002,33 @@ module.exports = function (server, config) {
       var testTopic = 'test'
       var testMessage = 'message'
       var mid = 253
+      var publishReceived = false
+      var pubrecReceived = false
+      var pubrelReceived = false
 
       client.once('connect', function () {
         client.subscribe(testTopic, {qos: 2})
+      })
+
+      client.on('packetreceive', (packet) => {
+        switch (packet.cmd) {
+          case 'connack':
+          case 'suback':
+            // expected, but not specifically part of QOS 2 semantics
+            break
+          case 'publish':
+            pubrecReceived.should.be.false()
+            pubrelReceived.should.be.false()
+            publishReceived = true
+            break
+          case 'pubrel':
+            publishReceived.should.be.true()
+            pubrecReceived.should.be.true()
+            pubrelReceived = true
+            break
+          default:
+            should.fail()
+        }
       })
 
       server.once('client', function (serverClient) {
@@ -2017,7 +2041,18 @@ module.exports = function (server, config) {
           })
         })
 
+        serverClient.on('pubrec', function () {
+          publishReceived.should.be.true()
+          pubrelReceived.should.be.false()
+          pubrecReceived = true
+        })
+
         serverClient.once('pubcomp', function () {
+          client.removeAllListeners()
+          serverClient.removeAllListeners()
+          publishReceived.should.be.true()
+          pubrecReceived.should.be.true()
+          pubrelReceived.should.be.true()
           done()
         })
       })
