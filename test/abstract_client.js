@@ -2058,6 +2058,40 @@ module.exports = function (server, config) {
       })
     })
 
+    it('should should empty the incoming store after a qos 2 handshake is completed', function (done) {
+      var client = connect()
+      var testTopic = 'test'
+      var testMessage = 'message'
+      var mid = 253
+
+      client.once('connect', function () {
+        client.subscribe(testTopic, {qos: 2})
+      })
+
+      client.on('packetreceive', (packet) => {
+        if (packet.cmd === 'pubrel') {
+          should(client.incomingStore._inflights.size).be.equal(1)
+        }
+      })
+
+      server.once('client', function (serverClient) {
+        serverClient.once('subscribe', function () {
+          serverClient.publish({
+            topic: testTopic,
+            payload: testMessage,
+            qos: 2,
+            messageId: mid
+          })
+        })
+
+        serverClient.once('pubcomp', function () {
+          should(client.incomingStore._inflights.size).be.equal(0)
+          client.removeAllListeners()
+          done()
+        })
+      })
+    })
+
     function testMultiplePubrel (shouldSendPubcompFail, done) {
       var client = connect()
       var testTopic = 'test'
