@@ -2057,6 +2057,88 @@ module.exports = function (server, config) {
         })
       })
     })
+
+    function testMultiplePubrel (shouldSendPubcompFail, done) {
+      var client = connect()
+      var testTopic = 'test'
+      var testMessage = 'message'
+      var mid = 253
+      var pubcompCount = 0
+      var pubrelCount = 0
+      var handleMessageCount = 0
+      var emitMessageCount = 0
+      var origSendPacket = client._sendPacket
+      var shouldSendFail
+
+      client.handleMessage = function (packet, callback) {
+        handleMessageCount++
+        callback()
+      }
+
+      client.on('message', function () {
+        emitMessageCount++
+      })
+
+      client._sendPacket = function (packet, sendDone) {
+        shouldSendFail = packet.cmd === 'pubcomp' && shouldSendPubcompFail
+        if (sendDone) {
+          sendDone(shouldSendFail ? new Error('testing pubcomp failure') : undefined)
+        }
+
+        // send the mocked response
+        switch (packet.cmd) {
+          case 'subscribe':
+            const suback = {cmd: 'suback', messageId: packet.messageId, granted: [2]}
+            client._handlePacket(suback, function (err) {
+              should(err).not.be.ok()
+            })
+            break
+          case 'pubrec':
+          case 'pubcomp':
+            // for both pubrec and pubcomp, reply with pubrel, simulating the server not receiving the pubcomp
+            if (packet.cmd === 'pubcomp') {
+              pubcompCount++
+              if (pubcompCount === 2) {
+                // end the test once the client has gone through two rounds of replying to pubrel messages
+                pubrelCount.should.be.exactly(2)
+                handleMessageCount.should.be.exactly(1)
+                emitMessageCount.should.be.exactly(1)
+                client._sendPacket = origSendPacket
+                done()
+                break
+              }
+            }
+
+            // simulate the pubrel message, either in response to pubrec or to mock pubcomp failing to be received
+            const pubrel = {cmd: 'pubrel', messageId: mid}
+            pubrelCount++
+            client._handlePacket(pubrel, function (err) {
+              if (shouldSendFail) {
+                should(err).be.ok()
+              } else {
+                should(err).not.be.ok()
+              }
+            })
+            break
+        }
+      }
+
+      client.once('connect', function () {
+        client.subscribe(testTopic, {qos: 2})
+        const publish = {cmd: 'publish', topic: testTopic, payload: testMessage, qos: 2, messageId: mid}
+        client._handlePacket(publish, function (err) {
+          should(err).not.be.ok()
+        })
+      })
+    }
+
+    it('handle qos 2 messages exactly once when multiple pubrel received', function (done) {
+      testMultiplePubrel(false, done)
+    })
+
+    it('handle qos 2 messages exactly once when multiple pubrel received and sending pubcomp fails on client', function (done) {
+      testMultiplePubrel(true, done)
+    })
   })
 
   describe('auto reconnect', function () {
