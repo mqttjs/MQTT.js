@@ -536,6 +536,57 @@ module.exports = function (server, config) {
       })
     })
 
+    it('should not interrupt messages', function (done) {
+      var client = null
+      var incomingStore = new mqtt.Store({ clean: false })
+      var outgoingStore = new mqtt.Store({ clean: false })
+      var publishCount = 0
+      var server2 = new Server(function (c) {
+        c.on('connect', function () {
+          c.connack({returnCode: 0})
+        })
+        c.on('publish', function (packet) {
+          c.puback({messageId: packet.messageId})
+          switch (publishCount++) {
+            case 0:
+              packet.payload.toString().should.equal('payload1')
+              break
+            case 1:
+              packet.payload.toString().should.equal('payload2')
+              break
+            case 2:
+              packet.payload.toString().should.equal('payload3')
+              server2.close()
+              done()
+              break
+          }
+        })
+      })
+
+      server2.listen(port + 50, function () {
+        client = mqtt.connect({
+          port: port + 50,
+          host: 'localhost',
+          clean: false,
+          clientId: 'cid1',
+          reconnectPeriod: 0,
+          incomingStore: incomingStore,
+          outgoingStore: outgoingStore
+        })
+        client.on('packetreceive', function (packet) {
+          if (packet.cmd === 'connack') {
+            setImmediate(
+              function () {
+                client.publish('test', 'payload3', {qos: 2})
+              }
+            )
+          }
+        })
+        client.publish('test', 'payload1', {qos: 2})
+        client.publish('test', 'payload2', {qos: 2})
+      })
+    })
+
     it('should call cb if an outgoing QoS 0 message is not sent', function (done) {
       var client = connect({queueQoSZero: false})
       var called = false
