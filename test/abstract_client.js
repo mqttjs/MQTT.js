@@ -546,7 +546,9 @@ module.exports = function (server, config) {
           c.connack({returnCode: 0})
         })
         c.on('publish', function (packet) {
-          c.puback({messageId: packet.messageId})
+          if (packet.qos !== 0) {
+            c.puback({messageId: packet.messageId})
+          }
           switch (publishCount++) {
             case 0:
               packet.payload.toString().should.equal('payload1')
@@ -556,6 +558,9 @@ module.exports = function (server, config) {
               break
             case 2:
               packet.payload.toString().should.equal('payload3')
+              break
+            case 3:
+              packet.payload.toString().should.equal('payload4')
               server2.close()
               done()
               break
@@ -571,13 +576,15 @@ module.exports = function (server, config) {
           clientId: 'cid1',
           reconnectPeriod: 0,
           incomingStore: incomingStore,
-          outgoingStore: outgoingStore
+          outgoingStore: outgoingStore,
+          queueQoSZero: true
         })
         client.on('packetreceive', function (packet) {
           if (packet.cmd === 'connack') {
             setImmediate(
               function () {
-                client.publish('test', 'payload3', {qos: 2})
+                client.publish('test', 'payload3', {qos: 1})
+                client.publish('test', 'payload4', {qos: 0})
               }
             )
           }
