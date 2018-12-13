@@ -30,7 +30,6 @@
     "prepare": "npm run browser-build",
     "browser-build": "rimraf dist/ && mkdirp dist/ && browserify mqtt.js -s mqtt > dist/mqtt.js && uglifyjs < dist/mqtt.js > dist/mqtt.min.js",
     "browser-test": "zuul --server test/browser/server.js --local --open test/browser/test.js",
-    "weapp-test": "zuul --server test/browser/server.js --local --open test/browser/wx.js",
     "sauce-test": "zuul --server test/browser/server.js --tunnel ngrok -- test/browser/test.js",
     "ci": "npm run tslint && npm run typescript-test && npm run test && codecov"
   },
