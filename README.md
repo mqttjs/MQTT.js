@@ -525,22 +525,40 @@ at https://unpkg.com/mqtt/dist/mqtt.min.js.
 See http://unpkg.com for the full documentation on version ranges.
 
 <a name="weapp"></a>
-## Weixin App
-Surport [Weixin App](https://mp.weixin.qq.com/). See [Doc](https://mp.weixin.qq.com/debug/wxadoc/dev/api/network-socket.html).
+## WeChat Mini Program
+Surport [WeChat Mini Program](https://mp.weixin.qq.com/). See [Doc](https://mp.weixin.qq.com/debug/wxadoc/dev/api/network-socket.html).
 <a name="example"></a>
 
 ## Example(js)
 
 ```js
 var mqtt = require('mqtt')
-var client  = mqtt.connect('wxs://test.mosquitto.org')
+var client = mqtt.connect('wxs://test.mosquitto.org')
 ```
 
 ## Example(ts)
 
 ```ts
 import { connect } from 'mqtt';
-const client  = connect('wxs://test.mosquitto.org');
+const client = connect('wxs://test.mosquitto.org');
+```
+
+## Ali Mini Program
+Surport [Ali Mini Program](https://open.alipay.com/channel/miniIndex.htm). See [Doc](https://docs.alipay.com/mini/developer/getting-started).
+<a name="example"></a>
+
+## Example(js)
+
+```js
+var mqtt = require('mqtt')
+var client = mqtt.connect('alis://test.mosquitto.org')
+```
+
+## Example(ts)
+
+```ts
+import { connect } from 'mqtt';
+const client  = connect('alis://test.mosquitto.org');
 ```
 
 <a name="browserify"></a>
