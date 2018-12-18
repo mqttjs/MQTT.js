@@ -31,7 +31,7 @@
     "browser-test": "zuul --server test/browser/server.js --local --open test/browser/test.js",
     "weapp-test": "zuul --server test/browser/server.js --local --open test/browser/wx.js",
     "sauce-test": "zuul --server test/browser/server.js --tunnel ngrok -- test/browser/test.js",
-    "ci": "npm run tslint && npm run typescript-test && npm run test && codecov"
+    "ci": "npm run tslint && npm run typescript-compile-test && npm run test && codecov"
   },
   "pre-commit": [
     "test",
@@ -74,12 +74,12 @@
     "pump": "^3.0.0",
     "readable-stream": "^2.3.6",
     "reinterval": "^1.1.0",
-    "split2": "^2.1.1",
+    "split2": "^3.1.0",
     "websocket-stream": "^5.1.2",
     "xtend": "^4.0.1"
   },
   "devDependencies": {
-    "@types/node": "^8.10.21",
+    "@types/node": "^10.0.0",
     "browserify": "^16.2.2",
     "codecov": "^3.0.4",
     "global": "^4.3.2",
@@ -92,12 +92,12 @@
     "safe-buffer": "^5.1.2",
     "should": "^13.2.1",
     "sinon": "~1.17.7",
-    "snazzy": "^7.1.1",
+    "snazzy": "^8.0.0",
     "standard": "^11.0.1",
-    "through2": "^2.0.3",
+    "through2": "^3.0.0",
     "tslint": "^5.11.0",
-    "tslint-config-standard": "^7.1.0",
-    "typescript": "^2.9.2",
+    "tslint-config-standard": "^8.0.1",
+    "typescript": "^3.2.2",
     "uglify-js": "^3.4.5",
     "ws": "^3.3.3",
     "zuul": "^3.12.0",
