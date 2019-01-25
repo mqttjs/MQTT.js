@@ -536,6 +536,64 @@ module.exports = function (server, config) {
       })
     })
 
+    it('should not interrupt messages', function (done) {
+      var client = null
+      var incomingStore = new mqtt.Store({ clean: false })
+      var outgoingStore = new mqtt.Store({ clean: false })
+      var publishCount = 0
+      var server2 = new Server(function (c) {
+        c.on('connect', function () {
+          c.connack({returnCode: 0})
+        })
+        c.on('publish', function (packet) {
+          if (packet.qos !== 0) {
+            c.puback({messageId: packet.messageId})
+          }
+          switch (publishCount++) {
+            case 0:
+              packet.payload.toString().should.equal('payload1')
+              break
+            case 1:
+              packet.payload.toString().should.equal('payload2')
+              break
+            case 2:
+              packet.payload.toString().should.equal('payload3')
+              break
+            case 3:
+              packet.payload.toString().should.equal('payload4')
+              server2.close()
+              done()
+              break
+          }
+        })
+      })
+
+      server2.listen(port + 50, function () {
+        client = mqtt.connect({
+          port: port + 50,
+          host: 'localhost',
+          clean: false,
+          clientId: 'cid1',
+          reconnectPeriod: 0,
+          incomingStore: incomingStore,
+          outgoingStore: outgoingStore,
+          queueQoSZero: true
+        })
+        client.on('packetreceive', function (packet) {
+          if (packet.cmd === 'connack') {
+            setImmediate(
+              function () {
+                client.publish('test', 'payload3', {qos: 1})
+                client.publish('test', 'payload4', {qos: 0})
+              }
+            )
+          }
+        })
+        client.publish('test', 'payload1', {qos: 2})
+        client.publish('test', 'payload2', {qos: 2})
+      })
+    })
+
     it('should call cb if an outgoing QoS 0 message is not sent', function (done) {
       var client = connect({queueQoSZero: false})
       var called = false
@@ -1008,7 +1066,7 @@ module.exports = function (server, config) {
           return new AsyncStore()
         }
       }
-      AsyncStore.prototype.put = function (packet, cb) {
+      AsyncStore.prototype.del = function (packet, cb) {
         process.nextTick(function () {
           cb(new Error('Error'))
         })
@@ -1031,15 +1089,15 @@ module.exports = function (server, config) {
     })
 
     it('should handle success with async incoming store in QoS 2 `handlePubrel` method', function (done) {
-      var putComplete = false
+      var delComplete = false
       function AsyncStore () {
         if (!(this instanceof AsyncStore)) {
           return new AsyncStore()
         }
       }
-      AsyncStore.prototype.put = function (packet, cb) {
+      AsyncStore.prototype.del = function (packet, cb) {
         process.nextTick(function () {
-          putComplete = true
+          delComplete = true
           cb(null)
         })
       }
@@ -1055,7 +1113,7 @@ module.exports = function (server, config) {
         messageId: 1,
         qos: 2
       }, function () {
-        putComplete.should.equal(true)
+        delComplete.should.equal(true)
         done()
         client.end()
       })
@@ -2002,9 +2060,76 @@ module.exports = function (server, config) {
       var testTopic = 'test'
       var testMessage = 'message'
       var mid = 253
+      var publishReceived = false
+      var pubrecReceived = false
+      var pubrelReceived = false
 
       client.once('connect', function () {
         client.subscribe(testTopic, {qos: 2})
+      })
+
+      client.on('packetreceive', (packet) => {
+        switch (packet.cmd) {
+          case 'connack':
+          case 'suback':
+            // expected, but not specifically part of QOS 2 semantics
+            break
+          case 'publish':
+            pubrecReceived.should.be.false()
+            pubrelReceived.should.be.false()
+            publishReceived = true
+            break
+          case 'pubrel':
+            publishReceived.should.be.true()
+            pubrecReceived.should.be.true()
+            pubrelReceived = true
+            break
+          default:
+            should.fail()
+        }
+      })
+
+      server.once('client', function (serverClient) {
+        serverClient.once('subscribe', function () {
+          serverClient.publish({
+            topic: testTopic,
+            payload: testMessage,
+            qos: 2,
+            messageId: mid
+          })
+        })
+
+        serverClient.on('pubrec', function () {
+          publishReceived.should.be.true()
+          pubrelReceived.should.be.false()
+          pubrecReceived = true
+        })
+
+        serverClient.once('pubcomp', function () {
+          client.removeAllListeners()
+          serverClient.removeAllListeners()
+          publishReceived.should.be.true()
+          pubrecReceived.should.be.true()
+          pubrelReceived.should.be.true()
+          done()
+        })
+      })
+    })
+
+    it('should should empty the incoming store after a qos 2 handshake is completed', function (done) {
+      var client = connect()
+      var testTopic = 'test'
+      var testMessage = 'message'
+      var mid = 253
+
+      client.once('connect', function () {
+        client.subscribe(testTopic, {qos: 2})
+      })
+
+      client.on('packetreceive', (packet) => {
+        if (packet.cmd === 'pubrel') {
+          should(client.incomingStore._inflights.size).be.equal(1)
+        }
       })
 
       server.once('client', function (serverClient) {
@@ -2018,9 +2143,93 @@ module.exports = function (server, config) {
         })
 
         serverClient.once('pubcomp', function () {
+          should(client.incomingStore._inflights.size).be.equal(0)
+          client.removeAllListeners()
           done()
         })
       })
+    })
+
+    function testMultiplePubrel (shouldSendPubcompFail, done) {
+      var client = connect()
+      var testTopic = 'test'
+      var testMessage = 'message'
+      var mid = 253
+      var pubcompCount = 0
+      var pubrelCount = 0
+      var handleMessageCount = 0
+      var emitMessageCount = 0
+      var origSendPacket = client._sendPacket
+      var shouldSendFail
+
+      client.handleMessage = function (packet, callback) {
+        handleMessageCount++
+        callback()
+      }
+
+      client.on('message', function () {
+        emitMessageCount++
+      })
+
+      client._sendPacket = function (packet, sendDone) {
+        shouldSendFail = packet.cmd === 'pubcomp' && shouldSendPubcompFail
+        if (sendDone) {
+          sendDone(shouldSendFail ? new Error('testing pubcomp failure') : undefined)
+        }
+
+        // send the mocked response
+        switch (packet.cmd) {
+          case 'subscribe':
+            const suback = {cmd: 'suback', messageId: packet.messageId, granted: [2]}
+            client._handlePacket(suback, function (err) {
+              should(err).not.be.ok()
+            })
+            break
+          case 'pubrec':
+          case 'pubcomp':
+            // for both pubrec and pubcomp, reply with pubrel, simulating the server not receiving the pubcomp
+            if (packet.cmd === 'pubcomp') {
+              pubcompCount++
+              if (pubcompCount === 2) {
+                // end the test once the client has gone through two rounds of replying to pubrel messages
+                pubrelCount.should.be.exactly(2)
+                handleMessageCount.should.be.exactly(1)
+                emitMessageCount.should.be.exactly(1)
+                client._sendPacket = origSendPacket
+                done()
+                break
+              }
+            }
+
+            // simulate the pubrel message, either in response to pubrec or to mock pubcomp failing to be received
+            const pubrel = {cmd: 'pubrel', messageId: mid}
+            pubrelCount++
+            client._handlePacket(pubrel, function (err) {
+              if (shouldSendFail) {
+                should(err).be.ok()
+              } else {
+                should(err).not.be.ok()
+              }
+            })
+            break
+        }
+      }
+
+      client.once('connect', function () {
+        client.subscribe(testTopic, {qos: 2})
+        const publish = {cmd: 'publish', topic: testTopic, payload: testMessage, qos: 2, messageId: mid}
+        client._handlePacket(publish, function (err) {
+          should(err).not.be.ok()
+        })
+      })
+    }
+
+    it('handle qos 2 messages exactly once when multiple pubrel received', function (done) {
+      testMultiplePubrel(false, done)
+    })
+
+    it('handle qos 2 messages exactly once when multiple pubrel received and sending pubcomp fails on client', function (done) {
+      testMultiplePubrel(true, done)
     })
   })
 
