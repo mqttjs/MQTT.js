@@ -526,7 +526,7 @@ See http://unpkg.com for the full documentation on version ranges.
 
 <a name="weapp"></a>
 ## WeChat Mini Program
-Surport [WeChat Mini Program](https://mp.weixin.qq.com/). See [Doc](https://mp.weixin.qq.com/debug/wxadoc/dev/api/network-socket.html).
+Support [WeChat Mini Program](https://mp.weixin.qq.com/). See [Doc](https://mp.weixin.qq.com/debug/wxadoc/dev/api/network-socket.html).
 <a name="example"></a>
 
 ## Example(js)
