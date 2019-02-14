@@ -706,6 +706,51 @@ describe('MqttClient', function () {
         done()
       })
     })
+
+    it('should resubscribe when reconnecting with protocolVersion 5 and Session Present flag is false', function (done) {
+      this.timeout(15000)
+      var tryReconnect = true
+      var reconnectEvent = false
+      var server316 = new Server(function (client) {
+        client.on('connect', function (packet) {
+          client.connack({
+            reasonCode: 0,
+            sessionPresent: false
+          })
+          client.on('subscribe', function () {
+            if (!tryReconnect) {
+              client.end()
+              server316.close()
+              done()
+            }
+          })
+        })
+      }).listen(port + 316)
+      var opts = {
+        host: 'localhost',
+        port: port + 316,
+        protocolVersion: 5
+      }
+      var client = mqtt.connect(opts)
+
+      client.on('reconnect', function () {
+        reconnectEvent = true
+      })
+
+      client.on('connect', function (connack) {
+        should(connack.sessionPresent).be.equal(false)
+        if (tryReconnect) {
+          client.subscribe('hello', function () {
+            client.stream.end()
+          })
+
+          tryReconnect = false
+        } else {
+          reconnectEvent.should.equal(true)
+        }
+      })
+    })
+
     var serverErr = new Server(function (client) {
       client.on('connect', function (packet) {
         client.connack({
