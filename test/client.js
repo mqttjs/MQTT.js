@@ -880,6 +880,30 @@ describe('MqttClient', function () {
         client.subscribe('a/b', {qos: 1})
       })
     })
+    it('server side disconnect', function (done) {
+      this.timeout(15000)
+      var server327 = new Server(function (client) {
+        client.on('connect', function (packet) {
+          client.connack({
+            reasonCode: 0
+          })
+          client.disconnect({reasonCode: 128})
+          server327.close()
+        })
+      })
+      server327.listen(port + 327)
+      var opts = {
+        host: 'localhost',
+        port: port + 327,
+        protocolVersion: 5
+      }
+
+      var client = mqtt.connect(opts)
+      client.once('close', function (disconnectPacket) {
+        should(disconnectPacket.reasonCode).be.equal(128)
+        done()
+      })
+    })
     it('pubrec handling custom reason code', function (done) {
       this.timeout(15000)
       serverErr.listen(port + 117)
