@@ -11,7 +11,7 @@ const options = {
   maxConnect: 3,
   reconnectPeriod: 500
 }
-const testingHost = '13.126.92.102'
+const testingHost = ''
 const clientPublisher = mqtt.connect('mqtt://' + testingHost, options)
 
 clientPublisher.on('error', function (err) {
