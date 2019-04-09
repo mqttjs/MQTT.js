@@ -291,6 +291,12 @@ Emitted when a reconnect starts.
 
 Emitted after a disconnection.
 
+#### Event `'disconnect'`
+
+`function (packet) {}`
+
+Emitted after reciving disconnect packet from brocker. MQTT 5.0 feature.
+
 #### Event `'offline'`
 
 `function () {}`

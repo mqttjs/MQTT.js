@@ -899,7 +899,7 @@ describe('MqttClient', function () {
       }
 
       var client = mqtt.connect(opts)
-      client.once('close', function (disconnectPacket) {
+      client.once('disconnect', function (disconnectPacket) {
         should(disconnectPacket.reasonCode).be.equal(128)
         done()
       })
