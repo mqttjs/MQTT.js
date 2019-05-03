@@ -751,6 +751,60 @@ describe('MqttClient', function () {
       })
     })
 
+    it('should resubscribe when reconnecting with protocolVersion 5 and properties', function (done) {
+      this.timeout(15000)
+      var tryReconnect = true
+      var reconnectEvent = false
+      var server326 = new Server(function (client) {
+        client.on('connect', function (packet) {
+          client.on('subscribe', function (packet) {
+            if (!reconnectEvent) {
+              client.suback({
+                messageId: packet.messageId,
+                granted: packet.subscriptions.map(function (e) {
+                  return e.qos
+                })
+              })
+            } else {
+              if (!tryReconnect) {
+                should(packet.properties.userProperties.test).be.equal('test')
+                client.end()
+                server326.close()
+                done()
+              }
+            }
+          })
+          client.connack({
+            reasonCode: 0,
+            sessionPresent: false
+          })
+        })
+      }).listen(port + 326)
+      var opts = {
+        host: 'localhost',
+        port: port + 326,
+        protocolVersion: 5
+      }
+      var client = mqtt.connect(opts)
+
+      client.on('reconnect', function () {
+        reconnectEvent = true
+      })
+
+      client.on('connect', function (connack) {
+        should(connack.sessionPresent).be.equal(false)
+        if (tryReconnect) {
+          client.subscribe('hello', { properties: { userProperties: { test: 'test' } } }, function () {
+            client.stream.end()
+          })
+
+          tryReconnect = false
+        } else {
+          reconnectEvent.should.equal(true)
+        }
+      })
+    })
+
     var serverErr = new Server(function (client) {
       client.on('connect', function (packet) {
         client.connack({
