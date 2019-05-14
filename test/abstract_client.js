@@ -1777,6 +1777,7 @@ module.exports = function (server, config) {
               result.nl = false
               result.rap = false
               result.rh = 0
+              result.properties = undefined
             }
             granted.should.containEql(result)
             done()
