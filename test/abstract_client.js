@@ -2682,6 +2682,55 @@ module.exports = function (server, config) {
       })
     })
 
+    it.only('should clear outgoing if close from server', function (done) {
+      var reconnect = false
+      var client = {}
+      var server2 = new Server(function (c) {
+        c.on('connect', function (packet) {
+          c.connack({returnCode: 0})
+        })
+        c.on('subscribe', function (packet) {
+          if (reconnect) {
+            c.suback({
+              messageId: packet.messageId,
+              granted: packet.subscriptions.map(function (e) {
+                return e.qos
+              })
+            })
+          } else {
+            c.destroy()
+          }
+        })
+      })
+
+      server2.listen(port + 50, function () {
+        client = mqtt.connect({
+          port: port + 50,
+          host: 'localhost',
+          clean: true,
+          clientId: 'cid1',
+          reconnectPeriod: 0
+        })
+
+        client.on('connect', function () {
+          client.subscribe('test', {qos: 2}, function () {
+            client.end()
+          })
+        })
+
+        client.on('close', function () {
+          if (reconnect) {
+            server2.close()
+            done()
+          } else {
+            Object.keys(client.outgoing).length.should.equal(0)
+            reconnect = true
+            client.reconnect()
+          }
+        })
+      })
+    })
+
     it('should resend in-flight QoS 1 publish messages from the client if clean is false', function (done) {
       var reconnect = false
       var client = {}
