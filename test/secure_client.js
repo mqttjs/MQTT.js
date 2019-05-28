@@ -1,7 +1,6 @@
 'use strict'
 
 var mqtt = require('..')
-var should = require('should')
 var path = require('path')
 var abstractClientTests = require('./abstract_client')
 var fs = require('fs')
@@ -153,48 +152,6 @@ describe('MqttSecureClient', function () {
       client.once('close', function () {
         done()
       })
-    })
-
-    it('should request the hostname as servername by default', function (done) {
-      var host = '127.0.0.1'
-
-      server.once('secureConnection', function (socket) {
-        should(socket.servername).be.equal(host)
-        socket.end()
-        done()
-      })
-
-      var client = mqtt.connect({
-        protocol: 'mqtts',
-        port: port,
-        host: host,
-        ca: [fs.readFileSync(CERT)],
-        rejectUnauthorized: true
-      })
-
-      client.on('error', function () {})
-      client.on('close', function () {})
-    })
-
-    it('should request the servername', function (done) {
-      var servername = 'some.example.com'
-
-      server.once('secureConnection', function (socket) {
-        should(socket.servername).be.equal(servername)
-        socket.end()
-        done()
-      })
-
-      var client = mqtt.connect({
-        protocol: 'mqtts',
-        port: port,
-        servername: servername,
-        ca: [fs.readFileSync(CERT)],
-        rejectUnauthorized: true
-      })
-
-      client.on('error', function () {})
-      client.on('close', function () {})
     })
   })
 })
