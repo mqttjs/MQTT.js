@@ -66,6 +66,7 @@ export interface ISubscriptionMap {
   }
 }
 
+export declare type OnConnectCallback = (packet: Packet) => void
 export declare type ClientSubscribeCallback = (err: Error, granted: ISubscriptionGrant[]) => void
 export declare type OnMessageCallback = (topic: string, payload: Buffer, packet: Packet) => void
 export declare type OnPacketCallback = (packet: Packet) => void
@@ -97,15 +98,15 @@ export declare class MqttClient extends events.EventEmitter {
 
   constructor (streamBuilder: (client: MqttClient) => IStream, options: IClientOptions)
 
+  public on (event: 'connect', cb: OnConnectCallback): this
   public on (event: 'message', cb: OnMessageCallback): this
   public on (event: 'packetsend' | 'packetreceive', cb: OnPacketCallback): this
   public on (event: 'error', cb: OnErrorCallback): this
   public on (event: string, cb: Function): this
 
+  public once (event: 'connect', cb: OnConnectCallback): this
   public once (event: 'message', cb: OnMessageCallback): this
-  public once (event:
-                'packetsend'
-                | 'packetreceive', cb: OnPacketCallback): this
+  public once (event: 'packetsend' | 'packetreceive', cb: OnPacketCallback): this
   public once (event: 'error', cb: OnErrorCallback): this
   public once (event: string, cb: Function): this
 
