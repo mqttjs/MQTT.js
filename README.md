@@ -380,9 +380,9 @@ Subscribe to a topic or topics
 
 * `topic` is a `String` topic to subscribe to or an `Array` of
   topics to subscribe to. It can also be an object, it has as object
-  keys the topic name and as value the QoS, like `{'test1': {qos: 0}, 'test2': {qos: 1}}`.
+  keys the topic names to subscribe to, and as values the `options` for each subscription (e.g. `{'test1': {qos: 0}, 'test2': {qos: 1, nl: true}}`).
   MQTT `topic` wildcard characters are supported (`+` - for single level and `#` - for multi level)
-* `options` is the options to subscribe with, including:
+* `options` is the options to subscribe with (not used when the first parameter is an object), including:
   * `qos` qos subscription level, default 0
   * `nl` No Local MQTT 5.0 flag (If the value is true, Application Messages MUST NOT be forwarded to a connection with a ClientID equal to the ClientID of the publishing connection)
   * `rap` Retain as Published MQTT 5.0 flag (If true, Application Messages forwarded using this subscription keep the RETAIN flag they were published with. If false, Application Messages forwarded using this subscription have the RETAIN flag set to 0.)
