@@ -485,7 +485,7 @@ Other implementations of `mqtt.Store`:
 * [mqtt-level-store](http://npm.im/mqtt-level-store) which uses
   [Level-browserify](http://npm.im/level-browserify) to store the inflight
   data, making it usable both in Node and the Browser.
-* [mqtt-nedbb-store](https://github.com/behrad/mqtt-nedb-store) which
+* [mqtt-nedb-store](https://github.com/behrad/mqtt-nedb-store) which
   uses [nedb](https://www.npmjs.com/package/nedb) to store the inflight
   data.
 * [mqtt-localforage-store](http://npm.im/mqtt-localforage-store) which uses
