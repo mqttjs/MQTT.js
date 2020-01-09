@@ -72,7 +72,7 @@ var server = new Server.SecureServer({
 }).listen(port)
 
 describe('MqttSecureClient', function () {
-  var config = { protocol: 'mqtts', port: port, rejectUnauthorized: false }
+  var config = { protocol: 'mqtts', port: port, rejectUnauthorized: false, secureContext: {} }
   abstractClientTests(server, config)
 
   describe('with secure parameters', function () {
@@ -150,6 +150,26 @@ describe('MqttSecureClient', function () {
 
       // TODO node v0.8.x emits multiple close events
       client.once('close', function () {
+        done()
+      })
+    })
+
+    it('should pass the secureContext to the TLS layer', function (done) {
+      var secureContext = { fakeContext: 'fakeValue' }
+      
+      var client = mqtt.connect({
+        protocol: 'mqtts',
+        port: port,
+        ca: [fs.readFileSync(CERT)],
+        rejectUnauthorized: true,
+        secureContext: secureContext
+      })
+
+      client.on('error', function (err) {
+        done(err)
+      })
+
+      server.once('connect', function () {
         done()
       })
     })
