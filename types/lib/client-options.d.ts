@@ -129,7 +129,7 @@ export interface ISecureClientOptions {
    */
   ca?: string | string[] | Buffer | Buffer[]
   /**
-   * optionally override the TLS configuration to by default validate through trusted CA
+   * optionally override the TLS configuration to not validate the trusted CA
    */
   rejectUnauthorized?: boolean
   /**
