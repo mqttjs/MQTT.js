@@ -133,9 +133,9 @@ export interface ISecureClientOptions {
    */
   rejectUnauthorized?: boolean
   /**
-   * optionally affect OpenSSL protocol behavior through TLS options
+   * optionally override default TLS security options
    */
-  secureOptions?: number
+  secureContext?: Object
 
 }
 export interface IClientPublishOptions {
