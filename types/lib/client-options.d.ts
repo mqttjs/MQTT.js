@@ -125,15 +125,15 @@ export interface ISecureClientOptions {
    */
   cert?: string | string[] | Buffer | Buffer[]
   /**
-   * Optionally override the trusted CA certificates in PEM format
+   * optionally override the trusted CA certificates in PEM format
    */
   ca?: string | string[] | Buffer | Buffer[]
   /**
-   * Optionally override the TLS configuration to by default validate through trusted CA
+   * optionally override the TLS configuration to by default validate through trusted CA
    */
   rejectUnauthorized?: boolean
   /**
-   * Optionally affect OpenSSL protocol behavior through TLS options
+   * optionally affect OpenSSL protocol behavior through TLS options
    */
   secureOptions?: number
 
