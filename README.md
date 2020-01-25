@@ -383,7 +383,7 @@ Subscribe to a topic or topics
   keys the topic name and as value the QoS, like `{'test1': {qos: 0}, 'test2': {qos: 1}}`.
   MQTT `topic` wildcard characters are supported (`+` - for single level and `#` - for multi level)
 * `options` is the options to subscribe with, including:
-  * `qos` qos subscription level, default 0
+  * `qos` QoS subscription level, default 0
   * `nl` No Local MQTT 5.0 flag (If the value is true, Application Messages MUST NOT be forwarded to a connection with a ClientID equal to the ClientID of the publishing connection)
   * `rap` Retain as Published MQTT 5.0 flag (If true, Application Messages forwarded using this subscription keep the RETAIN flag they were published with. If false, Application Messages forwarded using this subscription have the RETAIN flag set to 0.)
   * `rh` Retain Handling MQTT 5.0 (This option specifies whether retained messages are sent when the subscription is established.)
@@ -395,7 +395,7 @@ Subscribe to a topic or topics
   * `err` a subscription error or an error that occurs when client is disconnecting
   * `granted` is an array of `{topic, qos}` where:
     * `topic` is a subscribed to topic
-    * `qos` is the granted qos level on it
+    * `qos` is the granted QoS level on it
 
 -------------------------------------------------------
 <a name="unsubscribe"></a>
