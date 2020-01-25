@@ -216,7 +216,7 @@ the `connect` event. Typically a `net.Socket`.
   * `queueQoSZero`: if connection is broken, queue outgoing QoS zero messages (default `true`)
   * `customHandleAcks`: MQTT 5 feature of custom handling puback and pubrec packets. Its callback:
       ```js
-        customHandleAcks: function(topic, message, packet, done) {*some logic wit colling done(error, reasonCode)*}
+        customHandleAcks: function(topic, message, packet, done) {/*some logic wit colling done(error, reasonCode)*/}
       ```
   * `properties`: properties MQTT 5.0.
   `object` that supports the following properties:
