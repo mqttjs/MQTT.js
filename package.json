@@ -27,10 +27,10 @@
     "typescript-compile-test": "tsc -p test/typescript/tsconfig.json",
     "typescript-compile-execute": "node test/typescript/*.js",
     "typescript-test": "npm run typescript-compile-test && npm run typescript-compile-execute",
-    "prepare": "npm run browser-build",
     "browser-build": "rimraf dist/ && mkdirp dist/ && browserify mqtt.js -s mqtt > dist/mqtt.js && uglifyjs < dist/mqtt.js > dist/mqtt.min.js",
-    "browser-test": "zuul --server test/browser/server.js --local --open test/browser/test.js",
-    "sauce-test": "zuul --server test/browser/server.js --tunnel ngrok -- test/browser/test.js",
+    "prepare": "npm run browser-build",
+    "browser-test": "airtap --server test/browser/server.js --local --open test/browser/test.js",
+    "sauce-test": "airtap --server test/browser/server.js -- test/browser/test.js",
     "ci": "npm run tslint && npm run typescript-compile-test && npm run test && codecov"
   },
   "pre-commit": [
@@ -81,6 +81,7 @@
   },
   "devDependencies": {
     "@types/node": "^10.0.0",
+    "airtap": "^3.0.0",
     "browserify": "^16.2.2",
     "codecov": "^3.0.4",
     "global": "^4.3.2",
@@ -89,7 +90,7 @@
     "mocha": "^4.1.0",
     "mqtt-connection": "^4.0.0",
     "pre-commit": "^1.2.2",
-    "rimraf": "^2.6.2",
+    "rimraf": "^3.0.2",
     "safe-buffer": "^5.1.2",
     "should": "^13.2.1",
     "sinon": "~1.17.7",
@@ -100,9 +101,7 @@
     "tslint-config-standard": "^8.0.1",
     "typescript": "^3.2.2",
     "uglify-js": "^3.4.5",
-    "ws": "^3.3.3",
-    "zuul": "^3.12.0",
-    "zuul-ngrok": "^4.0.0"
+    "ws": "^3.3.3"
   },
   "standard": {
     "env": [

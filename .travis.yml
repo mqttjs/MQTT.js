@@ -8,6 +8,7 @@ node_js:
 env:
 # For compiling optional extensions
 addons:
+  sauce_connect: true
   apt:
     sources:
       - ubuntu-toolchain-r-test
