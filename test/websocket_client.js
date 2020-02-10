@@ -15,8 +15,8 @@ function attachWebsocketServer (httpServer) {
   var webSocketServer = new WebSocket.Server({server: httpServer, perMessageDeflate: false})
 
   webSocketServer.on('connection', function (ws) {
-    let stream = WebSocket.createWebSocketStream(ws)
-    let connection = new MQTTConnection(stream)
+    var stream = WebSocket.createWebSocketStream(ws)
+    var connection = new MQTTConnection(stream)
     connection.protocol = ws.protocol
     httpServer.emit('client', connection)
     stream.on('error', function () {})
