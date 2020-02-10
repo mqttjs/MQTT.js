@@ -12,9 +12,9 @@ var port = 9999
 var httpServer = http.createServer()
 
 function attachWebsocketServer (httpServer) {
-  var wss = new WebSocketServer({server: httpServer, perMessageDeflate: false})
+  var webSocketServer = new WebSocket.Server({server: httpServer, perMessageDeflate: false})
 
-  wss.on('connection', function (ws) {
+  webSocketServer.on('connection', function (ws) {
     let stream = WebSocket.createWebSocketStream(ws)
     let connection = new MQTTConnection(stream)
     connection.protocol = ws.protocol
@@ -93,12 +93,11 @@ describe('Websocket Client', function () {
     return xtend(baseConfig, custom || {})
   }
 
-  it('should use mqtt as the protocol by default', function (done) {
+  it('should set mqtt as the protocol by default', function (done) {
     httpServer.once('client', function (client) {
       client.protocol.should.equal('mqtt')
     })
-    mqtt.connect(makeOptions()).on('connect', function (data) {
-      console.log(data)
+    mqtt.connect(makeOptions()).on('connect', function () {
       this.end(true, done)
     })
   })
@@ -128,9 +127,9 @@ describe('Websocket Client', function () {
       })
   })
 
-  it('should use mqttv3.1 as the protocol if using v3.1', function (done) {
+  it('should set mqttv3.1 as the protocol if using v3.1', function (done) {
     httpServer.once('client', function (client) {
-      client.stream.socket.protocol.should.equal('mqttv3.1')
+      client.protocol.should.equal('mqttv3.1')
     })
 
     var opts = makeOptions({

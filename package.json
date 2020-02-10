@@ -5,7 +5,8 @@
   "contributors": [
     "Adam Rudd <adamvrr@gmail.com>",
     "Matteo Collina <matteo.collina@gmail.com> (https://github.com/mcollina)",
-    "Siarhei Buntsevich <scarry0506@gmail.com> (https://github.com/scarry1992)"
+    "Siarhei Buntsevich <scarry0506@gmail.com> (https://github.com/scarry1992)",
+    "Yoseph Maguire <yomaguir@microsoft.com> (https://github.com/YoDaMa)"
   ],
   "keywords": [
     "mqtt",
@@ -27,10 +28,6 @@
     "typescript-compile-test": "tsc -p test/typescript/tsconfig.json",
     "typescript-compile-execute": "node test/typescript/*.js",
     "typescript-test": "npm run typescript-compile-test && npm run typescript-compile-execute",
-    "prepare": "npm run browser-build",
-    "browser-build": "rimraf dist/ && mkdirp dist/ && browserify mqtt.js -s mqtt > dist/mqtt.js && uglifyjs < dist/mqtt.js > dist/mqtt.min.js",
-    "browser-test": "zuul --server test/browser/server.js --local --open test/browser/test.js",
-    "sauce-test": "zuul --server test/browser/server.js --tunnel ngrok -- test/browser/test.js",
     "ci": "npm run tslint && npm run typescript-compile-test && npm run test && codecov"
   },
   "pre-commit": [
@@ -64,6 +61,7 @@
   },
   "dependencies": {
     "base64-js": "^1.3.0",
+    "bufferutil": "^4.0.1",
     "commist": "^1.0.0",
     "concat-stream": "^1.6.2",
     "end-of-stream": "^1.4.1",
@@ -76,6 +74,7 @@
     "readable-stream": "^2.3.6",
     "reinterval": "^1.1.0",
     "split2": "^3.1.0",
+    "utf-8-validate": "^5.0.2",
     "ws": "^7.2.1",
     "xtend": "^4.0.1"
   },
@@ -99,10 +98,7 @@
     "tslint": "^5.11.0",
     "tslint-config-standard": "^8.0.1",
     "typescript": "^3.2.2",
-    "uglify-js": "^3.4.5",
-    "ws": "^3.3.3",
-    "zuul": "^3.12.0",
-    "zuul-ngrok": "^4.0.0"
+    "uglify-js": "^3.4.5"
   },
   "standard": {
     "env": [
