@@ -80,7 +80,7 @@ export interface IClientOptions extends ISecureClientOptions {
     /**
      * the message to publish
      */
-    payload: Buffer
+    payload: Buffer | string
     /**
      * the QoS
      */
