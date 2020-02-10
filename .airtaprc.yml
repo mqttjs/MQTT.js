@@ -1,3 +1,4 @@
+sauce_connect: true
 ui: mocha-bdd
 browsers:
   - name: chrome
@@ -7,4 +8,6 @@ browsers:
   - name: opera
     version: latest
   - name: internet explorer
+    version: latest
+  - name: microsoftedge
     version: latest
