@@ -122,11 +122,11 @@ function start (startPort, done) {
 }
 
 if (require.main === module) {
-  start(process.env.PORT || process.env.ZUUL_PORT, function (err) {
+  start(process.env.PORT || process.env.AIRTAP_PORT, function (err) {
     if (err) {
       console.error(err)
       return
     }
-    console.log('tunnelled server started on port', process.env.PORT || process.env.ZUUL_PORT)
+    console.log('tunnelled server started on port', process.env.PORT || process.env.AIRTAP_PORT)
   })
 }
