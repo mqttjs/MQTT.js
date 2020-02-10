@@ -2,7 +2,6 @@
 
 var http = require('http')
 var WebSocket = require('ws')
-var WebSocketServer = require('ws').Server
 var MQTTConnection = require('mqtt-connection')
 var abstractClientTests = require('./abstract_client')
 var mqtt = require('../')
