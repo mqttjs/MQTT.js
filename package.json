@@ -90,6 +90,7 @@
     "mocha": "^4.1.0",
     "mqtt-connection": "^4.0.0",
     "pre-commit": "^1.2.2",
+    "rimraf": "^3.0.2",
     "safe-buffer": "^5.1.2",
     "should": "^13.2.1",
     "sinon": "~1.17.7",
