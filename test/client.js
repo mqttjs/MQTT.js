@@ -13,6 +13,9 @@ var Duplex = require('readable-stream').Duplex
 var Connection = require('mqtt-connection')
 var Server = require('./server')
 var FastServer = require('./server').FastMqttServer
+var assert = require('chai').assert
+var sinon = require('sinon')
+var EventEmitter = require('events').EventEmitter
 var port = 9876
 var server
 
@@ -113,23 +116,19 @@ function buildServer (fastFlag) {
 
 server = buildServer().listen(port)
 
+afterEach(() => {
+  // Restore the default sandbox here
+  sinon.restore()
+})
+
 describe('MqttClient', function () {
   describe('creating', function () {
-    it('should allow instantiation of MqttClient without the \'new\' operator', function (done) {
-      should(function () {
-        var client
-        try {
-          client = mqtt.MqttClient(function () {
-            throw Error('break')
-          }, {})
-          client.end()
-        } catch (err) {
-          if (err.message !== 'break') {
-            throw err
-          }
-          done()
-        }
-      }).not.throw('Object #<Object> has no method \'_setupStream\'')
+    it('should extend EventEmitter', function () {
+      var client, fakeStreamBuilder
+      fakeStreamBuilder = sinon.fake()
+      sinon.stub(mqtt.MqttClient.prototype, '_setupStream')
+      client = new mqtt.MqttClient(fakeStreamBuilder, {})
+      assert(client instanceof EventEmitter)
     })
   })
 
