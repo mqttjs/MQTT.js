@@ -153,5 +153,34 @@ describe('MqttSecureClient', function () {
         done()
       })
     })
+
+    it.only('should support SNI on the TLS connection', function (done) {
+      var hostname, client
+      server.removeAllListeners('secureConnection') // clear eventHandler
+      server.once('secureConnection', function (tlsSocket) { // one time eventHandler
+        assert(tlsSocket.servername) // validate SNI set
+        server.on('secureConnection', Server.setupConnection) // reset eventHandler
+
+        var that = this
+        var connection = new Connection(tlsSocket, function () {
+          that.emit('client', connection)
+        })
+      })
+
+      client = mqtt.connect({
+        protocol: 'mqtts',
+        port: port,
+        ca: [fs.readFileSync(CERT)],
+        rejectUnauthorized: true,
+      })
+      
+      client.on('error', function (err) {
+        done(err)
+      })
+
+      server.once('connect', function () {
+        done()
+      })
+    })
   })
 })
