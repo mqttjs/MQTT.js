@@ -9,6 +9,7 @@ var KEY = path.join(__dirname, 'helpers', 'tls-key.pem')
 var CERT = path.join(__dirname, 'helpers', 'tls-cert.pem')
 var WRONG_CERT = path.join(__dirname, 'helpers', 'wrong-cert.pem')
 var Server = require('./server')
+var assert = require('chai').assert
 
 var server = new Server.SecureServer({
   key: fs.readFileSync(KEY),
@@ -158,20 +159,18 @@ describe('MqttSecureClient', function () {
       var hostname, client
       server.removeAllListeners('secureConnection') // clear eventHandler
       server.once('secureConnection', function (tlsSocket) { // one time eventHandler
-        assert(tlsSocket.servername) // validate SNI set
-        server.on('secureConnection', Server.setupConnection) // reset eventHandler
-
-        var that = this
-        var connection = new Connection(tlsSocket, function () {
-          that.emit('client', connection)
-        })
+        assert.equal(tlsSocket.servername, hostname) // validate SNI set
+        server.setupConnection(tlsSocket)
       })
 
+
+      hostname = 'localhost'
       client = mqtt.connect({
         protocol: 'mqtts',
         port: port,
         ca: [fs.readFileSync(CERT)],
         rejectUnauthorized: true,
+        host: hostname
       })
       
       client.on('error', function (err) {
@@ -179,6 +178,7 @@ describe('MqttSecureClient', function () {
       })
 
       server.once('connect', function () {
+        server.on('secureConnection', server.setupConnection) // reset eventHandler
         done()
       })
     })

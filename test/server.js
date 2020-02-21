@@ -8,7 +8,7 @@ var MqttServer
 var FastMqttServer
 var MqttSecureServer
 
-var setupConnection = module.exports.setupConnection = function setupConnection (duplex) {
+var setupConnection = function (duplex) {
   var that = this
   var connection = new Connection(duplex, function () {
     that.emit('client', connection)
@@ -91,3 +91,5 @@ MqttSecureServer = module.exports.SecureServer =
     return this
   }
 inherits(MqttSecureServer, tls.Server)
+MqttSecureServer.prototype.setupConnection = setupConnection
+
