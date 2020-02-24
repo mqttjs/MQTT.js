@@ -92,4 +92,3 @@ MqttSecureServer = module.exports.SecureServer =
   }
 inherits(MqttSecureServer, tls.Server)
 MqttSecureServer.prototype.setupConnection = setupConnection
-

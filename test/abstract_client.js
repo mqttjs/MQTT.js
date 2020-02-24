@@ -9,6 +9,7 @@ var mqtt = require('../')
 var xtend = require('xtend')
 var Server = require('./server')
 var Store = require('./../lib/store')
+var assert = require('chai').assert
 var port = 9876
 
 module.exports = function (server, config) {
@@ -336,7 +337,7 @@ module.exports = function (server, config) {
       })
     })
 
-    it('should emit error', function (done) {
+    it('should emit error on invalid clientId', function (done) {
       var client = connect({clientId: 'invalid'})
       client.once('connect', function () {
         done(new Error('Should not emit connect'))
@@ -344,6 +345,17 @@ module.exports = function (server, config) {
       client.once('error', function (error) {
         var value = version === 5 ? 128 : 2
         should(error.code).be.equal(value) // code for clientID identifer rejected
+        client.end()
+        done()
+      })
+    })
+
+    it('should emit error event if the socket refuses the connection', function (done) {
+      // fake a port
+      var client = connect({ port: 4557 })
+
+      client.on('error', function (e) {
+        assert.equal(e.code, 'ECONNREFUSED')
         client.end()
         done()
       })
@@ -361,7 +373,7 @@ module.exports = function (server, config) {
   })
 
   describe('handling offline states', function () {
-    it('should emit offline events once when the client transitions from connected states to disconnected ones', function (done) {
+    it('should emit offline event once when the client transitions from connected states to disconnected ones', function (done) {
       var client = connect({reconnectPeriod: 20})
 
       client.on('connect', function () {
@@ -373,9 +385,11 @@ module.exports = function (server, config) {
       })
     })
 
-    it('should emit offline events once when the client (at first) can NOT connect to servers', function (done) {
+    it('should emit offline event once when the client (at first) can NOT connect to servers', function (done) {
       // fake a port
       var client = connect({ reconnectPeriod: 20, port: 4557 })
+
+      client.on('error', function () {})
 
       client.on('offline', function () {
         client.end(true, done)

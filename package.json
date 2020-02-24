@@ -5,7 +5,8 @@
   "contributors": [
     "Adam Rudd <adamvrr@gmail.com>",
     "Matteo Collina <matteo.collina@gmail.com> (https://github.com/mcollina)",
-    "Siarhei Buntsevich <scarry0506@gmail.com> (https://github.com/scarry1992)"
+    "Siarhei Buntsevich <scarry0506@gmail.com> (https://github.com/scarry1992)",
+    "Yoseph Maguire <yomaguir@microsoft.com> (https://github.com/YoDaMa)"
   ],
   "keywords": [
     "mqtt",
@@ -83,6 +84,7 @@
     "@types/node": "^10.0.0",
     "airtap": "^3.0.0",
     "browserify": "^16.2.2",
+    "chai": "^4.2.0",
     "codecov": "^3.0.4",
     "global": "^4.3.2",
     "istanbul": "^0.4.5",
@@ -93,14 +95,14 @@
     "rimraf": "^3.0.2",
     "safe-buffer": "^5.1.2",
     "should": "^13.2.1",
-    "sinon": "~1.17.7",
+    "sinon": "^9.0.0",
     "snazzy": "^8.0.0",
     "standard": "^11.0.1",
     "through2": "^3.0.0",
     "tslint": "^5.11.0",
     "tslint-config-standard": "^8.0.1",
     "typescript": "^3.2.2",
-    "uglify-js": "^3.4.5",
+    "uglify-js": "^3.8.0",
     "ws": "^3.3.3"
   },
   "standard": {
