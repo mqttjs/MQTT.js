@@ -135,6 +135,16 @@ mqtt pub -t 'hello' -h 'test.mosquitto.org' -m 'from MQTT.js'
 
 See `mqtt help <command>` for the command help.
 
+<a name="debug"></a>
+## Debug Logs
+
+MQTT.js uses the [debug](https://www.npmjs.com/package/debug#cmd) package for debugging purposes. To enable debug logs, add the following environment variable on runtime :
+```ps
+# (example using PowerShell, the VS Code default)
+$env:DEBUG='mqttjs*'
+
+```
+
 <a name="api"></a>
 ## API
 
