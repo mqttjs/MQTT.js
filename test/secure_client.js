@@ -155,7 +155,7 @@ describe('MqttSecureClient', function () {
       })
     })
 
-    it.only('should support SNI on the TLS connection', function (done) {
+    it('should support SNI on the TLS connection', function (done) {
       var hostname, client
       server.removeAllListeners('secureConnection') // clear eventHandler
       server.once('secureConnection', function (tlsSocket) { // one time eventHandler
