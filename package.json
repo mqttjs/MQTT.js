@@ -22,7 +22,7 @@
   "main": "mqtt.js",
   "types": "types/index.d.ts",
   "scripts": {
-    "test": "node_modules/.bin/nyc --reporter=lcov --reporter=text-summary ./node_modules/mocha/bin/_mocha",
+    "test": "node_modules/.bin/nyc --reporter=lcov --reporter=text ./node_modules/mocha/bin/_mocha",
     "pretest": "standard | snazzy",
     "tslint": "if [[ \"`node -v`\" != \"v4.3.2\" ]]; then tslint types/**/*.d.ts; fi",
     "typescript-compile-test": "tsc -p test/typescript/tsconfig.json",
