@@ -26,9 +26,7 @@ function attachWebsocketServer (wsServer) {
   return wsServer
 }
 
-attachWebsocketServer(server)
-
-server.on('client', function (client) {
+function attachClientEventHandlers (client) {
   client.on('connect', function (packet) {
     if (packet.clientId === 'invalid') {
       client.connack({ returnCode: 2 })
@@ -81,7 +79,18 @@ server.on('client', function (client) {
   client.on('pingreq', function () {
     client.pingresp()
   })
-}).listen(port)
+}
+
+attachWebsocketServer(server)
+
+var serverBuilder = function () {
+  var server = http.createServer()
+  attachWebsocketServer(server)
+  server.on('client', attachClientEventHandlers)
+  return server
+}
+
+server.on('client', attachClientEventHandlers).listen(port)
 
 describe('Websocket Client', function () {
   var baseConfig = { protocol: 'ws', port: port }
@@ -140,5 +149,5 @@ describe('Websocket Client', function () {
     })
   })
 
-  abstractClientTests(server, makeOptions())
+  abstractClientTests(serverBuilder, makeOptions())
 })

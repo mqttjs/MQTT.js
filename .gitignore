@@ -8,9 +8,9 @@ Session.vim
 *~
 npm-debug.log
 dist/
+.nyc_output
 yarn.lock
 coverage
-.nyc_output
 .idea/*
 test/typescript/.idea/*
 test/typescript/*.js

@@ -8,13 +8,11 @@ var port = 9899
 var KEY = path.join(__dirname, 'helpers', 'tls-key.pem')
 var CERT = path.join(__dirname, 'helpers', 'tls-cert.pem')
 var WRONG_CERT = path.join(__dirname, 'helpers', 'wrong-cert.pem')
-var Server = require('./server')
+var MqttSecureServer = require('./server').MqttSecureServer
 var assert = require('chai').assert
 
-var server = new Server.SecureServer({
-  key: fs.readFileSync(KEY),
-  cert: fs.readFileSync(CERT)
-}, function (client) {
+var serverListener = function (client) {
+  // this is the Server's MQTT Client
   client.on('connect', function (packet) {
     if (packet.clientId === 'invalid') {
       client.connack({returnCode: 2})
@@ -70,7 +68,12 @@ var server = new Server.SecureServer({
   client.on('pingreq', function () {
     client.pingresp()
   })
-}).listen(port)
+}
+
+var server = new MqttSecureServer({
+  key: fs.readFileSync(KEY),
+  cert: fs.readFileSync(CERT)
+}, serverListener).listen(port)
 
 describe('MqttSecureClient', function () {
   var config = { protocol: 'mqtts', port: port, rejectUnauthorized: false }
