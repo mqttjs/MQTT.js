@@ -83,12 +83,12 @@ function attachClientEventHandlers (client) {
 
 attachWebsocketServer(server)
 
-var serverBuilder = function () {
-  var server = http.createServer()
-  attachWebsocketServer(server)
-  server.on('client', attachClientEventHandlers)
-  return server
-}
+// var serverBuilder = function () {
+//   var server = http.createServer()
+//   attachWebsocketServer(server)
+//   server.on('client', attachClientEventHandlers)
+//   return server
+// }
 
 server.on('client', attachClientEventHandlers).listen(port)
 
@@ -102,7 +102,7 @@ describe('Websocket Client', function () {
 
   it('should use mqtt as the protocol by default', function (done) {
     server.once('client', function (client) {
-      client.stream.socket.protocol.should.equal('mqtt')
+      assert.strictEqual(client.stream.socket.protocol, 'mqtt')
     })
     mqtt.connect(makeOptions()).on('connect', function () {
       this.end(true, done)
@@ -136,7 +136,7 @@ describe('Websocket Client', function () {
 
   it('should use mqttv3.1 as the protocol if using v3.1', function (done) {
     server.once('client', function (client) {
-      client.stream.socket.protocol.should.equal('mqttv3.1')
+      assert.strictEqual(client.stream.socket.protocol, 'mqttv3.1')
     })
 
     var opts = makeOptions({
@@ -149,5 +149,5 @@ describe('Websocket Client', function () {
     })
   })
 
-  abstractClientTests(serverBuilder, makeOptions())
+  abstractClientTests(server, makeOptions())
 })
