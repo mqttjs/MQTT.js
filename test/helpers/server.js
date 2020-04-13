@@ -1,10 +1,11 @@
 'use strict'
 
-var Server = require('../server')
+var MqttServer = require('../server').MqttServer
+var MqttSecureServer = require('../server').MqttSecureServer
 var fs = require('fs')
 
 module.exports.init_server = function (PORT) {
-  var server = new Server(function (client) {
+  var server = new MqttServer(function (client) {
     client.on('connect', function () {
       client.connack(0)
     })
@@ -39,7 +40,7 @@ module.exports.init_server = function (PORT) {
 }
 
 module.exports.init_secure_server = function (port, key, cert) {
-  var server = new Server.SecureServer({
+  var server = new MqttSecureServer({
     key: fs.readFileSync(key),
     cert: fs.readFileSync(cert)
   }, function (client) {
