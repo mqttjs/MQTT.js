@@ -406,9 +406,7 @@ describe('MqttClient', function () {
     })
 
     it('should not fill the queue of subscribes if it cannot connect', function (done) {
-      // YM: works independently
-      // this.timeout(2500)
-
+      this.timeout(2500)
       var server2 = net.createServer(function (stream) {
         var serverClient = new Connection(stream)
 

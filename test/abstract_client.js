@@ -11,7 +11,6 @@ var MqttServer = require('./server').MqttServer
 var Store = require('./../lib/store')
 var assert = require('chai').assert
 var ports = require('./helpers/port_list')
-var debug = require('debug')('TEST:abstract_client')
 
 module.exports = function (server, config) {
   var version = config.protocolVersion || 4
@@ -172,7 +171,6 @@ module.exports = function (server, config) {
     })
 
     it('should emit end even on a failed connection', function (done) {
-      debug('client connecting.')
       var client = connect({host: 'this_hostname_should_not_exist'})
 
       var timeout = setTimeout(function () {
@@ -186,11 +184,9 @@ module.exports = function (server, config) {
 
       // after 200ms manually invoke client.end
       setTimeout(() => {
-        debug('manually invoking client.end')
         var boundEnd = client.end.bind(client)
         boundEnd()
       }, 200)
-      // setTimeout(client.end.bind(client), 200)
     })
 
     it.skip('should emit end only once for a reconnecting client', function (done) {
@@ -201,17 +197,14 @@ module.exports = function (server, config) {
       var client = connect({host: 'this_hostname_should_not_exist', connectTimeout: 10, reconnectPeriod: 20})
       setTimeout(done.bind(null), 1000)
       var endCallback = function () {
-        debug('endCallback triggered')
         assert.strictEqual(spy.callCount, 1, 'end was emitted more than once for reconnecting client')
       }
 
       var spy = sinon.spy(endCallback)
       client.on('end', spy)
       setTimeout(() => {
-        debug('timeout invoked. Manually calling client.end()')
         client.end.bind(client)
         client.end()
-        // client.end.bind(client)
       }, 300)
     })
   })
@@ -291,7 +284,6 @@ module.exports = function (server, config) {
         var client = connect({ clean: false })
         client.on('error', function (err) {
           done(err)
-          // done(new Error('should have thrown'));
         })
       } catch (err) {
         assert.strictEqual(err.message, 'Missing clientId for unclean clients')
@@ -385,18 +377,12 @@ module.exports = function (server, config) {
       // method completes closing the stores and invokes the callback, and another time when the
       // stream is closed. When the stream is closed, for some reason the closeStores method is called
       // a second time.
-      debug('connect client1')
       var client1 = connect()
-      debug('connect client2')
       var client2 = connect()
 
       assert.notStrictEqual(client1.options.clientId, client2.options.clientId)
-      debug('ending client 1.')
       client1.end(true, () => {
-        debug('client1.end complete.')
-        debug('ending client 2.')
         client2.end(true, () => {
-          debug('client2.end complete.')
           done()
         })
       })
@@ -1230,8 +1216,6 @@ module.exports = function (server, config) {
           cmd: 'publish'
         }, function () {
           // cleans up the client
-          // client.end()
-
           client._sendPacket = sinon.spy()
           client._handlePubrel({cmd: 'pubrel', messageId: messageId}, function (err) {
             assert.exists(err)
@@ -2091,7 +2075,6 @@ module.exports = function (server, config) {
             qos: 0,
             retain: false
           })
-          // client.end(done)
         })
       })
     })

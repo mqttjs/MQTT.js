@@ -83,13 +83,6 @@ function attachClientEventHandlers (client) {
 
 attachWebsocketServer(server)
 
-// var serverBuilder = function () {
-//   var server = http.createServer()
-//   attachWebsocketServer(server)
-//   server.on('client', attachClientEventHandlers)
-//   return server
-// }
-
 server.on('client', attachClientEventHandlers).listen(port)
 
 describe('Websocket Client', function () {
