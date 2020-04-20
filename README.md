@@ -27,6 +27,11 @@ Guide](https://cdn.rawgit.com/feross/standard/master/badge.svg)](https://github.
 <a name="notes"></a>
 ## Important notes for existing users
 
+v4.0.0 removes support for all end of life node versions, and now supports node v10 and v12. It also adds improvements to
+debug logging, along with some feature additions.
+
+v3.0.0 adds support for MQTT 5, support for node v10.x, and many fixes to improve reliability.
+
 v2.0.0 removes support for node v0.8, v0.10 and v0.12, and it is 3x faster in sending
 packets. It also removes all the deprecated functionality in v1.0.0,
 mainly `mqtt.createConnection` and `mqtt.Server`. From v2.0.0,
