@@ -1,6 +1,6 @@
-name: Node.js CI
+name: MQTT.js CI
 
-on: 
+on:
   push:
     branches:
     - master
