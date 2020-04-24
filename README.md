@@ -27,7 +27,7 @@ Guide](https://cdn.rawgit.com/feross/standard/master/badge.svg)](https://github.
 <a name="notes"></a>
 ## Important notes for existing users
 
-v4.0.0 removes support for all end of life node versions, and now supports node v10 and v12. It also adds improvements to
+v4.0.0 removes support for all end of life node versions, and now supports node v12 and v14. It also adds improvements to
 debug logging, along with some feature additions.
 
 v3.0.0 adds support for MQTT 5, support for node v10.x, and many fixes to improve reliability.
@@ -49,6 +49,13 @@ performance by a 30% factor, embeds Websocket support
 support for QoS 1 and 2. The previous API is still supported but
 deprecated, as such, it is not documented in this README.
 
+For v4.0.0:
+As a __breaking change__, by default a error handler is built into the MQTT.js client, so if any
+errors are emitted and the user has not created an event handler on the client for errors, the client will
+not break as a result of unhandled errors. Additionally, typical TLS errors like `ECONNREFUSED`, `ECONNRESET` have been
+added to a list of TLS errors that will be emitted from the MQTT.js client, and so can be handled as connection errors.
+
+For v2.0.0:
 As a __breaking change__, the `encoding` option in the old client is
 removed, and now everything is UTF-8 with the exception of the
 `password` in the CONNECT message and `payload` in the PUBLISH message,
