@@ -1,11 +1,7 @@
 ![mqtt.js](https://raw.githubusercontent.com/mqttjs/MQTT.js/137ee0e3940c1f01049a30248c70f24dc6e6f829/MQTT.js.png)
 =======
 
-[![Build Status](https://travis-ci.org/mqttjs/MQTT.js.svg)](https://travis-ci.org/mqttjs/MQTT.js) [![codecov](https://codecov.io/gh/mqttjs/MQTT.js/branch/master/graph/badge.svg)](https://codecov.io/gh/mqttjs/MQTT.js)
-
-[![NPM](https://nodei.co/npm-dl/mqtt.png)](https://nodei.co/npm/mqtt/) [![NPM](https://nodei.co/npm/mqtt.png)](https://nodei.co/npm/mqtt/)
-
-[![Sauce Test Status](https://saucelabs.com/browser-matrix/mqttjs.svg)](https://saucelabs.com/u/mqttjs)
+![Github Test Status](https://github.com/mqttjs/MQTT.js/workflows/MQTT.js%20CI/badge.svg)  [![codecov](https://codecov.io/gh/mqttjs/MQTT.js/branch/master/graph/badge.svg)](https://codecov.io/gh/mqttjs/MQTT.js)
 
 MQTT.js is a client library for the [MQTT](http://mqtt.org/) protocol, written
 in JavaScript for node.js and the browser.
@@ -31,6 +27,11 @@ Guide](https://cdn.rawgit.com/feross/standard/master/badge.svg)](https://github.
 <a name="notes"></a>
 ## Important notes for existing users
 
+v4.0.0 removes support for all end of life node versions, and now supports node v12 and v14. It also adds improvements to
+debug logging, along with some feature additions.
+
+v3.0.0 adds support for MQTT 5, support for node v10.x, and many fixes to improve reliability.
+
 v2.0.0 removes support for node v0.8, v0.10 and v0.12, and it is 3x faster in sending
 packets. It also removes all the deprecated functionality in v1.0.0,
 mainly `mqtt.createConnection` and `mqtt.Server`. From v2.0.0,
@@ -48,6 +49,13 @@ performance by a 30% factor, embeds Websocket support
 support for QoS 1 and 2. The previous API is still supported but
 deprecated, as such, it is not documented in this README.
 
+For v4.0.0:
+As a __breaking change__, by default a error handler is built into the MQTT.js client, so if any
+errors are emitted and the user has not created an event handler on the client for errors, the client will
+not break as a result of unhandled errors. Additionally, typical TLS errors like `ECONNREFUSED`, `ECONNRESET` have been
+added to a list of TLS errors that will be emitted from the MQTT.js client, and so can be handled as connection errors.
+
+For v2.0.0:
 As a __breaking change__, the `encoding` option in the old client is
 removed, and now everything is UTF-8 with the exception of the
 `password` in the CONNECT message and `payload` in the PUBLISH message,
