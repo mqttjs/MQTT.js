@@ -51,8 +51,7 @@ describe('MQTT 5.0', function () {
       assert.strictEqual(error.message, 'Packet has no Authentication Method')
       // client will not be connected, so we will call done.
       assert.isTrue(client.disconnected, 'validate client is disconnected')
-      client.end(true)
-      done()
+      client.end(true, done)
     })
   })
 
