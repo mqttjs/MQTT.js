@@ -183,10 +183,13 @@ Example (update clientId & username on each reconnect):
 
     const connection = await mqtt.connectAsync(<wss url>, {
       ...,
-      transformWsUrl,
+      transformWsUrl: transformUrl,
     });
 
 ```
+Now every time a new WebSocket connection is opened (hopefully not too often),
+we will get a fresh signed url or fresh auth token data.
+
 Note: Currently this hook does _not_ support promises, meaning that in order to
 use the latest auth token, you must have some outside mechanism running that
 handles application-level authentication refreshing so that the websocket
