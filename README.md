@@ -222,7 +222,7 @@ the `connect` event. Typically a `net.Socket`.
   * `clean`: `true`, set to false to receive QoS 1 and 2 messages while
     offline
   * `reconnectPeriod`: `1000` milliseconds, interval between two
-    reconnections
+    reconnections. Disable auto reconnect by setting to `0`.
   * `connectTimeout`: `30 * 1000` milliseconds, time to wait before a
     CONNACK is received
   * `username`: the username required by your broker, if any
