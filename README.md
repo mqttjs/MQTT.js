@@ -151,6 +151,60 @@ $env:DEBUG='mqttjs*'
 
 ```
 
+<a name="reconnecting"></a>
+## About Reconnection
+
+An important part of any websocket connection is what to do when a connection
+drops off and the client needs to reconnect. MQTT has built-in reconnection
+support that can be configured to behave in ways that suite the application.
+
+#### Refresh Authentication Options / Signed Urls
+
+When an mqtt connection drops and needs to reconnect, it's common to require
+that any authentication associated with the connection is kept current with
+the underlying auth mechanism. For instance some applications may pass an auth
+token with connection options on the initial connection, while other cloud
+services may require a url be signed with each connection.
+
+By the time the reconnect happens in the application lifecycle, the original
+auth data may have expired.
+
+To address this we can use a hook called `transformWsUrl` to manipulate
+either of the connection url or the client options at the time of a reconnect.
+
+Example (update clientId & username on each reconnect):
+```
+    const transformWsUrl = (url, options, client) => {
+      client.options.username = `token=${this.get_current_auth_token()}`;
+      client.options.clientId = `${this.get_updated_clientId()}`;
+
+      return `${this.get_signed_cloud_url(url)`;
+    }
+
+    const connection = await mqtt.connectAsync(<wss url>, {
+      ...,
+      transformWsUrl,
+    });
+
+```
+Note: Currently this hook does _not_ support promises, meaning that in order to
+use the latest auth token, you must have some outside mechanism running that
+handles application-level authentication refreshing so that the websocket
+connection can simply grab the latest valid token or signed url.
+
+
+#### Enabling Reconnection with `reconnectPeriod` option
+
+To ensure that the mqtt client automatically tries to reconnect when the
+connection is dropped, you must set the client option `reconnectPeriod` to a
+value greater than 0. A value of 0 will disable reconnection and then terminate
+the final connection when it drops.
+
+The default value is 1000 ms which means it will try to reconnect 1 second
+after losing the connection.
+
+
+
 <a name="api"></a>
 ## API
 
@@ -640,29 +694,6 @@ you can then use mqtt.js in the browser with the same api than node's one.
 ```
 
 Your broker should accept websocket connection (see [MQTT over Websockets](https://github.com/mcollina/mosca/wiki/MQTT-over-Websockets) to setup [Mosca](http://mcollina.github.io/mosca/)).
-
-<a name="signedurls"></a>
-### Signed WebSocket Urls
-
-If you need to sign an url, for example for [AWS IoT](http://docs.aws.amazon.com/iot/latest/developerguide/protocols.html#mqtt-ws),
-then you can pass in a `transformWsUrl` function to the <a href="#connect"><code>mqtt.<b>connect()</b></code></a> options
-This is needed because signed urls have an expiry and eventually upon reconnects, a new signed url needs to be created:
-
-```js
-// This module doesn't actually exist, just an example
-var awsIotUrlSigner = require('awsIotUrlSigner')
-mqtt.connect('wss://a2ukbzaqo9vbpb.iot.ap-southeast-1.amazonaws.com/mqtt', {
-  transformWsUrl: function (url, options, client) {
-    // It's possible to inspect some state on options(pre parsed url components)
-    // and the client (reconnect state etc)
-    return awsIotUrlSigner(url)
-  }
-})
-
-// Now every time a new WebSocket connection is opened (hopefully not that
-// often) we get a freshly signed url
-
-```
 
 <a name="qos"></a>
 ## About QoS
