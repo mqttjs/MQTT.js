@@ -156,9 +156,9 @@ $env:DEBUG='mqttjs*'
 
 An important part of any websocket connection is what to do when a connection
 drops off and the client needs to reconnect. MQTT has built-in reconnection
-support that can be configured to behave in ways that suite the application.
+support that can be configured to behave in ways that suit the application.
 
-#### Refresh Authentication Options / Signed Urls
+#### Refresh Authentication Options / Signed Urls with `transformWsUrl` (Websocket Only)
 
 When an mqtt connection drops and needs to reconnect, it's common to require
 that any authentication associated with the connection is kept current with
