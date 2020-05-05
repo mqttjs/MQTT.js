@@ -2376,8 +2376,9 @@ module.exports = function (server, config) {
 
     var reconnectPeriodTests = [ {period: 200}, {period: 2000}, {period: 4000} ]
     reconnectPeriodTests.forEach((test) => {
-      it('should allow specification of a reconnect period', function (done) {
+      it('should allow specification of a reconnect period (' + test.period + 'ms)', function (done) {
         var end
+        var reconnectSlushTime = 200
         var client = connect({reconnectPeriod: test.period})
         var reconnect = false
         var start = Date.now()
@@ -2389,11 +2390,12 @@ module.exports = function (server, config) {
           } else {
             end = Date.now()
             client.end(() => {
-              if (end - start >= test.period - 200 && end - start <= test.period + 200) {
+              let reconnectPeriodDuringTest = end - start
+              if (reconnectPeriodDuringTest >= test.period - reconnectSlushTime && reconnectPeriodDuringTest <= test.period + reconnectSlushTime) {
                 // give the connection a 200 ms slush window
                 done()
               } else {
-                done(new Error('Strange reconnect period'))
+                done(new Error('Strange reconnect period: ' + reconnectPeriodDuringTest))
               }
             })
           }
