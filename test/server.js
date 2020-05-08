@@ -6,6 +6,9 @@ var Connection = require('mqtt-connection')
 
 /**
  * MqttServer
+ * All we are doing here is updating the connection event handler to take
+ * the connection object (a net.Socket), and create a MQTT specific connection over
+ * that net.Socket. Then once
  *
  * @param {Function} listener - fired on client connection
  */
