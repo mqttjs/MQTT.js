@@ -41,7 +41,7 @@
   "bin": {
     "mqtt_pub": "./bin/pub.js",
     "mqtt_sub": "./bin/sub.js",
-    "mqtt": "./mqtt.js"
+    "mqtt": "./bin/mqtt.js"
   },
   "files": [
     "dist/",
