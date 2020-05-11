@@ -49,8 +49,6 @@
     "doc",
     "lib",
     "bin",
-    "examples",
-    "test",
     "types",
     "mqtt.js"
   ],
