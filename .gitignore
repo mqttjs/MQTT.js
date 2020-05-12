@@ -10,6 +10,7 @@ npm-debug.log
 dist/
 yarn.lock
 coverage
+.nyc_output
 .idea/*
 test/typescript/.idea/*
 test/typescript/*.js

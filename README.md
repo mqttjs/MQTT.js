@@ -1,11 +1,7 @@
 ![mqtt.js](https://raw.githubusercontent.com/mqttjs/MQTT.js/137ee0e3940c1f01049a30248c70f24dc6e6f829/MQTT.js.png)
 =======
 
-[![Build Status](https://travis-ci.org/mqttjs/MQTT.js.svg)](https://travis-ci.org/mqttjs/MQTT.js) [![codecov](https://codecov.io/gh/mqttjs/MQTT.js/branch/master/graph/badge.svg)](https://codecov.io/gh/mqttjs/MQTT.js)
-
-[![NPM](https://nodei.co/npm-dl/mqtt.png)](https://nodei.co/npm/mqtt/) [![NPM](https://nodei.co/npm/mqtt.png)](https://nodei.co/npm/mqtt/)
-
-[![Sauce Test Status](https://saucelabs.com/browser-matrix/mqttjs.svg)](https://saucelabs.com/u/mqttjs)
+![Github Test Status](https://github.com/mqttjs/MQTT.js/workflows/MQTT.js%20CI/badge.svg)  [![codecov](https://codecov.io/gh/mqttjs/MQTT.js/branch/master/graph/badge.svg)](https://codecov.io/gh/mqttjs/MQTT.js)
 
 MQTT.js is a client library for the [MQTT](http://mqtt.org/) protocol, written
 in JavaScript for node.js and the browser.
@@ -31,22 +27,24 @@ Guide](https://cdn.rawgit.com/feross/standard/master/badge.svg)](https://github.
 <a name="notes"></a>
 ## Important notes for existing users
 
-v2.0.0 removes support for node v0.8, v0.10 and v0.12, and it is 3x faster in sending
+__v4.0.0__ (Released 04/2020) removes support for all end of life node versions, and now supports node v12 and v14. It also adds improvements to
+debug logging, along with some feature additions.
+
+As a __breaking change__, by default a error handler is built into the MQTT.js client, so if any
+errors are emitted and the user has not created an event handler on the client for errors, the client will
+not break as a result of unhandled errors. Additionally, typical TLS errors like `ECONNREFUSED`, `ECONNRESET` have been
+added to a list of TLS errors that will be emitted from the MQTT.js client, and so can be handled as connection errors.
+
+__v3.0.0__ adds support for MQTT 5, support for node v10.x, and many fixes to improve reliability.
+
+__Note:__ MQTT v5 support is experimental as it has not been implemented by brokers yet.
+
+__v2.0.0__ removes support for node v0.8, v0.10 and v0.12, and it is 3x faster in sending
 packets. It also removes all the deprecated functionality in v1.0.0,
 mainly `mqtt.createConnection` and `mqtt.Server`. From v2.0.0,
 subscriptions are restored upon reconnection if `clean: true`.
 v1.x.x is now in *LTS*, and it will keep being supported as long as
 there are v0.8, v0.10 and v0.12 users.
-
-v1.0.0 improves the overall architecture of the project, which is now
-split into three components: MQTT.js keeps the Client,
-[mqtt-connection](http://npm.im/mqtt-connection) includes the barebone
-Connection code for server-side usage, and [mqtt-packet](http://npm.im/mqtt-packet)
-includes the protocol parser and generator. The new Client improves
-performance by a 30% factor, embeds Websocket support
-([MOWS](http://npm.im/mows) is now deprecated), and it has a better
-support for QoS 1 and 2. The previous API is still supported but
-deprecated, as such, it is not documented in this README.
 
 As a __breaking change__, the `encoding` option in the old client is
 removed, and now everything is UTF-8 with the exception of the
@@ -56,7 +54,15 @@ which are `Buffer`.
 Another __breaking change__ is that MQTT.js now defaults to MQTT v3.1.1,
 so to support old brokers, please read the [client options doc](#client).
 
-MQTT v5 support is experimental as it has not been implemented by brokers yet.
+__v1.0.0__ improves the overall architecture of the project, which is now
+split into three components: MQTT.js keeps the Client,
+[mqtt-connection](http://npm.im/mqtt-connection) includes the barebone
+Connection code for server-side usage, and [mqtt-packet](http://npm.im/mqtt-packet)
+includes the protocol parser and generator. The new Client improves
+performance by a 30% factor, embeds Websocket support
+([MOWS](http://npm.im/mows) is now deprecated), and it has a better
+support for QoS 1 and 2. The previous API is still supported but
+deprecated, as such, it is not documented in this README.
 
 <a name="install"></a>
 ## Installation
@@ -135,6 +141,73 @@ mqtt pub -t 'hello' -h 'test.mosquitto.org' -m 'from MQTT.js'
 
 See `mqtt help <command>` for the command help.
 
+<a name="debug"></a>
+## Debug Logs
+
+MQTT.js uses the [debug](https://www.npmjs.com/package/debug#cmd) package for debugging purposes. To enable debug logs, add the following environment variable on runtime :
+```ps
+# (example using PowerShell, the VS Code default)
+$env:DEBUG='mqttjs*'
+
+```
+
+<a name="reconnecting"></a>
+## About Reconnection
+
+An important part of any websocket connection is what to do when a connection
+drops off and the client needs to reconnect. MQTT has built-in reconnection
+support that can be configured to behave in ways that suit the application.
+
+#### Refresh Authentication Options / Signed Urls with `transformWsUrl` (Websocket Only)
+
+When an mqtt connection drops and needs to reconnect, it's common to require
+that any authentication associated with the connection is kept current with
+the underlying auth mechanism. For instance some applications may pass an auth
+token with connection options on the initial connection, while other cloud
+services may require a url be signed with each connection.
+
+By the time the reconnect happens in the application lifecycle, the original
+auth data may have expired.
+
+To address this we can use a hook called `transformWsUrl` to manipulate
+either of the connection url or the client options at the time of a reconnect.
+
+Example (update clientId & username on each reconnect):
+```
+    const transformWsUrl = (url, options, client) => {
+      client.options.username = `token=${this.get_current_auth_token()}`;
+      client.options.clientId = `${this.get_updated_clientId()}`;
+
+      return `${this.get_signed_cloud_url(url)`;
+    }
+
+    const connection = await mqtt.connectAsync(<wss url>, {
+      ...,
+      transformWsUrl: transformUrl,
+    });
+
+```
+Now every time a new WebSocket connection is opened (hopefully not too often),
+we will get a fresh signed url or fresh auth token data.
+
+Note: Currently this hook does _not_ support promises, meaning that in order to
+use the latest auth token, you must have some outside mechanism running that
+handles application-level authentication refreshing so that the websocket
+connection can simply grab the latest valid token or signed url.
+
+
+#### Enabling Reconnection with `reconnectPeriod` option
+
+To ensure that the mqtt client automatically tries to reconnect when the
+connection is dropped, you must set the client option `reconnectPeriod` to a
+value greater than 0. A value of 0 will disable reconnection and then terminate
+the final connection when it drops.
+
+The default value is 1000 ms which means it will try to reconnect 1 second
+after losing the connection.
+
+
+
 <a name="api"></a>
 ## API
 
@@ -206,7 +279,7 @@ the `connect` event. Typically a `net.Socket`.
   * `clean`: `true`, set to false to receive QoS 1 and 2 messages while
     offline
   * `reconnectPeriod`: `1000` milliseconds, interval between two
-    reconnections
+    reconnections. Disable auto reconnect by setting to `0`.
   * `connectTimeout`: `30 * 1000` milliseconds, time to wait before a
     CONNACK is received
   * `username`: the username required by your broker, if any
@@ -216,7 +289,7 @@ the `connect` event. Typically a `net.Socket`.
   * `queueQoSZero`: if connection is broken, queue outgoing QoS zero messages (default `true`)
   * `customHandleAcks`: MQTT 5 feature of custom handling puback and pubrec packets. Its callback:
       ```js
-        customHandleAcks: function(topic, message, packet, done) {*some logic wit colling done(error, reasonCode)*}
+        customHandleAcks: function(topic, message, packet, done) {/*some logic wit colling done(error, reasonCode)*/}
       ```
   * `properties`: properties MQTT 5.0.
   `object` that supports the following properties:
@@ -310,6 +383,13 @@ Emitted when the client goes offline.
 Emitted when the client cannot connect (i.e. connack rc != 0) or when a
 parsing error occurs.
 
+The following TLS errors will be emitted as an `error` event:
+
+* `ECONNREFUSED`
+* `ECONNRESET`
+* `EADDRINUSE`
+* `ENOTFOUND`
+
 #### Event `'end'`
 
 `function () {}`
@@ -383,7 +463,7 @@ Subscribe to a topic or topics
   keys the topic name and as value the QoS, like `{'test1': {qos: 0}, 'test2': {qos: 1}}`.
   MQTT `topic` wildcard characters are supported (`+` - for single level and `#` - for multi level)
 * `options` is the options to subscribe with, including:
-  * `qos` qos subscription level, default 0
+  * `qos` QoS subscription level, default 0
   * `nl` No Local MQTT 5.0 flag (If the value is true, Application Messages MUST NOT be forwarded to a connection with a ClientID equal to the ClientID of the publishing connection)
   * `rap` Retain as Published MQTT 5.0 flag (If true, Application Messages forwarded using this subscription keep the RETAIN flag they were published with. If false, Application Messages forwarded using this subscription have the RETAIN flag set to 0.)
   * `rh` Retain Handling MQTT 5.0 (This option specifies whether retained messages are sent when the subscription is established.)
@@ -395,7 +475,7 @@ Subscribe to a topic or topics
   * `err` a subscription error or an error that occurs when client is disconnecting
   * `granted` is an array of `{topic, qos}` where:
     * `topic` is a subscribed to topic
-    * `qos` is the granted qos level on it
+    * `qos` is the granted QoS level on it
 
 -------------------------------------------------------
 <a name="unsubscribe"></a>
@@ -485,7 +565,7 @@ Other implementations of `mqtt.Store`:
 * [mqtt-level-store](http://npm.im/mqtt-level-store) which uses
   [Level-browserify](http://npm.im/level-browserify) to store the inflight
   data, making it usable both in Node and the Browser.
-* [mqtt-nedbb-store](https://github.com/behrad/mqtt-nedb-store) which
+* [mqtt-nedb-store](https://github.com/behrad/mqtt-nedb-store) which
   uses [nedb](https://www.npmjs.com/package/nedb) to store the inflight
   data.
 * [mqtt-localforage-store](http://npm.im/mqtt-localforage-store) which uses
@@ -617,29 +697,6 @@ you can then use mqtt.js in the browser with the same api than node's one.
 ```
 
 Your broker should accept websocket connection (see [MQTT over Websockets](https://github.com/mcollina/mosca/wiki/MQTT-over-Websockets) to setup [Mosca](http://mcollina.github.io/mosca/)).
-
-<a name="signedurls"></a>
-### Signed WebSocket Urls
-
-If you need to sign an url, for example for [AWS IoT](http://docs.aws.amazon.com/iot/latest/developerguide/protocols.html#mqtt-ws),
-then you can pass in a `transformWsUrl` function to the <a href="#connect"><code>mqtt.<b>connect()</b></code></a> options
-This is needed because signed urls have an expiry and eventually upon reconnects, a new signed url needs to be created:
-
-```js
-// This module doesn't actually exist, just an example
-var awsIotUrlSigner = require('awsIotUrlSigner')
-mqtt.connect('wss://a2ukbzaqo9vbpb.iot.ap-southeast-1.amazonaws.com/mqtt', {
-  transformWsUrl: function (url, options, client) {
-    // It's possible to inspect some state on options(pre parsed url components)
-    // and the client (reconnect state etc)
-    return awsIotUrlSigner(url)
-  }
-})
-
-// Now every time a new WebSocket connection is opened (hopefully not that
-// often) we get a freshly signed url
-
-```
 
 <a name="qos"></a>
 ## About QoS

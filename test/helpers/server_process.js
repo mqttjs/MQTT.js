@@ -1,8 +1,8 @@
 'use strict'
 
-var Server = require('../server')
+var MqttServer = require('../server').MqttServer
 
-new Server(function (client) {
+new MqttServer(function (client) {
   client.on('connect', function () {
     client.connack({ returnCode: 0 })
   })

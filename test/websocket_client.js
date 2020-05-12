@@ -26,9 +26,7 @@ function attachWebsocketServer (wsServer) {
   return wsServer
 }
 
-attachWebsocketServer(server)
-
-server.on('client', function (client) {
+function attachClientEventHandlers (client) {
   client.on('connect', function (packet) {
     if (packet.clientId === 'invalid') {
       client.connack({ returnCode: 2 })
@@ -81,7 +79,11 @@ server.on('client', function (client) {
   client.on('pingreq', function () {
     client.pingresp()
   })
-}).listen(port)
+}
+
+attachWebsocketServer(server)
+
+server.on('client', attachClientEventHandlers).listen(port)
 
 describe('Websocket Client', function () {
   var baseConfig = { protocol: 'ws', port: port }
@@ -93,7 +95,7 @@ describe('Websocket Client', function () {
 
   it('should use mqtt as the protocol by default', function (done) {
     server.once('client', function (client) {
-      client.stream.socket.protocol.should.equal('mqtt')
+      assert.strictEqual(client.stream.socket.protocol, 'mqtt')
     })
     mqtt.connect(makeOptions()).on('connect', function () {
       this.end(true, done)
@@ -127,7 +129,7 @@ describe('Websocket Client', function () {
 
   it('should use mqttv3.1 as the protocol if using v3.1', function (done) {
     server.once('client', function (client) {
-      client.stream.socket.protocol.should.equal('mqttv3.1')
+      assert.strictEqual(client.stream.socket.protocol, 'mqttv3.1')
     })
 
     var opts = makeOptions({
