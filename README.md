@@ -647,6 +647,60 @@ import { connect } from 'mqtt';
 const client  = connect('alis://test.mosquitto.org');
 ```
 
+## QQ Mini Program
+Surport [QQ Mini Program](https://q.qq.com/#/). See [Doc](https://q.qq.com/wiki/develop/miniprogram/frame/).
+<a name="example"></a>
+
+## Example(js)
+
+```js
+var mqtt = require('mqtt')
+var client = mqtt.connect('qqs://test.mosquitto.org')
+```
+
+## Example(ts)
+
+```ts
+import { connect } from 'mqtt';
+const client  = connect('qqs://test.mosquitto.org');
+```
+
+## Baidu Mini Program
+Surport [Baidu Mini Program](https://smartprogram.baidu.com/developer/index.html). See [Doc](https://smartprogram.baidu.com/docs/introduction/enter_application/).
+<a name="example"></a>
+
+## Example(js)
+
+```js
+var mqtt = require('mqtt')
+var client = mqtt.connect('bds://test.mosquitto.org')
+```
+
+## Example(ts)
+
+```ts
+import { connect } from 'mqtt';
+const client  = connect('bds://test.mosquitto.org');
+```
+
+## ByteDance Mini Program
+Surport [ByteDance Mini Program](https://developer.toutiao.com/). See [Doc](https://microapp.bytedance.com/dev/cn/mini-app/develop/framework/basic-reference/introduction).
+<a name="example"></a>
+
+## Example(js)
+
+```js
+var mqtt = require('mqtt')
+var client = mqtt.connect('tts://test.mosquitto.org')
+```
+
+## Example(ts)
+
+```ts
+import { connect } from 'mqtt';
+const client  = connect('tts://test.mosquitto.org');
+```
+
 <a name="browserify"></a>
 ### Browserify
 
