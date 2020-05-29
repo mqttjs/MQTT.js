@@ -10,9 +10,7 @@
 var path = require('path')
 var commist = require('commist')()
 var helpMe = require('help-me')({
-  // the default
   dir: path.join(path.dirname(require.main.filename), '/../doc'),
-  // the default
   ext: '.txt'
 })
 
