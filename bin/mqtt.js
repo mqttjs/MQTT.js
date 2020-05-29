@@ -11,8 +11,8 @@
 var commist = require('commist')()
 var helpMe = require('help-me')()
 
-commist.register('publish', require('./bin/pub'))
-commist.register('subscribe', require('./bin/sub'))
+commist.register('publish', require('./pub'))
+commist.register('subscribe', require('./sub'))
 commist.register('version', function () {
   console.log('MQTT.js version:', require('./package.json').version)
 })
