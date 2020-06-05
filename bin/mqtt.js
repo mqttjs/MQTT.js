@@ -7,14 +7,17 @@
  *
  * See LICENSE for more information
  */
-
+var path = require('path')
 var commist = require('commist')()
-var helpMe = require('help-me')()
+var helpMe = require('help-me')({
+  dir: path.join(path.dirname(require.main.filename), '/../doc'),
+  ext: '.txt'
+})
 
-commist.register('publish', require('./bin/pub'))
-commist.register('subscribe', require('./bin/sub'))
+commist.register('publish', require('./pub'))
+commist.register('subscribe', require('./sub'))
 commist.register('version', function () {
-  console.log('MQTT.js version:', require('./package.json').version)
+  console.log('MQTT.js version:', require('./../package.json').version)
 })
 commist.register('help', helpMe.toStdout)
 
