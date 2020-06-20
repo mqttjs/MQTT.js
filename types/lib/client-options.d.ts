@@ -94,7 +94,7 @@ export interface IClientOptions extends ISecureClientOptions {
     * */
     properties?: {
       willDelayInterval?: number,
-      payloadFormatIndicator?: number,
+      payloadFormatIndicator?: boolean,
       messageExpiryInterval?: number,
       contentType?: string,
       responseTopic?: string,
