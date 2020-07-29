@@ -92,7 +92,7 @@ module.exports = function (server, config) {
 
     it('should pass store close error to end callback but not to end listeners (incomingStore)', function (done) {
       var store = new Store()
-      var client = connect({ incomingStore: store})
+      var client = connect({ incomingStore: store })
 
       store.close = function (cb) {
         cb(new Error('test'))
@@ -116,7 +116,7 @@ module.exports = function (server, config) {
 
     it('should pass store close error to end callback but not to end listeners (outgoingStore)', function (done) {
       var store = new Store()
-      var client = connect({ outgoingStore: store})
+      var client = connect({ outgoingStore: store })
 
       store.close = function (cb) {
         cb(new Error('test'))
