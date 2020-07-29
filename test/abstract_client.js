@@ -90,24 +90,48 @@ module.exports = function (server, config) {
       })
     })
 
-    it('should pass store close error to end callback but not to end listeners', function (done) {
+    it('should pass store close error to end callback but not to end listeners (incomingStore)', function (done) {
       var store = new Store()
-      var client = connect({outgoingStore: store})
+      var client = connect({ incomingStore: store})
 
       store.close = function (cb) {
         cb(new Error('test'))
       }
       client.once('end', function () {
         if (arguments.length === 0) {
-          return done()
+          return
         }
-        throw new Error('no argument shoould be passed to event')
+        throw new Error('no argument should be passed to event')
       })
 
       client.once('connect', function () {
-        client.end(function (test) {
-          if (test && test.message === 'test') {
-            return
+        client.end(function (testError) {
+          if (testError && testError.message === 'test') {
+            return done()
+          }
+          throw new Error('bad argument passed to callback')
+        })
+      })
+    })
+
+    it('should pass store close error to end callback but not to end listeners (outgoingStore)', function (done) {
+      var store = new Store()
+      var client = connect({ outgoingStore: store})
+
+      store.close = function (cb) {
+        cb(new Error('test'))
+      }
+      client.once('end', function () {
+        if (arguments.length === 0) {
+          return
+        }
+        throw new Error('no argument should be passed to event')
+      })
+
+      client.once('connect', function () {
+        client.end(function (testError) {
+          if (testError && testError.message === 'test') {
+            return done()
           }
           throw new Error('bad argument passed to callback')
         })
