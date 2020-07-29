@@ -144,20 +144,6 @@ export interface IClientPublishOptions {
    */
   dup?: boolean
 
-  /*
-   *  MQTT 5.0 properties object
-   */
-  properties?: {
-    payloadFormatIndicator?: number,
-    messageExpiryInterval?: number,
-    topicAlias?: string,
-    responseTopic?: string,
-    correlationData?: Buffer,
-    userProperties?: Object,
-    subscriptionIdentifier?: number,
-    contentType?: string
-  }
-
   /**
    * callback called when message is put into `outgoingStore`
    */
