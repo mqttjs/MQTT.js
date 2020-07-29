@@ -143,7 +143,6 @@ export interface IClientPublishOptions {
    * whether or not mark a message as duplicate
    */
   dup?: boolean
-
   /**
    * callback called when message is put into `outgoingStore`
    */
