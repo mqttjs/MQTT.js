@@ -4,6 +4,8 @@ var http = require('http')
 var WebSocket = require('ws')
 var MQTTConnection = require('mqtt-connection')
 var abstractClientTests = require('./abstract_client')
+var ports = require('./helpers/port_list')
+var serverBuilder = require('./server_helpers_for_client_tests').serverBuilder
 var mqtt = require('../')
 var xtend = require('xtend')
 var assert = require('assert')
@@ -138,6 +140,41 @@ describe('Websocket Client', function () {
 
     mqtt.connect(opts).on('connect', function () {
       this.end(true, done)
+    })
+  })
+
+  describe('reconnecting', () => {
+    it('should reconnect to multiple host-ports-protocol combinations if servers is passed', function (done) {
+      this.timeout(15000)
+      var actualURL41 = 'wss://localhost:9917/'
+      var actualURL42 = 'ws://localhost:9918/'
+      var serverPort41 = serverBuilder(true).listen(ports.PORTAND41)
+      var serverPort42 = serverBuilder(true).listen(ports.PORTAND42)
+
+      serverPort42.on('listening', function () {
+        let client = mqtt.connect({
+          protocol: 'wss',
+          servers: [
+            { port: ports.PORTAND41, host: 'localhost' },
+            { port: ports.PORTAND42, host: 'localhost', protocol: 'ws' }
+          ],
+          keepalive: 50
+        })
+        serverPort41.once('client', function () {
+          assert.equal(client.stream.url, actualURL41, 'Protocol for second client should use the default protocol: wss, on port: port + 41.')
+          client.end(true, done)
+          serverPort41.close()
+        })
+        serverPort42.on('client', function (c) {
+          assert.equal(client.stream.url, actualURL42, 'Protocol for connection should use ws, on port: port + 42.')
+          c.stream.destroy()
+          serverPort42.close()
+        })
+
+        client.once('connect', function () {
+          client.stream.destroy()
+        })
+      })
     })
   })
 
