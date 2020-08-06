@@ -120,7 +120,7 @@ describe('Websocket Client', function () {
       }})
     mqtt.connect(opts)
       .on('connect', function () {
-        assert.equal(this.stream.socket.url, expected)
+        assert.equal(this.stream.url, expected)
         assert.equal(actual, expected)
         this.end(true, done)
       })
@@ -128,7 +128,7 @@ describe('Websocket Client', function () {
 
   it('should use mqttv3.1 as the protocol if using v3.1', function (done) {
     httpServer.once('client', function (client) {
-      assert.strictEqual(client.stream.socket.protocol, 'mqttv3.1')
+      assert.strictEqual(client.protocol, 'mqttv3.1')
     })
 
     var opts = makeOptions({
