@@ -1,29 +1,28 @@
 'use strict'
 
 var http = require('http')
-var websocket = require('websocket-stream')
-var WebSocketServer = require('ws').Server
-var Connection = require('mqtt-connection')
+var WebSocket = require('ws')
+var MQTTConnection = require('mqtt-connection')
 var abstractClientTests = require('./abstract_client')
 var mqtt = require('../')
 var xtend = require('xtend')
 var assert = require('assert')
 var port = 9999
-var server = http.createServer()
+var httpServer = http.createServer()
 
-function attachWebsocketServer (wsServer) {
-  var wss = new WebSocketServer({server: wsServer, perMessageDeflate: false})
+function attachWebsocketServer (httpServer) {
+  var webSocketServer = new WebSocket.Server({server: httpServer, perMessageDeflate: false})
 
-  wss.on('connection', function (ws) {
-    var stream = websocket(ws)
-    var connection = new Connection(stream)
-
-    wsServer.emit('client', connection)
+  webSocketServer.on('connection', function (ws) {
+    var stream = WebSocket.createWebSocketStream(ws)
+    var connection = new MQTTConnection(stream)
+    connection.protocol = ws.protocol
+    httpServer.emit('client', connection)
     stream.on('error', function () {})
     connection.on('error', function () {})
   })
 
-  return wsServer
+  return httpServer
 }
 
 function attachClientEventHandlers (client) {
@@ -31,7 +30,7 @@ function attachClientEventHandlers (client) {
     if (packet.clientId === 'invalid') {
       client.connack({ returnCode: 2 })
     } else {
-      server.emit('connect', client)
+      httpServer.emit('connect', client)
       client.connack({returnCode: 0})
     }
   })
@@ -81,9 +80,9 @@ function attachClientEventHandlers (client) {
   })
 }
 
-attachWebsocketServer(server)
+attachWebsocketServer(httpServer)
 
-server.on('client', attachClientEventHandlers).listen(port)
+httpServer.on('client', attachClientEventHandlers).listen(port)
 
 describe('Websocket Client', function () {
   var baseConfig = { protocol: 'ws', port: port }
@@ -94,8 +93,8 @@ describe('Websocket Client', function () {
   }
 
   it('should use mqtt as the protocol by default', function (done) {
-    server.once('client', function (client) {
-      assert.strictEqual(client.stream.socket.protocol, 'mqtt')
+    httpServer.once('client', function (client) {
+      assert.strictEqual(client.protocol, 'mqtt')
     })
     mqtt.connect(makeOptions()).on('connect', function () {
       this.end(true, done)
@@ -128,7 +127,7 @@ describe('Websocket Client', function () {
   })
 
   it('should use mqttv3.1 as the protocol if using v3.1', function (done) {
-    server.once('client', function (client) {
+    httpServer.once('client', function (client) {
       assert.strictEqual(client.stream.socket.protocol, 'mqttv3.1')
     })
 
@@ -142,5 +141,5 @@ describe('Websocket Client', function () {
     })
   })
 
-  abstractClientTests(server, makeOptions())
+  abstractClientTests(httpServer, makeOptions())
 })
