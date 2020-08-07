@@ -297,8 +297,10 @@ module.exports = function (server, config) {
         serverClient.once('connect', function (packet) {
           assert.include(packet.clientId, 'testclient')
           assert.isFalse(packet.clean)
-          serverClient.disconnect()
-          client.end(true, done)
+          client.end(false, function (err) {
+            serverClient.disconnect()
+            done(err)
+          })
         })
       })
     })
