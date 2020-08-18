@@ -1,6 +1,6 @@
 'use strict'
 
-var mqtt = require('../../types')
+var mqtt = require('../../')
 
 var clientId = 'mqttjs_' + Math.random().toString(16).substr(2, 8)
 
@@ -51,3 +51,5 @@ client.on('message', function (topic, message, packet) {
 client.on('close', function () {
   console.log(clientId + ' disconnected')
 })
+
+process.stdin.pipe();
