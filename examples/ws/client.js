@@ -51,5 +51,3 @@ client.on('message', function (topic, message, packet) {
 client.on('close', function () {
   console.log(clientId + ' disconnected')
 })
-
-process.stdin.pipe();
