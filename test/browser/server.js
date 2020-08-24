@@ -1,8 +1,8 @@
 'use strict'
 
 var handleClient
-var websocket = require('websocket-stream')
-var WebSocketServer = require('ws').Server
+var WS = require('ws')
+var WebSocketServer = WS.Server
 var Connection = require('mqtt-connection')
 var http = require('http')
 
@@ -109,7 +109,7 @@ function start (startPort, done) {
       return ws.close()
     }
 
-    stream = websocket(ws)
+    stream = WS.createWebSocketStream(ws)
     connection = new Connection(stream)
     handleClient.call(server, connection)
   })
