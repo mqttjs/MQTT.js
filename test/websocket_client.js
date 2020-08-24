@@ -103,7 +103,7 @@ describe('Websocket Client', function () {
     })
   })
 
-  it('should be able transform the url (for e.g. to sign it)', function (done) {
+  it('should be able to transform the url (for e.g. to sign it)', function (done) {
     var baseUrl = 'ws://localhost:9999/mqtt'
     var sig = '?AUTH=token'
     var expected = baseUrl + sig

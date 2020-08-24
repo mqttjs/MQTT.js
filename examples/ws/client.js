@@ -1,6 +1,6 @@
 'use strict'
 
-var mqtt = require('../../types')
+var mqtt = require('../../')
 
 var clientId = 'mqttjs_' + Math.random().toString(16).substr(2, 8)
 
