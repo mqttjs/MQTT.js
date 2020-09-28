@@ -696,6 +696,44 @@ you can then use mqtt.js in the browser with the same api than node's one.
 </html>
 ```
 
+### React
+```
+npm install -g webpack                    // Install webpack globally
+npm install mqtt                          // Install MQTT library
+cd node_modules/mqtt
+npm install .                             // Install dev deps at current dir
+webpack mqtt.js --output-library mqtt     // Build
+
+// now you can import the library with ES6 import, commonJS not tested
+```
+
+
+```javascript
+import React from 'react';
+import mqtt from 'mqtt';
+
+export default () => {
+  const [connectionStatus, setConnectionStatus] = React.useState(false);
+  const [messages, setMessages] = React.useState([]);
+  
+  useEffect(() => {
+    const client = mqtt.connect(SOME_URL);
+    client.on('connect', () => setConnectionStatus(true));
+    client.on('message', (topic, payload, packet) => {
+      setMessages(messages.concat(payload.toString()));
+    });
+  }, []);
+  
+  return (
+    <>
+     {lastMessages.map((message) => (
+        <h2>{message}</h2>
+     )
+    </>
+  )
+}
+```
+
 Your broker should accept websocket connection (see [MQTT over Websockets](https://github.com/mcollina/mosca/wiki/MQTT-over-Websockets) to setup [Mosca](http://mcollina.github.io/mosca/)).
 
 <a name="qos"></a>
