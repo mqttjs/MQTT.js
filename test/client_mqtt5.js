@@ -2,6 +2,7 @@
 
 var mqtt = require('..')
 var abstractClientTests = require('./abstract_client')
+var Buffer = require('safe-buffer').Buffer
 var MqttServer = require('./server').MqttServer
 var assert = require('chai').assert
 var serverBuilder = require('./server_helpers_for_client_tests').serverBuilder

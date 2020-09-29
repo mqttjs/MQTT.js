@@ -1,15 +1,13 @@
 'use strict'
 
-var Transform = require('stream').Transform
+var through = require('through2')
 
 module.exports.testStream = function () {
-  return new Transform({
-    transform (buf, enc, cb) {
-      var that = this
-      setImmediate(function () {
-        that.push(buf)
-        cb()
-      })
-    }
+  return through(function (buf, enc, cb) {
+    var that = this
+    setImmediate(function () {
+      that.push(buf)
+      cb()
+    })
   })
 }

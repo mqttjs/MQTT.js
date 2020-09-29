@@ -8,7 +8,8 @@ var abstractClientTests = require('./abstract_client')
 var net = require('net')
 var eos = require('end-of-stream')
 var mqttPacket = require('mqtt-packet')
-var Duplex = require('stream').Duplex
+var Buffer = require('safe-buffer').Buffer
+var Duplex = require('readable-stream').Duplex
 var Connection = require('mqtt-connection')
 var MqttServer = require('./server').MqttServer
 var util = require('util')
@@ -202,7 +203,7 @@ describe('MqttClient', function () {
         }
       })
 
-      client = mqtt.connect({ port: 3481, host: 'localhost', keepalive: 1 })
+      client = mqtt.connect({ port: 3000, host: 'localhost', keepalive: 1 })
       client.once('connect', function () {
         innerServer.kill('SIGINT') // mocks server shutdown
         client.once('close', function () {
