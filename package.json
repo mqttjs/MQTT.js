@@ -62,7 +62,6 @@
     "net": false
   },
   "dependencies": {
-    "base64-js": "^1.3.0",
     "commist": "^1.0.0",
     "concat-stream": "^1.6.2",
     "debug": "^4.1.1",
