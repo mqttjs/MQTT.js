@@ -71,7 +71,6 @@
     "minimist": "^1.2.5",
     "mqtt-packet": "^6.3.2",
     "pump": "^3.0.0",
-    "readable-stream": "^2.3.6",
     "reinterval": "^1.1.0",
     "split2": "^3.1.0",
     "ws": "^7.3.1",
