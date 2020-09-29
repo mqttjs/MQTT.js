@@ -203,7 +203,7 @@ describe('MqttClient', function () {
         }
       })
 
-      client = mqtt.connect({ port: 3000, host: 'localhost', keepalive: 1 })
+      client = mqtt.connect({ port: 3481, host: 'localhost', keepalive: 1 })
       client.once('connect', function () {
         innerServer.kill('SIGINT') // mocks server shutdown
         client.once('close', function () {
