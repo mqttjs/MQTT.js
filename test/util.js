@@ -1,6 +1,6 @@
 'use strict'
 
-var Transform = require('stream').Transform
+var Transform = require('readable-stream').Transform
 
 module.exports.testStream = function () {
   return new Transform({
