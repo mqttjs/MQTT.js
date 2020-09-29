@@ -7,7 +7,7 @@ var pump = require('pump')
 var path = require('path')
 var fs = require('fs')
 var concat = require('concat-stream')
-var Writable = require('stream').Writable
+var Writable = require('readable-stream').Writable
 var helpMe = require('help-me')({
   dir: path.join(__dirname, '..', 'doc')
 })
