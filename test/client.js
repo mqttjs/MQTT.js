@@ -8,7 +8,6 @@ var abstractClientTests = require('./abstract_client')
 var net = require('net')
 var eos = require('end-of-stream')
 var mqttPacket = require('mqtt-packet')
-var Buffer = require('safe-buffer').Buffer
 var Duplex = require('stream').Duplex
 var Connection = require('mqtt-connection')
 var MqttServer = require('./server').MqttServer
