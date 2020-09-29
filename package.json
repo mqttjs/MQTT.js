@@ -63,7 +63,7 @@
   },
   "dependencies": {
     "commist": "^1.0.0",
-    "concat-stream": "^1.6.2",
+    "concat-stream": "^2.0.0",
     "debug": "^4.1.1",
     "end-of-stream": "^1.4.1",
     "help-me": "^1.0.1",
