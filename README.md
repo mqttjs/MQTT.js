@@ -510,14 +510,14 @@ Close the client, accepts the following options:
 
 -------------------------------------------------------
 <a name="removeOutgoingMessage"></a>
-### mqtt.Client#removeOutgoingMessage(mid)
+### mqtt.Client#removeOutgoingMessage(mId)
 
 Remove a message from the outgoingStore.
 The outgoing callback will be called with Error('Message removed') if the message is removed.
 
 After this function is called, the messageId is released and becomes reusable.
 
-* `mid`: The messageId of the message in the outgoingStore.
+* `mId`: The messageId of the message in the outgoingStore.
 
 -------------------------------------------------------
 <a name="reconnect"></a>
