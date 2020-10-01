@@ -491,7 +491,7 @@ Unsubscribe from a topic or topics
 
 -------------------------------------------------------
 <a name="end"></a>
-### mqtt.Client#end([force], [options], [cb])
+### mqtt.Client#end([force], [options], [callback])
 
 Close the client, accepts the following options:
 
@@ -505,7 +505,7 @@ Close the client, accepts the following options:
     * `reasonString`: representing the reason for the disconnect `string`,
     * `userProperties`: The User Property is allowed to appear multiple times to represent multiple name, value pairs `object`,
     * `serverReference`: String which can be used by the Client to identify another Server to use `string`
-* `cb`: will be called when the client is closed. This parameter is
+* `callback`: will be called when the client is closed. This parameter is
   optional.
 
 -------------------------------------------------------
@@ -715,7 +715,7 @@ import mqtt from 'mqtt';
 export default () => {
   const [connectionStatus, setConnectionStatus] = React.useState(false);
   const [messages, setMessages] = React.useState([]);
-  
+
   useEffect(() => {
     const client = mqtt.connect(SOME_URL);
     client.on('connect', () => setConnectionStatus(true));
@@ -723,7 +723,7 @@ export default () => {
       setMessages(messages.concat(payload.toString()));
     });
   }, []);
-  
+
   return (
     <>
      {lastMessages.map((message) => (
