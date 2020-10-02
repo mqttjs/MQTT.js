@@ -18,7 +18,7 @@ var options = {
 var client = mqtt.connect(options)
 
 client.subscribe('messages')
-client.publish('messages', 'Current time is: ' + new Date())
+client.publish('messages', 'Current time is: ' +  new Date())
 client.on('message', function (topic, message) {
   console.log(message)
 })
