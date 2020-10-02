@@ -19,6 +19,9 @@ in JavaScript for node.js and the browser.
 * [License](#license)
 
 MQTT.js is an OPEN Open Source Project, see the [Contributing](#contributing) section to find out what this means.
+Security Enabled
+ 
+MQTT makes it easy to encrypt messages using TLS and authenticate clients using modern authentication protocols, such as OAuth.
 
 [![JavaScript Style
 Guide](https://cdn.rawgit.com/feross/standard/master/badge.svg)](https://github.com/feross/standard)
