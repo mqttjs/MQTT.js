@@ -2,7 +2,6 @@
 
 var mqtt = require('mqtt')
 var HttpsProxyAgent = require('https-proxy-agent')
-var url = require('url')
 /*
 host: host of the endpoint you want to connect e.g. my.mqqt.host.com
 path: path to you endpoint e.g. '/foo/bar/mqtt'
@@ -13,8 +12,8 @@ proxy: your proxy e.g. proxy.foo.bar.com
 port: http proxy port e.g. 8080
 */
 var proxy = process.env.http_proxy || 'http://<proxy>:<port>'
-var parsed = url.parse(endpoint)
-var proxyOpts = url.parse(proxy)
+var parsed = new URL(endpoint)
+var proxyOpts = new URL(proxy)
 // true for wss
 proxyOpts.secureEndpoint = parsed.protocol ? parsed.protocol === 'wss:' : true
 var agent = new HttpsProxyAgent(proxyOpts)
