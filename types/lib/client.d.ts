@@ -225,6 +225,14 @@ export declare class MqttClient extends events.EventEmitter {
   public handleMessage (packet: Packet, callback: PacketCallback): void
 
   /**
+   * TODO
+   *
+   * @param packet packet the packet
+   * @api public
+   */
+  public handleAuth (packet: Packet): void
+
+  /**
    * getLastMessageId
    */
   public getLastMessageId (): number
