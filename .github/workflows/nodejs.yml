@@ -17,6 +17,7 @@ jobs:
       matrix:
         node-version: [10.x, 12.x, 14.x]
       fail-fast: false
+      max-parallel: 1
 
     steps:
     - uses: actions/checkout@v2
