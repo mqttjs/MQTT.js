@@ -17,23 +17,32 @@ describe('MQTT 5.0', function () {
 
   var topicAliasTests = [
     {properties: {}, name: 'should allow any topicAlias when no topicAliasMaximum provided in settings'},
-    {properties: { topicAliasMaximum: 15 }, name: 'should not allow topicAlias > topicAliasMaximum when topicAliasMaximum provided in settings'}
+    {properties: { topicAliasMaximum: 15 }, name: 'should not allow topicAlias > serverTopicAliasMaximum when TopicAliasMaximum provided in CONNACK'}
   ]
 
   topicAliasTests.forEach(function (test) {
     it(test.name, function (done) {
+      var server215 = new MqttServer(function (serverClient) {
+        serverClient.on('connect', function (packet) {
+          serverClient.connack({
+            reasonCode: 0,
+            properties: test.properties
+          })
+        })
+      }).listen(ports.PORTAND215)
       this.timeout(15000)
-      server.once('client', function (serverClient) {
+      server215.once('client', function (serverClient) {
         serverClient.on('publish', function (packet) {
           if (packet.properties && packet.properties.topicAlias) {
             done(new Error('Packet should not have topicAlias'))
             return false
           } else {
+            server215.close()
             serverClient.end(done)
           }
         })
       })
-      var opts = {host: 'localhost', port: ports.PORTAND115, protocolVersion: 5, properties: test.properties}
+      var opts = {host: 'localhost', port: ports.PORTAND215, protocolVersion: 5, properties: {}}
       var client = mqtt.connect(opts)
       client.publish('t/h', 'Message', { properties: { topicAlias: 22 } })
     })
@@ -105,8 +114,8 @@ describe('MQTT 5.0', function () {
     var client = mqtt.connect(opts)
     client.on('connect', function () {
       assert.strictEqual(client.options.keepalive, 16)
-      assert.strictEqual(client.options.properties.topicAliasMaximum, 15)
-      assert.strictEqual(client.options.properties.maximumPacketSize, 95)
+      assert.strictEqual(client.options.properties.serverTopicAliasMaximum, 15)
+      assert.strictEqual(client.options.properties.serverMaximumPacketSize, 95)
       server116.close()
       client.end(true, done)
     })
