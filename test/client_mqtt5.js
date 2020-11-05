@@ -114,8 +114,8 @@ describe('MQTT 5.0', function () {
     var client = mqtt.connect(opts)
     client.on('connect', function () {
       assert.strictEqual(client.options.keepalive, 16)
-      assert.strictEqual(client.options.properties.serverTopicAliasMaximum, 15)
-      assert.strictEqual(client.options.properties.serverMaximumPacketSize, 95)
+      assert.strictEqual(client.options.serverProperties.topicAliasMaximum, 15)
+      assert.strictEqual(client.options.serverProperties.maximumPacketSize, 95)
       server116.close()
       client.end(true, done)
     })
