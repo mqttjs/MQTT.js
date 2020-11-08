@@ -117,8 +117,8 @@ function start (args) {
     args.rejectUnauthorized = false
   }
 
-  args.topic = (args.topic || args._.shift()).toString()
-  args.message = (args.message || args._.shift()).toString()
+  args.topic = args.topic || args._.shift()
+  args.message = args.message || args._.shift()
 
   if (!args.topic) {
     console.error('missing topic\n')
