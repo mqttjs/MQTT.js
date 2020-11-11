@@ -102,12 +102,12 @@ Hello mqtt
 
 If you want to run your own MQTT broker, you can use
 [Mosquitto](http://mosquitto.org) or
-[Mosca](http://mcollina.github.io/mosca/), and launch it.
-You can also use a test instance: test.mosquitto.org and test.mosca.io
-are both public.
+[Aedes-cli](https://github.com/moscajs/aedes-cli), and launch it.
+
+You can also use a test instance: test.mosquitto.org.
 
 If you do not want to install a separate broker, you can try using the
-[mqtt-connection](https://www.npmjs.com/package/mqtt-connection).
+[Aedes](https://github.com/moscajs/aedes).
 
 to use MQTT.js in the browser see the [browserify](#browserify) section
 
@@ -734,7 +734,7 @@ export default () => {
 }
 ```
 
-Your broker should accept websocket connection (see [MQTT over Websockets](https://github.com/mcollina/mosca/wiki/MQTT-over-Websockets) to setup [Mosca](http://mcollina.github.io/mosca/)).
+Your broker should accept websocket connection (see [MQTT over Websockets](https://github.com/moscajs/aedes/blob/master/docs/Examples.md#mqtt-server-over-websocket-using-server-factory) to setup [Aedes](https://github.com/moscajs/aedes)).
 
 <a name="qos"></a>
 ## About QoS
