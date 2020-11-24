@@ -1,7 +1,7 @@
 {
   "name": "mqtt",
   "description": "A library for the MQTT protocol",
-  "version": "4.2.5",
+  "version": "4.2.6",
   "contributors": [
     "Adam Rudd <adamvrr@gmail.com>",
     "Matteo Collina <matteo.collina@gmail.com> (https://github.com/mcollina)",
@@ -35,7 +35,7 @@
     "ci": "npm run tslint && npm run typescript-compile-test && npm run test && codecov"
   },
   "pre-commit": [
-    "test",
+    "pretest",
     "tslint"
   ],
   "bin": {
