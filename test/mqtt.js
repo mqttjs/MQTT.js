@@ -18,7 +18,7 @@ describe('mqtt', function () {
       (function () {
         var c = mqtt.connect('foo.bar.com')
         c.end()
-      }).should.throw('Invalid URL: foo.bar.com')
+      }).should.throw('Missing protocol')
     })
 
     it('should throw an error when called with no protocol specified - with options', function () {
