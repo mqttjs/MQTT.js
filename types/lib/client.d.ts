@@ -225,12 +225,13 @@ export declare class MqttClient extends events.EventEmitter {
   public handleMessage (packet: Packet, callback: PacketCallback): void
 
   /**
-   * TODO
+   * Handler to handle auth packages to implement mqtt5 enhanced auth procedures
    *
-   * @param packet packet the packet
+   * @param packet the auth packet to handle
+   * @param callback call when finished
    * @api public
    */
-  public handleAuth (packet: IAuthPacket): void
+  public handleAuth (packet: IAuthPacket, callback: PacketCallback): void
 
   /**
    * getLastMessageId
