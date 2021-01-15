@@ -7,10 +7,10 @@ var should = require('chai').should
 var sinon = require('sinon')
 var mqtt = require('../')
 var xtend = require('xtend')
-var MqttServer = require('./server').MqttServer
 var Store = require('./../lib/store')
 var assert = require('chai').assert
 var ports = require('./helpers/port_list')
+var serverBuilder = require('./server_helpers_for_client_tests').serverBuilder
 
 module.exports = function (server, config) {
   var version = config.protocolVersion || 4
@@ -598,9 +598,10 @@ module.exports = function (server, config) {
       var incomingStore = new mqtt.Store({ clean: false })
       var outgoingStore = new mqtt.Store({ clean: false })
       var publishCount = 0
-      var server2 = new MqttServer(function (serverClient) {
+      var server2 = serverBuilder(config.protocol, function (serverClient) {
         serverClient.on('connect', function () {
-          serverClient.connack({returnCode: 0})
+          var connack = version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
+          serverClient.connack(connack)
         })
         serverClient.on('publish', function (packet) {
           if (packet.qos !== 0) {
@@ -626,7 +627,7 @@ module.exports = function (server, config) {
       })
 
       server2.listen(ports.PORTAND50, function () {
-        client = mqtt.connect({
+        client = connect({
           port: ports.PORTAND50,
           host: 'localhost',
           clean: false,
@@ -1292,13 +1293,14 @@ module.exports = function (server, config) {
       var client = {}
       var incomingStore = new mqtt.Store({ clean: false })
       var outgoingStore = new mqtt.Store({ clean: false })
-      var server2 = new MqttServer(function (serverClient) {
+      var server2 = serverBuilder(config.protocol, function (serverClient) {
         // errors are not interesting for this test
         // but they might happen on some platforms
         serverClient.on('error', function () {})
 
         serverClient.on('connect', function (packet) {
-          serverClient.connack({returnCode: 0})
+          var connack = version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
+          serverClient.connack(connack)
         })
         serverClient.on('publish', function (packet) {
           serverClient.puback({messageId: packet.messageId})
@@ -1321,7 +1323,7 @@ module.exports = function (server, config) {
       })
 
       server2.listen(ports.PORTAND50, function () {
-        client = mqtt.connect({
+        client = connect({
           port: ports.PORTAND50,
           host: 'localhost',
           clean: false,
@@ -2655,9 +2657,10 @@ module.exports = function (server, config) {
     it('should not resubscribe when reconnecting if suback is error', function (done) {
       var tryReconnect = true
       var reconnectEvent = false
-      var server2 = new MqttServer(function (serverClient) {
+      var server2 = serverBuilder(config.protocol, function (serverClient) {
         serverClient.on('connect', function (packet) {
-          serverClient.connack({returnCode: 0})
+          var connack = version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
+          serverClient.connack(connack)
         })
         serverClient.on('subscribe', function (packet) {
           serverClient.suback({
@@ -2671,7 +2674,7 @@ module.exports = function (server, config) {
       })
 
       server2.listen(ports.PORTAND49, function () {
-        var client = mqtt.connect({
+        var client = connect({
           port: ports.PORTAND49,
           host: 'localhost',
           reconnectPeriod: 100
@@ -2708,9 +2711,10 @@ module.exports = function (server, config) {
       var client = {}
       var incomingStore = new mqtt.Store({ clean: false })
       var outgoingStore = new mqtt.Store({ clean: false })
-      var server2 = new MqttServer(function (serverClient) {
+      var server2 = serverBuilder(config.protocol, function (serverClient) {
         serverClient.on('connect', function (packet) {
-          serverClient.connack({returnCode: 0})
+          var connack = version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
+          serverClient.connack(connack)
           if (reconnect) {
             serverClient.pubrel({ messageId: 1 })
           }
@@ -2741,7 +2745,7 @@ module.exports = function (server, config) {
       })
 
       server2.listen(ports.PORTAND50, function () {
-        client = mqtt.connect({
+        client = connect({
           port: ports.PORTAND50,
           host: 'localhost',
           clean: false,
@@ -2768,9 +2772,10 @@ module.exports = function (server, config) {
     it('should clear outgoing if close from server', function (done) {
       var reconnect = false
       var client = {}
-      var server2 = new MqttServer(function (serverClient) {
+      var server2 = serverBuilder(config.protocol, function (serverClient) {
         serverClient.on('connect', function (packet) {
-          serverClient.connack({returnCode: 0})
+          var connack = version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
+          serverClient.connack(connack)
         })
         serverClient.on('subscribe', function (packet) {
           if (reconnect) {
@@ -2787,11 +2792,12 @@ module.exports = function (server, config) {
       })
 
       server2.listen(ports.PORTAND50, function () {
-        client = mqtt.connect({
+        client = connect({
           port: ports.PORTAND50,
           host: 'localhost',
           clean: true,
           clientId: 'cid1',
+          keepalive: 1,
           reconnectPeriod: 0
         })
 
@@ -2821,9 +2827,10 @@ module.exports = function (server, config) {
       var client = {}
       var incomingStore = new mqtt.Store({ clean: false })
       var outgoingStore = new mqtt.Store({ clean: false })
-      var server2 = new MqttServer(function (serverClient) {
+      var server2 = serverBuilder(config.protocol, function (serverClient) {
         serverClient.on('connect', function (packet) {
-          serverClient.connack({returnCode: 0})
+          var connack = version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
+          serverClient.connack(connack)
         })
         serverClient.on('publish', function (packet) {
           if (reconnect) {
@@ -2842,7 +2849,7 @@ module.exports = function (server, config) {
       })
 
       server2.listen(ports.PORTAND50, function () {
-        client = mqtt.connect({
+        client = connect({
           port: ports.PORTAND50,
           host: 'localhost',
           clean: false,
@@ -2866,9 +2873,10 @@ module.exports = function (server, config) {
       var client = {}
       var incomingStore = new mqtt.Store({ clean: false })
       var outgoingStore = new mqtt.Store({ clean: false })
-      var server2 = new MqttServer(function (serverClient) {
+      var server2 = serverBuilder(config.protocol, function (serverClient) {
         serverClient.on('connect', function (packet) {
-          serverClient.connack({returnCode: 0})
+          var connack = version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
+          serverClient.connack(connack)
         })
         serverClient.on('publish', function (packet) {
           if (reconnect) {
@@ -2887,7 +2895,7 @@ module.exports = function (server, config) {
       })
 
       server2.listen(ports.PORTAND50, function () {
-        client = mqtt.connect({
+        client = connect({
           port: ports.PORTAND50,
           host: 'localhost',
           clean: false,
@@ -2911,9 +2919,10 @@ module.exports = function (server, config) {
       var client = {}
       var incomingStore = new mqtt.Store({ clean: false })
       var outgoingStore = new mqtt.Store({ clean: false })
-      var server2 = new MqttServer(function (serverClient) {
+      var server2 = serverBuilder(config.protocol, function (serverClient) {
         serverClient.on('connect', function (packet) {
-          serverClient.connack({returnCode: 0})
+          var connack = version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
+          serverClient.connack(connack)
         })
         serverClient.on('publish', function (packet) {
           if (!reconnect) {
@@ -2937,7 +2946,7 @@ module.exports = function (server, config) {
       })
 
       server2.listen(ports.PORTAND50, function () {
-        client = mqtt.connect({
+        client = connect({
           port: ports.PORTAND50,
           host: 'localhost',
           clean: false,
@@ -2963,13 +2972,14 @@ module.exports = function (server, config) {
       var client = {}
       var incomingStore = new mqtt.Store({ clean: false })
       var outgoingStore = new mqtt.Store({ clean: false })
-      var server2 = new MqttServer(function (serverClient) {
+      var server2 = serverBuilder(config.protocol, function (serverClient) {
         // errors are not interesting for this test
         // but they might happen on some platforms
         serverClient.on('error', function () {})
 
         serverClient.on('connect', function (packet) {
-          serverClient.connack({returnCode: 0})
+          var connack = version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
+          serverClient.connack(connack)
         })
         serverClient.on('publish', function (packet) {
           serverClient.puback({messageId: packet.messageId})
@@ -3003,7 +3013,7 @@ module.exports = function (server, config) {
       })
 
       server2.listen(ports.PORTAND50, function () {
-        client = mqtt.connect({
+        client = connect({
           port: ports.PORTAND50,
           host: 'localhost',
           clean: false,
@@ -3105,7 +3115,7 @@ module.exports = function (server, config) {
       })
 
       it('should resubscribe even if disconnect is before suback', function (done) {
-        var client = mqtt.connect(Object.assign({ reconnectPeriod: 100 }, config))
+        var client = connect(Object.assign({ reconnectPeriod: 100 }, config))
         var subscribeCount = 0
         var connectCount = 0
 
@@ -3136,7 +3146,7 @@ module.exports = function (server, config) {
       })
 
       it('should resubscribe exactly once', function (done) {
-        var client = mqtt.connect(Object.assign({ reconnectPeriod: 100 }, config))
+        var client = connect(Object.assign({ reconnectPeriod: 100 }, config))
         var subscribeCount = 0
 
         server.on('client', function (serverClient) {

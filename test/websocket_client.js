@@ -5,7 +5,7 @@ var WebSocket = require('ws')
 var MQTTConnection = require('mqtt-connection')
 var abstractClientTests = require('./abstract_client')
 var ports = require('./helpers/port_list')
-var serverBuilder = require('./server_helpers_for_client_tests').serverBuilder
+var MqttServerNoWait = require('./server').MqttServerNoWait
 var mqtt = require('../')
 var xtend = require('xtend')
 var assert = require('assert')
@@ -145,27 +145,36 @@ describe('Websocket Client', function () {
 
   describe('reconnecting', () => {
     it('should reconnect to multiple host-ports-protocol combinations if servers is passed', function (done) {
+      var serverPort42Connected = false
+      var handler = function (serverClient) {
+        serverClient.on('connect', function (packet) {
+          serverClient.connack({returnCode: 0})
+        })
+      }
       this.timeout(15000)
       var actualURL41 = 'wss://localhost:9917/'
       var actualURL42 = 'ws://localhost:9918/'
-      var serverPort41 = serverBuilder(true).listen(ports.PORTAND41)
-      var serverPort42 = serverBuilder(true).listen(ports.PORTAND42)
+      var serverPort41 = new MqttServerNoWait(handler).listen(ports.PORTAND41)
+      var serverPort42 = new MqttServerNoWait(handler).listen(ports.PORTAND42)
 
       serverPort42.on('listening', function () {
         let client = mqtt.connect({
           protocol: 'wss',
           servers: [
-            { port: ports.PORTAND41, host: 'localhost' },
-            { port: ports.PORTAND42, host: 'localhost', protocol: 'ws' }
+            { port: ports.PORTAND42, host: 'localhost', protocol: 'ws' },
+            { port: ports.PORTAND41, host: 'localhost' }
           ],
           keepalive: 50
         })
-        serverPort41.once('client', function () {
+        serverPort41.once('client', function (c) {
           assert.equal(client.stream.url, actualURL41, 'Protocol for second client should use the default protocol: wss, on port: port + 41.')
+          assert(serverPort42Connected)
+          c.stream.destroy()
           client.end(true, done)
           serverPort41.close()
         })
-        serverPort42.on('client', function (c) {
+        serverPort42.once('client', function (c) {
+          serverPort42Connected = true
           assert.equal(client.stream.url, actualURL42, 'Protocol for connection should use ws, on port: port + 42.')
           c.stream.destroy()
           serverPort42.close()

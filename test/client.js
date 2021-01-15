@@ -18,7 +18,7 @@ var debug = require('debug')('TEST:client')
 
 describe('MqttClient', function () {
   var client
-  var server = serverBuilder()
+  var server = serverBuilder('mqtt')
   var config = {protocol: 'mqtt', port: ports.PORT}
   server.listen(ports.PORT)
 
@@ -277,7 +277,7 @@ describe('MqttClient', function () {
     it('should not keep requeueing the first message when offline', function (done) {
       this.timeout(2500)
 
-      var server2 = serverBuilder().listen(ports.PORTAND45)
+      var server2 = serverBuilder('mqtt').listen(ports.PORTAND45)
       client = mqtt.connect({
         port: ports.PORTAND45,
         host: 'localhost',
