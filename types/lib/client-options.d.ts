@@ -1,6 +1,7 @@
 import { MqttClient } from './client'
 import { Store } from './store'
 import { QoS, UserProperties } from 'mqtt-packet'
+import { IMessageIdProvider } from './message-id-provider'
 
 export declare type StorePutCallback = () => void
 
@@ -113,7 +114,8 @@ export interface IClientOptions extends ISecureClientOptions {
     userProperties?: UserProperties,
     authenticationMethod?: string,
     authenticationData?: Buffer
-  }
+  },
+  messageIdProvider?: IMessageIdProvider
 }
 export interface ISecureClientOptions {
   /**

@@ -322,6 +322,7 @@ the `connect` event. Typically a `net.Socket`.
         urls which upon reconnect can have become expired.
   * `resubscribe` : if connection is broken and reconnects,
      subscribed topics are automatically subscribed again (default `true`)
+  * `messageIdProvider`: custom messageId provider. when `new UniqueMessageIdProvider()` is set, then non conflict messageId is provided.
 
 In case mqtts (mqtt over tls) is required, the `options` object is
 passed through to

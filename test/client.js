@@ -54,26 +54,6 @@ describe('MqttClient', function () {
       client.end()
     })
 
-    it('should return 1 once the internal counter reached limit', function () {
-      client = mqtt.connect(config)
-      client.nextId = 65535
-
-      assert.equal(client._nextId(), 65535)
-      assert.equal(client._nextId(), 1)
-      client.end()
-    })
-
-    it('should return 65535 for last message id once the internal counter reached limit', function () {
-      client = mqtt.connect(config)
-      client.nextId = 65535
-
-      assert.equal(client._nextId(), 65535)
-      assert.equal(client.getLastMessageId(), 65535)
-      assert.equal(client._nextId(), 1)
-      assert.equal(client.getLastMessageId(), 1)
-      client.end()
-    })
-
     it('should not throw an error if packet\'s messageId is not found when receiving a pubrel packet', function (done) {
       var server2 = new MqttServer(function (serverClient) {
         serverClient.on('connect', function (packet) {
