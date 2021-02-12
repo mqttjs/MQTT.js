@@ -8,7 +8,7 @@ import {
   IClientReconnectOptions
 } from './client-options'
 import { Store } from './store'
-import { Packet, QoS } from 'mqtt-packet'
+import { Packet, IConnectPacket, IPublishPacket, QoS } from 'mqtt-packet'
 
 export interface ISubscriptionGrant {
   /**
@@ -66,9 +66,9 @@ export interface ISubscriptionMap {
   }
 }
 
-export declare type OnConnectCallback = (packet: Packet) => void
+export declare type OnConnectCallback = (packet: IConnectPacket) => void
 export declare type ClientSubscribeCallback = (err: Error, granted: ISubscriptionGrant[]) => void
-export declare type OnMessageCallback = (topic: string, payload: Buffer, packet: Packet) => void
+export declare type OnMessageCallback = (topic: string, payload: Buffer, packet: IPublishPacket) => void
 export declare type OnPacketCallback = (packet: Packet) => void
 export declare type OnErrorCallback = (error: Error) => void
 export declare type PacketCallback = (error?: Error, packet?: Packet) => any
