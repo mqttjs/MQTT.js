@@ -68,7 +68,7 @@
     "help-me": "^1.0.1",
     "inherits": "^2.0.3",
     "minimist": "^1.2.5",
-    "mqtt-packet": "git://github.com/bkp7/mqtt-packet.git#8647df5315909bb3ac17b6b5635bcd659e172fce",
+    "mqtt-packet": "^6.8.0",
     "pump": "^3.0.0",
     "readable-stream": "^3.6.0",
     "reinterval": "^1.1.0",
