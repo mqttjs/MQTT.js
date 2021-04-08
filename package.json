@@ -65,6 +65,7 @@
     "commist": "^1.0.0",
     "concat-stream": "^2.0.0",
     "debug": "^4.1.1",
+    "duplexify": "^4.1.1",
     "help-me": "^1.0.1",
     "inherits": "^2.0.3",
     "minimist": "^1.2.5",
