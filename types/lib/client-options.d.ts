@@ -1,6 +1,6 @@
 import { MqttClient } from './client'
 import { Store } from './store'
-import { QoS } from 'mqtt-packet'
+import { QoS, UserProperties } from 'mqtt-packet'
 
 export declare type StorePutCallback = () => void
 
@@ -99,7 +99,7 @@ export interface IClientOptions extends ISecureClientOptions {
       contentType?: string,
       responseTopic?: string,
       correlationData?: Buffer,
-      userProperties?: Object
+      userProperties?: UserProperties
     }
   }
   transformWsUrl?: (url: string, options: IClientOptions, client: MqttClient) => string,
@@ -110,7 +110,7 @@ export interface IClientOptions extends ISecureClientOptions {
     topicAliasMaximum?: number,
     requestResponseInformation?: boolean,
     requestProblemInformation?: boolean,
-    userProperties?: Object,
+    userProperties?: UserProperties,
     authenticationMethod?: string,
     authenticationData?: Buffer
   }
@@ -152,7 +152,7 @@ export interface IClientPublishOptions {
     topicAlias?: string,
     responseTopic?: string,
     correlationData?: Buffer,
-    userProperties?: Object,
+    userProperties?: UserProperties,
     subscriptionIdentifier?: number,
     contentType?: string
   }
