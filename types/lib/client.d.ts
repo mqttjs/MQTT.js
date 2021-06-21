@@ -71,9 +71,10 @@ export declare type OnDisconnectCallback = (packet: IDisconnectPacket) => void
 export declare type ClientSubscribeCallback = (err: Error, granted: ISubscriptionGrant[]) => void
 export declare type OnMessageCallback = (topic: string, payload: Buffer, packet: IPublishPacket) => void
 export declare type OnPacketCallback = (packet: Packet) => void
+export declare type OnCloseCallback = () => void
 export declare type OnErrorCallback = (error: Error) => void
 export declare type PacketCallback = (error?: Error, packet?: Packet) => any
-export declare type CloseCallback = () => void
+export declare type CloseCallback = (error?: Error) => void
 
 export interface IStream extends events.EventEmitter {
   pipe (to: any): any
