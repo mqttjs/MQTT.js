@@ -8,7 +8,7 @@ var serverBuilder = require('./server_helpers_for_client_tests').serverBuilder
 var ports = require('./helpers/port_list')
 
 describe('MQTT 5.0', function () {
-  var server = serverBuilder().listen(ports.PORTAND115)
+  var server = serverBuilder('mqtt').listen(ports.PORTAND115)
   var config = { protocol: 'mqtt', port: ports.PORTAND115, protocolVersion: 5, properties: { maximumPacketSize: 200 } }
 
   abstractClientTests(server, config)

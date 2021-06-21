@@ -23,5 +23,6 @@ export {
   IPingreqPacket,
   IPingrespPacket,
   IDisconnectPacket,
-  Packet
+  Packet,
+  UserProperties
 } from 'mqtt-packet'

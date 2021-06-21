@@ -8,7 +8,7 @@ import {
   IClientReconnectOptions
 } from './client-options'
 import { Store } from './store'
-import { Packet, QoS } from 'mqtt-packet'
+import { Packet, IConnectPacket, IPublishPacket, IDisconnectPacket, QoS } from 'mqtt-packet'
 
 export interface ISubscriptionGrant {
   /**
@@ -66,9 +66,10 @@ export interface ISubscriptionMap {
   }
 }
 
-export declare type OnConnectCallback = (packet: Packet) => void
+export declare type OnConnectCallback = (packet: IConnectPacket) => void
+export declare type OnDisconnectCallback = (packet: IDisconnectPacket) => void
 export declare type ClientSubscribeCallback = (err: Error, granted: ISubscriptionGrant[]) => void
-export declare type OnMessageCallback = (topic: string, payload: Buffer, packet: Packet) => void
+export declare type OnMessageCallback = (topic: string, payload: Buffer, packet: IPublishPacket) => void
 export declare type OnPacketCallback = (packet: Packet) => void
 export declare type OnErrorCallback = (error: Error) => void
 export declare type PacketCallback = (error?: Error, packet?: Packet) => any
@@ -101,13 +102,19 @@ export declare class MqttClient extends events.EventEmitter {
   public on (event: 'connect', cb: OnConnectCallback): this
   public on (event: 'message', cb: OnMessageCallback): this
   public on (event: 'packetsend' | 'packetreceive', cb: OnPacketCallback): this
+  public on (event: 'disconnect', cb: OnDisconnectCallback): this
   public on (event: 'error', cb: OnErrorCallback): this
+  public on (event: 'close', cb: OnCloseCallback): this
+  public on (event: 'end' | 'reconnect' | 'offline' | 'outgoingEmpty', cb: () => void): this
   public on (event: string, cb: Function): this
 
   public once (event: 'connect', cb: OnConnectCallback): this
   public once (event: 'message', cb: OnMessageCallback): this
   public once (event: 'packetsend' | 'packetreceive', cb: OnPacketCallback): this
+  public once (event: 'disconnect', cb: OnDisconnectCallback): this
   public once (event: 'error', cb: OnErrorCallback): this
+  public once (event: 'close', cb: OnCloseCallback): this
+  public once (event: 'end' | 'reconnect' | 'offline' | 'outgoingEmpty', cb: () => void): this
   public once (event: string, cb: Function): this
 
   /**
