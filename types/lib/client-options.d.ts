@@ -1,5 +1,7 @@
 import { MqttClient } from './client'
 import { Store } from './store'
+import { ClientOptions } from 'ws'
+import { ClientRequestArgs } from 'http'
 import { QoS, UserProperties } from 'mqtt-packet'
 
 export declare type StorePutCallback = () => void
@@ -11,9 +13,7 @@ export interface IClientOptions extends ISecureClientOptions {
   path?: string
   protocol?: 'wss' | 'ws' | 'mqtt' | 'mqtts' | 'tcp' | 'ssl' | 'wx' | 'wxs'
 
-  wsOptions?: {
-    [x: string]: any
-  }
+  wsOptions?: ClientOptions | ClientRequestArgs
   /**
    *  10 seconds, set to 0 to disable
    */
