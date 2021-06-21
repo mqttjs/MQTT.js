@@ -1,5 +1,5 @@
 import { MqttClient } from './client'
-import { Store } from './store''
+import { Store } from './store'
 import { ClientOptions } from 'ws'
 import { ClientRequestArgs } from 'http'
 import { QoS, UserProperties } from 'mqtt-packet'
