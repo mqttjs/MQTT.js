@@ -1,5 +1,11 @@
 # Release History
 
+## 4.2.8
+
+### PR
+
+Fix ws vulnerability and typescript bug (#1292)
+
 ## 4.2.7
 
 ### PR
@@ -18,6 +24,6 @@ Improve Typescript Declaratiosn for userProperties (#1249)
 
 Improve Documentation for Browserify (#1224)
 
-# v4.2.6 and Below
+## v4.2.6 and Below
 
 The release history has beend documented in the GitHub releases and tags historically. 
