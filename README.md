@@ -652,12 +652,20 @@ const client  = connect('alis://test.mosquitto.org');
 
 In order to use MQTT.js as a browserify module you can either require it in your browserify bundles or build it as a stand alone module. The exported module is AMD/CommonJs compatible and it will add an object in the global space.
 
-```javascript
-npm install -g browserify // install browserify
-cd node_modules/mqtt
-npm install . // install dev dependencies
-browserify mqtt.js -s mqtt > browserMqtt.js // require mqtt in your client-side app
+```bash
+mkdir tmpdir
+cd tmpdir
+npm install mqtt
+npm install browserify
+npm install tinyify
+cd node_modules/mqtt/
+npm install .
+npx browserify mqtt.js -s mqtt >browserMqtt.js // use script tag 
+# show size for compressed browser transfer
+gzip <browserMqtt.js | wc -c
 ```
+
+**Be sure to only use this bundle with `ws` or `wss` URLs in the browser. Others URL types will likey fail**
 
 <a name="webpack"></a>
 ### Webpack
