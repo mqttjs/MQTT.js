@@ -1,12 +1,13 @@
 // relative path uses package.json {"types":"types/index.d.ts", ...}
-import {IClientOptions, Client, connect, IConnackPacket} from '../..'
+import {IClientOptions, Client, connect, IConnackPacket, UniqueMessageIdProvider} from '../..'
 const BROKER = 'test.mosquitto.org'
 
 const PAYLOAD_WILL = Buffer.from('bye from TS')
 const PAYLOAD_QOS = Buffer.from('hello from TS (with qos=2)')
 const PAYLOAD_RETAIN = 'hello from TS (with retain=true)'
 const TOPIC = 'typescript-test-' + Math.random().toString(16).substr(2)
-const opts: IClientOptions = {will: {topic: TOPIC, payload: PAYLOAD_WILL, qos: 0, retain: false}}
+const opts: IClientOptions = {will: {topic: TOPIC, payload: PAYLOAD_WILL, qos: 0, retain: false},
+                              messageIdProvider: new UniqueMessageIdProvider()}
 
 console.log(`connect(${JSON.stringify(BROKER)})`)
 const client:Client = connect(`mqtt://${BROKER}`, opts)

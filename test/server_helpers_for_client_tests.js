@@ -22,12 +22,14 @@ var MQTTConnection = require('mqtt-connection')
 function serverBuilder (protocol, handler) {
   var defaultHandler = function (serverClient) {
     serverClient.on('auth', function (packet) {
+      if (serverClient.writable) return false
       var rc = 'reasonCode'
       var connack = {}
       connack[rc] = 0
       serverClient.connack(connack)
     })
     serverClient.on('connect', function (packet) {
+      if (!serverClient.writable) return false
       var rc = 'returnCode'
       var connack = {}
       if (serverClient.options && serverClient.options.protocolVersion === 5) {
@@ -52,6 +54,7 @@ function serverBuilder (protocol, handler) {
     })
 
     serverClient.on('publish', function (packet) {
+      if (!serverClient.writable) return false
       setImmediate(function () {
         switch (packet.qos) {
           case 0:
@@ -67,10 +70,12 @@ function serverBuilder (protocol, handler) {
     })
 
     serverClient.on('pubrel', function (packet) {
+      if (!serverClient.writable) return false
       serverClient.pubcomp(packet)
     })
 
     serverClient.on('pubrec', function (packet) {
+      if (!serverClient.writable) return false
       serverClient.pubrel(packet)
     })
 
@@ -79,6 +84,7 @@ function serverBuilder (protocol, handler) {
     })
 
     serverClient.on('subscribe', function (packet) {
+      if (!serverClient.writable) return false
       serverClient.suback({
         messageId: packet.messageId,
         granted: packet.subscriptions.map(function (e) {
@@ -88,11 +94,13 @@ function serverBuilder (protocol, handler) {
     })
 
     serverClient.on('unsubscribe', function (packet) {
+      if (!serverClient.writable) return false
       packet.granted = packet.unsubscriptions.map(function () { return 0 })
       serverClient.unsuback(packet)
     })
 
     serverClient.on('pingreq', function () {
+      if (!serverClient.writable) return false
       serverClient.pingresp()
     })
 

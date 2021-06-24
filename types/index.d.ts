@@ -26,3 +26,5 @@ export {
   Packet,
   UserProperties
 } from 'mqtt-packet'
+export { IMessageIdProvider } from './lib/message-id-provider'
+export { UniqueMessageIdProvider } from './lib/unique-message-id-provider'
