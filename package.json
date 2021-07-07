@@ -62,6 +62,7 @@
     "net": false
   },
   "dependencies": {
+    "collections": "^5.1.12",
     "commist": "^1.0.0",
     "concat-stream": "^2.0.0",
     "debug": "^4.1.1",
@@ -73,6 +74,7 @@
     "number-allocator": "^1.0.7",
     "pump": "^3.0.0",
     "readable-stream": "^3.6.0",
+    "rfdc": "^1.3.0",
     "reinterval": "^1.1.0",
     "split2": "^3.1.0",
     "ws": "^7.5.0",

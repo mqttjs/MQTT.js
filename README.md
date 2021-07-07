@@ -206,7 +206,41 @@ the final connection when it drops.
 The default value is 1000 ms which means it will try to reconnect 1 second
 after losing the connection.
 
+<a name="topicalias"></a>
+## About Topic Alias management
 
+### Enabling automatic Topic Alias using
+If the client sets the option `autoUseTopicAlias:true` then MQTT.js uses existing topic alias automatically.
+
+example scenario:
+```
+1. PUBLISH topic:'t1', ta:1                   (register)
+2. PUBLISH topic:'t1'       -> topic:'', ta:1 (auto use existing map entry)
+3. PUBLISH topic:'t2', ta:1                   (register overwrite)
+4. PUBLISH topic:'t2'       -> topic:'', ta:1 (auto use existing map entry based on the receent map)
+5. PUBLISH topic:'t1'                         (t1 is no longer mapped to ta:1)
+```
+
+User doesn't need to manage which topic is mapped to which topic alias.
+If the user want to register topic alias, then publish topic with topic alias.
+If the user want to use topic alias, then publish topic without topic alias. If there is a mapped topic alias then added it as a property and update the topic to empty string.
+
+### Enabling  automatic Topic Alias assign
+
+If the client sets the option `autoAssignTopicAlias:true` then MQTT.js uses existing topic alias automatically.
+If no topic alias exists, then assign a new vacant topic alias automatically. If topic alias is fully used, then LRU(Least Recently Used) topic-alias entry is overwritten.
+
+example scenario:
+```
+The broker returns CONNACK (TopicAliasMaximum:3)
+1. PUBLISH topic:'t1' -> 't1', ta:1 (auto assign t1:1 and register)
+2. PUBLISH topic:'t1' -> ''  , ta:1 (auto use existing map entry)
+3. PUBLISH topic:'t2' -> 't2', ta:2 (auto assign t1:2 and register. 2 was vacant)
+4. PUBLISH topic:'t3' -> 't3', ta:3 (auto assign t1:3 and register. 3 was vacant)
+5. PUBLISH topic:'t4' -> 't4', ta:1 (LRU entry is overwritten)
+```
+
+Also user can manually register topic-alias pair using PUBLISH topic:'some', ta:X. It works well with automatic topic alias assign.
 
 <a name="api"></a>
 ## API
@@ -291,6 +325,8 @@ the `connect` event. Typically a `net.Socket`.
       ```js
         customHandleAcks: function(topic, message, packet, done) {/*some logic wit colling done(error, reasonCode)*/}
       ```
+  * `autoUseTopicAlias`: enabling automatic Topic Alias using functionality
+  * `autoAssignTopicAlias`: enabling automatic Topic Alias assign functionality
   * `properties`: properties MQTT 5.0.
   `object` that supports the following properties:
     * `sessionExpiryInterval`: representing the Session Expiry Interval in seconds `number`,
@@ -661,7 +697,7 @@ npm install browserify
 npm install tinyify
 cd node_modules/mqtt/
 npm install .
-npx browserify mqtt.js -s mqtt >browserMqtt.js // use script tag 
+npx browserify mqtt.js -s mqtt >browserMqtt.js // use script tag
 # show size for compressed browser transfer
 gzip <browserMqtt.js | wc -c
 ```
