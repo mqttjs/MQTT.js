@@ -204,7 +204,7 @@ export declare class MqttClient extends events.EventEmitter {
    * @returns {MqttClient} this - for chaining
    * @api public
    *
-   * @example client.removeOutgoingMessage(client.getLastMessageId());
+   * @example client.removeOutgoingMessage(client.getLastMessageId())
    */
   public removeOutgoingMessage (mid: number): this
 
