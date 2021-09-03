@@ -18,7 +18,7 @@ var debug = require('debug')('TEST:client')
 
 describe('MqttClient', function () {
   var client
-  var server = serverBuilder()
+  var server = serverBuilder('mqtt')
   var config = {protocol: 'mqtt', port: ports.PORT}
   server.listen(ports.PORT)
 
@@ -51,26 +51,6 @@ describe('MqttClient', function () {
       var currentId = client._nextId()
 
       assert.equal(client._nextId(), currentId + 1)
-      client.end()
-    })
-
-    it('should return 1 once the internal counter reached limit', function () {
-      client = mqtt.connect(config)
-      client.nextId = 65535
-
-      assert.equal(client._nextId(), 65535)
-      assert.equal(client._nextId(), 1)
-      client.end()
-    })
-
-    it('should return 65535 for last message id once the internal counter reached limit', function () {
-      client = mqtt.connect(config)
-      client.nextId = 65535
-
-      assert.equal(client._nextId(), 65535)
-      assert.equal(client.getLastMessageId(), 65535)
-      assert.equal(client._nextId(), 1)
-      assert.equal(client.getLastMessageId(), 1)
       client.end()
     })
 
@@ -277,7 +257,7 @@ describe('MqttClient', function () {
     it('should not keep requeueing the first message when offline', function (done) {
       this.timeout(2500)
 
-      var server2 = serverBuilder().listen(ports.PORTAND45)
+      var server2 = serverBuilder('mqtt').listen(ports.PORTAND45)
       client = mqtt.connect({
         port: ports.PORTAND45,
         host: 'localhost',

@@ -1,7 +1,7 @@
 {
   "name": "mqtt",
   "description": "A library for the MQTT protocol",
-  "version": "4.2.6",
+  "version": "4.2.8",
   "contributors": [
     "Adam Rudd <adamvrr@gmail.com>",
     "Matteo Collina <matteo.collina@gmail.com> (https://github.com/mcollina)",
@@ -65,15 +65,17 @@
     "commist": "^1.0.0",
     "concat-stream": "^2.0.0",
     "debug": "^4.1.1",
-    "help-me": "^1.0.1",
+    "duplexify": "^4.1.1",
+    "help-me": "^3.0.0",
     "inherits": "^2.0.3",
     "minimist": "^1.2.5",
-    "mqtt-packet": "^6.7.0",
+    "mqtt-packet": "^6.8.0",
+    "number-allocator": "^1.0.7",
     "pump": "^3.0.0",
     "readable-stream": "^3.6.0",
     "reinterval": "^1.1.0",
     "split2": "^3.1.0",
-    "ws": "^7.3.1",
+    "ws": "^7.5.0",
     "xtend": "^4.0.2"
   },
   "devDependencies": {

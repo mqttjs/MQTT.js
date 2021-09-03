@@ -8,6 +8,8 @@
 var MqttClient = require('./lib/client')
 var connect = require('./lib/connect')
 var Store = require('./lib/store')
+var DefaultMessageIdProvider = require('./lib/default-message-id-provider')
+var UniqueMessageIdProvider = require('./lib/unique-message-id-provider')
 
 module.exports.connect = connect
 
@@ -15,3 +17,5 @@ module.exports.connect = connect
 module.exports.MqttClient = MqttClient
 module.exports.Client = MqttClient
 module.exports.Store = Store
+module.exports.DefaultMessageIdProvider = DefaultMessageIdProvider
+module.exports.UniqueMessageIdProvider = UniqueMessageIdProvider

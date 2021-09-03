@@ -1,6 +1,9 @@
 import { MqttClient } from './client'
 import { Store } from './store'
-import { QoS } from 'mqtt-packet'
+import { ClientOptions } from 'ws'
+import { ClientRequestArgs } from 'http'
+import { QoS, UserProperties } from 'mqtt-packet'
+import { IMessageIdProvider } from './message-id-provider'
 
 export declare type StorePutCallback = () => void
 
@@ -11,9 +14,7 @@ export interface IClientOptions extends ISecureClientOptions {
   path?: string
   protocol?: 'wss' | 'ws' | 'mqtt' | 'mqtts' | 'tcp' | 'ssl' | 'wx' | 'wxs'
 
-  wsOptions?: {
-    [x: string]: any
-  }
+  wsOptions?: ClientOptions | ClientRequestArgs
   /**
    *  10 seconds, set to 0 to disable
    */
@@ -99,7 +100,7 @@ export interface IClientOptions extends ISecureClientOptions {
       contentType?: string,
       responseTopic?: string,
       correlationData?: Buffer,
-      userProperties?: Object
+      userProperties?: UserProperties
     }
   }
   transformWsUrl?: (url: string, options: IClientOptions, client: MqttClient) => string,
@@ -110,10 +111,11 @@ export interface IClientOptions extends ISecureClientOptions {
     topicAliasMaximum?: number,
     requestResponseInformation?: boolean,
     requestProblemInformation?: boolean,
-    userProperties?: Object,
+    userProperties?: UserProperties,
     authenticationMethod?: string,
     authenticationData?: Buffer
-  }
+  },
+  messageIdProvider?: IMessageIdProvider
 }
 export interface ISecureClientOptions {
   /**
@@ -152,7 +154,7 @@ export interface IClientPublishOptions {
     topicAlias?: string,
     responseTopic?: string,
     correlationData?: Buffer,
-    userProperties?: Object,
+    userProperties?: UserProperties,
     subscriptionIdentifier?: number,
     contentType?: string
   }
