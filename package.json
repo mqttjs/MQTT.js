@@ -22,12 +22,19 @@
   "main": "mqtt.js",
   "types": "types/index.d.ts",
   "scripts": {
-    "test": "node_modules/.bin/nyc --reporter=lcov --reporter=text ./node_modules/mocha/bin/_mocha",
+    "start": "tsdx watch",
+    "build": "tsdx build",
+    "test": "tsdx test",
+    "lint": "tsdx lint",
+    "prepare": "tsdx build",
+    "size": "size-limit",
+    "analyze": "size-limit --why",
+    "test2": "node_modules/.bin/nyc --reporter=lcov --reporter=text ./node_modules/mocha/bin/_mocha",
     "pretest": "standard | snazzy",
     "browser-build": "rimraf dist/ && mkdirp dist/ && browserify mqtt.js --standalone mqtt > dist/mqtt.js && uglifyjs dist/mqtt.js --compress --mangle --output dist/mqtt.min.js",
     "browser-test": "airtap --server test/browser/server.js --local --open test/browser/test.js",
     "sauce-test": "airtap --server test/browser/server.js -- test/browser/test.js",
-    "ci": "npm run test && codecov"
+    "ci": "npm run test2 && codecov"
   },
   "bin": {
     "mqtt_pub": "./bin/pub.js",
@@ -92,9 +99,8 @@
     "sinon": "^11.1.2",
     "snazzy": "^9.0.0",
     "standard": "^16.0.3",
-    "tslint": "^5.20.1",
-    "tslint-config-standard": "^8.0.1",
-    "typescript": "^4.3.5",
+    "tsdx": "^0.14.1",
+    "typescript": "^4.4.3",
     "uglify-es": "^3.3.9"
   },
   "standard": {
