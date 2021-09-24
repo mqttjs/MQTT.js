@@ -6,6 +6,7 @@
 MQTT.js is a client library for the [MQTT](http://mqtt.org/) protocol, written
 in JavaScript for node.js and the browser.
 
+* [__MQTT.js vNext__](#vnext)
 * [Upgrade notes](#notes)
 * [Installation](#install)
 * [Example](#example)
@@ -23,6 +24,9 @@ MQTT.js is an OPEN Open Source Project, see the [Contributing](#contributing) se
 [![JavaScript Style
 Guide](https://cdn.rawgit.com/feross/standard/master/badge.svg)](https://github.com/feross/standard)
 
+<a name="vnext"></a>
+## Discussion on the next major version of MQTT.js
+There are discussions happening on the future of MQTT.js and the next major version (vNext). We invite the community to provide their thoughts and feedback in [this GitHub discussion](https://github.com/mqttjs/MQTT.js/discussions/1324)
 
 <a name="notes"></a>
 ## Important notes for existing users
