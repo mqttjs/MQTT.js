@@ -1,108 +1,113 @@
+import { MqttClient } from "../client"
+import { IConnectPacket } from "mqtt-packet"
+import { ConnectOptions } from ".."
 
-export async function handleConnect (client, packet) {
-  if (this.disconnected) {
-    this.emit('connect', packet)
-    return
-  }
+export async function handleConnect (client: MqttClient, opts: ConnectOptions) {
 
-  var that = this
+  client.conn
+  // if (this.disconnected) {
+  //   this.emit('connect', packet)
+  //   return
+  // }
 
-  this.messageIdProvider.clear()
-  this._setupPingTimer()
-  this._resubscribe(packet)
+  // var that = this
 
-  this.connected = true
+  // this.messageIdProvider.clear()
+  // this._setupPingTimer()
+  // this._resubscribe(packet)
 
-  function startStreamProcess () {
-    var outStore = that.outgoingStore.createStream()
+  // this.connected = true
 
-    function clearStoreProcessing () {
-      that._storeProcessing = false
-      that._packetIdsDuringStoreProcessing = {}
-    }
+  // function startStreamProcess () {
+  //   var outStore = that.outgoingStore.createStream()
 
-    that.once('close', remove)
-    outStore.on('error', function (err) {
-      clearStoreProcessing()
-      that._flushStoreProcessingQueue()
-      that.removeListener('close', remove)
-      that.emit('error', err)
-    })
+  //   function clearStoreProcessing () {
+  //     that._storeProcessing = false
+  //     that._packetIdsDuringStoreProcessing = {}
+  //   }
 
-    function remove () {
-      outStore.destroy()
-      outStore = null
-      that._flushStoreProcessingQueue()
-      clearStoreProcessing()
-    }
+  //   that.once('close', remove)
+  //   outStore.on('error', function (err) {
+  //     clearStoreProcessing()
+  //     that._flushStoreProcessingQueue()
+  //     that.removeListener('close', remove)
+  //     that.emit('error', err)
+  //   })
 
-    function storeDeliver () {
-      // edge case, we wrapped this twice
-      if (!outStore) {
-        return
-      }
-      that._storeProcessing = true
+  //   function remove () {
+  //     outStore.destroy()
+  //     outStore = null
+  //     that._flushStoreProcessingQueue()
+  //     clearStoreProcessing()
+  //   }
 
-      var packet = outStore.read(1)
+  //   function storeDeliver () {
+  //     // edge case, we wrapped this twice
+  //     if (!outStore) {
+  //       return
+  //     }
+  //     that._storeProcessing = true
 
-      var cb
+  //     var packet = outStore.read(1)
 
-      if (!packet) {
-        // read when data is available in the future
-        outStore.once('readable', storeDeliver)
-        return
-      }
+  //     var cb
 
-      // Skip already processed store packets
-      if (that._packetIdsDuringStoreProcessing[packet.messageId]) {
-        storeDeliver()
-        return
-      }
+  //     if (!packet) {
+  //       // read when data is available in the future
+  //       outStore.once('readable', storeDeliver)
+  //       return
+  //     }
 
-      // Avoid unnecessary stream read operations when disconnected
-      if (!that.disconnecting && !that.reconnectTimer) {
-        cb = that.outgoing[packet.messageId] ? that.outgoing[packet.messageId].cb : null
-        that.outgoing[packet.messageId] = {
-          volatile: false,
-          cb: function (err, status) {
-            // Ensure that the original callback passed in to publish gets invoked
-            if (cb) {
-              cb(err, status)
-            }
+  //     // Skip already processed store packets
+  //     if (that._packetIdsDuringStoreProcessing[packet.messageId]) {
+  //       storeDeliver()
+  //       return
+  //     }
 
-            storeDeliver()
-          }
-        }
-        that._packetIdsDuringStoreProcessing[packet.messageId] = true
-        if (that.messageIdProvider.register(packet.messageId)) {
-          that._sendPacket(packet)
-        } else {
-          debug('messageId: %d has already used.', packet.messageId)
-        }
-      } else if (outStore.destroy) {
-        outStore.destroy()
-      }
-    }
+  //     // Avoid unnecessary stream read operations when disconnected
+  //     if (!that.disconnecting && !that.reconnectTimer) {
+  //       cb = that.outgoing[packet.messageId] ? that.outgoing[packet.messageId].cb : null
+  //       that.outgoing[packet.messageId] = {
+  //         volatile: false,
+  //         cb: function (err, status) {
+  //           // Ensure that the original callback passed in to publish gets invoked
+  //           if (cb) {
+  //             cb(err, status)
+  //           }
 
-    outStore.on('end', function () {
-      var allProcessed = true
-      for (var id in that._packetIdsDuringStoreProcessing) {
-        if (!that._packetIdsDuringStoreProcessing[id]) {
-          allProcessed = false
-          break
-        }
-      }
-      if (allProcessed) {
-        clearStoreProcessing()
-        that.removeListener('close', remove)
-        that._invokeAllStoreProcessingQueue()
-        that.emit('connect', packet)
-      } else {
-        startStreamProcess()
-      }
-    })
-    storeDeliver()
-  }
-  // start flowing
-  startStreamProcess()
+  //           storeDeliver()
+  //         }
+  //       }
+  //       that._packetIdsDuringStoreProcessing[packet.messageId] = true
+  //       if (that.messageIdProvider.register(packet.messageId)) {
+  //         that._sendPacket(packet)
+  //       } else {
+  //         debug('messageId: %d has already used.', packet.messageId)
+  //       }
+  //     } else if (outStore.destroy) {
+  //       outStore.destroy()
+  //     }
+  //   }
+
+  //   outStore.on('end', function () {
+  //     var allProcessed = true
+  //     for (var id in that._packetIdsDuringStoreProcessing) {
+  //       if (!that._packetIdsDuringStoreProcessing[id]) {
+  //         allProcessed = false
+  //         break
+  //       }
+  //     }
+  //     if (allProcessed) {
+  //       clearStoreProcessing()
+  //       that.removeListener('close', remove)
+  //       that._invokeAllStoreProcessingQueue()
+  //       that.emit('connect', packet)
+  //     } else {
+  //       startStreamProcess()
+  //     }
+  //   })
+  //   storeDeliver()
+  // }
+  // // start flowing
+  // startStreamProcess()
 }

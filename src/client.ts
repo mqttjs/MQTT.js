@@ -1,15 +1,17 @@
 'use strict'
 
-import * as mqtt from 'mqtt-packet'
+import { IConnectPacket, parser as mqttParser, Parser as MqttParser, writeToStream } from 'mqtt-packet'
 import { handle } from './handlers'
 import { ConnectOptions } from '.'
-import { EventEmitter } from 'stream'
+import { Duplex, EventEmitter } from 'stream'
 import { connectionFactory } from './connectionFactory'
+import eos from 'end-of-stream'
+import { defaultConnectOptions } from './defaultConnectOptions'
 
 // const eventEmitter = require('events')
 // const mqttErrors = require('errors')
 
-const logger = require('pino')()
+// const logger = require('pino')()
 
 export class MqttClient extends EventEmitter {
   static isBrowser: boolean // This can be the global check for browser compatibility.
@@ -18,26 +20,24 @@ export class MqttClient extends EventEmitter {
   connected: boolean
   errored: boolean
   id: any
-  clean: boolean
+  clean?: boolean
   version: any
-  _isBrowser: boolean
   protocol: any
   port: any
   hostname: any
   rejectUnauthorized: any
-  stream: any
+  conn: Duplex
   _reconnectCount: number
   _disconnected: boolean
   _authorized: boolean
-  _parser: mqtt.Parser
-  _defaultConnectOptions: { keepalive: number; reschedulePings: boolean; protocolId: string; protocolVersion: number; reconnectPeriod: number; connectTimeout: number; clean: boolean; resubscribe: boolean }
+  _parser: MqttParser
   _options: any
   _parsingBatch: any
-  connackSent: boolean
+  connackSent: boolean = false
   _queueLimit: any
   queue: any
   options: any
-  disconnected: boolean
+  disconnected: boolean = true
   incomingStore: any
   outgoingStore: any
   _deferredReconnect: any
@@ -45,7 +45,7 @@ export class MqttClient extends EventEmitter {
   reconnectTimer: any
   reconnecting: any
   pingTimer: any
-  queueQoSZero: boolean
+  queueQoSZero: boolean = false
   _port: any
   _host: any
   tlsOptions: any
@@ -61,9 +61,9 @@ export class MqttClient extends EventEmitter {
   username: any
   password: any
   customHandleAcks: any
-  properties: { sessionExpiryInterval: number; receiveMaximum: number; maximumPacketSize: number; topicAliasMaximum: number; requestResponseInformation: boolean; requestProblemInformation: boolean; userPropertis: any; authenticationMethod: string; authenticationData: BinaryData }
+  properties?: { sessionExpiryInterval: number; receiveMaximum: number; maximumPacketSize: number; topicAliasMaximum: number; requestResponseInformation: boolean; requestProblemInformation: boolean; userPropertis: any; authenticationMethod: string; authenticationData: BinaryData }
   authPacket: any
-  will: {
+  will?: {
     topic: any; payload: any; qos: number; retain: boolean; properties: {
       willDelayInterval: number; payloadFormatIndicator: boolean; messageExpiryInterval: number // eslint-disable-next-line camelcase
       // eslint-disable-next-line camelcase
@@ -72,8 +72,8 @@ export class MqttClient extends EventEmitter {
       contentType: string; responseTopic: string; correlationData: BinaryData; userProperties: any
     }
   }
-  transformWsUrl: (opts: any) => URL
-  resubscribe: boolean
+  transformWsUrl?: (opts: any) => URL
+  resubscribe: boolean = false
   messageIdProvider: any
   parserQueue: any[]
   private _paused: any
@@ -99,129 +99,95 @@ export class MqttClient extends EventEmitter {
     // NOTE: STOP USING OPTIONS PAST THIS POINT
     // buildStream shouldn't rely on the options object. Let's have the option object used up beforehand and then
     // essentially discarded, so after this point it is never used again and only class fields are referenced. 
-    this.stream = options.customStreamFactory? options.customStreamFactory(options) : connectionFactory(options)
+    this.conn = options.customStreamFactory? options.customStreamFactory(options) : connectionFactory(options)
 
     this._reconnectCount = 0
 
     this._disconnected = false
     this._authorized = false
-    this._parser = mqtt.parser()
-    this._defaultConnectOptions = {
-      keepalive: 60,
-      reschedulePings: true,
-      protocolId: 'MQTT',
-      protocolVersion: 4,
-      reconnectPeriod: 1000,
-      connectTimeout: 30 * 1000,
-      clean: true,
-      resubscribe: true
-    }
+    this._parser = mqttParser()
 
-    this._options = options || { ...this._defaultConnectOptions }
+    this._options = options || defaultConnectOptions
+    // Loop through the defaultConnectOptions. If there is an option
+    // that is a default that has not been provided through the options
+    // object passed to the constructor, then update that value with the default Option.
+    for (const [key, value] of Object.entries(defaultConnectOptions)) {
+      this._options[key] = this._options[key] ?? value 
+    }
     this._options.clientId = options.clientId || `mqttjs_ ${Math.random().toString(16).substr(2, 8)}`
     this._parser.on('packet', this.enqueue)
     this.once('connected', this.dequeue)
     this.on('close', this._closeClient)
 
-    this.stream.on('readable', this.nextBatch)
+    this.conn.on('readable', this.nextBatch)
 
     this.on('error', this.onError)
-    this.stream.on('error', this.emit.bind(this, 'error'))
+    this.conn.on('error', this.emit.bind(this, 'error'))
     this._parser.on('error', this.emit.bind(this, 'error'))
   
-    this.stream.on('end', this.close.bind(this))
-    this._eos = eos(this.stream, this.close.bind(this))
+    this.conn.on('end', this.close.bind(this))
+    this._eos = eos(this.conn, this.close.bind(this))
+
   }
 
-  close (done) {
-    if (this.closed) {
-      if (typeof done === 'function') {
-        done()
-      }
-      return
+  public static async connect(options: ConnectOptions) {
+    const client = new MqttClient(options)
+    await client._sendConnect()
+    await client._sendAuth()
+    return client
+  }
+
+  private _sendAuth(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (
+        this._options.properties && 
+        this._options.properties.authenticationMethod && 
+        this._options.authPacket && 
+        typeof this._options.authPacket === 'object') {
+          var authPacket = {cmd: 'auth', reasonCode: 0, ...this._options.authPacket}
+          try {
+            // TODO: Should we worry about the 'drain' event?? See old code.      
+            // If a call to stream.write(chunk) returns false, the 'drain' event will
+            // be emitted when it is appropriate to resume writing data to the stream.
+            writeToStream(authPacket, this.conn, this._options)
+            resolve()
+          } catch (e) {
+            reject (e)
+          }}
+    })
+  }
+
+  private _sendConnect(): Promise<void> {
+    const packet: IConnectPacket  = {
+      cmd: 'connect',
+      clientId: this._options.clientId,
+      protocolVersion: this._options.protocolVersion,
+      protocolId: this._options.protocolId,
+      clean: this._options.clean,
+      keepalive: this._options.keepalive,
+      username: this._options.username,
+      password: this._options.password,
+      will: this._options.will,
+      properties: this._options.properties
     }
-  
-    this.closed = true
-  
-    this._parser.removeAllListeners('packet')
-    conn.removeAllListeners('readable')
-  
-    this._parser._queue = null
-  
-    if (this._keepaliveTimer) {
-      this._keepaliveTimer.clear()
-      this._keepaliveInterval = -1
-      this._keepaliveTimer = null
-    }
-  
-    if (this._connectTimer) {
-      clearTimeout(this._connectTimer)
-      this._connectTimer = null
-    }
-  
-    this._eos()
-    this._eos = noop
-  
-    handleUnsubscribe(
-      this,
-      {
-        unsubscriptions: Object.keys(this.subscriptions)
-      },
-      finish)
-  
-    function finish () {
-      const will = that.will
-      // _disconnected is set only if client is disconnected with a valid disconnect packet
-      if (!that._disconnected && will) {
-        that.broker.authorizePublish(that, will, function (err) {
-          if (err) { return done() }
-          that.broker.publish(will, that, done)
-  
-          function done () {
-            that.broker.persistence.delWill({
-              id: that.id,
-              brokerId: that.broker.id
-            }, noop)
-          }
+    
+    this.emit('packetsend', packet)
+    return new Promise<void>((resolve, reject) => {
+      try {
+        setImmediate(() => {
+          writeToStream(packet, this._options.conn, this._options._options)
+          resolve()
         })
+      } catch (e) {
+        reject(e)
       }
-      that.will = null // this function might be called twice
-      that._will = null
-  
-      that.connected = false
-      that.connecting = false
-  
-      conn.removeAllListeners('error')
-      conn.on('error', noop)
-  
-      if (that.broker.clients[that.id] && that._authorized) {
-        that.broker.unregisterClient(that)
-      }
-  
-      // clear up the drain event listeners
-      that.conn.emit('drain')
-      that.conn.removeAllListeners('drain')
-  
-      conn.destroy()
-  
-      if (typeof done === 'function') {
-        done()
-      }
-    }
+    });
   }
 
-  onError (err) {
-    if (!err) return
-  
-    this.errored = true
-    this.stream.removeAllListeners('error')
-    this.stream.on('error', noop)
-    // hack to clean up the write callbacks in case of error
-    const state = this.conn._writableState
-    const list = typeof state.getBuffer === 'function' ? state.getBuffer() : state.buffer
-    list.forEach(drainRequest)
-    this.broker.emit(this.id ? 'clientError' : 'connectionError', this, err)
-    this.close()
+  close (_done: any) {
+  }
+
+  onError (_err: any) {
   }
 
   _injestOptions(options: ConnectOptions) {
@@ -251,7 +217,7 @@ export class MqttClient extends EventEmitter {
     this.messageIdProvider = options.messageIdProvider
   }
 
-  async enqueue (packet) {
+  async enqueue (packet: string) {
     this._parsingBatch++
     // already connected or it's the first packet
     if (this.connackSent || this._parsingBatch === 1) {
@@ -268,13 +234,16 @@ export class MqttClient extends EventEmitter {
 
   async dequeue () {
     const q = this.parserQueue
-    for (let i = 0, len = q.length; i < len; i++) {
-      const result = await handle(this, q[i])
-      this.nextBatch(result)
+    if (q) {
+      for (let i = 0, len = q.length; i < len; i++) {
+        const result = await handle(this, q[i])
+        this.nextBatch(result)
+      }
     }
+    this.parserQueue = null
   }
 
-  nextBatch (err) {
+  nextBatch (err: void) {
     if (err) {
       this.emit('error', err)
       return
@@ -287,7 +256,7 @@ export class MqttClient extends EventEmitter {
     this._parsingBatch--
     if (this._parsingBatch <= 0) {
       this._parsingBatch = 0
-      const buf = this.stream.read(null)
+      const buf = this.conn.read(null)
       if (buf) {
         this._parser.parse(buf)
       }
@@ -297,183 +266,34 @@ export class MqttClient extends EventEmitter {
 
 
 
-  deliver0 = function deliverQoS0 (_packet, cb) {
-    const toForward = dedupe(this, _packet) &&
-      this.broker.authorizeForward(this, _packet)
-    if (toForward) {
-      // Give nodejs some time to clear stacks, or we will see
-      // "Maximum call stack size exceeded" in a very high load
-      setImmediate(() => {
-        const packet = new Packet(toForward, broker)
-        packet.qos = 0
-        write(this, packet, function (err) {
-          this._onError(err)
-          cb() // don't pass the error here or it will be thrown by mqemitter
-        })
-      })
-    } else {
-      setImmediate(cb)
-    }
+  deliver0 = function deliverQoS0 (_packet: any, _cb: any) {
   }
 
   _closeClient () {
-    logger('close :: connected set to `false`')
-    this.connected = false
-
-    logger('close :: clearing connackTimer')
-    clearTimeout(this.connackTimer)
-
-    logger('close :: clearing ping timer')
-    if (this.pingTimer !== null) {
-      this.pingTimer.clear()
-      this.pingTimer = null
-    }
-
-    logger('close :: calling _setupReconnect')
-    this._setupReconnect()
   }
-  connackTimer(connackTimer: any) {
+
+  connackTimer(_connackTimer: any) {
     throw new Error('Method not implemented.')
   }
 
   _sendQueuedPackets () {
-    const queue = this.queue
-
-    function deliver () {
-      const entry = queue.shift()
-      logger('deliver :: entry %o', entry)
-      let packet = null
-
-      if (!entry) {
-        return
-      }
-
-      packet = entry.packet
-      logger('deliver :: call _sendPacket for %o', packet)
-      let send = true
-      if (packet.messageId && packet.messageId !== 0) {
-        if (!this.messageIdProvider.register(packet.messageId)) {
-          packet.messageeId = this.messageIdProvider.allocate()
-          if (packet.messageId === null) {
-            send = false
-          }
-        }
-      }
-      if (send) {
-        this._sendPacket(
-          packet,
-          function (err) {
-            if (entry.cb) {
-              entry.cb(err)
-            }
-            deliver()
-          }
-        )
-      } else {
-        logger('messageId: %d has already used.', packet.messageId)
-        deliver()
-      }
-    }
-
-    deliver()
   }
 
-  async publish (topic, message, opts) {
-    const result = await handle.publish(this, message)
+  async publish (_topic: any, message: string, _opts: any) {
+    const result = await handle(this, message)
     return result
   }
 
-  async subscribe (packet) {
-    if (!packet.subscriptions) {
-      packet = { subscriptions: Array.isArray(packet) ? packet : [packet] }
-    }
-    const result = await handle.subscribe(this, packet)
-    return result
+  async subscribe (_packet: any) {
   }
 
-  async unsubscribe (packet) {
-    const result = await handle.unsubscribe(this, packet)
-    return result
+  async unsubscribe (_packet: any) {
   }
 
-  async end (force, opts) {
-
-    logger('end :: (%s)', this.options.clientId)
-
-    if (force == null || typeof force !== 'boolean') {
-      cb = opts || nop
-      opts = force
-      force = false
-      if (typeof opts !== 'object') {
-        cb = opts
-        opts = null
-        if (typeof cb !== 'function') {
-          cb = nop
-        }
-      }
-    }
-
-    if (typeof opts !== 'object') {
-      cb = opts
-      opts = null
-    }
-
-    logger('end :: cb? %s', !!cb)
-    cb = cb || nop
-
-    function closeStores () {
-      logger('end :: closeStores: closing incoming and outgoing stores')
-      this.disconnected = true
-      this.incomingStore.close((e1) => {
-        this.outgoingStore.close((e2) => {
-          logger('end :: closeStores: emitting end')
-          this.emit('end')
-          if (cb) {
-            const err = e1 || e2
-            logger('end :: closeStores: invoking callback with args')
-            cb(err)
-          }
-        })
-      })
-      if (that._deferredReconnect) {
-        that._deferredReconnect()
-      }
-    }
-
-    function finish () {
-      // defer closesStores of an I/O cycle,
-      // just to make sure things are
-      // ok for websockets
-      logger('end :: (%s) :: finish :: calling _cleanUp with force %s', that.options.clientId, force)
-      that._cleanUp(force, () => {
-        logger('end :: finish :: calling process.nextTick on closeStores')
-        // var boundProcess = nextTick.bind(null, closeStores)
-        nextTick(closeStores.bind(that))
-      }, opts)
-    }
-
-    if (this.disconnecting) {
-      cb()
-      return this
-    }
-
-    this._clearReconnect()
-
-    this.disconnecting = true
-
-    if (!force && Object.keys(this.outgoing).length > 0) {
-      // wait 10ms, just to be sure we received all of it
-      logger('end :: (%s) :: calling finish in 10ms once outgoing is empty', that.options.clientId)
-      this.once('outgoingEmpty', setTimeout.bind(null, finish, 10))
-    } else {
-      logger('end :: (%s) :: immediately calling finish', that.options.clientId)
-      finish()
-    }
-
-    return this
+  async end (_force: any, _opts: any) {
   }
-  outgoing(outgoing: any) {
-    throw new Error('Method not implemented.')
+
+  outgoing(_outgoing: any) {
   }
 
   /**
@@ -486,7 +306,7 @@ export class MqttClient extends EventEmitter {
    *
    * @example client.removeOutgoingMessage(client.getLastAllocated());
    */
-  removeOutgoingMessage (messageId) {
+  removeOutgoingMessage (messageId: string | number) {
     const cb = this.outgoing[messageId] ? this.outgoing[messageId].cb : null
     delete this.outgoing[messageId]
     this.outgoingStore.del({ messageId: messageId }, function () {
@@ -495,184 +315,18 @@ export class MqttClient extends EventEmitter {
     return this
   }
 
-  reconnect (opts) {
-    logger('client reconnect')
-    const that = this
-    const f = function () {
-      if (opts) {
-        that.options.incomingStore = opts.incomingStore
-        that.options.outgoingStore = opts.outgoingStore
-      } else {
-        that.options.incomingStore = null
-        that.options.outgoingStore = null
-      }
-      that.incomingStore = that.options.incomingStore || new Store()
-      that.outgoingStore = that.options.outgoingStore || new Store()
-      that.disconnecting = false
-      that.disconnected = false
-      that._deferredReconnect = null
-      that._reconnect()
-    }
-
-    if (this.disconnecting && !this.disconnected) {
-      this._deferredReconnect = f
-    } else {
-      f()
-    }
-    return this
-  }
-
-  _reconnect () {
-    logger('_reconnect: emitting reconnect to client')
-    this.emit('reconnect')
-    if (this.connected) {
-      this.end(() => { this._setupStream() })
-      logger('client already connected. disconnecting first.')
-    } else {
-      logger('_reconnect: calling _setupStream')
-      this._setupStream()
-    }
-  }
-  _setupStream() {
-    throw new Error('Method not implemented.')
+  reconnect (_opts: any) {
   }
 
   _setupReconnect () {
-    if (!this.disconnecting && !this.reconnectTimer && (this.options.reconnectPeriod > 0)) {
-      if (!this.reconnecting) {
-        logger('_setupReconnect :: emit `offline` state')
-        this.emit('offline')
-        logger('_setupReconnect :: set `reconnecting` to `true`')
-        this.reconnecting = true
-      }
-      logger('_setupReconnect :: setting reconnectTimer for %d ms', this.options.reconnectPeriod)
-      this.reconnectTimer = setInterval(() => {
-        logger('reconnectTimer :: reconnect triggered!')
-        this._reconnect()
-      }, this.options.reconnectPeriod)
-    } else {
-      logger('_setupReconnect :: doing nothing...')
-    }
   }
 
   _clearReconnect () {
-    logger('_clearReconnect : clearing reconnect timer')
-    if (this.reconnectTimer) {
-      clearInterval(this.reconnectTimer)
-      this.reconnectTimer = null
-    }
   }
 
-  async _cleanUp (forced) {
-    const opts = arguments[2]
-    if (done) {
-      logger('_cleanUp :: done callback provided for on stream close')
-      this.stream.on('close', done)
-    }
-
-    logger('_cleanUp :: forced? %s', forced)
-    if (forced) {
-      if ((this.options.reconnectPeriod === 0) && this.options.clean) {
-        flush(this.outgoing)
-      }
-      logger('_cleanUp :: (%s) :: destroying stream', this.options.clientId)
-      this.stream.destroy()
-    } else {
-      const packet = xtend({ cmd: 'disconnect' }, opts)
-      logger('_cleanUp :: (%s) :: call _sendPacket with disconnect packet', this.options.clientId)
-      this._sendPacket(
-        packet,
-        setImmediate.bind(
-          null,
-          this.stream.end.bind(this.stream)
-        )
-      )
-    }
-
-    if (!this.disconnecting) {
-      logger('_cleanUp :: client not disconnecting. Clearing and resetting reconnect.')
-      this._clearReconnect()
-      this._setupReconnect()
-    }
-
-    if (this.pingTimer !== null) {
-      logger('_cleanUp :: clearing pingTimer')
-      this.pingTimer.clear()
-      this.pingTimer = null
-    }
-
-    if (done && !this.connected) {
-      logger('_cleanUp :: (%s) :: removing stream `done` callback `close` listener', this.options.clientId)
-      this.stream.removeListener('close', done)
-      done()
-    }
+  async _cleanUp (_forced: any) {
   }
 
-  async _sendPacket (packet) {
-    logger('_sendPacket :: (%s) ::  start', this.options.clientId)
-    cbStorePut = cbStorePut || nop
-
-    if (!this.connected) {
-      logger('_sendPacket :: client not connected. Storing packet offline.')
-      this._storePacket(packet, cb, cbStorePut)
-      return
-    }
-
-    // When sending a packet, reschedule the ping timer
-    this._shiftPingInterval()
-
-    switch (packet.cmd) {
-      case 'publish':
-        break
-      case 'pubrel':
-        storeAndSend(this, packet, cb, cbStorePut)
-        return
-      default:
-        sendPacket(this, packet, cb)
-        return
-    }
-
-    switch (packet.qos) {
-      case 2:
-      case 1:
-        storeAndSend(this, packet, cb, cbStorePut)
-        break
-      /**
-       * no need of case here since it will be caught by default
-       * and jshint comply that before default it must be a break
-       * anyway it will result in -1 evaluation
-       */
-      case 0:
-        /* falls through */
-      default:
-        sendPacket(this, packet, cb)
-        break
-    }
-  }
-  _shiftPingInterval() {
-    throw new Error('Method not implemented.')
-  }
-
-  _storePacket (packet) {
-    cbStorePut = cbStorePut || nop
-
-    // check that the packet is not a qos of 0, or that the command is not a publish
-    if (((packet.qos || 0) === 0 && this.queueQoSZero) || packet.cmd !== 'publish') {
-      this.queue.push({ packet: packet, cb: cb })
-    } else if (packet.qos > 0) {
-      cb = this.outgoing[packet.messageId] ? this.outgoing[packet.messageId].cb : null
-      this.outgoingStore.put(packet, function (err) {
-        if (err) {
-          return cb && cb(err)
-        }
-        cbStorePut()
-      })
-    } else if (cb) {
-      cb(new Error('No connection to broker'))
-    }
+  _storePacket (_packet: any) {
   }
 }
-function eos(conn: any, arg1: any): any {
-  throw new Error('Function not implemented.')
-}
-
