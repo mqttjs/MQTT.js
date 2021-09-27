@@ -6,16 +6,14 @@
  */
 
 import { MqttClient } from './client'
-import { Store } from './store'
-import { DefaultMessageIdProvider } from './default-message-id-provider'
+import { DefaultMessageIdProvider } from './defaultMessageIdProvider'
 import { UniqueMessageIdProvider } from './unique-message-id-provider'
-import { urlToHttpOptions } from 'url'
 import { Duplex } from 'stream'
 import { TlsOptions } from 'tls'
 import { Server } from 'http'
 import {Server as HttpsServer} from 'https'
-
-type supportedProtocols = 'mqtt' | 'mqtts' | 'ws' | 'wss'
+import { isBrowser } from './isBrowser'
+import { QoS, UserProperties } from 'mqtt-packet'
 
 const protocols = {
   all : [
@@ -34,7 +32,7 @@ const protocols = {
   ]
 }
 
-export const isBrowser = (typeof process !== 'undefined' && process.title === 'browser') || typeof __webpack_require__ === 'function'
+// TODO:
 
 export type WsOptions = {
   backlog: number,
@@ -53,55 +51,56 @@ export type WsOptions = {
   [prop: string]: string
 }
 
-export interface ConnectOptions {
+export interface  ConnectOptions {
+  cmd: 'connect'
+  clientId: string
+  protocolVersion?: 4 | 5 | 3
+  protocolId?: 'MQTT' | 'MQIsdp'
+  clean?: boolean
+  keepalive?: number
+  username?: string
+  password?: Buffer
+  will?: {
+    topic: string
+    payload: Buffer
+    qos?: QoS
+    retain?: boolean
+    properties?: {
+      willDelayInterval?: number,
+      payloadFormatIndicator?: number,
+      messageExpiryInterval?: number,
+      contentType?: string,
+      responseTopic?: string,
+      correlationData?: Buffer,
+      userProperties?: UserProperties
+    }
+  }
+  properties?: {
+    sessionExpiryInterval?: number,
+    receiveMaximum?: number,
+    maximumPacketSize?: number,
+    topicAliasMaximum?: number,
+    requestResponseInformation?: boolean,
+    requestProblemInformation?: boolean,
+    userProperties?: UserProperties,
+    authenticationMethod?: string,
+    authenticationData?: Buffer
+  }
   brokerUrl: string | URL
   wsOptions: {[key: string]: WsOptions | unknown},
   tlsOptions: {[key: string]: TlsOptions | unknown},
-  keepalive: any,
   reschedulePings: any,
-  clientId: any,
-  protocolId: 'MQIsdp' | 'MQTT',
-  protocolVersion: any,
-  clean: any,
   reconnectPeriod: any,
   connectTimeout: any,
-  username: any,
-  password: any,
   incomingStore: any,
   outgoingStore: any,
   queueQoSZero: any,
   customHandleAcks: any,
-  properties: {
-    sessionExpiryInterval: number,
-    receiveMaximum: number,
-    maximumPacketSize: number,
-    topicAliasMaximum: number,
-    requestResponseInformation: boolean,
-    requestProblemInformation: boolean,
-    userPropertis: any,
-    authenticationMethod: string,
-    authenticationData: BinaryData // TODO: Should this be something else?
-  }
   authPacket: any,
-  will: {
-    topic: any,
-    payload: any,
-    qos: number,
-    retain: boolean,
-    properties: {
-      willDelayInterval: number,
-      payloadFormatIndicator: boolean,
-      messageExpiryInterval: number,
-      contentType: string,
-      responseTopic: string,
-      correlationData: BinaryData // TODO: is this the right type?
-      userProperties: any
-    }
-  }
   transformWsUrl: () => URL,
   resubscribe: boolean,
   messageIdProvider: any
-  customStreamFactory: (options) => Duplex
+  customStreamFactory: (options: ConnectOptions) => Duplex
 }
 
 
@@ -127,19 +126,20 @@ function connect (options: ConnectOptions) {
 
   // If there is a colon at the end of the provided protocol, replace it with 
   options.brokerUrl.protocol = options.brokerUrl.protocol.replace(/:$/, '')
-  const validationErr: Error = _validateProtocol(options)
+  const validationErr: Error | undefined = _validateProtocol(options)
   if (validationErr) {
     throw validationErr
   }
-  const client = new MqttClient(options)
+  const client = MqttClient.connect(options)
   return client
 }
 
-function _validateProtocol(opts): Error | undefined {
-  if (opts.cert && opts.key) {
-    if (opts.protocol) {
-      if (protocols.secure.indexOf(opts.protocol) === -1) {
-        const protocolError: Error = formatSecureProtocolError(opts.protocol)
+function _validateProtocol(opts: ConnectOptions): Error | undefined {
+  if (opts.tlsOptions.cert && opts.tlsOptions.key) {
+    const urlProtocol = (opts.brokerUrl as URL).protocol
+    if (urlProtocol) {
+      if (protocols.secure.indexOf(urlProtocol) === -1) {
+        const protocolError: Error = formatSecureProtocolError(urlProtocol)
         return protocolError
       }
     } else {
@@ -150,7 +150,7 @@ function _validateProtocol(opts): Error | undefined {
   }
 
   // if the protocol provided in the options does not exist in the supported protocols...
-  _ensureBrowserUsesSecureProtocol(opts.protocol)
+  _ensureBrowserUsesSecureProtocol((opts.brokerUrl as URL).protocol)
   return
 }
 
@@ -171,9 +171,9 @@ function formatSecureProtocolError(protocol: string): Error {
     Use ${secureProtocol} instead.`)
 }
 
-function _ensureBrowserUsesSecureProtocol(protocol: supportedProtocols): string {
-  let browserCompatibleProtocol: string
-  if (Client.isBrowser) {
+function _ensureBrowserUsesSecureProtocol(protocol: string): string {
+  let browserCompatibleProtocol: string = ''
+  if (isBrowser()) {
     if (protocol === 'mqtt') {
       browserCompatibleProtocol = 'ws'
     } else if (protocol === 'mqtts') {
@@ -183,4 +183,4 @@ function _ensureBrowserUsesSecureProtocol(protocol: supportedProtocols): string 
   return browserCompatibleProtocol || protocol
 }
 
-export {connect, Store, DefaultMessageIdProvider, UniqueMessageIdProvider}
+export {connect, DefaultMessageIdProvider, UniqueMessageIdProvider}

@@ -77,6 +77,7 @@
     "xtend": "^4.0.2"
   },
   "devDependencies": {
+    "@types/end-of-stream": "^1.4.1",
     "@types/node": "^16.7.1",
     "aedes": "^0.46.1",
     "airtap": "^4.0.3",
