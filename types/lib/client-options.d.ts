@@ -134,7 +134,7 @@ export interface ISecureClientOptions {
   /**
    * optional alpn's
    */
-  ALPNProtocols?: string[] | Buffer[] | Uint8Array[] | Buffer | Uint8Array;
+  ALPNProtocols?: string[] | Buffer[] | Uint8Array[] | Buffer | Uint8Array
 }
 export interface IClientPublishOptions {
   /**
