@@ -739,7 +739,7 @@ export default () => {
 
   return (
     <>
-     {lastMessages.map((message) => (
+     {messages.map((message) => (
         <h2>{message}</h2>
      )
     </>
