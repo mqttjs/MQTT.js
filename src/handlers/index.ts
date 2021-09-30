@@ -1,35 +1,79 @@
-'use strict'
-
 import { handleConnect } from './connect'
 import { handleConnAck } from './connack'
-import { handleDisconnect } from './disconnect'
-import { handlePing } from './ping'
+// import { handleDisconnect } from './disconnect'
+// import { handlePing } from './ping'
 import { handlePingReq } from './pingreq'
-import { handlePingResp } from './pingresp'
-import { handlePub } from './pub'
-import { handlePubRec } from './pubrec'
-import { handlePubRel } from './pubrel'
-import { handlePubComp } from './pubcomp'
-import { handlePubAck } from './puback'
-import { handleSub } from './sub'
-import { handleSubAck } from './suback'
-import { handleUnsub } from './unsub'
-import { handleUnsubAck } from './unsuback'
-import { handleAuth } from './auth'
+// import { handlePingResp } from './pingresp'
+// import { handlePub } from './pub'
+// import { handlePubRec } from './pubrec'
+// import { handlePubRel } from './pubrel'
+// import { handlePubComp } from './pubcomp'
+// import { handlePubAck } from './puback'
+// import { handleSub } from './sub'
+// import { handleSubAck } from './suback'
+// import { handleUnsub } from './unsub'
+// import { handleUnsubAck } from './unsuback'
+// import { handleAuth } from './auth'
 import { MqttClient } from '../client'
-import { PacketCmd, Packet } from 'mqtt-packet'
+import { Packet, writeToStream } from 'mqtt-packet'
+import { handleAuth } from './auth'
+import { ReasonCodeErrors } from '../errors'
 
-export async function handle (client: MqttClient, cmd: PacketCmd, options: unknown) {
+export class ConnectionRefusedError extends Error {
+  code?: number
+}
+
+export async function handleInboundPackets(client: MqttClient, packet: Packet): Promise<void> {
+  /* eslint no-fallthrough: "off" */
+  var messageId = packet.messageId
+  var type = packet.cmd
+  var response = null
+  var cb = this.outgoing[messageId] ? this.outgoing[messageId].cb : null
+  var that = this
+  var err
+
+  if (!cb) {
+    // Server sent an ack in error, ignore it.
+    return
+  }
+
+  switch (packet.cmd) {
+    case 'connack':
+      await handleConnAck(client, packet)
+      break
+    case 'pubcomp':
+      // same thing as puback for QoS 2
+    case 'puback':
+      var pubackRC = packet.reasonCode
+      // Callback - we're done
+      if (pubackRC && pubackRC > 0 && pubackRC !== 16) {
+        err = new ConnectionRefusedError('Publish error: ' + ReasonCodeErrors[`${pubackRC}`])
+        err.code = pubackRC
+        cb(err, packet)
+      }
+      delete client.outgoing[messageId]
+      client.outgoingStore.del(packet, cb)
+      client.messageIdProvider.deallocate(messageId)
+      client._invokeStoreProcessingQueue()
+    case 'unsuback':
+      // result = await handleUnsubAck(client, options)
+      break
+    case 'suback':
+        // result = await handleSubAck(client, options)
+        break
+  }
+
+}
+
+export async function handleOutgoingPackets(client: MqttClient, packet: Packet): Promise<void> {
   let result
-  switch (cmd) {
+  switch (packet.cmd) {
     case 'auth':
-      // result = await handleAuth(client, options)
+      // TODO: Does this follow the spec correctly? Shouldn't auth be able to be sent at any time???
+      result = await handleAuth(client, packet)
       break
     case 'connect':
-      result = await handleConnect(client, options)
-      break
-    case 'connack':
-      result = await handleConnAck(client, options)
+      await handleConnect(client, packet)
       break
     case 'publish':
       // result = await handlePub(client, options)
@@ -37,14 +81,8 @@ export async function handle (client: MqttClient, cmd: PacketCmd, options: unkno
     case 'subscribe':
       // result = await handleSub(client, options)
       break
-    case 'suback':
-      // result = await handleSubAck(client, options)
-      break
     case 'unsubscribe':
       // result = await handleUnsub(client, options)
-      break
-    case 'unsuback':
-      // result = await handleUnsubAck(client, options)
       break
     case 'pubcomp':
       // result = await handlePubComp(client, options)
@@ -59,7 +97,7 @@ export async function handle (client: MqttClient, cmd: PacketCmd, options: unkno
       // result = await handlePubRec(client, options)
       break
     case 'pingreq':
-      // result = await handlePingReq(client, options)
+      result = await handlePingReq(client, packet)
       break
     case 'pingresp':
       // result = await handlePingResp(client, options)

@@ -52,6 +52,7 @@ export type WsOptions = {
 }
 
 export interface  ConnectOptions {
+  queueLimit: number
   cmd: 'connect'
   clientId: string
   protocolVersion?: 4 | 5 | 3
@@ -86,7 +87,7 @@ export interface  ConnectOptions {
     authenticationMethod?: string,
     authenticationData?: Buffer
   }
-  brokerUrl: string | URL
+  brokerUrl: URL
   wsOptions: {[key: string]: WsOptions | unknown},
   tlsOptions: {[key: string]: TlsOptions | unknown},
   reschedulePings: any,
@@ -97,7 +98,7 @@ export interface  ConnectOptions {
   queueQoSZero: any,
   customHandleAcks: any,
   authPacket: any,
-  transformWsUrl: () => URL,
+  transformWsUrl: (options: any) => URL,
   resubscribe: boolean,
   messageIdProvider: any
   customStreamFactory: (options: ConnectOptions) => Duplex

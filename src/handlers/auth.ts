@@ -1,22 +1,5 @@
-interface AuthProperties {
-  authenticationMethod: string,
-  authenticationData: Buffer,
-  reasonString: string,
-  userProperties: {[x: string]: unknown}
-}
-
-export async function handleAuth (direction: 'toServer' | 'fromServer', reasonCode: number, props: AuthProperties) {
-  const packet = {
-    cmd: 'auth',
-    reasonCode: reasonCode, // MQTT 5.0 code
-    properties: { // properties MQTT 5.0
-       authenticationMethod: props.authenticationMethod,
-       authenticationData: props.authenticationData,
-       reasonString: props.reasonString,
-       userProperties: props.userProperties
-    }
-  }
-}
+import { IAuthPacket, writeToStream } from "mqtt-packet"
+import { MqttClient } from "../client"
 
 /**
  * Authentication in MQTT v5
@@ -54,3 +37,7 @@ export async function handleAuth (direction: 'toServer' | 'fromServer', reasonCo
  *  }
  * }
  */
+export async function handleAuth (client: MqttClient, packet: IAuthPacket) {
+  client.emit('packetsend', packet)
+  writeToStream(packet, client.conn, client._options)
+}

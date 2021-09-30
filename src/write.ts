@@ -1,8 +1,8 @@
 import mqtt from 'mqtt-packet'
 import { MqttClient } from './client'
 
-export async function write (client: MqttClient, packet: mqtt.Packet) {
-  let error = null
+export function write (client: MqttClient, packet: mqtt.Packet): Promise<void> {
+  let error: Error | null = null
   return new Promise((resolve, reject) => {
 
     if (client.connecting || client.connected) {

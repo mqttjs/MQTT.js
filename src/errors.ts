@@ -1,6 +1,6 @@
 'use strict'
 
-export var errors = {
+export const ReasonCodeErrors = {
   0: '',
   1: 'Unacceptable protocol version',
   2: 'Identifier rejected',
