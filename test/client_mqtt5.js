@@ -46,7 +46,7 @@ describe('MQTT 5.0', function () {
           qos: 0,
           properties: { topicAlias: 1 }
         })
-        // overwrite register topicAlias
+        // overwrite registered topicAlias
         serverClient.publish({
           messageId: 0,
           topic: 'test2',
