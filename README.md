@@ -207,7 +207,7 @@ The default value is 1000 ms which means it will try to reconnect 1 second
 after losing the connection.
 
 <a name="topicalias"></a>
-## About Topic Alias management
+## About Topic Alias Management
 
 ### Enabling automatic Topic Alias using
 If the client sets the option `autoUseTopicAlias:true` then MQTT.js uses existing topic alias automatically.
