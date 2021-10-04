@@ -13,29 +13,548 @@ describe('MQTT 5.0', function () {
 
   abstractClientTests(server, config)
 
-  // var server = serverBuilder().listen(ports.PORTAND115)
+  it('topic should be complemented on receive', function (done) {
+    this.timeout(15000)
 
-  var topicAliasTests = [
-    {properties: {}, name: 'should allow any topicAlias when no topicAliasMaximum provided in settings'},
-    {properties: { topicAliasMaximum: 15 }, name: 'should not allow topicAlias > topicAliasMaximum when topicAliasMaximum provided in settings'}
-  ]
+    var opts = {
+      host: 'localhost',
+      port: ports.PORTAND103,
+      protocolVersion: 5,
+      topicAliasMaximum: 3
+    }
+    var client = mqtt.connect(opts)
+    var publishCount = 0
+    var server103 = new MqttServer(function (serverClient) {
+      serverClient.on('connect', function (packet) {
+        assert.strictEqual(packet.properties.topicAliasMaximum, 3)
+        serverClient.connack({
+          reasonCode: 0
+        })
+        // register topicAlias
+        serverClient.publish({
+          messageId: 0,
+          topic: 'test1',
+          payload: 'Message',
+          qos: 0,
+          properties: { topicAlias: 1 }
+        })
+        // use topicAlias
+        serverClient.publish({
+          messageId: 0,
+          topic: '',
+          payload: 'Message',
+          qos: 0,
+          properties: { topicAlias: 1 }
+        })
+        // overwrite registered topicAlias
+        serverClient.publish({
+          messageId: 0,
+          topic: 'test2',
+          payload: 'Message',
+          qos: 0,
+          properties: { topicAlias: 1 }
+        })
+        // use topicAlias
+        serverClient.publish({
+          messageId: 0,
+          topic: '',
+          payload: 'Message',
+          qos: 0,
+          properties: { topicAlias: 1 }
+        })
+      })
+    }).listen(ports.PORTAND103)
 
-  topicAliasTests.forEach(function (test) {
-    it(test.name, function (done) {
-      this.timeout(15000)
-      server.once('client', function (serverClient) {
-        serverClient.on('publish', function (packet) {
-          if (packet.properties && packet.properties.topicAlias) {
-            done(new Error('Packet should not have topicAlias'))
-            return false
-          } else {
-            serverClient.end(done)
+    client.on('message', function (topic, messagee, packet) {
+      switch (publishCount++) {
+        case 0:
+          assert.strictEqual(topic, 'test1')
+          assert.strictEqual(packet.topic, 'test1')
+          assert.strictEqual(packet.properties.topicAlias, 1)
+          break
+        case 1:
+          assert.strictEqual(topic, 'test1')
+          assert.strictEqual(packet.topic, '')
+          assert.strictEqual(packet.properties.topicAlias, 1)
+          break
+        case 2:
+          assert.strictEqual(topic, 'test2')
+          assert.strictEqual(packet.topic, 'test2')
+          assert.strictEqual(packet.properties.topicAlias, 1)
+          break
+        case 3:
+          assert.strictEqual(topic, 'test2')
+          assert.strictEqual(packet.topic, '')
+          assert.strictEqual(packet.properties.topicAlias, 1)
+          server103.close()
+          client.end(true, done)
+          break
+      }
+    })
+  })
+
+  it('registered topic alias should automatically used if autoUseTopicAlias is true', function (done) {
+    this.timeout(15000)
+
+    var opts = {
+      host: 'localhost',
+      port: ports.PORTAND103,
+      protocolVersion: 5,
+      autoUseTopicAlias: true
+    }
+    var client = mqtt.connect(opts)
+
+    var publishCount = 0
+    var server103 = new MqttServer(function (serverClient) {
+      serverClient.on('connect', function (packet) {
+        serverClient.connack({
+          reasonCode: 0,
+          properties: {
+            topicAliasMaximum: 3
           }
         })
       })
-      var opts = {host: 'localhost', port: ports.PORTAND115, protocolVersion: 5, properties: test.properties}
-      var client = mqtt.connect(opts)
-      client.publish('t/h', 'Message', { properties: { topicAlias: 22 } })
+      serverClient.on('publish', function (packet) {
+        switch (publishCount++) {
+          case 0:
+            assert.strictEqual(packet.topic, 'test1')
+            assert.strictEqual(packet.properties.topicAlias, 1)
+            break
+          case 1:
+            assert.strictEqual(packet.topic, '')
+            assert.strictEqual(packet.properties.topicAlias, 1)
+            break
+          case 2:
+            assert.strictEqual(packet.topic, '')
+            assert.strictEqual(packet.properties.topicAlias, 1)
+            server103.close()
+            client.end(true, done)
+            break
+        }
+      })
+    }).listen(ports.PORTAND103)
+
+    client.on('connect', function () {
+      // register topicAlias
+      client.publish('test1', 'Message', { properties: { topicAlias: 1 } })
+      // use topicAlias
+      client.publish('', 'Message', { properties: { topicAlias: 1 } })
+      // use topicAlias by autoApplyTopicAlias
+      client.publish('test1', 'Message')
+    })
+  })
+
+  it('topicAlias is automatically used if autoAssignTopicAlias is true', function (done) {
+    this.timeout(15000)
+
+    var opts = {
+      host: 'localhost',
+      port: ports.PORTAND103,
+      protocolVersion: 5,
+      autoAssignTopicAlias: true
+    }
+    var client = mqtt.connect(opts)
+
+    var publishCount = 0
+    var server103 = new MqttServer(function (serverClient) {
+      serverClient.on('connect', function (packet) {
+        serverClient.connack({
+          reasonCode: 0,
+          properties: {
+            topicAliasMaximum: 3
+          }
+        })
+      })
+      serverClient.on('publish', function (packet) {
+        switch (publishCount++) {
+          case 0:
+            assert.strictEqual(packet.topic, 'test1')
+            assert.strictEqual(packet.properties.topicAlias, 1)
+            break
+          case 1:
+            assert.strictEqual(packet.topic, 'test2')
+            assert.strictEqual(packet.properties.topicAlias, 2)
+            break
+          case 2:
+            assert.strictEqual(packet.topic, 'test3')
+            assert.strictEqual(packet.properties.topicAlias, 3)
+            break
+          case 3:
+            assert.strictEqual(packet.topic, '')
+            assert.strictEqual(packet.properties.topicAlias, 1)
+            break
+          case 4:
+            assert.strictEqual(packet.topic, '')
+            assert.strictEqual(packet.properties.topicAlias, 3)
+            break
+          case 5:
+            assert.strictEqual(packet.topic, 'test4')
+            assert.strictEqual(packet.properties.topicAlias, 2)
+            server103.close()
+            client.end(true, done)
+            break
+        }
+      })
+    }).listen(ports.PORTAND103)
+
+    client.on('connect', function () {
+      // register topicAlias
+      client.publish('test1', 'Message')
+      client.publish('test2', 'Message')
+      client.publish('test3', 'Message')
+
+      // use topicAlias
+      client.publish('test1', 'Message')
+      client.publish('test3', 'Message')
+
+      // renew LRU topicAlias
+      client.publish('test4', 'Message')
+    })
+  })
+
+  it('topicAlias should be removed and topic restored on resend', function (done) {
+    this.timeout(15000)
+
+    var incomingStore = new mqtt.Store({ clean: false })
+    var outgoingStore = new mqtt.Store({ clean: false })
+    var opts = {
+      host: 'localhost',
+      port: ports.PORTAND103,
+      protocolVersion: 5,
+      clientId: 'cid1',
+      incomingStore: incomingStore,
+      outgoingStore: outgoingStore,
+      clean: false,
+      reconnectPeriod: 100
+    }
+    var client = mqtt.connect(opts)
+
+    var connectCount = 0
+    var publishCount = 0
+    var server103 = new MqttServer(function (serverClient) {
+      serverClient.on('connect', function (packet) {
+        switch (connectCount++) {
+          case 0:
+            serverClient.connack({
+              reasonCode: 0,
+              sessionPresent: false,
+              properties: {
+                topicAliasMaximum: 3
+              }
+            })
+            break
+          case 1:
+            serverClient.connack({
+              reasonCode: 0,
+              sessionPresent: true,
+              properties: {
+                topicAliasMaximum: 3
+              }
+            })
+            break
+        }
+      })
+      serverClient.on('publish', function (packet) {
+        switch (publishCount++) {
+          case 0:
+            assert.strictEqual(packet.topic, 'test1')
+            assert.strictEqual(packet.properties.topicAlias, 1)
+            break
+          case 1:
+            assert.strictEqual(packet.topic, '')
+            assert.strictEqual(packet.properties.topicAlias, 1)
+            setImmediate(function () {
+              serverClient.stream.destroy()
+            })
+            break
+          case 2:
+            assert.strictEqual(packet.topic, 'test1')
+            var alias1
+            if (packet.properties) {
+              alias1 = packet.properties.topicAlias
+            }
+            assert.strictEqual(alias1, undefined)
+            serverClient.puback({messageId: packet.messageId})
+            break
+          case 3:
+            assert.strictEqual(packet.topic, 'test1')
+            var alias2
+            if (packet.properties) {
+              alias2 = packet.properties.topicAlias
+            }
+            assert.strictEqual(alias2, undefined)
+            serverClient.puback({messageId: packet.messageId})
+            server103.close()
+            client.end(true, done)
+            break
+        }
+      })
+    }).listen(ports.PORTAND103)
+
+    client.once('connect', function () {
+      // register topicAlias
+      client.publish('test1', 'Message', { qos: 1, properties: { topicAlias: 1 } })
+      // use topicAlias
+      client.publish('', 'Message', { qos: 1, properties: { topicAlias: 1 } })
+    })
+  })
+
+  it('topicAlias should be removed and topic restored on offline publish', function (done) {
+    this.timeout(15000)
+
+    var incomingStore = new mqtt.Store({ clean: false })
+    var outgoingStore = new mqtt.Store({ clean: false })
+    var opts = {
+      host: 'localhost',
+      port: ports.PORTAND103,
+      protocolVersion: 5,
+      clientId: 'cid1',
+      incomingStore: incomingStore,
+      outgoingStore: outgoingStore,
+      clean: false,
+      reconnectPeriod: 100
+    }
+    var client = mqtt.connect(opts)
+
+    var connectCount = 0
+    var publishCount = 0
+    var server103 = new MqttServer(function (serverClient) {
+      serverClient.on('connect', function (packet) {
+        switch (connectCount++) {
+          case 0:
+            serverClient.connack({
+              reasonCode: 0,
+              sessionPresent: false,
+              properties: {
+                topicAliasMaximum: 3
+              }
+            })
+            setImmediate(function () {
+              serverClient.stream.destroy()
+            })
+            break
+          case 1:
+            serverClient.connack({
+              reasonCode: 0,
+              sessionPresent: true,
+              properties: {
+                topicAliasMaximum: 3
+              }
+            })
+            break
+        }
+      })
+      serverClient.on('publish', function (packet) {
+        switch (publishCount++) {
+          case 0:
+            assert.strictEqual(packet.topic, 'test1')
+            var alias1
+            if (packet.properties) {
+              alias1 = packet.properties.topicAlias
+            }
+            assert.strictEqual(alias1, undefined)
+            assert.strictEqual(packet.qos, 1)
+            serverClient.puback({messageId: packet.messageId})
+            break
+          case 1:
+            assert.strictEqual(packet.topic, 'test1')
+            var alias2
+            if (packet.properties) {
+              alias2 = packet.properties.topicAlias
+            }
+            assert.strictEqual(alias2, undefined)
+            assert.strictEqual(packet.qos, 0)
+            break
+          case 2:
+            assert.strictEqual(packet.topic, 'test1')
+            var alias3
+            if (packet.properties) {
+              alias3 = packet.properties.topicAlias
+            }
+            assert.strictEqual(alias3, undefined)
+            assert.strictEqual(packet.qos, 0)
+            server103.close()
+            client.end(true, done)
+            break
+        }
+      })
+    }).listen(ports.PORTAND103)
+
+    client.once('close', function () {
+      // register topicAlias
+      client.publish('test1', 'Message', { qos: 0, properties: { topicAlias: 1 } })
+      // use topicAlias
+      client.publish('', 'Message', { qos: 0, properties: { topicAlias: 1 } })
+      client.publish('', 'Message', { qos: 1, properties: { topicAlias: 1 } })
+    })
+  })
+
+  it('should error cb call if PUBLISH out of range topicAlias', function (done) {
+    this.timeout(15000)
+
+    var opts = {
+      host: 'localhost',
+      port: ports.PORTAND103,
+      protocolVersion: 5
+    }
+    var client = mqtt.connect(opts)
+    var server103 = new MqttServer(function (serverClient) {
+      serverClient.on('connect', function (packet) {
+        serverClient.connack({
+          reasonCode: 0,
+          sessionPresent: false,
+          properties: {
+            topicAliasMaximum: 3
+          }
+        })
+      })
+    }).listen(ports.PORTAND103)
+
+    client.on('connect', function () {
+      // register topicAlias
+      client.publish(
+        'test1',
+        'Message',
+        { properties: { topicAlias: 4 } },
+        function (error) {
+          assert.strictEqual(error.message, 'Sending Topic Alias out of range')
+          server103.close()
+          client.end(true, done)
+        })
+    })
+  })
+
+  it('should error cb call if PUBLISH out of range topicAlias on topicAlias disabled by broker', function (done) {
+    this.timeout(15000)
+
+    var opts = {
+      host: 'localhost',
+      port: ports.PORTAND103,
+      protocolVersion: 5
+    }
+    var client = mqtt.connect(opts)
+    var server103 = new MqttServer(function (serverClient) {
+      serverClient.on('connect', function (packet) {
+        serverClient.connack({
+          reasonCode: 0,
+          sessionPresent: false
+        })
+      })
+    }).listen(ports.PORTAND103)
+
+    client.on('connect', function () {
+      // register topicAlias
+      client.publish(
+        'test1',
+        'Message',
+        { properties: { topicAlias: 1 } },
+        function (error) {
+          assert.strictEqual(error.message, 'Sending Topic Alias out of range')
+          server103.close()
+          client.end(true, done)
+        })
+    })
+  })
+
+  it('should throw an error if broker PUBLISH out of range topicAlias', function (done) {
+    this.timeout(15000)
+
+    var opts = {
+      host: 'localhost',
+      port: ports.PORTAND103,
+      protocolVersion: 5,
+      topicAliasMaximum: 3
+    }
+    var client = mqtt.connect(opts)
+    var server103 = new MqttServer(function (serverClient) {
+      serverClient.on('connect', function (packet) {
+        serverClient.connack({
+          reasonCode: 0,
+          sessionPresent: false
+        })
+        // register out of range topicAlias
+        serverClient.publish({
+          messageId: 0,
+          topic: 'test1',
+          payload: 'Message',
+          qos: 0,
+          properties: { topicAlias: 4 }
+        })
+      })
+    }).listen(ports.PORTAND103)
+
+    client.on('error', function (error) {
+      assert.strictEqual(error.message, 'Received Topic Alias is out of range')
+      server103.close()
+      client.end(true, done)
+    })
+  })
+
+  it('should throw an error if broker PUBLISH topicAlias:0', function (done) {
+    this.timeout(15000)
+
+    var opts = {
+      host: 'localhost',
+      port: ports.PORTAND103,
+      protocolVersion: 5,
+      topicAliasMaximum: 3
+    }
+    var client = mqtt.connect(opts)
+    var server103 = new MqttServer(function (serverClient) {
+      serverClient.on('connect', function (packet) {
+        serverClient.connack({
+          reasonCode: 0,
+          sessionPresent: false
+        })
+        // register out of range topicAlias
+        serverClient.publish({
+          messageId: 0,
+          topic: 'test1',
+          payload: 'Message',
+          qos: 0,
+          properties: { topicAlias: 0 }
+        })
+      })
+    }).listen(ports.PORTAND103)
+
+    client.on('error', function (error) {
+      assert.strictEqual(error.message, 'Received Topic Alias is out of range')
+      server103.close()
+      client.end(true, done)
+    })
+  })
+
+  it('should throw an error if broker PUBLISH unregistered topicAlias', function (done) {
+    this.timeout(15000)
+
+    var opts = {
+      host: 'localhost',
+      port: ports.PORTAND103,
+      protocolVersion: 5,
+      topicAliasMaximum: 3
+    }
+    var client = mqtt.connect(opts)
+    var server103 = new MqttServer(function (serverClient) {
+      serverClient.on('connect', function (packet) {
+        serverClient.connack({
+          reasonCode: 0,
+          sessionPresent: false
+        })
+        // register out of range topicAlias
+        serverClient.publish({
+          messageId: 0,
+          topic: '', // use topic alias
+          payload: 'Message',
+          qos: 0,
+          properties: { topicAlias: 1 } // in range topic alias
+        })
+      })
+    }).listen(ports.PORTAND103)
+
+    client.on('error', function (error) {
+      assert.strictEqual(error.message, 'Received unregistered Topic Alias')
+      server103.close()
+      client.end(true, done)
     })
   })
 
@@ -85,7 +604,6 @@ describe('MQTT 5.0', function () {
         serverClient.connack({
           reasonCode: 0,
           properties: {
-            topicAliasMaximum: 15,
             serverKeepAlive: 16,
             maximumPacketSize: 95
           }
@@ -105,7 +623,6 @@ describe('MQTT 5.0', function () {
     var client = mqtt.connect(opts)
     client.on('connect', function () {
       assert.strictEqual(client.options.keepalive, 16)
-      assert.strictEqual(client.options.properties.topicAliasMaximum, 15)
       assert.strictEqual(client.options.properties.maximumPacketSize, 95)
       server116.close()
       client.end(true, done)
