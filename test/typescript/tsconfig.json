@@ -4,7 +4,7 @@
     "target": "es5",
     "moduleResolution": "node",
     "noEmitOnError": true,
-    "noImplicitAny": false,
+    "noImplicitAny": true,
     "alwaysStrict": true,
     "strictNullChecks": true,
     "noImplicitReturns": true,
