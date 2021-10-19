@@ -149,7 +149,7 @@ export interface IClientPublishOptions {
    *  MQTT 5.0 properties object
    */
   properties?: {
-    payloadFormatIndicator?: number,
+    payloadFormatIndicator?: boolean,
     messageExpiryInterval?: number,
     topicAlias?: string,
     responseTopic?: string,
