@@ -15,7 +15,6 @@ coverage
 test/typescript/.idea/*
 test/typescript/*.js
 test/typescript/*.map
-package-lock.json
 # VS Code stuff
 **/typings/**
 **/.vscode/**
