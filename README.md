@@ -6,14 +6,16 @@
 MQTT.js is a client library for the [MQTT](http://mqtt.org/) protocol, written
 in JavaScript for node.js and the browser.
 
+## Table of Contents
 * [__MQTT.js vNext__](#vnext)
 * [Upgrade notes](#notes)
 * [Installation](#install)
 * [Example](#example)
+* [Import Styles](#example)
 * [Command Line Tools](#cli)
 * [API](#api)
 * [Browser](#browser)
-* [Weapp](#weapp)
+* [Weapp and Ali support](#weapp-alipay)
 * [About QoS](#qos)
 * [TypeScript](#typescript)
 * [Contributing](#contributing)
