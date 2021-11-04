@@ -15,9 +15,9 @@ in JavaScript for node.js and the browser.
 * [Command Line Tools](#cli)
 * [API](#api)
 * [Browser](#browser)
-* [Weapp and Ali support](#weapp-alipay)
 * [About QoS](#qos)
 * [TypeScript](#typescript)
+* [Weapp and Ali support](#weapp-alipay)
 * [Contributing](#contributing)
 * [License](#license)
 
