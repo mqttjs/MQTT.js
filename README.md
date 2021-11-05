@@ -671,7 +671,7 @@ const client = connect('wxs://test.mosquitto.org');
 ```
 
 ## Ali Mini Program
-Surport [Ali Mini Program](https://open.alipay.com/channel/miniIndex.htm). See [Doc](https://docs.alipay.com/mini/developer/getting-started).
+Support [Ali Mini Program](https://open.alipay.com/channel/miniIndex.htm). See [Doc](https://docs.alipay.com/mini/developer/getting-started).
 <a name="example"></a>
 
 ## Example(js)
