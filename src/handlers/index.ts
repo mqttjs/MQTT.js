@@ -38,34 +38,12 @@ export async function handleInboundPackets(client: MqttClient, packet: Packet): 
   }
 
   switch (packet.cmd) {
-    case 'connack':
-      await handleConnAck(client, packet)
-      break
-    case 'pubcomp':
-      // same thing as puback for QoS 2
-    case 'puback':
-      var pubackRC = packet.reasonCode
-      // Callback - we're done
-      if (pubackRC && pubackRC > 0 && pubackRC !== 16) {
-        err = new ConnectionRefusedError('Publish error: ' + ReasonCodeErrors[`${pubackRC}`])
-        err.code = pubackRC
-        cb(err, packet)
-      }
-      delete client.outgoing[messageId]
-      client.outgoingStore.del(packet, cb)
-      client.messageIdProvider.deallocate(messageId)
-      client._invokeStoreProcessingQueue()
-    case 'unsuback':
-      // result = await handleUnsubAck(client, options)
-      break
-    case 'suback':
-        // result = await handleSubAck(client, options)
-        break
+
   }
 
 }
 
-export async function handleOutgoingPackets(client: MqttClient, packet: Packet): Promise<void> {
+export async function handle(client: MqttClient, packet: Packet): Promise<void> {
   let result
   switch (packet.cmd) {
     case 'auth':
@@ -84,21 +62,25 @@ export async function handleOutgoingPackets(client: MqttClient, packet: Packet):
     case 'unsubscribe':
       // result = await handleUnsub(client, options)
       break
-    case 'pubcomp':
-      // result = await handlePubComp(client, options)
-      break
-    case 'puback':
-      // result = await handlePubAck(client, options)
-      break
     case 'pubrel':
-      // result = await handlePubRel(client, options)
-      break
     case 'pubrec':
-      // result = await handlePubRec(client, options)
-      break
     case 'pingreq':
       result = await handlePingReq(client, packet)
       break
+    case 'pubcomp':
+      // fallthrough
+    case 'puback':
+      var pubackRC = packet.reasonCode
+      // Callback - we're done
+      if (pubackRC && pubackRC > 0 && pubackRC !== 16) {
+        const err = new ConnectionRefusedError('Publish error: ' + ReasonCodeErrors[pubackRC as keyof typeof ReasonCodeErrors])
+        err.code = pubackRC
+        throw err
+      }
+      delete client.outgoing[messageId]
+      client.outgoingStore.del(packet, cb)
+      client.messageIdProvider.deallocate(messageId)
+      client._invokeStoreProcessingQueue()
     case 'pingresp':
       // result = await handlePingResp(client, options)
       break
@@ -106,6 +88,17 @@ export async function handleOutgoingPackets(client: MqttClient, packet: Packet):
       // result = await handleDisconnect(client, options)
       // client._disconnected = true
       break
+    case 'connack':
+      await handleConnAck(client, packet)
+      break
+    case 'pubcomp':
+      // same thing as puback for QoS 2
+    case 'unsuback':
+      // result = await handleUnsubAck(client, options)
+      break
+    case 'suback':
+        // result = await handleSubAck(client, options)
+        break
   }
 
   return result

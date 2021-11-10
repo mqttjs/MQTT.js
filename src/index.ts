@@ -7,12 +7,11 @@
 
 import { MqttClient } from './client'
 import { DefaultMessageIdProvider } from './defaultMessageIdProvider'
-import { UniqueMessageIdProvider } from './unique-message-id-provider'
+import { UniqueMessageIdProvider } from './uniqueMessageIdProvider'
 import { Duplex } from 'stream'
 import { TlsOptions } from 'tls'
 import { Server } from 'http'
 import {Server as HttpsServer} from 'https'
-import { isBrowser } from './isBrowser'
 import { QoS, UserProperties } from 'mqtt-packet'
 
 const protocols = {
@@ -52,6 +51,9 @@ export type WsOptions = {
 }
 
 export interface  ConnectOptions {
+  autoUseTopicAlias: any
+  autoAssignTopicAlias: any
+  topicAliasMaximum: number
   queueLimit: number
   cmd: 'connect'
   clientId: string
@@ -131,6 +133,11 @@ function connect (options: ConnectOptions) {
   if (validationErr) {
     throw validationErr
   }
+
+  if (!options.messageIdProvider) {
+    options.messageIdProvider = new DefaultMessageIdProvider()
+  }
+
   const client = MqttClient.connect(options)
   return client
 }
@@ -174,7 +181,9 @@ function formatSecureProtocolError(protocol: string): Error {
 
 function _ensureBrowserUsesSecureProtocol(protocol: string): string {
   let browserCompatibleProtocol: string = ''
-  if (isBrowser()) {
+  // TODO: This used to be if (isBrowser) but I'm removing isBrowser. We should 
+  // just shim this.
+  if (false) {
     if (protocol === 'mqtt') {
       browserCompatibleProtocol = 'ws'
     } else if (protocol === 'mqtts') {
