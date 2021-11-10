@@ -1,7 +1,6 @@
 'use strict'
 
-import { IAuthPacket, IConnackPacket, IConnectPacket, IDisconnectPacket, IPingreqPacket, IPingrespPacket, IPubackPacket, IPubcompPacket, IPublishPacket, IPubrecPacket, IPubrelPacket, ISubackPacket, ISubscribePacket, IUnsubackPacket, IUnsubscribePacket, Packet, parser as mqttParser, Parser as MqttParser, writeToStream } from 'mqtt-packet'
-import { ConnectionRefusedError, handle } from './handlers'
+import { IConnackPacket, IConnectPacket, IPublishPacket, Packet, parser as mqttParser, Parser as MqttParser, writeToStream } from 'mqtt-packet'
 import { ConnectOptions } from '.'
 import { Duplex, EventEmitter, Readable } from 'stream'
 import { connectionFactory } from './connectionFactory'
@@ -307,7 +306,7 @@ export class MqttClient extends EventEmitter {
       this.reconnecting = false
       return 
     } else if (rc > 0) {
-      const err = new ConnectionRefusedError('Connection refused: ' + ReasonCodeErrors[rc as keyof typeof ReasonCodeErrors])
+      const err:any = new Error('Connection refused: ' + ReasonCodeErrors[rc as keyof typeof ReasonCodeErrors])
       err.code = rc
       this.emit('error', err)
       throw err
