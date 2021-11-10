@@ -14,7 +14,6 @@ import {TopicAliasRecv} from './topicAliasRecv'
 import rfdc from 'rfdc'
 import { debug } from 'console'
 import { Store } from './store'
-import { rejects } from 'assert'
 import { nextTick } from 'process'
 
 const clone = rfdc()
@@ -149,7 +148,17 @@ export class MqttClient extends EventEmitter {
     this._incomingPacketParser.on('error', this.emit.bind(this, 'error'))
 
     this.once('connected', () => {})
-    this.on('close', this._closeClient)
+    this.on('close', () => {
+      debug('close :: connected set to `false`')
+      this.connected = false
+  
+      if (this.topicAliasRecv) {
+        this.topicAliasRecv.clear()
+      }
+  
+      debug('close :: calling _setupReconnect')
+      this._setupReconnect()
+    })
 
     this.conn.on('readable', () => {
       let data
@@ -239,7 +248,7 @@ export class MqttClient extends EventEmitter {
   
     if (!this.connected) {
       logger('_cleanUp :: (%s) :: removing stream `done` callback `close` listener', this._options.clientId)
-      this.conn.removeListener('close', this.remove)
+      this.conn.removeListener('close', () => {})
       return 
 
     }
@@ -382,7 +391,7 @@ export class MqttClient extends EventEmitter {
    * This is necessary as a method call even from the user. If the client is ever disconnected, they can manually call this, because
    * there is no exposed 'connect' method that doesn't create a new client. 
    */
-  async _reconnect (): void {
+  async _reconnect (): Promise<void> {
     this.emit('reconnect')
     this._clearReconnect()
     if (this.connected) {
