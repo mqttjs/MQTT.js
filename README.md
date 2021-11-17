@@ -6,16 +6,18 @@
 MQTT.js is a client library for the [MQTT](http://mqtt.org/) protocol, written
 in JavaScript for node.js and the browser.
 
+## Table of Contents
 * [__MQTT.js vNext__](#vnext)
 * [Upgrade notes](#notes)
 * [Installation](#install)
 * [Example](#example)
+* [Import Styles](#example)
 * [Command Line Tools](#cli)
 * [API](#api)
 * [Browser](#browser)
-* [Weapp](#weapp)
 * [About QoS](#qos)
 * [TypeScript](#typescript)
+* [Weapp and Ali support](#weapp-alipay)
 * [Contributing](#contributing)
 * [License](#license)
 
@@ -114,6 +116,25 @@ If you do not want to install a separate broker, you can try using the
 [Aedes](https://github.com/moscajs/aedes).
 
 to use MQTT.js in the browser see the [browserify](#browserify) section
+
+<a name="import_styles"></a>
+## Import styles
+### CommonJS (Require)
+```js
+var mqtt = require('mqtt')  // require mqtt
+var client = mqtt.connect('est.mosquitto.org')  // create a client
+```
+### ES6 Modules (Import)
+#### Aliased wildcard import
+```js
+import * as mqtt from "mqtt"  // import everything inside the mqtt module and give it the namespace "mqtt"
+let client = mqtt.connect('mqtt://test.mosquitto.org') // create a client
+```
+#### Importing individual components
+```js
+import { connect } from "mqtt"  // import connect from mqtt
+let client = connect('mqtt://test.mosquitto.org') // create a client
+```
 
 <a name="promises"></a>
 ## Promise support
@@ -275,7 +296,7 @@ Connects to the broker specified by the given url and options and
 returns a [Client](#client).
 
 The URL can be on the following protocols: 'mqtt', 'mqtts', 'tcp',
-'tls', 'ws', 'wss'. The URL can also be an object as returned by
+'tls', 'ws', 'wss', 'wxs', 'alis'. The URL can also be an object as returned by
 [`URL.parse()`](http://nodejs.org/api/url.html#url_url_parse_urlstr_parsequerystring_slashesdenotehost),
 in that case the two objects are merged, i.e. you can pass a single
 object with both the URL and the connect options.
@@ -651,43 +672,6 @@ The MQTT.js bundle is available through http://unpkg.com, specifically
 at https://unpkg.com/mqtt/dist/mqtt.min.js.
 See http://unpkg.com for the full documentation on version ranges.
 
-<a name="weapp"></a>
-## WeChat Mini Program
-Support [WeChat Mini Program](https://mp.weixin.qq.com/). See [Doc](https://mp.weixin.qq.com/debug/wxadoc/dev/api/network-socket.html).
-<a name="example"></a>
-
-## Example(js)
-
-```js
-var mqtt = require('mqtt')
-var client = mqtt.connect('wxs://test.mosquitto.org')
-```
-
-## Example(ts)
-
-```ts
-import { connect } from 'mqtt';
-const client = connect('wxs://test.mosquitto.org');
-```
-
-## Ali Mini Program
-Support [Ali Mini Program](https://open.alipay.com/channel/miniIndex.htm). See [Doc](https://docs.alipay.com/mini/developer/getting-started).
-<a name="example"></a>
-
-## Example(js)
-
-```js
-var mqtt = require('mqtt')
-var client = mqtt.connect('alis://test.mosquitto.org')
-```
-
-## Example(ts)
-
-```ts
-import { connect } from 'mqtt';
-const client  = connect('alis://test.mosquitto.org');
-```
-
 <a name="browserify"></a>
 ### Browserify
 
@@ -806,6 +790,31 @@ Before you can begin using these TypeScript definitions with your project, you n
  * Set tsconfig.json: `{"compilerOptions" : {"moduleResolution" : "node"}, ...}`
  * Includes the TypeScript definitions for node. You can use npm to install this by typing the following into a terminal window:
    `npm install --save-dev @types/node`
+   
+### Typescript example
+```
+import * as mqtt from "mqtt"
+let client : mqtt.MqttClient = mqtt.connect('mqtt://test.mosquitto.org')
+```
+
+<a name="weapp-alipay"></a>
+## WeChat and Ali Mini Program support
+### WeChat Mini Program
+Supports [WeChat Mini Program](https://mp.weixin.qq.com/). Use the `wxs` protocol. See [the WeChat docs](https://mp.weixin.qq.com/debug/wxadoc/dev/api/network-socket.html).
+
+```js
+var mqtt = require('mqtt')
+var client = mqtt.connect('wxs://test.mosquitto.org')
+```
+
+### Ali Mini Program
+Supports [Ali Mini Program](https://open.alipay.com/channel/miniIndex.htm). Use the `alis` protocol. See [the Alipay docs](https://docs.alipay.com/mini/developer/getting-started).
+<a name="example"></a>
+
+```js
+var mqtt = require('mqtt')
+var client = mqtt.connect('alis://test.mosquitto.org')
+```
 
 <a name="contributing"></a>
 ## Contributing
@@ -826,6 +835,7 @@ MQTT.js is only possible due to the excellent work of the following contributors
 <tr><th align="left">Maxime Agor</th><td><a href="https://github.com/4rzael">GitHub/4rzael</a></td><td><a href="http://twitter.com/4rzael">Twitter/@4rzael</a></td></tr>
 <tr><th align="left">Siarhei Buntsevich</th><td><a href="https://github.com/scarry1992">GitHub/scarry1992</a></td></tr>
 </tbody></table>
+
 
 <a name="license"></a>
 ## License
