@@ -3,13 +3,13 @@
 /**
  * Module dependencies
  */
-import {LruMap} from 'collections/lru-map'
 import {NumberAllocator} from 'number-allocator'
+var LruMap = require("collections/lru-map"); 
 
 export class TopicAliasSend {
   max: number
-  aliasToTopic: LruMap
-  topicToAlias: {[topic: string]: string}
+  aliasToTopic: typeof LruMap
+  topicToAlias: {[topic: string]: number}
   numberAllocator: NumberAllocator
   length: number
   
@@ -64,12 +64,12 @@ export class TopicAliasSend {
    * @param {String} [topic] - topic
    * @returns {Number} - if mapped topic exists return topic alias, otherwise return undefined
    */
-  getAliasByTopic(topic: string | number) {
+  getAliasByTopic(topic: string | number): number {
     const alias = this.topicToAlias[topic]
     if (typeof alias !== 'undefined') {
       this.aliasToTopic.get(alias) // LRU update
     }
-    return alias
+    return Number(alias)
   }
 
   /**

@@ -1,21 +1,21 @@
 'use strict'
 
 import { IConnackPacket, IConnectPacket, IPublishPacket, Packet, parser as mqttParser, Parser as MqttParser, writeToStream } from 'mqtt-packet'
-import { ConnectOptions } from '.'
+import { ConnectOptions } from './interfaces/connectOptions'
 import { Duplex, EventEmitter, Readable } from 'stream'
 import { connectionFactory } from './connectionFactory'
 import eos from 'end-of-stream'
-import { defaultConnectOptions } from './defaultConnectOptions'
+import { defaultConnectOptions } from './utils/constants'
 import { applyTopicAlias, write } from './write'
 import { ReasonCodeErrors } from './errors'
 import {TopicAliasSend} from './topicAliasSend'
 import {TopicAliasRecv} from './topicAliasRecv'
-import rfdc from 'rfdc'
+// import rfdc from 'rfdc'
 import { debug } from 'console'
 import { Store } from './store'
 import { nextTick } from 'process'
 
-const clone = rfdc()
+// const clone = rfdc()
 
 // const eventEmitter = require('events')
 // const mqttErrors = require('errors')
@@ -81,7 +81,7 @@ export class MqttClient extends EventEmitter {
     this.connecting = false
     this.connected = false
     this.connectedPromise = () => { 
-      const promise = new Promise<void>((res, rej) => {
+      const promise = new Promise<void>((res) => {
         if (this.connected) {
           res()
         } else {

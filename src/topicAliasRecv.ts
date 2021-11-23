@@ -1,5 +1,7 @@
 const logger = require('pino')() 
 
+const maxDefault = 10
+
 export class TopicAliasRecv {
   max: number
   aliasToTopic: {[alias: string]: string}
@@ -10,13 +12,14 @@ export class TopicAliasRecv {
    * This holds alias to topic map
    * @param {Number} [max] - topic alias maximum entries
    */
-  constructor(max: number) {
-    if (max > 0) {
-      if (max > 0xffff) {
-        throw new Error('MqttClient :: options.topicAliasMaximum is out of range')
+  constructor(max?: number) {
+    if (max) {
+      if (max > 0 && max > 0xffff) {
+        throw new Error('topicAliasMaximum is out of range')
       }
     }
-    this.max = max
+
+    this.max = max || maxDefault
     this.aliasToTopic = {}
   }
 

@@ -1,4 +1,4 @@
-import mqtt, { IPacket, Packet } from 'mqtt-packet'
+import mqtt, { Packet } from 'mqtt-packet'
 import { MqttClient } from './client'
 import rfdc from 'rfdc'
 
@@ -8,11 +8,11 @@ const clone = rfdc()
 export function write (client: MqttClient, packet: mqtt.Packet): Promise<void> {
   let error: Error | null = null
   return new Promise((resolve, reject) => {
-    const topicAliasErr = applyTopicAlias(client, packet)
+    const aliasedPacket = applyTopicAlias(client, packet)
 
     if (client.connecting || client.connected) {
       try {
-        mqtt.writeToStream(packet, client.conn)
+        mqtt.writeToStream(aliasedPacket, client.conn)
         if (!client.errored) {
           client.conn.once('drain', resolve)
           return

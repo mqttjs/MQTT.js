@@ -9,7 +9,7 @@
  * @param {String} topic - A topic
  * @returns {Boolean} If the topic is valid, returns true. Otherwise, returns false.
  */
-export function validateTopic (topic) {
+export function validateTopic (topic: string) {
   var parts = topic.split('/')
 
   for (var i = 0; i < parts.length; i++) {
@@ -35,7 +35,7 @@ export function validateTopic (topic) {
   * @param {Array} topics - Array of topics
  * @returns {String} If the topics is valid, returns null. Otherwise, returns the invalid one
  */
-export function validateTopics (topics) {
+export function validateTopics (topics: Array<string>) {
   if (topics.length === 0) {
     return 'empty_topic_list'
   }

@@ -6,105 +6,16 @@
  */
 
 import { MqttClient } from './client'
-import { DefaultMessageIdProvider } from './defaultMessageIdProvider'
+import { DefaultMessageIdProvider } from './utils/defaultMessageIdProvider'
 import { UniqueMessageIdProvider } from './uniqueMessageIdProvider'
-import { Duplex } from 'stream'
-import { TlsOptions } from 'tls'
-import { Server } from 'http'
-import {Server as HttpsServer} from 'https'
-import { QoS, UserProperties } from 'mqtt-packet'
 
-const protocols = {
-  all : [
-    'mqtt',
-    'mqtts',
-    'ws',
-    'wss'
-  ],
-  secure: [
-    'mqtts',
-    'ws'
-  ],
-  insecure: [
-    'mqtt',
-    'wss'
-  ]
-}
+import { URL } from 'url'
+import { ConnectOptions } from './interfaces/connectOptions'
+import { protocols } from './utils/constants'
 
-// TODO:
 
-export type WsOptions = {
-  backlog: number,
-  clientTracking: boolean,
-  handleProtocols: () => unknown,
-  host: string,
-  maxPayload: number,
-  noServer: boolean,
-  path: string,
-  perMessageDeflate: boolean | {[x: string]: unknown},
-  port: number,
-  server: Server | HttpsServer,
-  skipUTF8Validation: boolean,
-  verifyClient: () => unknown
-} & {
-  [prop: string]: string
-}
 
-export interface  ConnectOptions {
-  autoUseTopicAlias: any
-  autoAssignTopicAlias: any
-  topicAliasMaximum: number
-  queueLimit: number
-  cmd: 'connect'
-  clientId: string
-  protocolVersion?: 4 | 5 | 3
-  protocolId?: 'MQTT' | 'MQIsdp'
-  clean?: boolean
-  keepalive?: number
-  username?: string
-  password?: Buffer
-  will?: {
-    topic: string
-    payload: Buffer
-    qos?: QoS
-    retain?: boolean
-    properties?: {
-      willDelayInterval?: number,
-      payloadFormatIndicator?: number,
-      messageExpiryInterval?: number,
-      contentType?: string,
-      responseTopic?: string,
-      correlationData?: Buffer,
-      userProperties?: UserProperties
-    }
-  }
-  properties?: {
-    sessionExpiryInterval?: number,
-    receiveMaximum?: number,
-    maximumPacketSize?: number,
-    topicAliasMaximum?: number,
-    requestResponseInformation?: boolean,
-    requestProblemInformation?: boolean,
-    userProperties?: UserProperties,
-    authenticationMethod?: string,
-    authenticationData?: Buffer
-  }
-  brokerUrl: URL
-  wsOptions: {[key: string]: WsOptions | unknown},
-  tlsOptions: {[key: string]: TlsOptions | unknown},
-  reschedulePings: any,
-  reconnectPeriod: any,
-  connectTimeout: any,
-  incomingStore: any,
-  outgoingStore: any,
-  queueQoSZero: any,
-  customHandleAcks: any,
-  authPacket: any,
-  transformWsUrl: (options: any) => URL,
-  resubscribe: boolean,
-  messageIdProvider: any
-  customStreamFactory: (options: ConnectOptions) => Duplex
-}
+
 
 
 /**
@@ -119,7 +30,7 @@ function connect (options: ConnectOptions) {
     options.brokerUrl = new URL(options.brokerUrl) 
   }
 
-  if (!options.brokerUrl.protocol) {
+  if (!options?.brokerUrl?.protocol) {
     throw new Error(
       `Missing protocol. \
       To provide a protocol, you have two options:\
@@ -143,7 +54,7 @@ function connect (options: ConnectOptions) {
 }
 
 function _validateProtocol(opts: ConnectOptions): Error | undefined {
-  if (opts.tlsOptions.cert && opts.tlsOptions.key) {
+  if (opts.tlsOptions && 'cert' in opts.tlsOptions && 'key' in opts.tlsOptions) {
     const urlProtocol = (opts.brokerUrl as URL).protocol
     if (urlProtocol) {
       if (protocols.secure.indexOf(urlProtocol) === -1) {

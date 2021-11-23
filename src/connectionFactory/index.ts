@@ -1,8 +1,11 @@
 import net from 'net'
 import { Duplex } from 'stream'
 import tls from 'tls'
-import { ConnectOptions } from '..'
-import { _buildWebSocketStream } from './websocket'
+import { ConnectOptions } from '../interfaces/connectOptions'
+import { buildWebSocketStream } from './buildWebSocketStream'
+import { WebSocketOptions } from './interfaces/webSocketOptions'
+import { URL } from "url";
+
 
 const logger = require('pino')()
 
@@ -55,26 +58,24 @@ export function connectionFactory (options: ConnectOptions): Duplex {
     }
     case 'ws': {
       const url = options.transformWsUrl ? options.transformWsUrl(options.brokerUrl) : options.brokerUrl as URL
+      const websocketSubProtocol =
+      (options.protocolId === 'MQIsdp') && (options.protocolVersion === 3)
+        ? 'mqttv3.1'
+        : 'mqtt'  
       const webSocketOptions: WebSocketOptions = {
         url: url,
         hostname: url.hostname || 'localhost',
         port: url.port || url.protocol === 'wss' ? 443 : 80,
         protocol: url.protocol,
+        protocolId: options.protocolId,
+        websocketSubProtocol: websocketSubProtocol,
         path: url.pathname || '/',
         wsOptions: options.wsOptions || {}
       }
-      const wsStream = _buildWebSocketStream(webSocketOptions)
+      const wsStream = buildWebSocketStream(webSocketOptions)
       return wsStream
     } default:
     throw new Error('Unrecognized protocol')
   }
 }
 
-interface WebSocketOptions {
-  url: URL,
-  hostname: string,
-  protocol: string,
-  port: number,
-  path: string,
-  wsOptions: any
-}
