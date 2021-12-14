@@ -179,7 +179,14 @@ export interface IClientSubscribeOptions {
   /*
   * Retain Handling option
   * */
-  rh?: number
+  rh?: number,
+  /*
+  *  MQTT 5.0 properies object of subscribe
+  * */
+  properties?: {
+    subscriptionIdentifier?: number,
+    userProperties?: UserProperties
+  }
 }
 export interface IClientReconnectOptions {
   /**
