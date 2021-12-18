@@ -7,9 +7,9 @@
  *
  * See LICENSE for more information
  */
-var path = require('path')
-var commist = require('commist')()
-var helpMe = require('help-me')({
+const path = require('path')
+const commist = require('commist')()
+const helpMe = require('help-me')({
   dir: path.join(path.dirname(require.main.filename), '/../doc'),
   ext: '.txt'
 })

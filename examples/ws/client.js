@@ -1,8 +1,8 @@
 'use strict'
 
-var mqtt = require('../../')
+const mqtt = require('../../')
 
-var clientId = 'mqttjs_' + Math.random().toString(16).substr(2, 8)
+const clientId = 'mqttjs_' + Math.random().toString(16).substr(2, 8)
 
 // This sample should be run in tandem with the aedes_server.js file.
 // Simply run it:
@@ -11,9 +11,9 @@ var clientId = 'mqttjs_' + Math.random().toString(16).substr(2, 8)
 // Then run this file in a separate console:
 // $ node websocket_sample.js
 //
-var host = 'ws://localhost:8080'
+const host = 'ws://localhost:8080'
 
-var options = {
+const options = {
   keepalive: 30,
   clientId: clientId,
   protocolId: 'MQTT',
@@ -31,7 +31,7 @@ var options = {
 }
 
 console.log('connecting mqtt client')
-var client = mqtt.connect(host, options)
+const client = mqtt.connect(host, options)
 
 client.on('error', function (err) {
   console.log(err)

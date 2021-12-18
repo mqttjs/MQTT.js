@@ -1,17 +1,17 @@
 'use strict'
 
-var MqttServer = require('./server').MqttServer
-var MqttSecureServer = require('./server').MqttSecureServer
-var debug = require('debug')('TEST:server_helpers')
+const MqttServer = require('./server').MqttServer
+const MqttSecureServer = require('./server').MqttSecureServer
+const debug = require('debug')('TEST:server_helpers')
 
-var path = require('path')
-var fs = require('fs')
-var KEY = path.join(__dirname, 'helpers', 'tls-key.pem')
-var CERT = path.join(__dirname, 'helpers', 'tls-cert.pem')
+const path = require('path')
+const fs = require('fs')
+const KEY = path.join(__dirname, 'helpers', 'tls-key.pem')
+const CERT = path.join(__dirname, 'helpers', 'tls-cert.pem')
 
-var http = require('http')
-var WebSocket = require('ws')
-var MQTTConnection = require('mqtt-connection')
+const http = require('http')
+const WebSocket = require('ws')
+const MQTTConnection = require('mqtt-connection')
 
 /**
  * This will build the client for the server to use during testing, and set up the
@@ -20,18 +20,18 @@ var MQTTConnection = require('mqtt-connection')
  * @param {Function} handler - event handler
  */
 function serverBuilder (protocol, handler) {
-  var defaultHandler = function (serverClient) {
+  const defaultHandler = function (serverClient) {
     serverClient.on('auth', function (packet) {
       if (serverClient.writable) return false
-      var rc = 'reasonCode'
-      var connack = {}
+      const rc = 'reasonCode'
+      const connack = {}
       connack[rc] = 0
       serverClient.connack(connack)
     })
     serverClient.on('connect', function (packet) {
       if (!serverClient.writable) return false
-      var rc = 'returnCode'
-      var connack = {}
+      let rc = 'returnCode'
+      const connack = {}
       if (serverClient.options && serverClient.options.protocolVersion === 5) {
         rc = 'reasonCode'
         if (packet.clientId === 'invalid') {
@@ -113,34 +113,36 @@ function serverBuilder (protocol, handler) {
     handler = defaultHandler
   }
 
-  switch (protocol) {
-    case 'mqtt':
-      return new MqttServer(handler)
-    case 'mqtts':
-      return new MqttSecureServer({
-        key: fs.readFileSync(KEY),
-        cert: fs.readFileSync(CERT)
-      },
-      handler)
-    case 'ws':
-      var attachWebsocketServer = function (server) {
-        var webSocketServer = new WebSocket.Server({server: server, perMessageDeflate: false})
+  if (
+    protocol === 'mqtt') {
+    return new MqttServer(handler)
+  } else if (
+    protocol === 'mqtts') {
+    return new MqttSecureServer({
+      key: fs.readFileSync(KEY),
+      cert: fs.readFileSync(CERT)
+    },
+    handler)
+  } else if (
+    protocol === 'ws') {
+    const attachWebsocketServer = function (server) {
+      const webSocketServer = new WebSocket.Server({ server: server, perMessageDeflate: false })
 
-        webSocketServer.on('connection', function (ws) {
-          var stream = WebSocket.createWebSocketStream(ws)
-          var connection = new MQTTConnection(stream)
-          connection.protocol = ws.protocol
-          server.emit('client', connection)
-          stream.on('error', function () {})
-          connection.on('error', function () {})
-          connection.on('close', function () {})
-        })
-      }
+      webSocketServer.on('connection', function (ws) {
+        const stream = WebSocket.createWebSocketStream(ws)
+        const connection = new MQTTConnection(stream)
+        connection.protocol = ws.protocol
+        server.emit('client', connection)
+        stream.on('error', function () {})
+        connection.on('error', function () {})
+        connection.on('close', function () {})
+      })
+    }
 
-      var httpServer = http.createServer()
-      attachWebsocketServer(httpServer)
-      httpServer.on('client', handler)
-      return httpServer
+    const httpServer = http.createServer()
+    attachWebsocketServer(httpServer)
+    httpServer.on('client', handler)
+    return httpServer
   }
 }
 
