@@ -131,6 +131,10 @@ export interface ISecureClientOptions {
    */
   ca?: string | string[] | Buffer | Buffer[]
   rejectUnauthorized?: boolean
+  /**
+   * optional alpn's
+   */
+  ALPNProtocols?: string[] | Buffer[] | Uint8Array[] | Buffer | Uint8Array
 }
 export interface IClientPublishOptions {
   /**
