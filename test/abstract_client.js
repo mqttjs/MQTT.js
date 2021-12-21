@@ -2425,6 +2425,7 @@ module.exports = function (server, config) {
     const reconnectPeriodTests = [{ period: 200 }, { period: 2000 }, { period: 4000 }]
     reconnectPeriodTests.forEach((test) => {
       it('should allow specification of a reconnect period (' + test.period + 'ms)', function (done) {
+        this.timeout(10000)
         let end
         const reconnectSlushTime = 200
         const client = connect({ reconnectPeriod: test.period })
@@ -2454,10 +2455,14 @@ module.exports = function (server, config) {
     it('should always cleanup successfully on reconnection', function (done) {
       const client = connect({ host: 'this_hostname_should_not_exist', connectTimeout: 0, reconnectPeriod: 1 })
       // bind client.end so that when it is called it is automatically passed in the done callback
-      setTimeout(client.end.bind(client, done), 50)
+      setTimeout(() => {
+        const boundEnd = client.end.bind(client, done)
+        boundEnd()
+      }, 50)
     })
 
     it('should resend in-flight QoS 1 publish messages from the client', function (done) {
+      this.timeout(4000)
       const client = connect({ reconnectPeriod: 200 })
       let serverPublished = false
       let clientCalledBack = false
