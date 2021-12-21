@@ -1,11 +1,11 @@
 'use strict'
 
-var Transform = require('readable-stream').Transform
+const Transform = require('readable-stream').Transform
 
 module.exports.testStream = function () {
   return new Transform({
     transform (buf, enc, cb) {
-      var that = this
+      const that = this
       setImmediate(function () {
         that.push(buf)
         cb()

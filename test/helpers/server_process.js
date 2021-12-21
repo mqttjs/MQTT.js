@@ -1,6 +1,6 @@
 'use strict'
 
-var MqttServer = require('../server').MqttServer
+const MqttServer = require('../server').MqttServer
 
 new MqttServer(function (client) {
   client.on('connect', function () {

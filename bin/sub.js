@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 
-var mqtt = require('../')
-var path = require('path')
-var fs = require('fs')
-var helpMe = require('help-me')({
+const mqtt = require('../')
+const path = require('path')
+const fs = require('fs')
+const helpMe = require('help-me')({
   dir: path.join(__dirname, '..', 'doc')
 })
-var minimist = require('minimist')
+const minimist = require('minimist')
 
 function start (args) {
   args = minimist(args, {
@@ -84,7 +84,7 @@ function start (args) {
 
   args.keepAlive = args['keep-alive']
 
-  var client = mqtt.connect(args)
+  const client = mqtt.connect(args)
 
   client.on('connect', function () {
     client.subscribe(args.topic, { qos: args.qos }, function (err, result) {

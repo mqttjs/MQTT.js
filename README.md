@@ -83,8 +83,8 @@ npm install mqtt --save
 For the sake of simplicity, let's put the subscriber and the publisher in the same file:
 
 ```js
-var mqtt = require('mqtt')
-var client  = mqtt.connect('mqtt://test.mosquitto.org')
+const mqtt = require('mqtt')
+const client  = mqtt.connect('mqtt://test.mosquitto.org')
 
 client.on('connect', function () {
   client.subscribe('presence', function (err) {
@@ -121,8 +121,8 @@ to use MQTT.js in the browser see the [browserify](#browserify) section
 ## Import styles
 ### CommonJS (Require)
 ```js
-var mqtt = require('mqtt')  // require mqtt
-var client = mqtt.connect('est.mosquitto.org')  // create a client
+const mqtt = require('mqtt')  // require mqtt
+const client = mqtt.connect('est.mosquitto.org')  // create a client
 ```
 ### ES6 Modules (Import)
 #### Aliased wildcard import
@@ -695,7 +695,7 @@ gzip <browserMqtt.js | wc -c
 <a name="webpack"></a>
 ### Webpack
 
-Just like browserify, export MQTT.js as library. The exported module would be `var mqtt = xxx` and it will add an object in the global space. You could also export module in other [formats (AMD/CommonJS/others)](http://webpack.github.io/docs/configuration.html#output-librarytarget) by setting **output.libraryTarget** in webpack configuration.
+Just like browserify, export MQTT.js as library. The exported module would be `const mqtt = xxx` and it will add an object in the global space. You could also export module in other [formats (AMD/CommonJS/others)](http://webpack.github.io/docs/configuration.html#output-librarytarget) by setting **output.libraryTarget** in webpack configuration.
 
 ```javascript
 npm install -g webpack // install webpack
@@ -715,7 +715,7 @@ you can then use mqtt.js in the browser with the same api than node's one.
 <body>
 <script src="./browserMqtt.js"></script>
 <script>
-  var client = mqtt.connect() // you add a ws:// url here
+  const client = mqtt.connect() // you add a ws:// url here
   client.subscribe("mqtt/demo")
 
   client.on("message", function (topic, payload) {
@@ -803,8 +803,8 @@ let client : mqtt.MqttClient = mqtt.connect('mqtt://test.mosquitto.org')
 Supports [WeChat Mini Program](https://mp.weixin.qq.com/). Use the `wxs` protocol. See [the WeChat docs](https://mp.weixin.qq.com/debug/wxadoc/dev/api/network-socket.html).
 
 ```js
-var mqtt = require('mqtt')
-var client = mqtt.connect('wxs://test.mosquitto.org')
+const mqtt = require('mqtt')
+const client = mqtt.connect('wxs://test.mosquitto.org')
 ```
 
 ### Ali Mini Program
@@ -812,8 +812,8 @@ Supports [Ali Mini Program](https://open.alipay.com/channel/miniIndex.htm). Use 
 <a name="example"></a>
 
 ```js
-var mqtt = require('mqtt')
-var client = mqtt.connect('alis://test.mosquitto.org')
+const mqtt = require('mqtt')
+const client = mqtt.connect('alis://test.mosquitto.org')
 ```
 
 <a name="contributing"></a>

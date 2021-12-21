@@ -3,17 +3,17 @@
 /**
  * Testing dependencies
  */
-var should = require('chai').should
-var sinon = require('sinon')
-var mqtt = require('../')
-var xtend = require('xtend')
-var Store = require('./../lib/store')
-var assert = require('chai').assert
-var ports = require('./helpers/port_list')
-var serverBuilder = require('./server_helpers_for_client_tests').serverBuilder
+const should = require('chai').should
+const sinon = require('sinon')
+const mqtt = require('../')
+const xtend = require('xtend')
+const Store = require('./../lib/store')
+const assert = require('chai').assert
+const ports = require('./helpers/port_list')
+const serverBuilder = require('./server_helpers_for_client_tests').serverBuilder
 
 module.exports = function (server, config) {
-  var version = config.protocolVersion || 4
+  const version = config.protocolVersion || 4
 
   function connect (opts) {
     opts = xtend(config, opts)
@@ -22,7 +22,7 @@ module.exports = function (server, config) {
 
   describe('closing', function () {
     it('should emit close if stream closes', function (done) {
-      var client = connect()
+      const client = connect()
 
       client.once('connect', function () {
         client.stream.end()
@@ -34,7 +34,7 @@ module.exports = function (server, config) {
     })
 
     it('should mark the client as disconnected', function (done) {
-      var client = connect()
+      const client = connect()
 
       client.once('close', function () {
         client.end()
@@ -50,7 +50,7 @@ module.exports = function (server, config) {
     })
 
     it('should stop ping timer if stream closes', function (done) {
-      var client = connect()
+      const client = connect()
 
       client.once('close', function () {
         assert.notExists(client.pingTimer)
@@ -64,7 +64,7 @@ module.exports = function (server, config) {
     })
 
     it('should emit close after end called', function (done) {
-      var client = connect()
+      const client = connect()
 
       client.once('close', function () {
         done()
@@ -76,7 +76,7 @@ module.exports = function (server, config) {
     })
 
     it('should emit end after end called and client must be disconnected', function (done) {
-      var client = connect()
+      const client = connect()
 
       client.once('end', function () {
         if (client.disconnected) {
@@ -91,8 +91,8 @@ module.exports = function (server, config) {
     })
 
     it('should pass store close error to end callback but not to end listeners (incomingStore)', function (done) {
-      var store = new Store()
-      var client = connect({ incomingStore: store })
+      const store = new Store()
+      const client = connect({ incomingStore: store })
 
       store.close = function (cb) {
         cb(new Error('test'))
@@ -115,8 +115,8 @@ module.exports = function (server, config) {
     })
 
     it('should pass store close error to end callback but not to end listeners (outgoingStore)', function (done) {
-      var store = new Store()
-      var client = connect({ outgoingStore: store })
+      const store = new Store()
+      const client = connect({ outgoingStore: store })
 
       store.close = function (cb) {
         cb(new Error('test'))
@@ -139,11 +139,11 @@ module.exports = function (server, config) {
     })
 
     it('should return `this` if end called twice', function (done) {
-      var client = connect()
+      const client = connect()
 
       client.once('connect', function () {
         client.end()
-        var value = client.end()
+        const value = client.end()
         if (value === client) {
           done()
         } else {
@@ -153,10 +153,10 @@ module.exports = function (server, config) {
     })
 
     it('should emit end only on first client end', function (done) {
-      var client = connect()
+      const client = connect()
 
       client.once('end', function () {
-        var timeout = setTimeout(done.bind(null), 200)
+        const timeout = setTimeout(done.bind(null), 200)
         client.once('end', function () {
           clearTimeout(timeout)
           done(new Error('end was emitted twice'))
@@ -168,7 +168,7 @@ module.exports = function (server, config) {
     })
 
     it('should stop ping timer after end called', function (done) {
-      var client = connect()
+      const client = connect()
 
       client.once('connect', function () {
         assert.exists(client.pingTimer)
@@ -180,9 +180,9 @@ module.exports = function (server, config) {
     })
 
     it('should be able to end even on a failed connection', function (done) {
-      var client = connect({host: 'this_hostname_should_not_exist'})
+      const client = connect({ host: 'this_hostname_should_not_exist' })
 
-      var timeout = setTimeout(function () {
+      const timeout = setTimeout(function () {
         done(new Error('Failed to end a disconnected client'))
       }, 500)
 
@@ -195,9 +195,9 @@ module.exports = function (server, config) {
     })
 
     it('should emit end even on a failed connection', function (done) {
-      var client = connect({host: 'this_hostname_should_not_exist'})
+      const client = connect({ host: 'this_hostname_should_not_exist' })
 
-      var timeout = setTimeout(function () {
+      const timeout = setTimeout(function () {
         done(new Error('Disconnected client has failed to emit end'))
       }, 500)
 
@@ -208,7 +208,7 @@ module.exports = function (server, config) {
 
       // after 200ms manually invoke client.end
       setTimeout(() => {
-        var boundEnd = client.end.bind(client)
+        const boundEnd = client.end.bind(client)
         boundEnd()
       }, 200)
     })
@@ -218,13 +218,13 @@ module.exports = function (server, config) {
       // Reason for it is that there are overlaps in the reconnectTimer and connectTimer. In the PR for this code
       // there will be gists showing the difference between a successful test here and a failed test. For now we
       // will add the retries syntax because of the flakiness.
-      var client = connect({host: 'this_hostname_should_not_exist', connectTimeout: 10, reconnectPeriod: 20})
+      const client = connect({ host: 'this_hostname_should_not_exist', connectTimeout: 10, reconnectPeriod: 20 })
       setTimeout(done.bind(null), 1000)
-      var endCallback = function () {
+      const endCallback = function () {
         assert.strictEqual(spy.callCount, 1, 'end was emitted more than once for reconnecting client')
       }
 
-      var spy = sinon.spy(endCallback)
+      const spy = sinon.spy(endCallback)
       client.on('end', spy)
       setTimeout(() => {
         client.end.bind(client)
@@ -235,7 +235,7 @@ module.exports = function (server, config) {
 
   describe('connecting', function () {
     it('should connect to the broker', function (done) {
-      var client = connect()
+      const client = connect()
       client.on('error', done)
 
       server.once('client', function () {
@@ -245,7 +245,7 @@ module.exports = function (server, config) {
     })
 
     it('should send a default client id', function (done) {
-      var client = connect()
+      const client = connect()
       client.on('error', done)
 
       server.once('client', function (serverClient) {
@@ -258,7 +258,7 @@ module.exports = function (server, config) {
     })
 
     it('should send be clean by default', function (done) {
-      var client = connect()
+      const client = connect()
       client.on('error', done)
 
       server.once('client', function (serverClient) {
@@ -271,7 +271,7 @@ module.exports = function (server, config) {
     })
 
     it('should connect with the given client id', function (done) {
-      var client = connect({clientId: 'testclient'})
+      const client = connect({ clientId: 'testclient' })
       client.on('error', function (err) {
         throw err
       })
@@ -288,7 +288,7 @@ module.exports = function (server, config) {
     })
 
     it('should connect with the client id and unclean state', function (done) {
-      var client = connect({clientId: 'testclient', clean: false})
+      const client = connect({ clientId: 'testclient', clean: false })
       client.on('error', function (err) {
         throw err
       })
@@ -307,7 +307,7 @@ module.exports = function (server, config) {
 
     it('should require a clientId with clean=false', function (done) {
       try {
-        var client = connect({ clean: false })
+        const client = connect({ clean: false })
         client.on('error', function (err) {
           done(err)
         })
@@ -318,7 +318,7 @@ module.exports = function (server, config) {
     })
 
     it('should default to localhost', function (done) {
-      var client = connect({clientId: 'testclient'})
+      const client = connect({ clientId: 'testclient' })
       client.on('error', function (err) {
         throw err
       })
@@ -333,7 +333,7 @@ module.exports = function (server, config) {
     })
 
     it('should emit connect', function (done) {
-      var client = connect()
+      const client = connect()
       client.once('connect', function () {
         client.end(true, done)
       })
@@ -341,7 +341,7 @@ module.exports = function (server, config) {
     })
 
     it('should provide connack packet with connect event', function (done) {
-      var connack = version === 5 ? {reasonCode: 0} : {returnCode: 0}
+      const connack = version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
       server.once('client', function (serverClient) {
         connack.sessionPresent = true
         serverClient.connack(connack)
@@ -351,7 +351,7 @@ module.exports = function (server, config) {
         })
       })
 
-      var client = connect()
+      const client = connect()
       client.once('connect', function (packet) {
         assert.strictEqual(packet.sessionPresent, true)
         client.once('connect', function (packet) {
@@ -363,7 +363,7 @@ module.exports = function (server, config) {
     })
 
     it('should mark the client as connected', function (done) {
-      var client = connect()
+      const client = connect()
       client.once('connect', function () {
         client.end()
         if (client.connected) {
@@ -375,12 +375,12 @@ module.exports = function (server, config) {
     })
 
     it('should emit error on invalid clientId', function (done) {
-      var client = connect({clientId: 'invalid'})
+      const client = connect({ clientId: 'invalid' })
       client.once('connect', function () {
         done(new Error('Should not emit connect'))
       })
       client.once('error', function (error) {
-        var value = version === 5 ? 128 : 2
+        const value = version === 5 ? 128 : 2
         assert.strictEqual(error.code, value) // code for clientID identifer rejected
         client.end()
         done()
@@ -389,7 +389,7 @@ module.exports = function (server, config) {
 
     it('should emit error event if the socket refuses the connection', function (done) {
       // fake a port
-      var client = connect({ port: 4557 })
+      const client = connect({ port: 4557 })
 
       client.on('error', function (e) {
         assert.equal(e.code, 'ECONNREFUSED')
@@ -403,8 +403,8 @@ module.exports = function (server, config) {
       // method completes closing the stores and invokes the callback, and another time when the
       // stream is closed. When the stream is closed, for some reason the closeStores method is called
       // a second time.
-      var client1 = connect()
-      var client2 = connect()
+      const client1 = connect()
+      const client2 = connect()
 
       assert.notStrictEqual(client1.options.clientId, client2.options.clientId)
       client1.end(true, () => {
@@ -417,7 +417,7 @@ module.exports = function (server, config) {
 
   describe('handling offline states', function () {
     it('should emit offline event once when the client transitions from connected states to disconnected ones', function (done) {
-      var client = connect({reconnectPeriod: 20})
+      const client = connect({ reconnectPeriod: 20 })
 
       client.on('connect', function () {
         this.stream.end()
@@ -430,7 +430,7 @@ module.exports = function (server, config) {
 
     it('should emit offline event once when the client (at first) can NOT connect to servers', function (done) {
       // fake a port
-      var client = connect({ reconnectPeriod: 20, port: 4557 })
+      const client = connect({ reconnectPeriod: 20, port: 4557 })
 
       client.on('error', function () {})
 
@@ -442,7 +442,7 @@ module.exports = function (server, config) {
 
   describe('topic validations when subscribing', function () {
     it('should be ok for well-formated topics', function (done) {
-      var client = connect()
+      const client = connect()
       client.subscribe(
         [
           '+', '+/event', 'event/+', '#', 'event/#', 'system/event/+',
@@ -461,7 +461,7 @@ module.exports = function (server, config) {
     })
 
     it('should return an error (via callbacks) for topic #/event', function (done) {
-      var client = connect()
+      const client = connect()
       client.subscribe(['#/event', 'event#', 'event+'], function (err) {
         client.end(false, function () {
           if (err) {
@@ -473,7 +473,7 @@ module.exports = function (server, config) {
     })
 
     it('should return an empty array for duplicate subs', function (done) {
-      var client = connect()
+      const client = connect()
       client.subscribe('event', function (err, granted1) {
         if (err) {
           return done(err)
@@ -490,7 +490,7 @@ module.exports = function (server, config) {
     })
 
     it('should return an error (via callbacks) for topic #/event', function (done) {
-      var client = connect()
+      const client = connect()
       client.subscribe('#/event', function (err) {
         client.end(function () {
           if (err) {
@@ -502,7 +502,7 @@ module.exports = function (server, config) {
     })
 
     it('should return an error (via callbacks) for topic event#', function (done) {
-      var client = connect()
+      const client = connect()
       client.subscribe('event#', function (err) {
         client.end(function () {
           if (err) {
@@ -514,7 +514,7 @@ module.exports = function (server, config) {
     })
 
     it('should return an error (via callbacks) for topic system/#/event', function (done) {
-      var client = connect()
+      const client = connect()
       client.subscribe('system/#/event', function (err) {
         client.end(function () {
           if (err) {
@@ -526,7 +526,7 @@ module.exports = function (server, config) {
     })
 
     it('should return an error (via callbacks) for empty topic list', function (done) {
-      var client = connect()
+      const client = connect()
       client.subscribe([], function (err) {
         client.end()
         if (err) {
@@ -537,7 +537,7 @@ module.exports = function (server, config) {
     })
 
     it('should return an error (via callbacks) for topic system/+/#/event', function (done) {
-      var client = connect()
+      const client = connect()
       client.subscribe('system/+/#/event', function (err) {
         client.end(true, function () {
           if (err) {
@@ -551,7 +551,7 @@ module.exports = function (server, config) {
 
   describe('offline messages', function () {
     it('should queue message until connected', function (done) {
-      var client = connect()
+      const client = connect()
 
       client.publish('test', 'test')
       client.subscribe('test')
@@ -567,9 +567,9 @@ module.exports = function (server, config) {
     })
 
     it('should not queue qos 0 messages if queueQoSZero is false', function (done) {
-      var client = connect({queueQoSZero: false})
+      const client = connect({ queueQoSZero: false })
 
-      client.publish('test', 'test', {qos: 0})
+      client.publish('test', 'test', { qos: 0 })
       assert.strictEqual(client.queue.length, 0)
       client.on('connect', function () {
         setTimeout(function () {
@@ -579,10 +579,10 @@ module.exports = function (server, config) {
     })
 
     it('should queue qos != 0 messages', function (done) {
-      var client = connect({queueQoSZero: false})
+      const client = connect({ queueQoSZero: false })
 
-      client.publish('test', 'test', {qos: 1})
-      client.publish('test', 'test', {qos: 2})
+      client.publish('test', 'test', { qos: 1 })
+      client.publish('test', 'test', { qos: 2 })
       client.subscribe('test')
       client.unsubscribe('test')
       assert.strictEqual(client.queue.length, 2)
@@ -594,18 +594,18 @@ module.exports = function (server, config) {
     })
 
     it('should not interrupt messages', function (done) {
-      var client = null
-      var incomingStore = new mqtt.Store({ clean: false })
-      var outgoingStore = new mqtt.Store({ clean: false })
-      var publishCount = 0
-      var server2 = serverBuilder(config.protocol, function (serverClient) {
+      let client = null
+      let publishCount = 0
+      const incomingStore = new mqtt.Store({ clean: false })
+      const outgoingStore = new mqtt.Store({ clean: false })
+      const server2 = serverBuilder(config.protocol, function (serverClient) {
         serverClient.on('connect', function () {
-          var connack = version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
+          const connack = version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
           serverClient.connack(connack)
         })
         serverClient.on('publish', function (packet) {
           if (packet.qos !== 0) {
-            serverClient.puback({messageId: packet.messageId})
+            serverClient.puback({ messageId: packet.messageId })
           }
           switch (publishCount++) {
             case 0:
@@ -641,22 +641,22 @@ module.exports = function (server, config) {
           if (packet.cmd === 'connack') {
             setImmediate(
               function () {
-                client.publish('test', 'payload3', {qos: 1})
-                client.publish('test', 'payload4', {qos: 0})
+                client.publish('test', 'payload3', { qos: 1 })
+                client.publish('test', 'payload4', { qos: 0 })
               }
             )
           }
         })
-        client.publish('test', 'payload1', {qos: 2})
-        client.publish('test', 'payload2', {qos: 2})
+        client.publish('test', 'payload1', { qos: 2 })
+        client.publish('test', 'payload2', { qos: 2 })
       })
     })
 
     it('should call cb if an outgoing QoS 0 message is not sent', function (done) {
-      var client = connect({queueQoSZero: false})
-      var called = false
+      const client = connect({ queueQoSZero: false })
+      let called = false
 
-      client.publish('test', 'test', {qos: 0}, function () {
+      client.publish('test', 'test', { qos: 0 }, function () {
         called = true
       })
 
@@ -669,8 +669,8 @@ module.exports = function (server, config) {
     })
 
     it('should delay ending up until all inflight messages are delivered', function (done) {
-      var client = connect()
-      var subscribeCalled = false
+      const client = connect()
+      let subscribeCalled = false
 
       client.on('connect', function () {
         client.subscribe('test', function () {
@@ -686,8 +686,8 @@ module.exports = function (server, config) {
     })
 
     it('wait QoS 1 publish messages', function (done) {
-      var client = connect()
-      var messageReceived = false
+      const client = connect()
+      let messageReceived = false
 
       client.on('connect', function () {
         client.subscribe('test')
@@ -713,7 +713,7 @@ module.exports = function (server, config) {
 
     it('does not wait acks when force-closing', function (done) {
       // non-running broker
-      var client = connect('mqtt://localhost:8993')
+      const client = connect('mqtt://localhost:8993')
       client.publish('test', 'test', { qos: 1 })
       client.end(true, done)
     })
@@ -723,7 +723,7 @@ module.exports = function (server, config) {
       store.put = function (packet, cb) {
         process.nextTick(cb, new Error('oops there is an error'))
       }
-      var client = connect({ incomingStore: store, outgoingStore: store })
+      const client = connect({ incomingStore: store, outgoingStore: store })
       client.publish('test', 'test', { qos: 2 }, function (err) {
         if (err) {
           client.end(true, done)
@@ -734,9 +734,9 @@ module.exports = function (server, config) {
 
   describe('publishing', function () {
     it('should publish a message (offline)', function (done) {
-      var client = connect()
-      var payload = 'test'
-      var topic = 'test'
+      const client = connect()
+      const payload = 'test'
+      const topic = 'test'
       // don't wait on connect to send publish
       client.publish(topic, payload)
 
@@ -758,9 +758,9 @@ module.exports = function (server, config) {
     })
 
     it('should publish a message (online)', function (done) {
-      var client = connect()
-      var payload = 'test'
-      var topic = 'test'
+      const client = connect()
+      const payload = 'test'
+      const topic = 'test'
       // block on connect before sending publish
       client.on('connect', function () {
         client.publish(topic, payload)
@@ -784,10 +784,10 @@ module.exports = function (server, config) {
     })
 
     it('should publish a message (retain, offline)', function (done) {
-      var client = connect({ queueQoSZero: true })
-      var payload = 'test'
-      var topic = 'test'
-      var called = false
+      const client = connect({ queueQoSZero: true })
+      const payload = 'test'
+      const topic = 'test'
+      let called = false
 
       client.publish(topic, payload, { retain: true }, function () {
         called = true
@@ -806,9 +806,9 @@ module.exports = function (server, config) {
     })
 
     it('should emit a packetsend event', function (done) {
-      var client = connect()
-      var payload = 'test_payload'
-      var topic = 'testTopic'
+      const client = connect()
+      const payload = 'test_payload'
+      const topic = 'testTopic'
 
       client.on('packetsend', function (packet) {
         if (packet.cmd === 'publish') {
@@ -826,10 +826,10 @@ module.exports = function (server, config) {
     })
 
     it('should accept options', function (done) {
-      var client = connect()
-      var payload = 'test'
-      var topic = 'test'
-      var opts = {
+      const client = connect()
+      const payload = 'test'
+      const topic = 'test'
+      const opts = {
         retain: true,
         qos: 1
       }
@@ -851,10 +851,10 @@ module.exports = function (server, config) {
     })
 
     it('should publish with the default options for an empty parameter', function (done) {
-      var client = connect()
-      var payload = 'test'
-      var topic = 'test'
-      var defaultOpts = {qos: 0, retain: false, dup: false}
+      const client = connect()
+      const payload = 'test'
+      const topic = 'test'
+      const defaultOpts = { qos: 0, retain: false, dup: false }
 
       client.once('connect', function () {
         client.publish(topic, payload, {})
@@ -873,10 +873,10 @@ module.exports = function (server, config) {
     })
 
     it('should mark a message as  duplicate when "dup" option is set', function (done) {
-      var client = connect()
-      var payload = 'duplicated-test'
-      var topic = 'test'
-      var opts = {
+      const client = connect()
+      const payload = 'duplicated-test'
+      const topic = 'test'
+      const opts = {
         retain: true,
         qos: 1,
         dup: true
@@ -899,7 +899,7 @@ module.exports = function (server, config) {
     })
 
     it('should fire a callback (qos 0)', function (done) {
-      var client = connect()
+      const client = connect()
 
       client.once('connect', function () {
         client.publish('a', 'b', function () {
@@ -910,8 +910,8 @@ module.exports = function (server, config) {
     })
 
     it('should fire a callback (qos 1)', function (done) {
-      var client = connect()
-      var opts = { qos: 1 }
+      const client = connect()
+      const opts = { qos: 1 }
 
       client.once('connect', function () {
         client.publish('a', 'b', opts, function () {
@@ -922,8 +922,8 @@ module.exports = function (server, config) {
     })
 
     it('should fire a callback (qos 2)', function (done) {
-      var client = connect()
-      var opts = { qos: 2 }
+      const client = connect()
+      const opts = { qos: 2 }
 
       client.once('connect', function () {
         client.publish('a', 'b', opts, function () {
@@ -934,7 +934,7 @@ module.exports = function (server, config) {
     })
 
     it('should support UTF-8 characters in topic', function (done) {
-      var client = connect()
+      const client = connect()
 
       client.once('connect', function () {
         client.publish('中国', 'hello', function () {
@@ -945,7 +945,7 @@ module.exports = function (server, config) {
     })
 
     it('should support UTF-8 characters in payload', function (done) {
-      var client = connect()
+      const client = connect()
 
       client.once('connect', function () {
         client.publish('hello', '中国', function () {
@@ -956,8 +956,8 @@ module.exports = function (server, config) {
     })
 
     it('should publish 10 QoS 2 and receive them', function (done) {
-      var client = connect()
-      var count = 0
+      const client = connect()
+      let count = 0
 
       client.on('connect', function () {
         client.subscribe('test')
@@ -992,10 +992,10 @@ module.exports = function (server, config) {
     })
 
     function testQosHandleMessage (qos, done) {
-      var client = connect()
+      const client = connect()
 
-      var messageEventCount = 0
-      var handleMessageCount = 0
+      let messageEventCount = 0
+      let handleMessageCount = 0
 
       client.handleMessage = function (packet, callback) {
         setTimeout(function () {
@@ -1027,7 +1027,7 @@ module.exports = function (server, config) {
         })
 
         serverClient.on('subscribe', function () {
-          for (var i = 0; i < 10; i++) {
+          for (let i = 0; i < 10; i++) {
             serverClient.publish({
               messageId: i,
               topic: 'test',
@@ -1039,7 +1039,7 @@ module.exports = function (server, config) {
       })
     }
 
-    var qosTests = [ 0, 1, 2 ]
+    const qosTests = [0, 1, 2]
     qosTests.forEach(function (QoS) {
       it('should publish 10 QoS ' + QoS + 'and receive them only when `handleMessage` finishes', function (done) {
         testQosHandleMessage(QoS, done)
@@ -1047,7 +1047,7 @@ module.exports = function (server, config) {
     })
 
     it('should not send a `puback` if the execution of `handleMessage` fails for messages with QoS `1`', function (done) {
-      var client = connect()
+      const client = connect()
 
       client.handleMessage = function (packet, callback) {
         callback(new Error('Error thrown by the application'))
@@ -1071,7 +1071,7 @@ module.exports = function (server, config) {
 
     it('should silently ignore errors thrown by `handleMessage` and return when no callback is passed ' +
       'into `handlePublish` method', function (done) {
-      var client = connect()
+      const client = connect()
 
       client.handleMessage = function (packet, callback) {
         callback(new Error('Error thrown by the application'))
@@ -1103,8 +1103,8 @@ module.exports = function (server, config) {
         }
       }
 
-      var store = new AsyncStore()
-      var client = connect({incomingStore: store})
+      const store = new AsyncStore()
+      const client = connect({ incomingStore: store })
 
       client._handlePublish({
         messageId: 1,
@@ -1118,10 +1118,25 @@ module.exports = function (server, config) {
     })
 
     it('should handle error with async incoming store in QoS 2 `handlePublish` method', function (done) {
+      const timeout = setTimeout(() => {
+        done('test timed out')
+      }, 10000)
       class AsyncStore {
         put (packet, cb) {
           process.nextTick(function () {
             cb(null, 'Error')
+          })
+        }
+
+        del (packet, cb) {
+          process.nextTick(function () {
+            cb(new Error('Error'))
+          })
+        }
+
+        get (packet, cb) {
+          process.nextTick(function () {
+            cb(null, { cmd: 'publish' })
           })
         }
 
@@ -1130,8 +1145,8 @@ module.exports = function (server, config) {
         }
       }
 
-      var store = new AsyncStore()
-      var client = connect({incomingStore: store})
+      const store = new AsyncStore()
+      const client = connect({ incomingStore: store })
 
       client._handlePublish({
         messageId: 1,
@@ -1140,6 +1155,7 @@ module.exports = function (server, config) {
         qos: 2
       }, function () {
         client.end()
+        clearTimeout(timeout)
         done()
       })
     })
@@ -1160,7 +1176,7 @@ module.exports = function (server, config) {
 
         get (packet, cb) {
           process.nextTick(function () {
-            cb(null, {cmd: 'publish'})
+            cb(null, { cmd: 'publish' })
           })
         }
 
@@ -1169,8 +1185,8 @@ module.exports = function (server, config) {
         }
       }
 
-      var store = new AsyncStore()
-      var client = connect({ incomingStore: store })
+      const store = new AsyncStore()
+      const client = connect({ incomingStore: store })
 
       client._handlePubrel({
         messageId: 1,
@@ -1181,7 +1197,7 @@ module.exports = function (server, config) {
     })
 
     it('should handle success with async incoming store in QoS 2 `handlePubrel` method', function (done) {
-      var delComplete = false
+      let delComplete = false
       class AsyncStore {
         put (packet, cb) {
           process.nextTick(function () {
@@ -1198,7 +1214,7 @@ module.exports = function (server, config) {
 
         get (packet, cb) {
           process.nextTick(function () {
-            cb(null, {cmd: 'publish'})
+            cb(null, { cmd: 'publish' })
           })
         }
 
@@ -1207,8 +1223,8 @@ module.exports = function (server, config) {
         }
       }
 
-      var store = new AsyncStore()
-      var client = connect({incomingStore: store})
+      const store = new AsyncStore()
+      const client = connect({ incomingStore: store })
 
       client._handlePubrel({
         messageId: 1,
@@ -1220,20 +1236,20 @@ module.exports = function (server, config) {
     })
 
     it('should not send a `pubcomp` if the execution of `handleMessage` fails for messages with QoS `2`', function (done) {
-      var store = new Store()
-      var client = connect({incomingStore: store})
+      const store = new Store()
+      const client = connect({ incomingStore: store })
 
-      var messageId = Math.floor(65535 * Math.random())
-      var topic = 'testTopic'
-      var payload = 'testPayload'
-      var qos = 2
+      const messageId = Math.floor(65535 * Math.random())
+      const topic = 'testTopic'
+      const payload = 'testPayload'
+      const qos = 2
 
       client.handleMessage = function (packet, callback) {
         callback(new Error('Error thrown by the application'))
       }
 
       client.once('connect', function () {
-        client.subscribe(topic, {qos: 2})
+        client.subscribe(topic, { qos: 2 })
 
         store.put({
           messageId: messageId,
@@ -1244,7 +1260,7 @@ module.exports = function (server, config) {
         }, function () {
           // cleans up the client
           client._sendPacket = sinon.spy()
-          client._handlePubrel({cmd: 'pubrel', messageId: messageId}, function (err) {
+          client._handlePubrel({ cmd: 'pubrel', messageId: messageId }, function (err) {
             assert.exists(err)
             assert.strictEqual(client._sendPacket.callCount, 0)
             client.end(true, done)
@@ -1255,20 +1271,20 @@ module.exports = function (server, config) {
 
     it('should silently ignore errors thrown by `handleMessage` and return when no callback is passed ' +
       'into `handlePubrel` method', function (done) {
-      var store = new Store()
-      var client = connect({incomingStore: store})
+      const store = new Store()
+      const client = connect({ incomingStore: store })
 
-      var messageId = Math.floor(65535 * Math.random())
-      var topic = 'test'
-      var payload = 'test'
-      var qos = 2
+      const messageId = Math.floor(65535 * Math.random())
+      const topic = 'test'
+      const payload = 'test'
+      const qos = 2
 
       client.handleMessage = function (packet, callback) {
         callback(new Error('Error thrown by the application'))
       }
 
       client.once('connect', function () {
-        client.subscribe(topic, {qos: 2})
+        client.subscribe(topic, { qos: 2 })
 
         store.put({
           messageId: messageId,
@@ -1278,7 +1294,7 @@ module.exports = function (server, config) {
           cmd: 'publish'
         }, function () {
           try {
-            client._handlePubrel({cmd: 'pubrel', messageId: messageId})
+            client._handlePubrel({ cmd: 'pubrel', messageId: messageId })
             client.end(true, done)
           } catch (err) {
             client.end(true, () => { done(err) })
@@ -1288,22 +1304,22 @@ module.exports = function (server, config) {
     })
 
     it('should keep message order', function (done) {
-      var publishCount = 0
-      var reconnect = false
-      var client = {}
-      var incomingStore = new mqtt.Store({ clean: false })
-      var outgoingStore = new mqtt.Store({ clean: false })
-      var server2 = serverBuilder(config.protocol, function (serverClient) {
+      let publishCount = 0
+      let reconnect = false
+      let client = {}
+      const incomingStore = new mqtt.Store({ clean: false })
+      const outgoingStore = new mqtt.Store({ clean: false })
+      const server2 = serverBuilder(config.protocol, function (serverClient) {
         // errors are not interesting for this test
         // but they might happen on some platforms
         serverClient.on('error', function () {})
 
         serverClient.on('connect', function (packet) {
-          var connack = version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
+          const connack = version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
           serverClient.connack(connack)
         })
         serverClient.on('publish', function (packet) {
-          serverClient.puback({messageId: packet.messageId})
+          serverClient.puback({ messageId: packet.messageId })
           if (reconnect) {
             switch (publishCount++) {
               case 0:
@@ -1335,11 +1351,11 @@ module.exports = function (server, config) {
 
         client.on('connect', function () {
           if (!reconnect) {
-            client.publish('topic', 'payload1', {qos: 1})
-            client.publish('topic', 'payload2', {qos: 1})
+            client.publish('topic', 'payload1', { qos: 1 })
+            client.publish('topic', 'payload2', { qos: 1 })
             client.end(true)
           } else {
-            client.publish('topic', 'payload3', {qos: 1})
+            client.publish('topic', 'payload3', { qos: 1 })
           }
         })
         client.on('close', function () {
@@ -1356,19 +1372,19 @@ module.exports = function (server, config) {
     })
 
     function testCallbackStorePutByQoS (qos, clean, expected, done) {
-      var client = connect({
+      const client = connect({
         clean: clean,
         clientId: 'testId'
       })
 
-      var callbacks = []
+      const callbacks = []
 
       function cbStorePut () {
         callbacks.push('storeput')
       }
 
       client.on('connect', function () {
-        client.publish('test', 'test', {qos: qos, cbStorePut: cbStorePut}, function (err) {
+        client.publish('test', 'test', { qos: qos, cbStorePut: cbStorePut }, function (err) {
           if (err) done(err)
           callbacks.push('publish')
           assert.deepEqual(callbacks, expected)
@@ -1377,13 +1393,13 @@ module.exports = function (server, config) {
       })
     }
 
-    var callbackStorePutByQoSParameters = [
-      {args: [0, true], expected: ['publish']},
-      {args: [0, false], expected: ['publish']},
-      {args: [1, true], expected: ['storeput', 'publish']},
-      {args: [1, false], expected: ['storeput', 'publish']},
-      {args: [2, true], expected: ['storeput', 'publish']},
-      {args: [2, false], expected: ['storeput', 'publish']}
+    const callbackStorePutByQoSParameters = [
+      { args: [0, true], expected: ['publish'] },
+      { args: [0, false], expected: ['publish'] },
+      { args: [1, true], expected: ['storeput', 'publish'] },
+      { args: [1, false], expected: ['storeput', 'publish'] },
+      { args: [2, true], expected: ['storeput', 'publish'] },
+      { args: [2, false], expected: ['storeput', 'publish'] }
     ]
 
     callbackStorePutByQoSParameters.forEach(function (test) {
@@ -1401,7 +1417,7 @@ module.exports = function (server, config) {
 
   describe('unsubscribing', function () {
     it('should send an unsubscribe packet (offline)', function (done) {
-      var client = connect()
+      const client = connect()
 
       client.unsubscribe('test')
 
@@ -1414,8 +1430,8 @@ module.exports = function (server, config) {
     })
 
     it('should send an unsubscribe packet', function (done) {
-      var client = connect()
-      var topic = 'topic'
+      const client = connect()
+      const topic = 'topic'
 
       client.once('connect', function () {
         client.unsubscribe(topic)
@@ -1430,8 +1446,8 @@ module.exports = function (server, config) {
     })
 
     it('should emit a packetsend event', function (done) {
-      var client = connect()
-      var testTopic = 'testTopic'
+      const client = connect()
+      const testTopic = 'testTopic'
 
       client.once('connect', function () {
         client.subscribe(testTopic)
@@ -1445,8 +1461,8 @@ module.exports = function (server, config) {
     })
 
     it('should emit a packetreceive event', function (done) {
-      var client = connect()
-      var testTopic = 'testTopic'
+      const client = connect()
+      const testTopic = 'testTopic'
 
       client.once('connect', function () {
         client.subscribe(testTopic)
@@ -1460,8 +1476,8 @@ module.exports = function (server, config) {
     })
 
     it('should accept an array of unsubs', function (done) {
-      var client = connect()
-      var topics = ['topic1', 'topic2']
+      const client = connect()
+      const topics = ['topic1', 'topic2']
 
       client.once('connect', function () {
         client.unsubscribe(topics)
@@ -1476,8 +1492,8 @@ module.exports = function (server, config) {
     })
 
     it('should fire a callback on unsuback', function (done) {
-      var client = connect()
-      var topic = 'topic'
+      const client = connect()
+      const topic = 'topic'
 
       client.once('connect', function () {
         client.unsubscribe(topic, () => {
@@ -1493,8 +1509,8 @@ module.exports = function (server, config) {
     })
 
     it('should unsubscribe from a chinese topic', function (done) {
-      var client = connect()
-      var topic = '中国'
+      const client = connect()
+      const topic = '中国'
 
       client.once('connect', function () {
         client.unsubscribe(topic, () => {
@@ -1513,8 +1529,9 @@ module.exports = function (server, config) {
   })
 
   describe('keepalive', function () {
-    var clock
+    let clock
 
+    // eslint-disable-next-line
     beforeEach(function () {
       clock = sinon.useFakeTimers()
     })
@@ -1524,8 +1541,8 @@ module.exports = function (server, config) {
     })
 
     it('should checkPing at keepalive interval', function (done) {
-      var interval = 3
-      var client = connect({ keepalive: interval })
+      const interval = 3
+      const client = connect({ keepalive: interval })
 
       client._checkPing = sinon.spy()
 
@@ -1544,8 +1561,8 @@ module.exports = function (server, config) {
     })
 
     it('should not checkPing if publishing at a higher rate than keepalive', function (done) {
-      var intervalMs = 3000
-      var client = connect({keepalive: intervalMs / 1000})
+      const intervalMs = 3000
+      const client = connect({ keepalive: intervalMs / 1000 })
 
       client._checkPing = sinon.spy()
 
@@ -1561,8 +1578,8 @@ module.exports = function (server, config) {
     })
 
     it('should checkPing if publishing at a higher rate than keepalive and reschedulePings===false', function (done) {
-      var intervalMs = 3000
-      var client = connect({
+      const intervalMs = 3000
+      const client = connect({
         keepalive: intervalMs / 1000,
         reschedulePings: false
       })
@@ -1583,7 +1600,7 @@ module.exports = function (server, config) {
 
   describe('pinging', function () {
     it('should set a ping timer', function (done) {
-      var client = connect({keepalive: 3})
+      const client = connect({ keepalive: 3 })
       client.once('connect', function () {
         assert.exists(client.pingTimer)
         client.end(true, done)
@@ -1591,7 +1608,7 @@ module.exports = function (server, config) {
     })
 
     it('should not set a ping timer keepalive=0', function (done) {
-      var client = connect({keepalive: 0})
+      const client = connect({ keepalive: 0 })
       client.on('connect', function () {
         assert.notExists(client.pingTimer)
         client.end(true, done)
@@ -1599,7 +1616,8 @@ module.exports = function (server, config) {
     })
 
     it('should reconnect if pingresp is not sent', function (done) {
-      var client = connect({keepalive: 1, reconnectPeriod: 100})
+      this.timeout(4000)
+      const client = connect({ keepalive: 1, reconnectPeriod: 100 })
 
       // Fake no pingresp being send by stubbing the _handlePingresp function
       client._handlePingresp = function () {}
@@ -1612,7 +1630,7 @@ module.exports = function (server, config) {
     })
 
     it('should not reconnect if pingresp is successful', function (done) {
-      var client = connect({keepalive: 100})
+      const client = connect({ keepalive: 100 })
       client.once('close', function () {
         done(new Error('Client closed connection'))
       })
@@ -1620,7 +1638,7 @@ module.exports = function (server, config) {
     })
 
     it('should defer the next ping when sending a control packet', function (done) {
-      var client = connect({keepalive: 1})
+      const client = connect({ keepalive: 1 })
 
       client.once('connect', function () {
         client._checkPing = sinon.spy()
@@ -1646,7 +1664,7 @@ module.exports = function (server, config) {
 
   describe('subscribing', function () {
     it('should send a subscribe message (offline)', function (done) {
-      var client = connect()
+      const client = connect()
 
       client.subscribe('test')
 
@@ -1658,8 +1676,8 @@ module.exports = function (server, config) {
     })
 
     it('should send a subscribe message', function (done) {
-      var client = connect()
-      var topic = 'test'
+      const client = connect()
+      const topic = 'test'
 
       client.once('connect', function () {
         client.subscribe(topic)
@@ -1667,7 +1685,7 @@ module.exports = function (server, config) {
 
       server.once('client', function (serverClient) {
         serverClient.once('subscribe', function (packet) {
-          var result = {
+          const result = {
             topic: topic,
             qos: 0
           }
@@ -1683,8 +1701,8 @@ module.exports = function (server, config) {
     })
 
     it('should emit a packetsend event', function (done) {
-      var client = connect()
-      var testTopic = 'testTopic'
+      const client = connect()
+      const testTopic = 'testTopic'
 
       client.once('connect', function () {
         client.subscribe(testTopic)
@@ -1698,8 +1716,8 @@ module.exports = function (server, config) {
     })
 
     it('should emit a packetreceive event', function (done) {
-      var client = connect()
-      var testTopic = 'testTopic'
+      const client = connect()
+      const testTopic = 'testTopic'
 
       client.once('connect', function () {
         client.subscribe(testTopic)
@@ -1713,8 +1731,8 @@ module.exports = function (server, config) {
     })
 
     it('should accept an array of subscriptions', function (done) {
-      var client = connect()
-      var subs = ['test1', 'test2']
+      const client = connect()
+      const subs = ['test1', 'test2']
 
       client.once('connect', function () {
         client.subscribe(subs)
@@ -1723,8 +1741,8 @@ module.exports = function (server, config) {
       server.once('client', function (serverClient) {
         serverClient.once('subscribe', function (packet) {
           // i.e. [{topic: 'a', qos: 0}, {topic: 'b', qos: 0}]
-          var expected = subs.map(function (i) {
-            var result = {topic: i, qos: 0}
+          const expected = subs.map(function (i) {
+            const result = { topic: i, qos: 0 }
             if (version === 5) {
               result.nl = false
               result.rap = false
@@ -1740,10 +1758,10 @@ module.exports = function (server, config) {
     })
 
     it('should accept a hash of subscriptions', function (done) {
-      var client = connect()
-      var topics = {
-        test1: {qos: 0},
-        test2: {qos: 1}
+      const client = connect()
+      const topics = {
+        test1: { qos: 0 },
+        test2: { qos: 1 }
       }
 
       client.once('connect', function () {
@@ -1752,12 +1770,11 @@ module.exports = function (server, config) {
 
       server.once('client', function (serverClient) {
         serverClient.once('subscribe', function (packet) {
-          var k
-          var expected = []
+          const expected = []
 
-          for (k in topics) {
-            if (topics.hasOwnProperty(k)) {
-              var result = {
+          for (const k in topics) {
+            if (Object.prototype.hasOwnProperty.call(topics, k)) {
+              const result = {
                 topic: k,
                 qos: topics[k].qos
               }
@@ -1777,9 +1794,9 @@ module.exports = function (server, config) {
     })
 
     it('should accept an options parameter', function (done) {
-      var client = connect()
-      var topic = 'test'
-      var opts = {qos: 1}
+      const client = connect()
+      const topic = 'test'
+      const opts = { qos: 1 }
 
       client.once('connect', function () {
         client.subscribe(topic, opts)
@@ -1787,7 +1804,7 @@ module.exports = function (server, config) {
 
       server.once('client', function (serverClient) {
         serverClient.once('subscribe', function (packet) {
-          var expected = [{
+          const expected = [{
             topic: topic,
             qos: 1
           }]
@@ -1805,9 +1822,9 @@ module.exports = function (server, config) {
     })
 
     it('should subscribe with the default options for an empty options parameter', function (done) {
-      var client = connect()
-      var topic = 'test'
-      var defaultOpts = {qos: 0}
+      const client = connect()
+      const topic = 'test'
+      const defaultOpts = { qos: 0 }
 
       client.once('connect', function () {
         client.subscribe(topic, {})
@@ -1815,7 +1832,7 @@ module.exports = function (server, config) {
 
       server.once('client', function (serverClient) {
         serverClient.once('subscribe', function (packet) {
-          var result = {
+          const result = {
             topic: topic,
             qos: defaultOpts.qos
           }
@@ -1832,8 +1849,8 @@ module.exports = function (server, config) {
     })
 
     it('should fire a callback on suback', function (done) {
-      var client = connect()
-      var topic = 'test'
+      const client = connect()
+      const topic = 'test'
 
       client.once('connect', function () {
         client.subscribe(topic, { qos: 2 }, function (err, granted) {
@@ -1841,7 +1858,7 @@ module.exports = function (server, config) {
             done(err)
           } else {
             assert.exists(granted, 'granted not given')
-            var expectedResult = {topic: 'test', qos: 2}
+            const expectedResult = { topic: 'test', qos: 2 }
             if (version === 5) {
               expectedResult.nl = false
               expectedResult.rap = false
@@ -1856,11 +1873,11 @@ module.exports = function (server, config) {
     })
 
     it('should fire a callback with error if disconnected (options provided)', function (done) {
-      var client = connect()
-      var topic = 'test'
+      const client = connect()
+      const topic = 'test'
       client.once('connect', function () {
         client.end(true, function () {
-          client.subscribe(topic, {qos: 2}, function (err, granted) {
+          client.subscribe(topic, { qos: 2 }, function (err, granted) {
             assert.notExists(granted, 'granted given')
             assert.exists(err, 'no error given')
             done()
@@ -1870,8 +1887,8 @@ module.exports = function (server, config) {
     })
 
     it('should fire a callback with error if disconnected (options not provided)', function (done) {
-      var client = connect()
-      var topic = 'test'
+      const client = connect()
+      const topic = 'test'
 
       client.once('connect', function () {
         client.end(true, function () {
@@ -1885,8 +1902,8 @@ module.exports = function (server, config) {
     })
 
     it('should subscribe with a chinese topic', function (done) {
-      var client = connect()
-      var topic = '中国'
+      const client = connect()
+      const topic = '中国'
 
       client.once('connect', function () {
         client.subscribe(topic)
@@ -1894,7 +1911,7 @@ module.exports = function (server, config) {
 
       server.once('client', function (serverClient) {
         serverClient.once('subscribe', function (packet) {
-          var result = {
+          const result = {
             topic: topic,
             qos: 0
           }
@@ -1912,8 +1929,8 @@ module.exports = function (server, config) {
 
   describe('receiving messages', function () {
     it('should fire the message event', function (done) {
-      var client = connect()
-      var testPacket = {
+      const client = connect()
+      const testPacket = {
         topic: 'test',
         payload: 'message',
         retain: true,
@@ -1938,8 +1955,8 @@ module.exports = function (server, config) {
     })
 
     it('should emit a packetreceive event', function (done) {
-      var client = connect()
-      var testPacket = {
+      const client = connect()
+      const testPacket = {
         topic: 'test',
         payload: 'message',
         retain: true,
@@ -1966,8 +1983,8 @@ module.exports = function (server, config) {
     })
 
     it('should support binary data', function (done) {
-      var client = connect({ encoding: 'binary' })
-      var testPacket = {
+      const client = connect({ encoding: 'binary' })
+      const testPacket = {
         topic: 'test',
         payload: 'message',
         retain: true,
@@ -1992,8 +2009,8 @@ module.exports = function (server, config) {
     })
 
     it('should emit a message event (qos=2)', function (done) {
-      var client = connect()
-      var testPacket = {
+      const client = connect()
+      const testPacket = {
         topic: 'test',
         payload: 'message',
         retain: true,
@@ -2020,8 +2037,8 @@ module.exports = function (server, config) {
     })
 
     it('should emit a message event (qos=2) - repeated publish', function (done) {
-      var client = connect()
-      var testPacket = {
+      const client = connect()
+      const testPacket = {
         topic: 'test',
         payload: 'message',
         retain: true,
@@ -2031,7 +2048,7 @@ module.exports = function (server, config) {
 
       server.testPublish = testPacket
 
-      var messageHandler = function (topic, message, packet) {
+      const messageHandler = function (topic, message, packet) {
         assert.strictEqual(topic, testPacket.topic)
         assert.strictEqual(message.toString(), testPacket.payload)
         assert.strictEqual(packet.messageId, testPacket.messageId)
@@ -2041,7 +2058,7 @@ module.exports = function (server, config) {
         client.end(true, done)
       }
 
-      var spiedMessageHandler = sinon.spy(messageHandler)
+      const spiedMessageHandler = sinon.spy(messageHandler)
 
       client.subscribe(testPacket.topic)
       client.on('message', spiedMessageHandler)
@@ -2056,8 +2073,8 @@ module.exports = function (server, config) {
     })
 
     it('should support a chinese topic', function (done) {
-      var client = connect({ encoding: 'binary' })
-      var testPacket = {
+      const client = connect({ encoding: 'binary' })
+      const testPacket = {
         topic: '国',
         payload: 'message',
         retain: true,
@@ -2085,12 +2102,12 @@ module.exports = function (server, config) {
 
   describe('qos handling', function () {
     it('should follow qos 0 semantics (trivial)', function (done) {
-      var client = connect()
-      var testTopic = 'test'
-      var testMessage = 'message'
+      const client = connect()
+      const testTopic = 'test'
+      const testMessage = 'message'
 
       client.once('connect', function () {
-        client.subscribe(testTopic, {qos: 0}, () => {
+        client.subscribe(testTopic, { qos: 0 }, () => {
           client.end(true, done)
         })
       })
@@ -2108,13 +2125,13 @@ module.exports = function (server, config) {
     })
 
     it('should follow qos 1 semantics', function (done) {
-      var client = connect()
-      var testTopic = 'test'
-      var testMessage = 'message'
-      var mid = 50
+      const client = connect()
+      const testTopic = 'test'
+      const testMessage = 'message'
+      const mid = 50
 
       client.once('connect', function () {
-        client.subscribe(testTopic, {qos: 1})
+        client.subscribe(testTopic, { qos: 1 })
       })
 
       server.once('client', function (serverClient) {
@@ -2135,16 +2152,16 @@ module.exports = function (server, config) {
     })
 
     it('should follow qos 2 semantics', function (done) {
-      var client = connect()
-      var testTopic = 'test'
-      var testMessage = 'message'
-      var mid = 253
-      var publishReceived = 0
-      var pubrecReceived = 0
-      var pubrelReceived = 0
+      const client = connect()
+      const testTopic = 'test'
+      const testMessage = 'message'
+      const mid = 253
+      let publishReceived = 0
+      let pubrecReceived = 0
+      let pubrelReceived = 0
 
       client.once('connect', function () {
-        client.subscribe(testTopic, {qos: 2})
+        client.subscribe(testTopic, { qos: 2 })
       })
 
       client.on('packetreceive', (packet) => {
@@ -2196,13 +2213,13 @@ module.exports = function (server, config) {
     })
 
     it('should should empty the incoming store after a qos 2 handshake is completed', function (done) {
-      var client = connect()
-      var testTopic = 'test'
-      var testMessage = 'message'
-      var mid = 253
+      const client = connect()
+      const testTopic = 'test'
+      const testMessage = 'message'
+      const mid = 253
 
       client.once('connect', function () {
-        client.subscribe(testTopic, {qos: 2})
+        client.subscribe(testTopic, { qos: 2 })
       })
 
       client.on('packetreceive', (packet) => {
@@ -2230,16 +2247,16 @@ module.exports = function (server, config) {
     })
 
     function testMultiplePubrel (shouldSendPubcompFail, done) {
-      var client = connect()
-      var testTopic = 'test'
-      var testMessage = 'message'
-      var mid = 253
-      var pubcompCount = 0
-      var pubrelCount = 0
-      var handleMessageCount = 0
-      var emitMessageCount = 0
-      var origSendPacket = client._sendPacket
-      var shouldSendFail
+      const client = connect()
+      const testTopic = 'test'
+      const testMessage = 'message'
+      const mid = 253
+      let pubcompCount = 0
+      let pubrelCount = 0
+      let handleMessageCount = 0
+      let emitMessageCount = 0
+      const origSendPacket = client._sendPacket
+      let shouldSendFail
 
       client.handleMessage = function (packet, callback) {
         handleMessageCount++
@@ -2258,14 +2275,16 @@ module.exports = function (server, config) {
 
         // send the mocked response
         switch (packet.cmd) {
-          case 'subscribe':
-            const suback = {cmd: 'suback', messageId: packet.messageId, granted: [2]}
+          case 'subscribe': {
+            const suback = { cmd: 'suback', messageId: packet.messageId, granted: [2] }
             client._handlePacket(suback, function (err) {
               assert.isNotOk(err)
             })
             break
+          }
           case 'pubrec':
           case 'pubcomp':
+          {
             // for both pubrec and pubcomp, reply with pubrel, simulating the server not receiving the pubcomp
             if (packet.cmd === 'pubcomp') {
               pubcompCount++
@@ -2281,7 +2300,7 @@ module.exports = function (server, config) {
             }
 
             // simulate the pubrel message, either in response to pubrec or to mock pubcomp failing to be received
-            const pubrel = {cmd: 'pubrel', messageId: mid}
+            const pubrel = { cmd: 'pubrel', messageId: mid }
             pubrelCount++
             client._handlePacket(pubrel, function (err) {
               if (shouldSendFail) {
@@ -2292,12 +2311,13 @@ module.exports = function (server, config) {
               }
             })
             break
+          }
         }
       }
 
       client.once('connect', function () {
-        client.subscribe(testTopic, {qos: 2})
-        const publish = {cmd: 'publish', topic: testTopic, payload: testMessage, qos: 2, messageId: mid}
+        client.subscribe(testTopic, { qos: 2 })
+        const publish = { cmd: 'publish', topic: testTopic, payload: testMessage, qos: 2, messageId: mid }
         client._handlePacket(publish, function (err) {
           assert.notExists(err)
         })
@@ -2315,7 +2335,7 @@ module.exports = function (server, config) {
 
   describe('auto reconnect', function () {
     it('should mark the client disconnecting if #end called', function (done) {
-      var client = connect()
+      const client = connect()
 
       client.end(true, err => {
         assert.isTrue(client.disconnecting)
@@ -2324,9 +2344,9 @@ module.exports = function (server, config) {
     })
 
     it('should reconnect after stream disconnect', function (done) {
-      var client = connect()
+      const client = connect()
 
-      var tryReconnect = true
+      let tryReconnect = true
 
       client.on('connect', function () {
         if (tryReconnect) {
@@ -2339,9 +2359,9 @@ module.exports = function (server, config) {
     })
 
     it('should emit \'reconnect\' when reconnecting', function (done) {
-      var client = connect()
-      var tryReconnect = true
-      var reconnectEvent = false
+      const client = connect()
+      let tryReconnect = true
+      let reconnectEvent = false
 
       client.on('reconnect', function () {
         reconnectEvent = true
@@ -2359,10 +2379,10 @@ module.exports = function (server, config) {
     })
 
     it('should emit \'offline\' after going offline', function (done) {
-      var client = connect()
+      const client = connect()
 
-      var tryReconnect = true
-      var offlineEvent = false
+      let tryReconnect = true
+      let offlineEvent = false
 
       client.on('offline', function () {
         offlineEvent = true
@@ -2380,7 +2400,7 @@ module.exports = function (server, config) {
     })
 
     it('should not reconnect if it was ended by the user', function (done) {
-      var client = connect()
+      const client = connect()
 
       client.on('connect', function () {
         client.end()
@@ -2389,7 +2409,7 @@ module.exports = function (server, config) {
     })
 
     it('should setup a reconnect timer on disconnect', function (done) {
-      var client = connect()
+      const client = connect()
 
       client.once('connect', function () {
         assert.notExists(client.reconnectTimer)
@@ -2402,14 +2422,15 @@ module.exports = function (server, config) {
       })
     })
 
-    var reconnectPeriodTests = [ {period: 200}, {period: 2000}, {period: 4000} ]
+    const reconnectPeriodTests = [{ period: 200 }, { period: 2000 }, { period: 4000 }]
     reconnectPeriodTests.forEach((test) => {
       it('should allow specification of a reconnect period (' + test.period + 'ms)', function (done) {
-        var end
-        var reconnectSlushTime = 200
-        var client = connect({reconnectPeriod: test.period})
-        var reconnect = false
-        var start = Date.now()
+        this.timeout(10000)
+        let end
+        const reconnectSlushTime = 200
+        const client = connect({ reconnectPeriod: test.period })
+        let reconnect = false
+        const start = Date.now()
 
         client.on('connect', function () {
           if (!reconnect) {
@@ -2418,7 +2439,7 @@ module.exports = function (server, config) {
           } else {
             end = Date.now()
             client.end(() => {
-              let reconnectPeriodDuringTest = end - start
+              const reconnectPeriodDuringTest = end - start
               if (reconnectPeriodDuringTest >= test.period - reconnectSlushTime && reconnectPeriodDuringTest <= test.period + reconnectSlushTime) {
                 // give the connection a 200 ms slush window
                 done()
@@ -2432,15 +2453,19 @@ module.exports = function (server, config) {
     })
 
     it('should always cleanup successfully on reconnection', function (done) {
-      var client = connect({host: 'this_hostname_should_not_exist', connectTimeout: 0, reconnectPeriod: 1})
+      const client = connect({ host: 'this_hostname_should_not_exist', connectTimeout: 0, reconnectPeriod: 1 })
       // bind client.end so that when it is called it is automatically passed in the done callback
-      setTimeout(client.end.bind(client, done), 50)
+      setTimeout(() => {
+        const boundEnd = client.end.bind(client, done)
+        boundEnd()
+      }, 50)
     })
 
     it('should resend in-flight QoS 1 publish messages from the client', function (done) {
-      var client = connect({reconnectPeriod: 200})
-      var serverPublished = false
-      var clientCalledBack = false
+      this.timeout(4000)
+      const client = connect({ reconnectPeriod: 200 })
+      let serverPublished = false
+      let clientCalledBack = false
 
       server.once('client', function (serverClient) {
         serverClient.on('connect', function () {
@@ -2470,9 +2495,9 @@ module.exports = function (server, config) {
     })
 
     it('should not resend in-flight publish messages if disconnecting', function (done) {
-      var client = connect({reconnectPeriod: 200})
-      var serverPublished = false
-      var clientCalledBack = false
+      const client = connect({ reconnectPeriod: 200 })
+      let serverPublished = false
+      let clientCalledBack = false
       server.once('client', function (serverClient) {
         serverClient.on('connect', function () {
           setImmediate(function () {
@@ -2496,9 +2521,9 @@ module.exports = function (server, config) {
     })
 
     it('should resend in-flight QoS 2 publish messages from the client', function (done) {
-      var client = connect({reconnectPeriod: 200})
-      var serverPublished = false
-      var clientCalledBack = false
+      const client = connect({ reconnectPeriod: 200 })
+      let serverPublished = false
+      let clientCalledBack = false
 
       server.once('client', function (serverClient) {
         // ignore errors
@@ -2530,8 +2555,8 @@ module.exports = function (server, config) {
     })
 
     it('should not resend in-flight QoS 1 removed publish messages from the client', function (done) {
-      var client = connect({reconnectPeriod: 200})
-      var clientCalledBack = false
+      const client = connect({ reconnectPeriod: 200 })
+      let clientCalledBack = false
 
       server.once('client', function (serverClient) {
         serverClient.on('connect', function () {
@@ -2565,8 +2590,8 @@ module.exports = function (server, config) {
     })
 
     it('should not resend in-flight QoS 2 removed publish messages from the client', function (done) {
-      var client = connect({reconnectPeriod: 200})
-      var clientCalledBack = false
+      const client = connect({ reconnectPeriod: 200 })
+      let clientCalledBack = false
 
       server.once('client', function (serverClient) {
         serverClient.on('connect', function () {
@@ -2597,9 +2622,9 @@ module.exports = function (server, config) {
     })
 
     it('should resubscribe when reconnecting', function (done) {
-      var client = connect({ reconnectPeriod: 100 })
-      var tryReconnect = true
-      var reconnectEvent = false
+      const client = connect({ reconnectPeriod: 100 })
+      let tryReconnect = true
+      let reconnectEvent = false
 
       client.on('reconnect', function () {
         reconnectEvent = true
@@ -2625,9 +2650,9 @@ module.exports = function (server, config) {
     })
 
     it('should not resubscribe when reconnecting if resubscribe is disabled', function (done) {
-      var client = connect({ reconnectPeriod: 100, resubscribe: false })
-      var tryReconnect = true
-      var reconnectEvent = false
+      const client = connect({ reconnectPeriod: 100, resubscribe: false })
+      let tryReconnect = true
+      let reconnectEvent = false
 
       client.on('reconnect', function () {
         reconnectEvent = true
@@ -2655,11 +2680,11 @@ module.exports = function (server, config) {
     })
 
     it('should not resubscribe when reconnecting if suback is error', function (done) {
-      var tryReconnect = true
-      var reconnectEvent = false
-      var server2 = serverBuilder(config.protocol, function (serverClient) {
+      let tryReconnect = true
+      let reconnectEvent = false
+      const server2 = serverBuilder(config.protocol, function (serverClient) {
         serverClient.on('connect', function (packet) {
-          var connack = version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
+          const connack = version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
           serverClient.connack(connack)
         })
         serverClient.on('subscribe', function (packet) {
@@ -2674,7 +2699,7 @@ module.exports = function (server, config) {
       })
 
       server2.listen(ports.PORTAND49, function () {
-        var client = connect({
+        const client = connect({
           port: ports.PORTAND49,
           host: 'localhost',
           reconnectPeriod: 100
@@ -2707,13 +2732,13 @@ module.exports = function (server, config) {
     })
 
     it('should preserved incomingStore after disconnecting if clean is false', function (done) {
-      var reconnect = false
-      var client = {}
-      var incomingStore = new mqtt.Store({ clean: false })
-      var outgoingStore = new mqtt.Store({ clean: false })
-      var server2 = serverBuilder(config.protocol, function (serverClient) {
+      let reconnect = false
+      let client = {}
+      const incomingStore = new mqtt.Store({ clean: false })
+      const outgoingStore = new mqtt.Store({ clean: false })
+      const server2 = serverBuilder(config.protocol, function (serverClient) {
         serverClient.on('connect', function (packet) {
-          var connack = version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
+          const connack = version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
           serverClient.connack(connack)
           if (reconnect) {
             serverClient.pubrel({ messageId: 1 })
@@ -2757,7 +2782,7 @@ module.exports = function (server, config) {
 
         client.on('connect', function () {
           if (!reconnect) {
-            client.subscribe('test', {qos: 2}, function () {
+            client.subscribe('test', { qos: 2 }, function () {
             })
             reconnect = true
           }
@@ -2770,11 +2795,11 @@ module.exports = function (server, config) {
     })
 
     it('should clear outgoing if close from server', function (done) {
-      var reconnect = false
-      var client = {}
-      var server2 = serverBuilder(config.protocol, function (serverClient) {
+      let reconnect = false
+      let client = {}
+      const server2 = serverBuilder(config.protocol, function (serverClient) {
         serverClient.on('connect', function (packet) {
-          var connack = version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
+          const connack = version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
           serverClient.connack(connack)
         })
         serverClient.on('subscribe', function (packet) {
@@ -2802,7 +2827,7 @@ module.exports = function (server, config) {
         })
 
         client.on('connect', function () {
-          client.subscribe('test', {qos: 2}, function (e) {
+          client.subscribe('test', { qos: 2 }, function (e) {
             if (!e) {
               client.end()
             }
@@ -2823,13 +2848,13 @@ module.exports = function (server, config) {
     })
 
     it('should resend in-flight QoS 1 publish messages from the client if clean is false', function (done) {
-      var reconnect = false
-      var client = {}
-      var incomingStore = new mqtt.Store({ clean: false })
-      var outgoingStore = new mqtt.Store({ clean: false })
-      var server2 = serverBuilder(config.protocol, function (serverClient) {
+      let reconnect = false
+      let client = {}
+      const incomingStore = new mqtt.Store({ clean: false })
+      const outgoingStore = new mqtt.Store({ clean: false })
+      const server2 = serverBuilder(config.protocol, function (serverClient) {
         serverClient.on('connect', function (packet) {
-          var connack = version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
+          const connack = version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
           serverClient.connack(connack)
         })
         serverClient.on('publish', function (packet) {
@@ -2861,7 +2886,7 @@ module.exports = function (server, config) {
 
         client.on('connect', function () {
           if (!reconnect) {
-            client.publish('topic', 'payload', {qos: 1})
+            client.publish('topic', 'payload', { qos: 1 })
           }
         })
         client.on('error', function () {})
@@ -2869,13 +2894,13 @@ module.exports = function (server, config) {
     })
 
     it('should resend in-flight QoS 2 publish messages from the client if clean is false', function (done) {
-      var reconnect = false
-      var client = {}
-      var incomingStore = new mqtt.Store({ clean: false })
-      var outgoingStore = new mqtt.Store({ clean: false })
-      var server2 = serverBuilder(config.protocol, function (serverClient) {
+      let reconnect = false
+      let client = {}
+      const incomingStore = new mqtt.Store({ clean: false })
+      const outgoingStore = new mqtt.Store({ clean: false })
+      const server2 = serverBuilder(config.protocol, function (serverClient) {
         serverClient.on('connect', function (packet) {
-          var connack = version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
+          const connack = version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
           serverClient.connack(connack)
         })
         serverClient.on('publish', function (packet) {
@@ -2907,7 +2932,7 @@ module.exports = function (server, config) {
 
         client.on('connect', function () {
           if (!reconnect) {
-            client.publish('topic', 'payload', {qos: 2})
+            client.publish('topic', 'payload', { qos: 2 })
           }
         })
         client.on('error', function () {})
@@ -2915,18 +2940,18 @@ module.exports = function (server, config) {
     })
 
     it('should resend in-flight QoS 2 pubrel messages from the client if clean is false', function (done) {
-      var reconnect = false
-      var client = {}
-      var incomingStore = new mqtt.Store({ clean: false })
-      var outgoingStore = new mqtt.Store({ clean: false })
-      var server2 = serverBuilder(config.protocol, function (serverClient) {
+      let reconnect = false
+      let client = {}
+      const incomingStore = new mqtt.Store({ clean: false })
+      const outgoingStore = new mqtt.Store({ clean: false })
+      const server2 = serverBuilder(config.protocol, function (serverClient) {
         serverClient.on('connect', function (packet) {
-          var connack = version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
+          const connack = version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
           serverClient.connack(connack)
         })
         serverClient.on('publish', function (packet) {
           if (!reconnect) {
-            serverClient.pubrec({messageId: packet.messageId})
+            serverClient.pubrec({ messageId: packet.messageId })
           }
         })
         serverClient.on('pubrel', function () {
@@ -2958,7 +2983,7 @@ module.exports = function (server, config) {
 
         client.on('connect', function () {
           if (!reconnect) {
-            client.publish('topic', 'payload', {qos: 2})
+            client.publish('topic', 'payload', { qos: 2 })
           }
         })
         client.on('error', function () {})
@@ -2966,23 +2991,23 @@ module.exports = function (server, config) {
     })
 
     it('should resend in-flight publish messages by published order', function (done) {
-      var publishCount = 0
-      var reconnect = false
-      var disconnectOnce = true
-      var client = {}
-      var incomingStore = new mqtt.Store({ clean: false })
-      var outgoingStore = new mqtt.Store({ clean: false })
-      var server2 = serverBuilder(config.protocol, function (serverClient) {
+      let publishCount = 0
+      let reconnect = false
+      let disconnectOnce = true
+      let client = {}
+      const incomingStore = new mqtt.Store({ clean: false })
+      const outgoingStore = new mqtt.Store({ clean: false })
+      const server2 = serverBuilder(config.protocol, function (serverClient) {
         // errors are not interesting for this test
         // but they might happen on some platforms
         serverClient.on('error', function () {})
 
         serverClient.on('connect', function (packet) {
-          var connack = version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
+          const connack = version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
           serverClient.connack(connack)
         })
         serverClient.on('publish', function (packet) {
-          serverClient.puback({messageId: packet.messageId})
+          serverClient.puback({ messageId: packet.messageId })
           if (reconnect) {
             switch (publishCount++) {
               case 0:
@@ -3027,9 +3052,9 @@ module.exports = function (server, config) {
 
         client.on('connect', function () {
           if (!reconnect) {
-            client.publish('topic', 'payload1', {qos: 1})
-            client.publish('topic', 'payload2', {qos: 1})
-            client.publish('topic', 'payload3', {qos: 1})
+            client.publish('topic', 'payload1', { qos: 1 })
+            client.publish('topic', 'payload2', { qos: 1 })
+            client.publish('topic', 'payload3', { qos: 1 })
           }
         })
         client.on('error', function () {})
@@ -3037,9 +3062,9 @@ module.exports = function (server, config) {
     })
 
     it('should be able to pub/sub if reconnect() is called at close handler', function (done) {
-      var client = connect({ reconnectPeriod: 0 })
-      var tryReconnect = true
-      var reconnectEvent = false
+      const client = connect({ reconnectPeriod: 0 })
+      let tryReconnect = true
+      let reconnectEvent = false
 
       client.on('close', function () {
         if (tryReconnect) {
@@ -3067,9 +3092,9 @@ module.exports = function (server, config) {
     })
 
     it('should be able to pub/sub if reconnect() is called at out of close handler', function (done) {
-      var client = connect({ reconnectPeriod: 0 })
-      var tryReconnect = true
-      var reconnectEvent = false
+      const client = connect({ reconnectPeriod: 0 })
+      let tryReconnect = true
+      let reconnectEvent = false
 
       client.on('close', function () {
         if (tryReconnect) {
@@ -3099,8 +3124,8 @@ module.exports = function (server, config) {
     })
 
     context('with alternate server client', function () {
-      var cachedClientListeners
-      var connack = version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
+      let cachedClientListeners
+      const connack = version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
 
       beforeEach(function () {
         cachedClientListeners = server.listeners('client')
@@ -3115,9 +3140,9 @@ module.exports = function (server, config) {
       })
 
       it('should resubscribe even if disconnect is before suback', function (done) {
-        var client = connect(Object.assign({ reconnectPeriod: 100 }, config))
-        var subscribeCount = 0
-        var connectCount = 0
+        const client = connect(Object.assign({ reconnectPeriod: 100 }, config))
+        let subscribeCount = 0
+        let connectCount = 0
 
         server.on('client', function (serverClient) {
           serverClient.on('connect', function () {
@@ -3146,8 +3171,8 @@ module.exports = function (server, config) {
       })
 
       it('should resubscribe exactly once', function (done) {
-        var client = connect(Object.assign({ reconnectPeriod: 100 }, config))
-        var subscribeCount = 0
+        const client = connect(Object.assign({ reconnectPeriod: 100 }, config))
+        let subscribeCount = 0
 
         server.on('client', function (serverClient) {
           serverClient.on('connect', function () {
