@@ -23,7 +23,7 @@ const handleClient = function (client) {
   })
 
   client.on('publish', function (packet) {
-    let i, k, c, s, publish
+    let k, c, s, publish
     switch (packet.qos) {
       case 0:
         break
@@ -39,7 +39,7 @@ const handleClient = function (client) {
       c = self.clients[k]
       publish = false
 
-      for (i = 0; i < c.subscriptions.length; i++) {
+      for (let i = 0; i < c.subscriptions.length; i++) {
         s = c.subscriptions[i]
 
         if (s.test(packet.topic)) {

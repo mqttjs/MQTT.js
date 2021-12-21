@@ -22,7 +22,7 @@ describe('MqttClient', function () {
   const config = { protocol: 'mqtt', port: ports.PORT }
   server.listen(ports.PORT)
 
-  after(function () {
+  afterEach(function () {
     // clean up and make sure the server is no longer listening...
     if (server.listening) {
       server.close()
@@ -213,7 +213,7 @@ describe('MqttClient', function () {
         })
 
         server.once('client', function () {
-          client.end(true, (err) => {
+          client.end(false, (err) => {
             done(err)
           })
         })
