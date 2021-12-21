@@ -1616,6 +1616,7 @@ module.exports = function (server, config) {
     })
 
     it('should reconnect if pingresp is not sent', function (done) {
+      this.timeout(4000)
       const client = connect({ keepalive: 1, reconnectPeriod: 100 })
 
       // Fake no pingresp being send by stubbing the _handlePingresp function
