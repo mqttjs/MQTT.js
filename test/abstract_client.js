@@ -1118,10 +1118,25 @@ module.exports = function (server, config) {
     })
 
     it('should handle error with async incoming store in QoS 2 `handlePublish` method', function (done) {
+      const timeout = setTimeout(() => {
+        done('test timed out')
+      }, 10000)
       class AsyncStore {
         put (packet, cb) {
           process.nextTick(function () {
             cb(null, 'Error')
+          })
+        }
+
+        del (packet, cb) {
+          process.nextTick(function () {
+            cb(new Error('Error'))
+          })
+        }
+
+        get (packet, cb) {
+          process.nextTick(function () {
+            cb(null, { cmd: 'publish' })
           })
         }
 
@@ -1140,6 +1155,7 @@ module.exports = function (server, config) {
         qos: 2
       }, function () {
         client.end()
+        clearTimeout(timeout)
         done()
       })
     })
