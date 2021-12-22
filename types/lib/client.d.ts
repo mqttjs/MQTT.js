@@ -8,7 +8,7 @@ import {
   IClientReconnectOptions
 } from './client-options'
 import { Store } from './store'
-import { Packet, IConnectPacket, IPublishPacket, IDisconnectPacket, QoS, IConnackPacket } from 'mqtt-packet'
+import { IAuthPacket, IConnectPacket, IPublishPacket, IDisconnectPacket, IConnackPacket, Packet, QoS } from 'mqtt-packet'
 
 export interface ISubscriptionGrant {
   /**
@@ -231,6 +231,27 @@ export declare class MqttClient extends events.EventEmitter {
    * @api public
    */
   public handleMessage (packet: Packet, callback: PacketCallback): void
+
+  /**
+   * Handle auth packages for MQTT 5 enhanced authentication methods such
+   * as challenge response authentication.
+   *
+   * Challenge-response authentication flow would look something like this:
+   *
+   * --> CONNECT | authMethod = "mathChallenge" -->
+   * <-- AUTH | authMethod = "mathChallenge", authData = "12 + 34" <--
+   * --> AUTH | authMethod = "mathChallenge", authData = "46" -->
+   * <-- CONNACK | reasonCode = SUCCESS <--
+   *
+   * This form of authentication has several advantages over traditional
+   * credential-based approaches. For instance authentication without the direct
+   * exchange of authentication secrets.
+   *
+   * @param packet the auth packet to handle
+   * @param callback call when finished
+   * @api public
+   */
+  public handleAuth (packet: IAuthPacket, callback: PacketCallback): void
 
   /**
    * getLastMessageId
