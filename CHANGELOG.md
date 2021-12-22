@@ -1,5 +1,39 @@
 # Release History
 
+## 4.3.0
+
+### PR
+
+refined topic alias support (#1301)
+
+fix security vulnerability in ws stream (#1307)
+
+skip TLS SNI if host is IP address (#1311)
+
+update readme about vNext discussions (#1328)
+
+update readme sample (#1331)
+
+add support for ALPN TLS extension (#1332)
+
+align onConnectCallback with specs expecting connack packet (#1333)
+
+fix resubscribe messageId allocate twice (#1337)
+
+rework examples to be a bit more specific (#1352)
+
+readme typo fixed (#1353)
+
+fix(typescript): use correct version of @types/ws (#1358)
+
+fix(type): fix push properties types (#1359)
+
+fix: audit dev dependencies (#1374)
+
+fix(type): add properties type for IClientSubscribeOptions (#1378)
+
+feat(client): auth handler for enhanced auth (#1380)
+
 ## 4.2.8
 
 ### PR
