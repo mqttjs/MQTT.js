@@ -235,18 +235,18 @@ export declare class MqttClient extends events.EventEmitter {
   /**
    * Handle auth packages for MQTT 5 enhanced authentication methods such
    * as challenge response authentication.
-   * 
+   *
    * Challenge-response authentication flow would look something like this:
-   * 
+   *
    * --> CONNECT | authMethod = "mathChallenge" -->
    * <-- AUTH | authMethod = "mathChallenge", authData = "12 + 34" <--
    * --> AUTH | authMethod = "mathChallenge", authData = "46" -->
    * <-- CONNACK | reasonCode = SUCCESS <--
-   * 
+   *
    * This form of authentication has several advantages over traditional
    * credential-based approaches. For instance authentication without the direct
    * exchange of authentication secrets.
-   * 
+   *
    * @param packet the auth packet to handle
    * @param callback call when finished
    * @api public
