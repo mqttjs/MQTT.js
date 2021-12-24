@@ -1,5 +1,11 @@
 # Release History
 
+## 4.3.1
+
+### PR
+
+fix(dependencies): remove babel-eslint and snazzy (#1383)
+
 ## 4.3.0
 
 ### PR
