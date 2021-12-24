@@ -62,7 +62,6 @@
     "net": false
   },
   "dependencies": {
-    "babel-eslint": "^10.1.0",
     "collections": "^5.1.12",
     "commist": "^1.0.0",
     "concat-stream": "^2.0.0",
@@ -99,7 +98,7 @@
     "rimraf": "^3.0.2",
     "should": "^13.2.1",
     "sinon": "^9.0.0",
-    "snazzy": "^8.0.0",
+    "snazzy": "^9.0.0",
     "standard": "^16.0.4",
     "tslint": "^5.11.0",
     "tslint-config-standard": "^8.0.1",
@@ -107,7 +106,6 @@
     "uglify-es": "^3.3.9"
   },
   "standard": {
-    "parser": "babel-eslint",
     "env": [
       "mocha"
     ],
