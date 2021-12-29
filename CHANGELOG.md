@@ -1,5 +1,11 @@
 # Release History
 
+## 4.3.2
+
+### PR
+
+fix(dependencies): update collections (#1386)
+
 ## 4.3.1
 
 ### PR
