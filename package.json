@@ -62,7 +62,7 @@
     "net": false
   },
   "dependencies": {
-    "collections": "^5.1.12",
+    "collections": "^5.1.13",
     "commist": "^1.0.0",
     "concat-stream": "^2.0.0",
     "debug": "^4.1.1",
@@ -71,7 +71,7 @@
     "inherits": "^2.0.3",
     "minimist": "^1.2.5",
     "mqtt-packet": "^6.8.0",
-    "number-allocator": "^1.0.7",
+    "number-allocator": "^1.0.8",
     "pump": "^3.0.0",
     "readable-stream": "^3.6.0",
     "reinterval": "^1.1.0",
