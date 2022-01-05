@@ -1,5 +1,15 @@
 # Release History
 
+## 4.3.3
+
+fix(publish): call callback when messageId available (#1393)
+
+fix: remove collections.js depdendency from number-allocator (#1394)
+
+### PR
+
+fix(dependencies): update collections (#1386)
+
 ## 4.3.2
 
 ### PR
