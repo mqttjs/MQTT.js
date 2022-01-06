@@ -1,5 +1,9 @@
 # Release History
 
+## 4.3.4
+
+fix(dependency): migrate LruMap from collections to lru-cache (#1396)
+
 ## 4.3.3
 
 fix(publish): call callback when messageId available (#1393)
