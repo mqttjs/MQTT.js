@@ -62,13 +62,13 @@
     "net": false
   },
   "dependencies": {
-    "collections": "^5.1.13",
     "commist": "^1.0.0",
     "concat-stream": "^2.0.0",
     "debug": "^4.1.1",
     "duplexify": "^4.1.1",
     "help-me": "^3.0.0",
     "inherits": "^2.0.3",
+    "lru-cache": "^6.0.0",
     "minimist": "^1.2.5",
     "mqtt-packet": "^6.8.0",
     "number-allocator": "^1.0.9",
