@@ -10,7 +10,7 @@ in JavaScript for node.js and the browser.
 |:---------------------------|
 | our default branch has been moved from *master* to *main*      |
 
-| :warning: EXPLOSION          |
+| :explosion: MQTT.js vNext          |
 |:---------------------------|
 | Want to contribute to the next generation of **MQTT.js**? Join the discussion [here](https://github.com/mqttjs/MQTT.js/discussions/1324).       |
 
