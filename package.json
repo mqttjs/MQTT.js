@@ -1,0 +1,25 @@
+{
+  "//": "TODO: author, contributors",
+  "name": "mqtt",
+  "version": "5.0.0",
+  "description": "A MQTT client library",
+  "keywords": [
+    "mqtt",
+    "publish",
+    "subscribe",
+    "publish-subscribe",
+    "publish/subscribe",
+    "client",
+    "broker"
+  ],
+  "homepage": "https://github.com/mqttjs/MQTT.js#readme",
+  "bugs": "https://github.com/mqttjs/MQTT.js/issues",
+  "license": "MIT",
+  "type": "module",
+  "exports": "./dist/index.js",
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "files": ["dist"],
+  "types": "dist"
+}
