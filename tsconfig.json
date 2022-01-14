@@ -1,0 +1,24 @@
+
+{
+  "include": ["src"],
+  "compilerOptions": {
+    "outDir": "dist",
+    "exactOptionalPropertyTypes": true,
+    "strict": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "noUncheckedIndexedAccess": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "target": "ES2020",
+    "module": "NodeNext",
+    "declaration": true,
+    "newLine": "LF",
+    "noEmitOnError": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true
+  }
+}

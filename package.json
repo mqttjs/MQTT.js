@@ -20,6 +20,11 @@
   "engines": {
     "node": ">=14.13.1"
   },
-  "files": ["dist"],
-  "types": "dist"
+  "files": [
+    "dist"
+  ],
+  "types": "dist",
+  "devDependencies": {
+    "typescript": "^4.6.0-dev.20220114"
+  }
 }
