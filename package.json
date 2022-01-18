@@ -24,6 +24,9 @@
     "dist"
   ],
   "types": "dist",
+  "scripts": {
+    "build": "tsc"
+  },
   "devDependencies": {
     "typescript": "^4.6.0-dev.20220114"
   }
