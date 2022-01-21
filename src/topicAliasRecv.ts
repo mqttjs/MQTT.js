@@ -44,7 +44,7 @@ export class TopicAliasRecv {
    * @param {String} [topic] - topic
    * @returns { Number} - if mapped topic exists return topic alias, otherwise return undefined
    */
-  getTopicByAlias(alias: string | number): string {
+  getTopicByAlias(alias: string | number): string | undefined {
     return this.aliasToTopic[alias]
 
   }

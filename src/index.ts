@@ -5,18 +5,23 @@
  * See LICENSE for more information
  */
 
-import { MqttClient } from './client'
-import { DefaultMessageIdProvider } from './utils/defaultMessageIdProvider'
-import { UniqueMessageIdProvider } from './uniqueMessageIdProvider'
+import { MqttClient } from './client.js'
+import { DefaultMessageIdProvider } from './utils/defaultMessageIdProvider.js'
+import { UniqueMessageIdProvider } from './uniqueMessageIdProvider.js'
+import { ConnectOptions } from './interfaces/connectOptions.js'
+import { protocols } from './utils/constants.js'
+import { logger } from './utils/logger.js'
+import { handle } from './utils/error.js'
 
 import { URL } from 'url'
-import { ConnectOptions } from './interfaces/connectOptions'
-import { protocols } from './utils/constants'
 
+process.on("unhandledRejection", (err) => {
+  throw err;
+})
 
-
-
-
+process.on("uncaughtException", (err) => {
+  handle(err);
+})
 
 /**
  * connect()
@@ -26,6 +31,7 @@ import { protocols } from './utils/constants'
  *   3) Return the client to the user.
  */
 function connect (options: ConnectOptions) {
+  logger.info(`validating options...`)
   if (typeof(options.brokerUrl) === 'string') {
     options.brokerUrl = new URL(options.brokerUrl) 
   }
@@ -54,6 +60,7 @@ function connect (options: ConnectOptions) {
 }
 
 function _validateProtocol(opts: ConnectOptions): Error | undefined {
+  logger.info(`validating protocol options...`)
   if (opts.tlsOptions && 'cert' in opts.tlsOptions && 'key' in opts.tlsOptions) {
     const urlProtocol = (opts.brokerUrl as URL).protocol
     if (urlProtocol) {
@@ -67,13 +74,11 @@ function _validateProtocol(opts: ConnectOptions): Error | undefined {
       return new Error('Missing secure protocol key')
     }
   }
-
-  // if the protocol provided in the options does not exist in the supported protocols...
-  _ensureBrowserUsesSecureProtocol((opts.brokerUrl as URL).protocol)
-  return
+  return undefined
 }
 
 function formatSecureProtocolError(protocol: string): Error {
+  logger.info('secure protocol error! formatting secure protocol error... ')
   let secureProtocol: string;
   switch (protocol) {
     case 'mqtt':
@@ -88,20 +93,6 @@ function formatSecureProtocolError(protocol: string): Error {
   return new Error(
     `user provided cert and key , but protocol ${protocol} is insecure. 
     Use ${secureProtocol} instead.`)
-}
-
-function _ensureBrowserUsesSecureProtocol(protocol: string): string {
-  let browserCompatibleProtocol: string = ''
-  // TODO: This used to be if (isBrowser) but I'm removing isBrowser. We should 
-  // just shim this.
-  if (false) {
-    if (protocol === 'mqtt') {
-      browserCompatibleProtocol = 'ws'
-    } else if (protocol === 'mqtts') {
-      browserCompatibleProtocol = 'wss'
-    }
-  }
-  return browserCompatibleProtocol || protocol
 }
 
 export {connect, DefaultMessageIdProvider, UniqueMessageIdProvider}

@@ -1,10 +1,10 @@
 import net from 'net'
 import { Duplex } from 'stream'
 import tls from 'tls'
-import { ConnectOptions } from '../interfaces/connectOptions'
-import { buildWebSocketStream } from './buildWebSocketStream'
-import { WebSocketOptions } from './interfaces/webSocketOptions'
 import { URL } from "url";
+import { ConnectOptions } from '../interfaces/connectOptions.js'
+import { buildWebSocketStream } from './buildWebSocketStream.js'
+import { WebSocketOptions } from './interfaces/webSocketOptions.js'
 
 
 const logger = require('pino')()
@@ -30,7 +30,7 @@ export function connectionFactory (options: ConnectOptions): Duplex {
       const connection: tls.TLSSocket = tls.connect({port: port, host: host, servername: servername, ...options.tlsOptions})
       /* eslint no-use-before-define: [2, "nofunc"] */
       connection.on('secureConnect', function () {
-        if (tlsOptions.rejectUnauthorized && !connection.authorized) {
+        if (tlsOptions as any['rejectUnauthorized'] && !connection.authorized) {
           connection.emit('error', new Error('TLS not authorized'))
         } else {
           connection.removeListener('error', handleTLSerrors)
@@ -41,7 +41,7 @@ export function connectionFactory (options: ConnectOptions): Duplex {
         // How can I get verify this error is a tls error?
         // TODO: In the old version this was emitted via the client. 
         // We need to make this better.
-        if (options.tlsOptions.rejectUnauthorized) {
+        if (options.tlsOptions as any['rejectUnauthorized']) {
           connection.emit('error', err)
         }
 

@@ -55,18 +55,14 @@ export class Store  {
       }
     }
 
-    stream.destroy = function () {
-      if (destroyed) {
-        return
+    stream.destroy = function (_error?: Error | undefined): Readable {
+      if (!destroyed) {
+        destroyed = true
+        setTimeout(() => {
+          this.emit('close')
+        }, 0)
       }
-
-      const self = this
-
-      destroyed = true
-
-      setTimeout(function () {
-        self.emit('close')
-      }, 0)
+      return stream
     }
 
     return stream

@@ -1,5 +1,3 @@
-'use strict'
-
 /**
  * DefaultMessageAllocator constructor
  * @constructor
