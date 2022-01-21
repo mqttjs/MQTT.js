@@ -1,7 +1,7 @@
 import { Transform } from "stream";
-import { WebSocketOptions } from "./interfaces/webSocketOptions";
+import { WebSocketOptions } from "./interfaces/webSocketOptions.js";
 import duplexify from 'duplexify';
-import { WebSocketStream } from "./interfaces/webSocketStream";
+import { WebSocketStream } from "./interfaces/webSocketStream.js";
 
 const logger = require('pino')()
 
@@ -29,10 +29,10 @@ export function buildWebSocketStream (opts: WebSocketOptions): WebSocketStream {
     proxy._writev = (chunks, cb) => {
       const buffers = new Array(chunks.length)
       for (let i = 0; i < chunks.length; i++) {
-        if (typeof chunks[i].chunk === 'string') {
-          buffers[i] = Buffer.from(chunks[i] as any, 'utf8')
+        if (chunks && Array.isArray(chunks) && typeof (chunks as Array<any>)[i].chunk === 'string') {
+          buffers[i] = Buffer.from((chunks as Array<any>)[i].chunk, 'utf8')
         } else {
-          buffers[i] = chunks[i].chunk
+          buffers[i] = (chunks as Array<any>)[i].chunk
         }
       }
       proxy._write(Buffer.concat(buffers), 'binary', cb)

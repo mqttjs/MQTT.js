@@ -1,7 +1,7 @@
 import { QoS, UserProperties } from 'mqtt-packet'
 import { Duplex } from 'stream';
 import { TlsOptions } from 'tls';
-import { WsOptions } from './wsOptions';
+import { WsOptions } from './wsOptions.js';
 
 export interface ConnectOptions {
   objectMode?: any
@@ -24,7 +24,7 @@ export interface ConnectOptions {
     retain?: boolean
     properties?: {
       willDelayInterval?: number,
-      payloadFormatIndicator?: number,
+      payloadFormatIndicator?: boolean,
       messageExpiryInterval?: number,
       contentType?: string,
       responseTopic?: string,
