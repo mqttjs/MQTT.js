@@ -1,5 +1,3 @@
-'use strict'
-
 import { IConnackPacket, IConnectPacket, IPublishPacket, Packet, parser as mqttParser, Parser as MqttParser, writeToStream } from 'mqtt-packet'
 import { ConnectOptions } from './interfaces/connectOptions.js'
 import { Duplex, EventEmitter, Readable } from 'stream'

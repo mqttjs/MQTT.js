@@ -11,17 +11,8 @@ import { UniqueMessageIdProvider } from './uniqueMessageIdProvider.js'
 import { ConnectOptions } from './interfaces/connectOptions.js'
 import { protocols } from './utils/constants.js'
 import { logger } from './utils/logger.js'
-import { handle } from './utils/error.js'
 
 import { URL } from 'url'
-
-process.on("unhandledRejection", (err) => {
-  throw err;
-})
-
-process.on("uncaughtException", (err) => {
-  handle(err);
-})
 
 /**
  * connect()

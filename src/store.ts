@@ -1,5 +1,3 @@
-'use strict'
-
 import { Packet } from "mqtt-packet"
 import {Readable} from 'stream'
 

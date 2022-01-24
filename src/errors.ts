@@ -1,5 +1,3 @@
-'use strict'
-
 export const ReasonCodeErrors = {
   0: '',
   1: 'Unacceptable protocol version',

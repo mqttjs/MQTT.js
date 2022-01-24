@@ -1,5 +1,3 @@
-'use strict'
-
 import { NumberAllocator } from 'number-allocator'
 
 export class UniqueMessageIdProvider {
