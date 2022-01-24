@@ -43,6 +43,6 @@
     "@types/ws": "^8.2.2",
     "ava": "^4.0.1",
     "pino-pretty": "^7.5.0",
-    "typescript": "^4.6.0-dev.20220121"
+    "typescript": "^4.6.0-beta"
   }
 }
