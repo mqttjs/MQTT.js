@@ -35,8 +35,6 @@ function connect (options: ConnectOptions) {
       - Pass in the protocol via the protocol option.`)
   }
 
-  // If there is a colon at the end of the provided protocol, replace it with 
-  options.brokerUrl.protocol = options.brokerUrl.protocol.replace(/:$/, '')
   const validationErr: Error | undefined = _validateProtocol(options)
   if (validationErr) {
     throw validationErr

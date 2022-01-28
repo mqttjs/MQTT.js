@@ -1,17 +1,15 @@
-import { IConnackPacket, IConnectPacket, IPublishPacket, Packet, parser as mqttParser, Parser as MqttParser, writeToStream } from 'mqtt-packet'
+import { IConnackPacket, IConnectPacket, Packet, parser as mqttParser, Parser as MqttParser, writeToStream } from 'mqtt-packet'
 import { ConnectOptions } from './interfaces/connectOptions.js'
-import { Duplex, EventEmitter, Readable } from 'stream'
+import { Duplex, Readable } from 'stream'
+import { EventEmitter } from 'node:events'
 import { connectionFactory } from './connectionFactory/index.js'
 import eos from 'end-of-stream'
 import { defaultConnectOptions } from './utils/constants.js'
-import { applyTopicAlias, write } from './write.js'
+import { write } from './write.js'
 import { ReasonCodeErrors } from './errors.js'
-import {TopicAliasSend} from './topicAliasSend.js'
-import {TopicAliasRecv} from './topicAliasRecv.js'
 import { Store } from './store.js'
 import { nextTick } from 'process'
 import { logger } from './utils/logger.js'
-import { serialize, deserialize } from 'v8';
 import { defaultClientId } from './utils/defaultClientId.js'
 
 // const eventEmitter = require('events')
@@ -51,10 +49,8 @@ export class MqttClient extends EventEmitter {
   _eos: () => void
   _parsingBatch: number = 0
   pingResp: boolean | null
-  topicAliasSend?: TopicAliasSend
   inflightMessagesThatNeedToBeCleanedUpIfTheConnCloses: {[x: string]: any}
   storeProcessingQueue: any[]
-  topicAliasRecv: TopicAliasRecv
   messageIdToTopic: {[x: string]: string[]}
   resubscribeTopics: {[x: string]: any}
   connectedPromise: () => Promise<void>
@@ -93,10 +89,9 @@ export class MqttClient extends EventEmitter {
     this.outgoing = {}
 
     // Using this method to clean up the constructor to do options handling 
-    this._options = this.mergeDefaultOptions(options)
+    this._options = {...defaultConnectOptions, ...options}
 
     this.conn = this._options.customStreamFactory? this._options.customStreamFactory(this._options) : connectionFactory(this._options)
-    this.topicAliasRecv = new TopicAliasRecv(this._options.topicAliasMaximum)
 
     this.outgoingStore = options.outgoingStore || new Store()
     this.incomingStore = options.incomingStore || new Store()
@@ -119,11 +114,6 @@ export class MqttClient extends EventEmitter {
     this.once('connected', () => {})
     this.on('close', () => {
       this.connected = false
-  
-      if (this.topicAliasRecv) {
-        this.topicAliasRecv.clear()
-      }
-  
     })
 
     this.conn.on('readable', () => {
@@ -144,18 +134,7 @@ export class MqttClient extends EventEmitter {
   }
 
   mergeDefaultOptions(options: ConnectOptions): ConnectOptions {
-    const mergedOptions: any = deserialize(serialize(options));
-    // Loop through the defaultConnectOptions. If there is an option
-    // this is a default this has not been provided through the options
-    // object passed to the constructor, then update this value with the default Option.
-    for (const [key, value] of Object.entries(defaultConnectOptions)) {
-      // TODO: This type coercion is bad. How can I make it better?
-      mergedOptions[key] = this._options[key as keyof ConnectOptions] ?? value 
-    }
-
-    mergedOptions.clientId = options.clientId || defaultClientId()    
-
-    return mergedOptions
+    return {clientId: defaultClientId(), ...defaultConnectOptions, ...options}
   }
 
   async handleIncomingPacket (packet: Packet): Promise<void> {
@@ -189,7 +168,6 @@ export class MqttClient extends EventEmitter {
       this.conn.destroy()
     } else {
       let packet = { cmd: 'disconnect' , ...opts}
-      applyTopicAlias(this, packet)
 
       if (!this.connected) {
         const deferred: any = {
@@ -237,27 +215,10 @@ export class MqttClient extends EventEmitter {
   }
 
   private async _onConnected(connackPacket: IConnackPacket): Promise<void> {
-    delete this.topicAliasSend
-
-    if (connackPacket.properties) {
-      if (connackPacket.properties.topicAliasMaximum) {
-        if (connackPacket.properties.topicAliasMaximum > 0xffff) {
-          const err = new Error('topicAliasMaximum from broker is out of range')
-          this.emit('error', err)
-          throw err
-        }
-        if (connackPacket.properties.topicAliasMaximum > 0) {
-          this.topicAliasSend = new TopicAliasSend(connackPacket.properties.topicAliasMaximum)
-        }
-      }
-
-      if (connackPacket.properties.maximumPacketSize) {
-        if (!this._options.properties) { this._options.properties = {} }
-        this._options.properties.maximumPacketSize = connackPacket.properties.maximumPacketSize
-      }
+    const rc = connackPacket.returnCode
+    if (typeof rc !== 'number') {
+      throw new Error('Invalid connack packet');
     }
-
-    const rc: number = (this._options.protocolVersion === 5 ? connackPacket.reasonCode : connackPacket.returnCode) as number
     if (rc === 0) {
       return 
     } else if (rc > 0) {
@@ -306,31 +267,6 @@ export class MqttClient extends EventEmitter {
   sendPacket(packet: Packet) {
     this.emit('packetsend', packet)
     writeToStream(packet, this.conn, this._options)
-  }
-
-  removeTopicAliasAndRecoverTopicName (packet: IPublishPacket): void {
-    let alias
-    if (packet.properties) {
-      alias = packet.properties.topicAlias
-    }
-  
-    let topic = packet.topic.toString()
-    if (topic.length === 0) {
-      // restore topic from alias
-      if (typeof alias === 'undefined') {
-        throw new Error('Unregistered Topic Alias')
-      } else {
-        topic = this.topicAliasSend?.getTopicByAlias(alias)
-        if (typeof topic === 'undefined') {
-          throw new Error('Unregistered Topic Alias')
-        } else {
-          packet.topic = topic
-        }
-      }
-    }
-    if (alias) {
-      delete packet.properties?.topicAlias
-    }
   }
 
   async end (force?: boolean, opts?: any) {  
