@@ -25,7 +25,8 @@
   ],
   "types": "dist",
   "scripts": {
-    "build": "tsc"
+    "build": "tsc",
+    "test": "npm run build && ava"
   },
   "dependencies": {
     "duplexify": "^4.1.2",

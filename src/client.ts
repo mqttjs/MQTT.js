@@ -253,15 +253,35 @@ export class MqttClient extends EventEmitter {
     }
   }
 
+  /* THIS NEEDS TO BE THOUGHT THROUGH MORE */
   private async _sendConnect(): Promise<void> {
-     const connectPacket: IConnectPacket = createConnectPacket(this._options); 
-      await write(this, connectPacket)
+    let error = null;
+    await new Promise((resolve, reject) => {
+      try {
+        //not positive on result.. when would result be true?
+        const result: boolean | undefined = writeToStream(createConnectPacket(this._options), this.conn);
+        if (!result && !this.errored) {
+          client.conn.once('drain', resolve)
+        }
+      } catch (e) {
+        error = e;
+      }
+      if (error) {
+        reject(error)
+      } else {
+        setImmediate(resolve);
+      }
+    });
   }
 
-  close (_done: any) {
+  close(done: (error?: Error | null | undefined) => void) {
   }
 
-  onError (_err: any) {
+  onError () {
+    this.errored = true;
+    this.conn.removeAllListeners('error');
+    this.conn.on('error', () => {});
+    this.close()
   }
 
   sendPacket(packet: Packet) {
