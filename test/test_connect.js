@@ -15,3 +15,10 @@ test('should send a CONNECT packet to the broker and receive a CONNACK', async t
     brokerUrl: 'mqtt://localhost',
   });
 });
+
+/**
+ * 1) Send a Connect packet
+ * 2) writeToStream returns false and emits an error on this.conn('error')
+ * 
+ * We shouldn't be throwing away the whole client because 1 packet failed.
+ */
