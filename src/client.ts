@@ -1,28 +1,31 @@
 import { IConnackPacket, IConnectPacket, Packet, parser as mqttParser, Parser as MqttParser, writeToStream } from 'mqtt-packet'
 import { ConnectOptions } from './interfaces/connectOptions.js'
-import { Duplex, Readable } from 'stream'
+import { Duplex } from 'stream'
 import { EventEmitter } from 'node:events'
 import { connectionFactory } from './connectionFactory/index.js'
 import eos from 'end-of-stream'
 import { defaultConnectOptions } from './utils/constants.js'
-import { write } from './write.js'
 import { ReasonCodeErrors } from './errors.js'
-import { Store } from './store.js'
-import { nextTick } from 'process'
 import { logger } from './utils/logger.js'
 import { defaultClientId } from './utils/defaultClientId.js'
 
 // const eventEmitter = require('events')
 // const mqttErrors = require('errors')
 
+function eosPromisified(stream: NodeJS.ReadableStream | NodeJS.WritableStream): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    eos(stream, err => err instanceof Error ? reject(err) : resolve());
+  })
+}
+
+// call close(done) after the stream has closed () => void
+// call await close()
 
 export class MqttClient extends EventEmitter {
   _incomingPacketParser: MqttParser
   _options: ConnectOptions
   connacked: boolean = false
   disconnected: boolean = true
-  incomingStore: Store
-  outgoingStore: Store
   disconnecting: any
   pingTimer: any
   queueQoSZero: boolean = false
@@ -42,11 +45,11 @@ export class MqttClient extends EventEmitter {
   connected: boolean
   errored: boolean
   id: null
+  _eos: Promise<void> | undefined
   clean: boolean
   version: null
   conn: Duplex
   _disconnected: boolean
-  _eos: () => void
   _parsingBatch: number = 0
   pingResp: boolean | null
   inflightMessagesThatNeedToBeCleanedUpIfTheConnCloses: {[x: string]: any}
@@ -56,7 +59,6 @@ export class MqttClient extends EventEmitter {
   connectedPromise: () => Promise<void>
   _storeProcessingQueue: any[]
   outgoing: {[x:string]: any}
-
 
 
   constructor (options: ConnectOptions) {
@@ -91,11 +93,8 @@ export class MqttClient extends EventEmitter {
     // Using this method to clean up the constructor to do options handling 
     this._options = {...defaultConnectOptions, ...options}
 
-    this.conn = this._options.customStreamFactory? this._options.customStreamFactory(this._options) : connectionFactory(this._options)
-
-    this.outgoingStore = options.outgoingStore || new Store()
-    this.incomingStore = options.incomingStore || new Store()
-
+    this.conn = this._options.customStreamFactory? this._options.customStreamFactory(this._options) : connectionFactory(this._options);
+  
     // many drain listeners are needed for qos 1 callbacks if the connection is intermittent
     this.conn.setMaxListeners(1000)
 
@@ -108,8 +107,10 @@ export class MqttClient extends EventEmitter {
     // readable stream of the conn stream. 
     this._incomingPacketParser.on('packet', this.handleIncomingPacket)
 
-    // Echo connection errors
-    this._incomingPacketParser.on('error', this.emit.bind(this, 'error'))
+    // Echo connection errors this.emit('clientError')
+    // We could look at maybe pushing errors in different directions depending on how we should
+    // respond to the different errors.
+    this._incomingPacketParser.on('error', () => this.emit('clientError'));
 
     this.once('connected', () => {})
     this.on('close', () => {
@@ -125,12 +126,14 @@ export class MqttClient extends EventEmitter {
       }
     })
 
-    this.on('error', this.onError)
-    this.conn.on('error', this.emit.bind(this, 'error'))
+    this.on('clientError', this.onError)
+    this.conn.on('error', this.emit.bind(this, 'clientError'))
   
-    this.conn.on('end', this.close.bind(this))
-    this._eos = eos(this.conn, this.close.bind(this))
-
+    this.conn.on('end', () => { this.close() });
+    this._eos = eosPromisified(this.conn);
+    this._eos.catch((err: any) => {
+      this.emit('error', err);
+    })
   }
 
   mergeDefaultOptions(options: ConnectOptions): ConnectOptions {
@@ -224,44 +227,35 @@ export class MqttClient extends EventEmitter {
     } else if (rc > 0) {
       const err:any = new Error('Connection refused: ' + ReasonCodeErrors[rc as keyof typeof ReasonCodeErrors])
       err.code = rc
-      this.emit('error', err)
+      this.emit('clientError', err)
       throw err
     }
-
-    let outStore: Readable | null = await this.outgoingStore.createStream()
-    const clearStoreProcessing = () => {
-    }
-
-    this.once('close', () => {
-      if (outStore) {
-        outStore.destroy()
-        clearStoreProcessing()
-      }
-    })
-    outStore.on('error', (err) => {
-      clearStoreProcessing()
-      this.removeListener('close', remove)
-      this.emit('error', err)
-    })
-
-    const remove = () => {
-      if (outStore) {
-        outStore.destroy()
-        outStore = null
-        clearStoreProcessing()
-      }
-    }
   }
 
+  /* THIS NEEDS TO BE THOUGHT THROUGH MORE */
   private async _sendConnect(): Promise<void> {
-     const connectPacket: IConnectPacket = createConnectPacket(this._options); 
-      await write(this, connectPacket)
+    const result: boolean | undefined = writeToStream(createConnectPacket(this._options), this.conn) as boolean | undefined;
+    return new Promise<void>((resolve, reject) => {
+      if (this.errored) {
+        reject();
+      } else if (!result) { // conn is full, wait to drain before resolving...
+          this.conn.once('drain', resolve)
+      } else { // no error, no 
+        resolve();
+      }
+    });
   }
 
-  close (_done: any) {
+  async close(_error?: Error | null | undefined): Promise<void> {
+    // empty right now
   }
 
-  onError (_err: any) {
+  onError (err?: Error | null | undefined) {
+    this.emit('error', err);
+    this.errored = true;
+    this.conn.removeAllListeners('error');
+    this.conn.on('error', () => {});
+    this.close()
   }
 
   sendPacket(packet: Packet) {
@@ -270,22 +264,12 @@ export class MqttClient extends EventEmitter {
   }
 
   async end (force?: boolean, opts?: any) {  
-    const closeStores = async () => {
-      this.disconnected = true
-      try {
-        await this.incomingStore.close();
-        await this.outgoingStore.close();
-      } catch (e) {
-      }
-      this.emit('end')
-    }
   
     const finish = async () => {
       // defer closesStores of an I/O cycle,
       // just to make sure things are
       // ok for websockets
       await this._cleanUp(force, opts);
-      nextTick(closeStores.bind(this))
     }
   
     if (this.disconnecting) {

@@ -25,7 +25,8 @@
   ],
   "types": "dist",
   "scripts": {
-    "build": "tsc"
+    "build": "tsc",
+    "test": "npm run build && ava"
   },
   "dependencies": {
     "duplexify": "^4.1.2",
@@ -38,8 +39,7 @@
   "devDependencies": {
     "@types/duplexify": "^3.6.1",
     "@types/end-of-stream": "^1.4.1",
-    "@types/node": "^14.14.31",
-    "@types/pino": "^7.0.5",
+    "@types/node": "^14.18.10",
     "@types/ws": "^8.2.2",
     "ava": "^4.0.1",
     "pino-pretty": "^7.5.0",
