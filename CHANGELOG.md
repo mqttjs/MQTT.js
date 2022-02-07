@@ -1,5 +1,9 @@
 # Release History
 
+## 4.3.5
+
+fix(drain-leak): fix regression introduced in #1301 (#1401)
+
 ## 4.3.4
 
 fix(dependency): migrate LruMap from collections to lru-cache (#1396)
