@@ -89,6 +89,7 @@ export class MqttClient extends EventEmitter {
     this.outgoing = {}
 
     // Using this method to clean up the constructor to do options handling 
+    logger.debug(`populating internal client options object...`);
     this._options = {...defaultConnectOptions, ...options}
 
     this.conn = this._options.customStreamFactory? this._options.customStreamFactory(this._options) : connectionFactory(this._options);
@@ -103,22 +104,31 @@ export class MqttClient extends EventEmitter {
     // Handle incoming packets this are parsed
     // NOTE: THis is only handling incoming packets from the 
     // readable stream of the conn stream. 
-    this._incomingPacketParser.on('packet', this.handleIncomingPacket)
+    // we need to make sure that the function called on 'packet' is bound to the context of 'MQTTClient'
+    this._incomingPacketParser.on('packet', this.handleIncomingPacket.bind(this))
 
     // Echo connection errors this.emit('clientError')
     // We could look at maybe pushing errors in different directions depending on how we should
     // respond to the different errors.
-    this._incomingPacketParser.on('error', () => this.emit('clientError'));
+    this._incomingPacketParser.on('error', () => {
+      logger.error(`error in incomingPacketParser.`)
+      this.emit('clientError')
+    });
 
-    this.once('connected', () => {})
+    this.once('connected', () => {
+      logger.debug(`client is connected.`);
+    })
     this.on('close', () => {
+      logger.debug(`client is closed.`);
       this.connected = false
     })
 
     this.conn.on('readable', () => {
+      logger.debug(`data available to be read from the 'conn' stream...`);
       let data
 
       while (data = this.conn.read()) {
+        logger.debug(`process the data..`);
         // process the data
         this._incomingPacketParser.parse(data)
       }
@@ -139,6 +149,7 @@ export class MqttClient extends EventEmitter {
   }
 
   async handleIncomingPacket (packet: Packet): Promise<void> {
+    logger.debug(`handleIncomingPacket packet.cmd=${packet.cmd}`);
     switch (packet.cmd) {
       case 'connack':
         this.emit('connack', packet)
@@ -152,17 +163,17 @@ export class MqttClient extends EventEmitter {
    * @returns 
    */
   public static async connect(options: ConnectOptions): Promise<MqttClient> {
-    logger.info('creating new client...')
+    logger.debug('creating new client...')
     const client = new MqttClient(options)
-    logger.info('sending connect...')
+    logger.debug('sending connect...')
     client.connecting = true
     const connackPromise = client._awaitConnack()
     await write(client, createConnectPacket(client._options))
-    logger.info('waiting for connack...')
+    logger.debug('waiting for connack...')
     const connack = await connackPromise
     client._onConnected(connack)
     client.connecting = false
-    logger.info('client connected. returning client...')
+    logger.debug('client connected. returning client...')
     return client
   }
 
@@ -204,14 +215,16 @@ export class MqttClient extends EventEmitter {
   }
 
   private _awaitConnack(): Promise<IConnackPacket> {
+    logger.debug(`in awaitConnect. setting connackTimeout.`);
     return new Promise((resolve, reject) => {
       const connackTimeout = setTimeout(
-        () => { reject(new Error('Connection timed out')) },
-        this._options.connectTimeout
-      )
-
+          () => { reject(new Error('Connection timed out')) },
+          this._options.connectTimeout
+      );
+      logger.debug(`listening for 'connack'`);
       this.once('connack', (connackPacket: IConnackPacket) => {
-        clearTimeout(connackTimeout)
+        logger.debug(`connack received. clearing connackTimeout...`);
+        clearTimeout(connackTimeout);
         resolve(connackPacket)
       })
     })
@@ -246,6 +259,7 @@ export class MqttClient extends EventEmitter {
   }
 
   sendPacket(packet: Packet) {
+    logger.debug(`sending packet ${packet}`)
     this.emit('packetsend', packet)
     writeToStream(packet, this.conn, this._options)
   }

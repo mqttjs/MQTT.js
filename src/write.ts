@@ -1,4 +1,4 @@
-import mqtt from 'mqtt-packet'
+import * as mqtt from 'mqtt-packet'
 import { MqttClient } from './client.js'
 
 export async function write (client: MqttClient, packet: mqtt.Packet): Promise<void> {
