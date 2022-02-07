@@ -1,4 +1,5 @@
 import { IConnackPacket, IConnectPacket, Packet, parser as mqttParser, Parser as MqttParser, writeToStream } from 'mqtt-packet'
+import { write } from './write.js'
 import { ConnectOptions } from './interfaces/connectOptions.js'
 import { Duplex } from 'stream'
 import { EventEmitter } from 'node:events'
@@ -8,9 +9,6 @@ import { defaultConnectOptions } from './utils/constants.js'
 import { ReasonCodeErrors } from './errors.js'
 import { logger } from './utils/logger.js'
 import { defaultClientId } from './utils/defaultClientId.js'
-
-// const eventEmitter = require('events')
-// const mqttErrors = require('errors')
 
 function eosPromisified(stream: NodeJS.ReadableStream | NodeJS.WritableStream): Promise<void> {
   return new Promise<void>((resolve, reject) => {
@@ -157,11 +155,13 @@ export class MqttClient extends EventEmitter {
     logger.info('creating new client...')
     const client = new MqttClient(options)
     logger.info('sending connect...')
-    await client._sendConnect()
-    const connackPromise = client.waitForConnack() // client.createAPromiseTimeoutThatResolvesOnConnack()
+    client.connecting = true
+    const connackPromise = client._awaitConnack()
+    await write(client, createConnectPacket(client._options))
     logger.info('waiting for connack...')
-    const connack: IConnackPacket = await connackPromise
-    await client._onConnected(connack)
+    const connack = await connackPromise
+    client._onConnected(connack)
+    client.connecting = false
     logger.info('client connected. returning client...')
     return client
   }
@@ -203,47 +203,34 @@ export class MqttClient extends EventEmitter {
     }
   }
 
-  private waitForConnack(): Promise<IConnackPacket> {
-    return new Promise((res, rej) => {
-      const connectionTimeout = () => {
-        rej('CONNECTION TIMEOUT')
-      }
-      const connackTimer = setTimeout(connectionTimeout, this._options.connectTimeout)
-      this.on('connack', (connackPacket) => {
-        this.removeListener('connack', res)
-        clearTimeout(connackTimer)
-        res(connackPacket)
+  private _awaitConnack(): Promise<IConnackPacket> {
+    return new Promise((resolve, reject) => {
+      const connackTimeout = setTimeout(
+        () => { reject(new Error('Connection timed out')) },
+        this._options.connectTimeout
+      )
+
+      this.once('connack', (connackPacket: IConnackPacket) => {
+        clearTimeout(connackTimeout)
+        resolve(connackPacket)
       })
     })
   }
 
-  private async _onConnected(connackPacket: IConnackPacket): Promise<void> {
+  private _onConnected(connackPacket: IConnackPacket) {
     const rc = connackPacket.returnCode
     if (typeof rc !== 'number') {
       throw new Error('Invalid connack packet');
     }
     if (rc === 0) {
-      return 
+      this.connected = true
+      return
     } else if (rc > 0) {
       const err:any = new Error('Connection refused: ' + ReasonCodeErrors[rc as keyof typeof ReasonCodeErrors])
       err.code = rc
       this.emit('clientError', err)
       throw err
     }
-  }
-
-  /* THIS NEEDS TO BE THOUGHT THROUGH MORE */
-  private async _sendConnect(): Promise<void> {
-    const result: boolean | undefined = writeToStream(createConnectPacket(this._options), this.conn) as boolean | undefined;
-    return new Promise<void>((resolve, reject) => {
-      if (this.errored) {
-        reject();
-      } else if (!result) { // conn is full, wait to drain before resolving...
-          this.conn.once('drain', resolve)
-      } else { // no error, no 
-        resolve();
-      }
-    });
   }
 
   async close(_error?: Error | null | undefined): Promise<void> {
