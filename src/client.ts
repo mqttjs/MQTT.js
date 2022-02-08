@@ -90,7 +90,11 @@ export class MqttClient extends EventEmitter {
 
     // Using this method to clean up the constructor to do options handling 
     logger.debug(`populating internal client options object...`);
-    this._options = {...defaultConnectOptions, ...options}
+    this._options = {
+      clientId: defaultClientId(),
+      ...defaultConnectOptions,
+      ...options
+    }
 
     this.conn = this._options.customStreamFactory? this._options.customStreamFactory(this._options) : connectionFactory(this._options);
   
@@ -142,10 +146,6 @@ export class MqttClient extends EventEmitter {
     this._eos.catch((err: any) => {
       this.emit('error', err);
     })
-  }
-
-  mergeDefaultOptions(options: ConnectOptions): ConnectOptions {
-    return {clientId: defaultClientId(), ...defaultConnectOptions, ...options}
   }
 
   async handleIncomingPacket (packet: Packet): Promise<void> {
