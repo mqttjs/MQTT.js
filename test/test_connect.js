@@ -44,19 +44,27 @@ test.before('set up aedes broker', async t => {
   });
 });
 
-/* TODO */
-test('should send a CONNECT packet to the broker and receive a CONNACK', async t => {
-  const client = await connect({
-    brokerUrl: 'mqtt://localhost',
-  });
-  t.assert(!!client);
-});
+test('should send a CONNECT packet to the broker and receive a CONNACK', (t) => {
+  t.plan(0)
+  const clientId = 'basic-connect-test'
 
-/**
- * 1) Send a Connect packet
- * 2) writeToStream returns false and emits an error on this.conn('error')
- * 
- * We shouldn't be throwing away the whole client because 1 packet failed.
- * 
- * UPDATE: matteo advises otherwise: https://github.com/mqttjs/mqtt-packet/issues/126#issuecomment-1029373619
- */
+  let resolveClientConnected
+  const clientConnectedPromise = new Promise((resolve) => {
+    resolveClientConnected = resolve
+  })
+
+  const clientConnectedListener = (client) => {
+    if (client.id === clientId) {
+      t.context.broker.removeListener('client', clientConnectedListener)
+      resolveClientConnected()
+    }
+  }
+  t.context.broker.on('client', clientConnectedListener)
+  
+  const clientPromise = connect({
+    brokerUrl: 'mqtt://localhost',
+    clientId
+  })
+
+  return Promise.all([clientConnectedPromise, clientPromise])
+})
