@@ -10,7 +10,8 @@
     "publish-subscribe",
     "publish/subscribe",
     "client",
-    "broker"
+    "broker",
+    "server"
   ],
   "homepage": "https://github.com/mqttjs/MQTT.js#readme",
   "bugs": "https://github.com/mqttjs/MQTT.js/issues",

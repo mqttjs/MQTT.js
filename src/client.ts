@@ -16,77 +16,23 @@ function eosPromisified(stream: NodeJS.ReadableStream | NodeJS.WritableStream): 
   })
 }
 
-// call close(done) after the stream has closed () => void
-// call await close()
-
 export class MqttClient extends EventEmitter {
   _incomingPacketParser: MqttParser
   _options: ConnectOptions
-  connacked: boolean = false
-  disconnected: boolean = true
   disconnecting: any
-  pingTimer: any
-  queueQoSZero: boolean = false
-  keepalive: any
-  reschedulePings: any
-  clientId: any
-  protocolId: any
-  protocolVersion: any
-  connectTimeout: any
-  username: any
-  password: any
-  resubscribe: boolean = false
-  messageIdProvider: any
-  parserQueue: Packet[] | null
-  closed: boolean
   connecting: boolean
   connected: boolean
   errored: boolean
-  id: null
   _eos: Promise<void> | undefined
-  clean: boolean
-  version: null
   conn: Duplex
-  _disconnected: boolean
-  _parsingBatch: number = 0
-  pingResp: boolean | null
-  inflightMessagesThatNeedToBeCleanedUpIfTheConnCloses: {[x: string]: any}
-  storeProcessingQueue: any[]
-  messageIdToTopic: {[x: string]: string[]}
-  resubscribeTopics: {[x: string]: any}
-  connectedPromise: () => Promise<void>
-  _storeProcessingQueue: any[]
-  outgoing: {[x:string]: any}
 
 
-  constructor (options: ConnectOptions) {
+  constructor(options: ConnectOptions) {
     super()
     // assume this the options have been validated before instantiating the client.
-    this.closed = false
     this.connecting = false
     this.connected = false
-    this.connectedPromise = () => { 
-      const promise = new Promise<void>((res) => {
-        if (this.connected) {
-          res()
-        } else {
-          this.once('connected', res)
-        }
-      });
-      return promise
-    }
     this.errored = false
-    this.id = null
-    this.clean = true
-    this.version = null
-    this.parserQueue = []
-    this.pingResp = null
-    this.inflightMessagesThatNeedToBeCleanedUpIfTheConnCloses = {}
-    this.storeProcessingQueue = []
-    this.messageIdToTopic = {}
-    this.resubscribeTopics = {}
-    this._storeProcessingQueue = []
-    this.outgoing = {}
 
     // Using this method to clean up the constructor to do options handling 
     logger.debug(`populating internal client options object...`);
@@ -101,8 +47,6 @@ export class MqttClient extends EventEmitter {
     // many drain listeners are needed for qos 1 callbacks if the connection is intermittent
     this.conn.setMaxListeners(1000)
 
-
-    this._disconnected = false
     this._incomingPacketParser = mqttParser(this._options)
 
     // Handle incoming packets this are parsed
@@ -114,9 +58,9 @@ export class MqttClient extends EventEmitter {
     // Echo connection errors this.emit('clientError')
     // We could look at maybe pushing errors in different directions depending on how we should
     // respond to the different errors.
-    this._incomingPacketParser.on('error', () => {
+    this._incomingPacketParser.on('error', (err) => {
       logger.error(`error in incomingPacketParser.`)
-      this.emit('clientError')
+      this.emit('clientError', err)
     });
 
     this.once('connected', () => {
@@ -141,14 +85,14 @@ export class MqttClient extends EventEmitter {
     this.on('clientError', this.onError)
     this.conn.on('error', this.emit.bind(this, 'clientError'))
   
-    this.conn.on('end', () => { this.close() });
+    this.conn.on('end', () => { this.end() });
     this._eos = eosPromisified(this.conn);
     this._eos.catch((err: any) => {
       this.emit('error', err);
     })
   }
 
-  async handleIncomingPacket (packet: Packet): Promise<void> {
+  async handleIncomingPacket(packet: Packet): Promise<void> {
     logger.debug(`handleIncomingPacket packet.cmd=${packet.cmd}`);
     switch (packet.cmd) {
       case 'connack':
@@ -168,7 +112,19 @@ export class MqttClient extends EventEmitter {
     logger.debug('sending connect...')
     client.connecting = true
     const connackPromise = client._awaitConnack()
-    await write(client, createConnectPacket(client._options))
+    const packet: IConnectPacket = {
+      cmd: 'connect',
+      clientId: client._options.clientId as string,
+      protocolVersion: client._options.protocolVersion,
+      protocolId: client._options.protocolId,
+      clean: client._options.clean,
+      keepalive: client._options.keepalive,
+      username: client._options.username,
+      password: client._options.password,
+      will: client._options.will,
+      properties: client._options.properties
+    }
+    await write(client, packet)
     logger.debug('waiting for connack...')
     const connack = await connackPromise
     client._onConnected(connack)
@@ -190,21 +146,15 @@ export class MqttClient extends EventEmitter {
           reject: null
         }
         deferred.promise = new Promise((resolve, reject) => {
-           deferred.resolve = resolve;
-           deferred.reject = reject;  
-        });
+           deferred.resolve = resolve
+           deferred.reject = reject
+        })
         setImmediate.bind(null, this.conn.end.bind(this.conn))
         return
       }
       this.emit('packetsend', packet)
       writeToStream(packet, this.conn, this._options)
       setImmediate.bind(null, this.conn.end.bind(this.conn))
-    }
-  
-  
-    if (this.pingTimer !== null) {
-      this.pingTimer.clear()
-      this.pingTimer = null
     }
   
     if (!this.connected) {
@@ -246,16 +196,12 @@ export class MqttClient extends EventEmitter {
     }
   }
 
-  async close(_error?: Error | null | undefined): Promise<void> {
-    // empty right now
-  }
-
-  onError (err?: Error | null | undefined) {
+  onError(err?: Error | null | undefined) {
     this.emit('error', err);
     this.errored = true;
     this.conn.removeAllListeners('error');
     this.conn.on('error', () => {});
-    this.close()
+    this.end()
   }
 
   sendPacket(packet: Packet) {
@@ -264,7 +210,7 @@ export class MqttClient extends EventEmitter {
     writeToStream(packet, this.conn, this._options)
   }
 
-  async end (force?: boolean, opts?: any) {  
+  async end(force?: boolean, opts?: any) {  
   
     const finish = async () => {
       // defer closesStores of an I/O cycle,
@@ -279,29 +225,8 @@ export class MqttClient extends EventEmitter {
     
     this.disconnecting = true
   
-    if (!force && Object.keys(this.outgoing).length > 0) {
-      // wait 10ms, just to be sure we received all of it
-      this.once('outgoingEmpty', setTimeout.bind(null, finish, 10))
-    } else {
-      finish()
-    }
+    finish()
   
     return this
   }
-}
-
-function createConnectPacket(options: ConnectOptions): IConnectPacket {
-  const packet: IConnectPacket  = {
-    cmd: 'connect',
-    clientId: options.clientId as string,
-    protocolVersion: options.protocolVersion,
-    protocolId: options.protocolId,
-    clean: options.clean,
-    keepalive: options.keepalive,
-    username: options.username,
-    password: options.password,
-    will: options.will,
-    properties: options.properties
-  }
-  return packet
 }
