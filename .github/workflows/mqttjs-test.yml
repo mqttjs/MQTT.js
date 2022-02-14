@@ -1,4 +1,4 @@
-name: MQTT.js CI
+name: MQTT.js Tests
 
 on:
   workflow_dispatch:
@@ -8,18 +8,16 @@ on:
         required: true
         default: 'mqttjs*'
   push:
-    branches:
-    - master
+    branches: [ main ]
   pull_request:
-    branches:
-    - master
+    branches: [ main ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [12.x, 14.x]
+        node-version: [12.x, 14.x, latest]
       fail-fast: false
 
     steps:
@@ -32,8 +30,7 @@ jobs:
         echo "Debug filter: $DEBUG"
       env:
         DEBUG: ${{ github.event.inputs.logLevel }}
-    - run: npm install
-    - run: npm run build --if-present
+    - run: npm ci
     - run: npm test
       env:
         CI: true
