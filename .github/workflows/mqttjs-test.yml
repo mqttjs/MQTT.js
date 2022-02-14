@@ -17,13 +17,13 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [12.x, 14.x, latest]
+        node-version: [12.x, 14.x, 16.x]
       fail-fast: false
 
     steps:
     - uses: actions/checkout@v2
     - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v1
+      uses: actions/setup-node@v2
       with:
         node-version: ${{ matrix.node-version }}
     - run: |
@@ -31,7 +31,9 @@ jobs:
       env:
         DEBUG: ${{ github.event.inputs.logLevel }}
     - run: npm ci
-    - run: npm test
-      env:
+    - run: |
+        echo "Debug filter: $DEBUG"
+        npm test
+      env:S
         CI: true
         DEBUG: ${{ github.event.inputs.logLevel }} || "mqttjs*"

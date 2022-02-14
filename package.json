@@ -30,7 +30,6 @@
     "browser-build": "rimraf dist/ && mkdirp dist/ && browserify mqtt.js --standalone mqtt > dist/mqtt.js && uglifyjs dist/mqtt.js --compress --mangle --output dist/mqtt.min.js",
     "prepare": "npm run browser-build",
     "browser-test": "airtap --server test/browser/server.js --local --open test/browser/test.js",
-    "sauce-test": "airtap --server test/browser/server.js -- test/browser/test.js",
     "test": "npm run typescript-compile-test && npm run unit-test && codecov"
   },
   "pre-commit": [
