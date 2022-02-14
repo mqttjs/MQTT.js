@@ -1,6 +1,12 @@
 name: MQTT.js CI
 
 on:
+  workflow_dispatch:
+    inputs:
+      logLevel:
+        description: 'Debug Filter'     
+        required: true
+        default: 'mqttjs*'
   push:
     branches:
     - master
@@ -10,9 +16,7 @@ on:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
-
     strategy:
       matrix:
         node-version: [12.x, 14.x]
@@ -24,9 +28,13 @@ jobs:
       uses: actions/setup-node@v1
       with:
         node-version: ${{ matrix.node-version }}
+    - run: |
+        echo "Debug filter: $DEBUG"
+      env:
+        DEBUG: ${{ github.event.inputs.logLevel }}
     - run: npm install
     - run: npm run build --if-present
     - run: npm test
       env:
         CI: true
-        DEBUG: "mqttjs*"
+        DEBUG: ${{ github.event.inputs.logLevel }} || "mqttjs*"
