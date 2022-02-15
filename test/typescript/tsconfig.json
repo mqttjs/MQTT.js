@@ -9,6 +9,7 @@
     "strictNullChecks": true,
     "noImplicitReturns": true,
     "noImplicitThis": true,
-    "sourceMap": true
+    "sourceMap": true,
+    "esModuleInterop": true
   }
 }
