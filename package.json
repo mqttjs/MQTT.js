@@ -87,6 +87,7 @@
     "airtap": "^4.0.4",
     "browserify": "^16.5.0",
     "chai": "^4.2.0",
+    "chokidar": "^3.5.3",
     "codecov": "^3.0.4",
     "end-of-stream": "^1.4.1",
     "global": "^4.3.2",
