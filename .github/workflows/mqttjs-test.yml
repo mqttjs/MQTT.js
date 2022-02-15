@@ -28,8 +28,14 @@ jobs:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
     - run: npm ci
-    - run: |
-        npm test
+    - name: Node Tests
+      run: npm test:node
       env:
         CI: true
-        DEBUG: "mqttjs*"
+        DEBUG: "mqttjs"
+    - name: Node Tests
+      run: npm test:node
+      env:
+        CI: true
+        DEBUG: "mqttjs"
+
