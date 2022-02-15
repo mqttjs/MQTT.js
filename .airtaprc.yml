@@ -1,13 +1,11 @@
-sauce_connect: true
+providers:
+  - airtap-system
+  - airtap-playwright
 ui: mocha-bdd
 browsers:
-  - name: chrome
+  - name: chromium
     version: latest
   - name: firefox
     version: latest
   - name: opera
-    version: latest
-  - name: internet explorer
-    version: latest
-  - name: microsoftedge
     version: latest

@@ -22,15 +22,17 @@
   "main": "mqtt.js",
   "types": "types/index.d.ts",
   "scripts": {
-    "unit-test": "node_modules/.bin/nyc --reporter=lcov --reporter=text ./node_modules/mocha/bin/_mocha --exit",
     "pretest": "standard | snazzy",
     "typescript-compile-test": "tsc -p test/typescript/tsconfig.json",
-    "typescript-compile-execute": "node test/typescript/*.js",
-    "typescript-test": "npm run typescript-compile-test && npm run typescript-compile-execute",
+    "typescript-compile-execute": "node test/typescript/broker-connect-subscribe-and-publish.js",
     "browser-build": "rimraf dist/ && mkdirp dist/ && browserify mqtt.js --standalone mqtt > dist/mqtt.js && uglifyjs dist/mqtt.js --compress --mangle --output dist/mqtt.min.js",
     "prepare": "npm run browser-build",
-    "browser-test": "airtap --server test/browser/server.js --local --open test/browser/test.js",
-    "test": "npm run typescript-compile-test && npm run unit-test && codecov"
+    "unit-test:node": "node_modules/.bin/nyc --reporter=lcov --reporter=text ./node_modules/mocha/bin/_mocha --exit",
+    "unit-test:browser": "airtap --server test/browser/server.js test/browser/test.js",
+    "test:node": "npm run unit-test:node && codecov",
+    "test:browser": "npm run browser-build && npm run unit-test:browser",
+    "test:typescript": "npm run typescript-compile-test && npm run typescript-compile-execute",
+    "test": "npm run pretest && npm run test:node && npm run test:typescript"
   },
   "pre-commit": [
     "pretest"
@@ -79,19 +81,25 @@
   },
   "devDependencies": {
     "@types/node": "^10.0.0",
+    "@types/tape": "^4.13.2",
     "@types/ws": "^7.4.7",
     "@typescript-eslint/eslint-plugin": "^5.12.0",
     "@typescript-eslint/parser": "^5.12.0",
-    "aedes": "^0.42.5",
+    "aedes": "^0.46.2",
     "airtap": "^4.0.4",
     "browserify": "^16.5.0",
     "chai": "^4.2.0",
     "codecov": "^3.0.4",
     "end-of-stream": "^1.4.1",
-    "eslint": "^8.9.0",
+    "eslint": "^7.12.1",
+    "eslint-config-standard": "^16.0.3",
+    "eslint-plugin-import": "^2.25.4",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-promise": "^5.2.0",
+    "eslint-plugin-react": "^7.28.0",
     "global": "^4.3.2",
     "mkdirp": "^0.5.1",
-    "mocha": "^9.1.3",
+    "mocha": "^9.2.0",
     "mqtt-connection": "^4.0.0",
     "nyc": "^15.0.1",
     "pre-commit": "^1.2.2",
@@ -100,23 +108,13 @@
     "sinon": "^9.0.0",
     "snazzy": "^9.0.0",
     "standard": "^16.0.4",
-    "tslint": "^5.11.0",
-    "tslint-config-standard": "^8.0.1",
-    "typescript": "^3.9.10",
+    "tape": "^5.5.2",
+    "typescript": "^4.5.5",
     "uglify-es": "^3.3.9"
   },
   "standard": {
     "env": [
       "mocha"
-    ],
-    "globals": [
-      "expect",
-      "test",
-      "describe",
-      "it",
-      "beforeEach",
-      "beforeAll",
-      "afterAll"
     ]
   }
 }

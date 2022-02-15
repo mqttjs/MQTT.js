@@ -1,20 +1,21 @@
 module.exports = {
   root: true,
-  env: { 
-    "node": true,
-    "browser": true,
+  env: {
+    node: true,
+    browser: true
   },
   parser: '@typescript-eslint/parser',
   plugins: [
-    '@typescript-eslint',
+    '@typescript-eslint'
   ],
   extends: [
     'eslint:recommended',
     'plugin:@typescript-eslint/recommended',
+    'standard'
   ],
   overrides: [
     {
-      "files": [ "types/**/*.ts" ]
+      files: ['types/**/*.ts']
     }
   ]
 }
