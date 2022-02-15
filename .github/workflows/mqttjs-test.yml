@@ -29,12 +29,12 @@ jobs:
         cache: 'npm'
     - run: npm ci
     - name: Node Tests
-      run: npm test:node
+      run: npm run test:node
       env:
         CI: true
         DEBUG: "mqttjs"
-    - name: Node Tests
-      run: npm test:node
+    - name: Test Typescript
+      run: npm run test:typescript
       env:
         CI: true
         DEBUG: "mqttjs"
