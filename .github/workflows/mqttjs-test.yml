@@ -35,6 +35,6 @@ jobs:
     - run: |
         echo "Debug filter: $DEBUG"
         npm test
-      env:S
+      env:
         CI: true
         DEBUG: ${{ github.event.inputs.logLevel }} || "mqttjs*"
