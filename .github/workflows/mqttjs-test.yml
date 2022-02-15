@@ -27,14 +27,9 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
-    - run: |
-        echo "Debug filter: $DEBUG"
-      env:
-        DEBUG: ${{ github.event.inputs.logLevel }}
     - run: npm ci
     - run: |
-        echo "Debug filter: $DEBUG"
         npm test
       env:
         CI: true
-        DEBUG: ${{ github.event.inputs.logLevel }} || "mqttjs*"
+        DEBUG: "mqttjs*"
