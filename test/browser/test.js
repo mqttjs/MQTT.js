@@ -2,7 +2,6 @@
 
 const test = require('tape')
 const mqtt = require('../../lib/connect')
-const xtend = require('xtend')
 const _URL = require('url')
 // eslint-disable-next-line
 const parsed = _URL.parse(document.URL)
@@ -11,7 +10,7 @@ const port = parsed.port || (isHttps ? 443 : 80)
 const host = parsed.hostname
 const protocol = isHttps ? 'wss' : 'ws'
 
-client = mqtt.connect({protocolId: 'MQIsdp', protocolVersion: 3, protocol: protocol, port: port, host: host })
+const client = mqtt.connect({ protocolId: 'MQIsdp', protocolVersion: 3, protocol: protocol, port: port, host: host })
 client.on('offline', function () {
   console.log('client offline')
 })
