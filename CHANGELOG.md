@@ -1,5 +1,11 @@
 # Release History
 
+## 4.3.6
+
+chore: update CI
+fix(browser): require buffer (#1420)
+fix(types): connect function proper overloads (#1416)
+
 ## 4.3.5
 
 fix(drain-leak): fix regression introduced in #1301 (#1401)
