@@ -1,5 +1,11 @@
 # Release History
 
+## 4.3.6
+
+chore: update CI
+fix(browser): require buffer (#1420)
+fix(types): connect function proper overloads (#1416)
+
 ## 4.3.5
 
 fix(drain-leak): fix regression introduced in #1301 (#1401)
@@ -90,4 +96,4 @@ Improve Documentation for Browserify (#1224)
 
 ## v4.2.6 and Below
 
-The release history has beend documented in the GitHub releases and tags historically. 
+The release history has been documented in the GitHub releases and tags historically. 
