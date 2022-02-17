@@ -6,8 +6,6 @@
  */
 
 import { MqttClient } from './client.js'
-import { DefaultMessageIdProvider } from './utils/defaultMessageIdProvider.js'
-import { UniqueMessageIdProvider } from './uniqueMessageIdProvider.js'
 import { ConnectOptions } from './interfaces/connectOptions.js'
 import { protocols } from './utils/constants.js'
 import { logger } from './utils/logger.js'
@@ -38,10 +36,6 @@ function connect (options: ConnectOptions) {
   const validationErr: Error | undefined = _validateProtocol(options)
   if (validationErr) {
     throw validationErr
-  }
-
-  if (!options.messageIdProvider) {
-    options.messageIdProvider = new DefaultMessageIdProvider()
   }
 
   const client = MqttClient.connect(options)
@@ -84,4 +78,4 @@ function formatSecureProtocolError(protocol: string): Error {
     Use ${secureProtocol} instead.`)
 }
 
-export {connect, DefaultMessageIdProvider, UniqueMessageIdProvider}
+export { connect }

@@ -56,6 +56,5 @@ export interface ConnectOptions {
   authPacket?: any,
   transformWsUrl?: (options: any) => URL,
   resubscribe?: boolean,
-  messageIdProvider?: any
   customStreamFactory?: (options: ConnectOptions) => Duplex
 }
