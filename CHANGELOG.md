@@ -96,4 +96,4 @@ Improve Documentation for Browserify (#1224)
 
 ## v4.2.6 and Below
 
-The release history has beend documented in the GitHub releases and tags historically. 
+The release history has been documented in the GitHub releases and tags historically. 
