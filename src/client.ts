@@ -1,4 +1,4 @@
-import { IConnackPacket, IConnectPacket, Packet, parser as mqttParser, Parser as MqttParser, writeToStream } from 'mqtt-packet'
+import { IConnackPacket, IConnectPacket, IDisconnectPacket, Packet, parser as mqttParser, Parser as MqttParser } from 'mqtt-packet'
 import { write } from './write.js'
 import { ConnectOptions } from './interfaces/connectOptions.js'
 import { Duplex } from 'stream'
@@ -12,7 +12,7 @@ import { defaultClientId } from './utils/defaultClientId.js'
 
 function eosPromisified(stream: NodeJS.ReadableStream | NodeJS.WritableStream): Promise<void> {
   return new Promise<void>((resolve, reject) => {
-    eos(stream, err => err instanceof Error ? reject(err) : resolve());
+    eos(stream, (err: any) => err instanceof Error ? reject(err) : resolve());
   })
 }
 
@@ -29,10 +29,11 @@ export class MqttClient extends EventEmitter {
 
   constructor(options: ConnectOptions) {
     super()
-    // assume this the options have been validated before instantiating the client.
+    // assume the options have been validated before instantiating the client.
     this.connecting = false
     this.connected = false
     this.errored = false
+    this.disconnecting = false
 
     // Using this method to clean up the constructor to do options handling 
     logger.debug(`populating internal client options object...`);
@@ -58,7 +59,7 @@ export class MqttClient extends EventEmitter {
     // Echo connection errors this.emit('clientError')
     // We could look at maybe pushing errors in different directions depending on how we should
     // respond to the different errors.
-    this._incomingPacketParser.on('error', (err) => {
+    this._incomingPacketParser.on('error', (err: any) => {
       logger.error(`error in incomingPacketParser.`)
       this.emit('clientError', err)
     });
@@ -85,7 +86,7 @@ export class MqttClient extends EventEmitter {
     this.on('clientError', this.onError)
     this.conn.on('error', this.emit.bind(this, 'clientError'))
   
-    this.conn.on('end', () => { this.end() });
+    this.conn.on('close', () => { this.disconnect({ force: false }) });
     this._eos = eosPromisified(this.conn);
     this._eos.catch((err: any) => {
       this.emit('error', err);
@@ -133,35 +134,46 @@ export class MqttClient extends EventEmitter {
     return client
   }
 
-  async _cleanUp(forced?: boolean, opts?: any) {
-    if (forced) {
+  public async disconnect({ force, options = {} }: { force?: boolean; options?: any } = {}): Promise<MqttClient> {
+    // if client is already disconnecting, do nothing.
+    if (this.disconnecting) {
+      logger.debug(`client already disconnecting.`)
+      return this
+    }
+
+    // 
+    this.disconnecting = true
+    
+    this.conn.removeAllListeners('error')
+    this.conn.on('error', () => {})
+
+    logger.debug('disconnecting client...')
+    const packet: IDisconnectPacket = {
+      cmd: 'disconnect',
+      reasonCode: options.reasonCode,
+      properties: options.properties
+    }
+    logger.debug('writing disconnect...')
+    // close the network connection
+    // ensure NO control packets are sent on the network connection.
+    // disconnect packet is the final control packet sent from the client to the server. It indicates the client is disconnecting cleanly.
+    await write(this, packet)
+
+    // once write is done, then switch state to disconnected
+    this.connected = false
+    this.connecting = false
+    
+    if (force) {
       this.conn.destroy()
     } else {
-      let packet = { cmd: 'disconnect' , ...opts}
-
-      if (!this.connected) {
-        const deferred: any = {
-          promise: null,
-          resolve: null,
-          reject: null
-        }
-        deferred.promise = new Promise((resolve, reject) => {
-           deferred.resolve = resolve
-           deferred.reject = reject
-        })
-        setImmediate.bind(null, this.conn.end.bind(this.conn))
-        return
-      }
-      this.emit('packetsend', packet)
-      writeToStream(packet, this.conn, this._options)
-      setImmediate.bind(null, this.conn.end.bind(this.conn))
+      this.conn.end()
+      // once the stream.end() method has been called, and all the data has been flushed to the underlying system, the 'finish' event is emitted.
+      this.conn.once('finish', () => {
+        logger.debug('all data has been flushed from stream.')
+        this.emit('')
+      })
     }
-  
-    if (!this.connected) {
-      this.conn.removeListener('close', () => {})
-      return 
-
-    }
+    return this
   }
 
   private _awaitConnack(): Promise<IConnackPacket> {
@@ -201,32 +213,6 @@ export class MqttClient extends EventEmitter {
     this.errored = true;
     this.conn.removeAllListeners('error');
     this.conn.on('error', () => {});
-    this.end()
-  }
-
-  sendPacket(packet: Packet) {
-    logger.debug(`sending packet ${packet}`)
-    this.emit('packetsend', packet)
-    writeToStream(packet, this.conn, this._options)
-  }
-
-  async end(force?: boolean, opts?: any) {  
-  
-    const finish = async () => {
-      // defer closesStores of an I/O cycle,
-      // just to make sure things are
-      // ok for websockets
-      await this._cleanUp(force, opts);
-    }
-  
-    if (this.disconnecting) {
-      return this
-    }
-    
-    this.disconnecting = true
-  
-    finish()
-  
-    return this
+    this.disconnect({ force: true })
   }
 }

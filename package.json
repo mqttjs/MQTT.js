@@ -27,7 +27,7 @@
   "types": "dist",
   "scripts": {
     "build": "tsc",
-    "test": "npm run build && ava"
+    "test": "npm run build && nyc ava | pino-pretty"
   },
   "dependencies": {
     "duplexify": "^4.1.2",
@@ -44,7 +44,25 @@
     "@types/ws": "^8.2.2",
     "aedes": "^0.46.2",
     "ava": "^4.0.1",
+    "nyc": "^15.1.0",
     "pino-pretty": "^7.5.0",
     "typescript": "^4.6.0-beta"
+  },
+  "ava": {
+    "files": [
+      "test/**/*",
+      "!test/util"
+    ],
+    "concurrency": 5,
+    "failFast": false,
+    "failWithoutAssertions": false,
+    "environmentVariables": {
+      "DEBUG": "mqtt-packet:writeToStream"
+    },
+    "verbose": true,
+    "nodeArguments": [
+      "--trace-deprecation",
+      "--napi-modules"
+    ]
   }
 }
