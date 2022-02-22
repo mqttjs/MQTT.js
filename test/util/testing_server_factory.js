@@ -1,4 +1,8 @@
 import test from 'ava'
+import aedes from 'aedes'
+import { createServer } from 'node:net'
+import { logger } from '../../dist/utils/logger.js'
+
 
 /* ===================== BEGIN before/beforeEach HOOKS ===================== */
 export const serverFactoryMacro = test.macro(async (t, port) => {
@@ -7,7 +11,7 @@ export const serverFactoryMacro = test.macro(async (t, port) => {
 
     await new Promise(resolve => t.context.server.listen(port, resolve))
 
-    logger.test(`server listening on port ${testPort}`)
+    logger.test(`server listening on port ${port}`)
     t.context.broker.on('clientError', (client, err) => {
         logger.test('client error', client.id, err.message, err.stack)
     })

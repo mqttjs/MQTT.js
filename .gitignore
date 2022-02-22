@@ -39,3 +39,9 @@ dist/**/*
 
 # VSCode
 .vscode
+
+# NYC
+.nyc_output
+
+# dist
+dist

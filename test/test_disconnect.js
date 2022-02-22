@@ -1,12 +1,11 @@
 import test from 'ava'
-import aedes from 'aedes'
-import { createServer } from 'node:net'
 import { connect } from '../dist/index.js'
 import { logger } from '../dist/utils/logger.js'
-import { serverFactoryMacro } from './testing_server_factory.js'
-
+import { serverFactoryMacro } from './util/testing_server_factory.js'
+import { uniquePort } from './util/generate_unique_port_number.js'
+const port = 1883
 /* ===================== BEGIN before/beforeEach HOOKS ===================== */
-test.before('set up aedes broker', serverFactoryMacro, uniquePort())
+test.before('set up aedes broker', serverFactoryMacro, port)
 /* ====================== END before/beforeEach HOOKS ====================== */
 
 
@@ -20,7 +19,7 @@ test('should disconnect and clean up connection stream', async t => {
   }
   t.context.broker.on('connectReceived', connectReceivedListener)
 
-  const client = await connect({ brokerUrl: `mqtt://localhost:${testPort}` })
+  const client = await connect({ brokerUrl: `mqtt://localhost:${port}` })
   logger.test(`client connected. disconnecting...`)
   t.context.broker.on('clientDisconnect', (client) => {
     logger.test(`client ${client.id} is disconnected.`)

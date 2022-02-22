@@ -3,11 +3,13 @@ import aedes from 'aedes'
 import { createServer } from 'node:net'
 import { connect } from '../dist/index.js'
 import { logger } from '../dist/utils/logger.js'
-import { serverFactoryMacro } from './testing_server_factory.js'
-import { uniquePort } from './generate_unique_port_number.js'
+import { serverFactoryMacro } from './util/testing_server_factory.js'
+import { uniquePort } from './util/generate_unique_port_number.js'
+
+const port = 1884
 
 /* ===================== BEGIN before/beforeEach HOOKS ===================== */
-test.before('set up aedes broker', serverFactoryMacro, uniquePort())
+test.before('set up aedes broker', serverFactoryMacro, port)
 /* ====================== END before/beforeEach HOOKS ====================== */
 
 
@@ -36,7 +38,7 @@ test('should send a CONNECT packet with the correct default parameters', async (
     }
     t.context.broker.on('connectReceived', connectReceivedListener)
   })
-  t.context.client = await connect({ brokerUrl: 'mqtt://localhost' })
+  t.context.client = await connect({ brokerUrl: `mqtt://localhost:${port}` })
   await clientConnectedPromise
 })
 
