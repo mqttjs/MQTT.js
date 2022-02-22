@@ -86,7 +86,7 @@ export class MqttClient extends EventEmitter {
     this.on('clientError', this.onError)
     this.conn.on('error', this.emit.bind(this, 'clientError'))
   
-    this.conn.on('close', () => { this.disconnect({ force: true }) });
+    this.conn.on('close', () => { this.disconnect({ force: false }) });
     this._eos = eosPromisified(this.conn);
     this._eos.catch((err: any) => {
       this.emit('error', err);
@@ -213,6 +213,6 @@ export class MqttClient extends EventEmitter {
     this.errored = true;
     this.conn.removeAllListeners('error');
     this.conn.on('error', () => {});
-    this.disconnect({ force: false })
+    this.disconnect({ force: true })
   }
 }

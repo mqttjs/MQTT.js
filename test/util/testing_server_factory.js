@@ -41,3 +41,20 @@ export const serverFactoryMacro = test.macro(async (t, port) => {
         callback(null, true)
     }
 })
+
+export const cleanupBetweenTestsMacro = test.macro((t) => {
+    t.context.broker?.removeAllListeners?.('connectReceived')
+    t.context.client?.disconnect?.({force: false})
+    t.context.client = null
+})
+
+export const cleanupAfterAllTestsMacro = test.macro(async (t) => {
+    t.context.server?.unref?.()
+    await new Promise((resolve) => {
+        if (!t.context.broker?.close) {
+        resolve()
+        return
+        }
+        t.context.broker.close(resolve)
+    })
+})

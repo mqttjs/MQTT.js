@@ -3,7 +3,7 @@ import aedes from 'aedes'
 import { createServer } from 'node:net'
 import { connect } from '../dist/index.js'
 import { logger } from '../dist/utils/logger.js'
-import { serverFactoryMacro } from './util/testing_server_factory.js'
+import { serverFactoryMacro, cleanupAfterAllTestsMacro, cleanupBetweenTestsMacro } from './util/testing_server_factory.js'
 import { uniquePort } from './util/generate_unique_port_number.js'
 
 const port = 1884
@@ -66,20 +66,7 @@ test.todo('must have same packet identifier on SUBSCRIBE and SUBACK packet')
 
 
 /* ====================== BEGIN after/afterEach HOOKS ====================== */
-test.afterEach.always((t) => {
-	t.context.broker?.removeAllListeners?.('connectReceived')
-  t.context.client?.end?.()
-  t.context.client = null
-})
+test.afterEach.always(cleanupBetweenTestsMacro)
 
-test.after.always(async (t) => {
-  t.context.server?.unref?.()
-  await new Promise((resolve) => {
-    if (!t.context.broker?.close) {
-      resolve()
-      return
-    }
-    t.context.broker.close(resolve)
-  })
-})
+test.after.always(cleanupAfterAllTestsMacro)
 /* ======================= END after/afterEach HOOKS ======================= */
