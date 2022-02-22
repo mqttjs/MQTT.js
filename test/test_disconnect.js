@@ -4,7 +4,7 @@ import { createServer } from 'node:net'
 import { connect } from '../dist/index.js'
 import { logger } from '../dist/utils/logger.js'
 
-const testPort = 1883
+const testPort = 1885
 
 /* ===================== BEGIN before/beforeEach HOOKS ===================== */
 test.before('set up aedes broker', async t => {
@@ -48,50 +48,40 @@ test.before('set up aedes broker', async t => {
 
 /* ============================== BEGIN TESTS ============================== */
 /* NOTE: Use unique clientId to de-conflict tests since they run in parallel */
-test('should send a CONNECT packet with the correct default parameters', async (t) => {
-  t.plan(7)
 
-  const clientConnectedPromise = new Promise((resolve) => {
-    const connectReceivedListener = (packet) => {
-      /* Ensure default mqttjs client ID is used */
-      if (!packet.clientId.startsWith('mqttjs_')) return
+test.only('should emit close if stream closes', async t => {
+  const connectReceivedListener = async (packet) => {
+    logger.test(`connectReceivedListener called with packet ${packet}`)
+    t.context.broker.removeListener('connectReceived', connectReceivedListener)
+  }
+  t.context.broker.on('connectReceived', connectReceivedListener)
 
-      t.context.broker.removeListener('connectReceived', connectReceivedListener)
-      
-      /* Ensure default options are used in connect packet */
-      t.falsy(packet.will)
-      t.falsy(packet.username)
-      t.falsy(packet.password)
-      t.true(packet.clean)
-      t.is(packet.keepalive, 60)
-      t.is(packet.protocolVersion, 4)
-      t.is(packet.protocolId, 'MQTT')
-      
-      resolve()
-    }
-    t.context.broker.on('connectReceived', connectReceivedListener)
+  const client = await connect({ brokerUrl: `mqtt://localhost:${testPort}` })
+  logger.test(`client connected. disconnecting...`)
+  t.context.broker.on('clientDisconnect', (client) => {
+    logger.test(`client ${client.id} is disconnected.`)
   })
-  t.context.client = await connect({ brokerUrl: 'mqtt://localhost' })
-  await clientConnectedPromise
+  await client.disconnect()
+  await new Promise((resolve, reject) => {
+    try {
+      client.conn.write('', (e) => {
+        t.assert(e.code === 'ERR_STREAM_WRITE_AFTER_END')
+        resolve()
+      })
+    } catch (e) {
+      logger.test(e)
+      reject(e)
+    }
+  })
 })
-
-test.todo('should send a CONNECT packet with a user-provided client ID')
-test.todo('should send a CONNECT packet with a user-provided protocol level')
-test.todo('should send a DISCONNECT packet when closing client')
-test.todo('can send a PINGREQ at any time')
-test.todo('should close the network connection to the server if client does not receive PINGRESP within a reasonable amount of time')
-test.todo('a keepalive of zero (0) has the effect of turning off the keepalive mechanism')
-test.todo('user can specify value of keepalive')
-test.todo('maximum value of keepalive is 18 hours, 12 minutes and 15 seconds')
-test.todo('the client identifier (clientId) must be present')
-test.todo('a clientId must be between 1 and 23 UTF-8 encoded bytest in length and contain only the characters "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"')
-test.todo('user can use convenience method to generate a random clientId')
-test.todo('user cannot use random clientId if cleanSession is set to 0')
-test.todo('the first packet sent from the server MUST be a CONNACK packet')
-test.todo('handle return codes 0x00, 0x01, 0x02, 0x03, 0x04, 0x05 on CONNACK')
-test.todo('can send PUBLISH packet')
-test.todo('can send SUBSCRIBE packet')
-test.todo('must have same packet identifier on SUBSCRIBE and SUBACK packet')
+test.todo('should mark the client as disconnected')
+test.todo('should stop ping timer if stream closes')
+test.todo('should emit close after end called')
+test.todo('should emit end after end classed and client must be disconnected')
+test.todo('should pass store close error to end callback but not to end listeners (incomingStore)')
+test.todo('should pass store close error to end callback but not to end listeners (outgoingStore)')
+test.todo('should emit end only once')
+test.todo('should stop ping timer after end called')
 
 /* TODO: Stub out more tests */
 

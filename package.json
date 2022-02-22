@@ -27,7 +27,7 @@
   "types": "dist",
   "scripts": {
     "build": "tsc",
-    "test": "npm run build && ava"
+    "test": "npm run build && ava | pino-pretty"
   },
   "dependencies": {
     "duplexify": "^4.1.2",
