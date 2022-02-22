@@ -3,46 +3,11 @@ import aedes from 'aedes'
 import { createServer } from 'node:net'
 import { connect } from '../dist/index.js'
 import { logger } from '../dist/utils/logger.js'
-
-const testPort = 1883
+import { serverFactoryMacro } from './testing_server_factory.js'
+import { uniquePort } from './generate_unique_port_number.js'
 
 /* ===================== BEGIN before/beforeEach HOOKS ===================== */
-test.before('set up aedes broker', async t => {
-  t.context.broker = aedes()
-  t.context.server = createServer(t.context.broker.handle)
-
-  await new Promise(resolve => t.context.server.listen(testPort, resolve))
-
-  logger.test(`server listening on port ${testPort}`)
-  t.context.broker.on('clientError', (client, err) => {
-    logger.test('client error', client.id, err.message, err.stack)
-  })
-  t.context.broker.on('connectionError', (client, err) => {
-    logger.test('connection error', client, err.message, err.stack)
-  })
-  t.context.broker.on('publish', (_packet, client) => {
-    if (client) {
-      logger.test('message from client', client.id)
-    }
-  })
-  t.context.broker.on('subscribe', (subscriptions, client) => {
-    if (client) {
-      logger.test(`subscribe from client: ${subscriptions}, ${client.id}`)
-    }
-  })
-  t.context.broker.on('publish', (_packet, client) => {
-    if (client) {
-      logger.test(`message from client: ${client.id}`)
-    }
-  })
-  t.context.broker.on('client', (client) => {
-    logger.test(`new client: ${client.id}`)
-  })
-  t.context.broker.preConnect = (_client, packet, callback) => {
-    t.context.broker.emit('connectReceived', packet)
-    callback(null, true)
-  }
-})
+test.before('set up aedes broker', serverFactoryMacro, uniquePort())
 /* ====================== END before/beforeEach HOOKS ====================== */
 
 
