@@ -28,14 +28,6 @@ export function connectionFactory (options: ConnectOptions): Duplex {
       logger.info(`port ${port} host ${host} servername ${servername}`)
 
       const connection: tls.TLSSocket = tls.connect({port: port, host: host, servername: servername, ...options.tlsOptions})
-      /* eslint no-use-before-define: [2, "nofunc"] */
-      connection.on('secureConnect', function () {
-        if (tlsOptions as any['rejectUnauthorized'] && !connection.authorized) {
-          connection.emit('error', new Error('TLS not authorized'))
-        } else {
-          connection.removeListener('error', handleTLSerrors)
-        }
-      })
 
       const handleTLSerrors = (err: Error) => {
         // How can I get verify this error is a tls error?
@@ -52,6 +44,15 @@ export function connectionFactory (options: ConnectOptions): Duplex {
         // net.createConnection
         connection.end()
       }
+
+      /* eslint no-use-before-define: [2, "nofunc"] */
+      connection.on('secureConnect', function () {
+        if (tlsOptions as any['rejectUnauthorized'] && !connection.authorized) {
+          connection.emit('error', new Error('TLS not authorized'))
+        } else {
+          connection.removeListener('error', handleTLSerrors)
+        }
+      })
 
       connection.on('error', handleTLSerrors)
       return connection

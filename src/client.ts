@@ -134,6 +134,23 @@ export class MqttClient extends EventEmitter {
     return client
   }
 
+  /**
+   * publish - publish <message> to <topic>
+   * Currently only supports QoS 0 Publish
+   * 
+   * @param {IPublishPacket} packet - publish packet
+   * @returns {Promise<void>} - Promise will be resolved 
+   *    when the message has been sent, but not acked.
+   * @api public
+   *
+   * @example client.publish({topic: 'topic', message: 'message', qos: 1, retain: true, dup: true});
+   */
+  public async publish(packet: IPublishPacket): Promise<void> {
+    this.reschedulePing();
+    write(this, packet);
+    return;
+  }
+
   public async disconnect({ force, options = {} }: { force?: boolean; options?: any } = {}): Promise<MqttClient> {
     // if client is already disconnecting, do nothing.
     if (this.disconnecting) {

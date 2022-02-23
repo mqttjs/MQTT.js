@@ -8,9 +8,9 @@
  * @returns {Boolean} If the topic is valid, returns true. Otherwise, returns false.
  */
 export function validateTopic (topic: string) {
-  var parts: string[] = topic.split('/')
+  const parts: string[] = topic.split('/')
 
-  for (var i = 0; i < parts.length; i++) {
+  for (let i = 0; i < parts.length; i++) {
     if (parts[i] === '+') {
       continue
     }
@@ -37,7 +37,7 @@ export function validateTopics (topics: Array<string>) {
   if (topics.length === 0) {
     return 'empty_topic_list'
   }
-  for (var i = 0; i < topics.length; i++) {
+  for (let i = 0; i < topics.length; i++) {
     if (!validateTopic(topics[i] as string)) {
       return topics[i]
     }
