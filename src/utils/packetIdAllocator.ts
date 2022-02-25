@@ -9,7 +9,7 @@ export class PacketIdAllocator {
   async allocate(): Promise<number> {
     if (this._intervals.length === 0) {
       /* TODO: return promise that resolves when a new packet ID is available */
-      throw new Error('No more packet ids available');
+      throw new Error('No more packet IDs available');
     }
 
     const lastInterval = this._intervals[this._intervals.length - 1] as [number, number];
@@ -25,6 +25,10 @@ export class PacketIdAllocator {
   }
 
   release(id: number): void {
+    if (id < 1 || id > 65535) {
+      throw new RangeError('Packet ID must be between 1 and 65535')
+    }
+
     if (this._intervals.length === 0) {
       this._intervals.push([id, id]);
       return;
@@ -42,7 +46,7 @@ export class PacketIdAllocator {
 
     const insertionPoint = this._intervals.findIndex(([max]) => id > max)
     if (insertionPoint === -1) {
-      throw new Error('Packet ID already released')
+      throw new Error('Packet ID already available')
     }
 
     const insertionPointInterval = this._intervals[insertionPoint] as [number, number];
