@@ -2,10 +2,10 @@ import net from 'net'
 import { Duplex } from 'stream'
 import tls from 'tls'
 import { URL } from "url";
-import { ConnectOptions } from '../interfaces/connectOptions.js'
+import { ConnectOptions } from '../interface/connectOptions.js'
 import { buildWebSocketStream } from './buildWebSocketStream.js'
 import { WebSocketOptions } from './interfaces/webSocketOptions.js'
-import { logger } from "../utils/logger.js";
+import { logger } from "../util/logger.js";
 
 export function connectionFactory (options: ConnectOptions): Duplex {
   const brokerUrl: URL = options.brokerUrl as URL

@@ -18,11 +18,6 @@ export const serverFactoryMacro = test.macro(async (t, port) => {
     t.context.broker.on('connectionError', (client, err) => {
         logger.test('connection error', client, err.message, err.stack)
     })
-    t.context.broker.on('publish', (_packet, client) => {
-        if (client) {
-        logger.test('message from client', client.id)
-        }
-    })
     t.context.broker.on('subscribe', (subscriptions, client) => {
         if (client) {
         logger.test(`subscribe from client: ${subscriptions}, ${client.id}`)

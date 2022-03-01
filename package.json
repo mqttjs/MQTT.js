@@ -55,7 +55,7 @@
     "nyc": "^15.1.0",
     "pino-pretty": "^7.5.0",
     "prettier": "^2.5.1",
-    "typescript": "^4.6.0-dev.20220211"
+    "typescript": "^4.7.0-dev.20220223"
   },
   "ava": {
     "files": [

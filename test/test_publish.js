@@ -12,15 +12,128 @@ test.before('set up aedes broker', serverFactoryMacro, port)
 /* ============================== BEGIN TESTS ============================== */
 
 test.only('publish QoS 0', async (t) => {
+  const connectReceivedPromise = new Promise((resolve) => {
     const connectReceivedListener = (packet) => {
-        logger.test(`connect received: ${packet}`)
-        t.context.broker.removeListener('connectReceived', connectReceivedListener)
-      }
-      t.context.broker.on('connectReceived', connectReceivedListener)
-    const client = await connect({ brokerUrl: `mqtt://localhost:${port}`})
-    await client.publish({topic: 'fakeTopic', message: 'fakeMessage'});
+      logger.test(`connect received: ${packet}`)
+      if (!packet.clientId.startsWith('mqttjs_')) return
+      t.context.broker.removeListener('connectReceived', connectReceivedListener)
+      resolve(packet);
+    }
+    t.context.broker.on('connectReceived', connectReceivedListener)
+  });
+  const client = await connect({ brokerUrl: `mqtt://localhost:${port}`});
+  const sentPacket = await connectReceivedPromise;
+
+  client.on('error', (e) => {
+    // TODO: When publishing a malformed publish packet, the client receives a ECONNRESET because of a disconnect. 
+    // We should figure out a better way to handle this error gracefully.
+    logger.error(`Client emitted error: ${e.message}`)
+    return t.fail(e.message)
+  })
+  // validate the clientId received is thec correct clientId.
+  t.deepEqual(sentPacket.clientId, client._options.clientId)
+
+  t.context.broker.on('publish', async (packet, clientOnBroker) => {
+    logger.test(packet)
+    if (clientOnBroker && clientOnBroker.id === client._options.clientId) {
+      logger.test(`testing packet on client ${clientOnBroker.id}`)
+      t.assert(packet.cmd === 'publish')
+      t.assert(packet.topic === 'fakeTopic')
+      t.assert(packet.message === 'fakeMessage')
+    }
+    logger.test(`calling disconnect.`)
     await client.disconnect();
+  })
+
+  logger.test(`calling publish.`)
+  try {
+    await client.publish({topic: 'fakeTopic', message: 'fakeMessage'});
+  } catch (e) {
+    logger.error(`failed on publish with error: ${e}`);
+    return t.fail(e.message);
+  }
 })
+
+
+test('handles error on malformed publish packet', async (t) => {
+  const connectReceivedPromise = new Promise((resolve) => {
+    const connectReceivedListener = (packet) => {
+      logger.test(`connect received: ${packet}`)
+      if (!packet.clientId.startsWith('mqttjs_')) return
+      t.context.broker.removeListener('connectReceived', connectReceivedListener)
+      resolve(packet);
+    }
+    t.context.broker.on('connectReceived', connectReceivedListener)
+  });
+  const client = await connect({ brokerUrl: `mqtt://localhost:${port}`});
+  const sentPacket = await connectReceivedPromise;
+
+  client.on('error', (e) => {
+    // TODO: When publishing a malformed publish packet, the client receives a ECONNRESET because of a disconnect. 
+    // We should figure out a better way to handle this error gracefully.
+    logger.error(`Client emitted error: ${e.message}`)
+    return t.fail(e.message)
+  })
+  // validate the clientId received is thec correct clientId.
+  t.deepEqual(sentPacket.clientId, client._options.clientId)
+
+  t.context.broker.on('publish', async (packet, clientOnBroker) => {
+    logger.test(packet)
+    // if (clientOnBroker && clientOnBroker.id === client._options.clientId) {
+    //   logger.test(`testing packet on client ${clientOnBroker.id}`)
+    //   t.assert(packet.cmd === 'publish')
+    //   t.assert(packet.topic === 'fakeTopic')
+    //   t.assert(packet.message === 'fakeMessage')
+    // }
+    // logger.test(`calling disconnect.`)
+    // await client.disconnect();
+  })
+
+  logger.test(`calling publish.`)
+  try {
+    await client.publish({topic: 'fakeTopic', message: 'fakeMessage'});
+  } catch (e) {
+    logger.error(`failed on publish with error: ${e}`);
+    return t.fail(e.message);
+  }
+})
+
+// test('client will PUBACK on QoS 1 Publish received from server', (t) => {
+//   const connectReceivedPromise = new Promise((resolve) => {
+//     const connectReceivedListener = (packet) => {
+//       logger.test(`connect received: ${packet}`)
+//       if (!packet.clientId.startsWith('mqttjs_')) return
+//       t.context.broker.removeListener('connectReceived', connectReceivedListener)
+//       resolve(packet);
+//     }
+//     t.context.broker.on('connectReceived', connectReceivedListener)
+//   });
+//   const client = await connect({ brokerUrl: `mqtt://localhost:${port}`});
+//   const sentPacket = await connectReceivedPromise;
+
+//   // validate the clientId received is the correct clientId.
+//   t.deepEqual(sentPacket.clientId, client._options.clientId)
+
+//   t.context.broker.on('client', (client) => {
+//     logger.test(`new client: ${client.id}`)
+//   })
+
+//   t.context.broker.on('publish', (packet, clientOnBroker) => {
+//     if (clientOnBroker && clientOnBroker.id === client._options.clientId) {
+//       logger.test(`testing packet on client ${clientOnBroker.id}`)
+//       t.assert(packet.cmd === 'publish')
+//       t.assert(packet.topic === 'fakeTopic')
+//       t.assert(packet.message === 'fakeMessage')
+//       logger.test(`calling disconnect.`)
+//       await client.disconnect();
+//     }
+//   })
+
+//   logger.test(`calling publish.`)
+//   await client.publish({cmd: 'publish', topic: 'fakeTopic', message: 'fakeMessage'});
+// })
+
+test.todo('client handles malformed publish failure from mqtt-packet')
 
 /* =============================== END TESTS =============================== */
 

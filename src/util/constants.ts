@@ -1,4 +1,4 @@
-import { ConnectOptions } from "../interfaces/connectOptions.js";
+import { ConnectOptions } from "../interface/connectOptions.js";
 import {URL} from 'url'
 
 export const defaultConnectOptions: ConnectOptions = {
