@@ -2,7 +2,7 @@
   "//": "TODO: author, contributors",
   "name": "mqtt",
   "version": "5.0.0",
-  "description": "A MQTT client library",
+  "description": "TODO: Should we move MQTT.js to @mqtt/client in npm? A MQTT client library",
   "keywords": [
     "mqtt",
     "publish",

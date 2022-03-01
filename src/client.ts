@@ -166,13 +166,42 @@ export class MqttClient extends EventEmitter {
       this.emit(`error in numberAllocator during publish`);
       return;
     }
-    const publishPacket: IPublishPacket = {cmd: 'publish', messageId: messageId as number, ...packet}
+    const defaultPublishPacket: IPublishPacket = {
+      cmd: 'publish', 
+      retain: false,
+      dup: false, 
+      messageId: messageId as number,
+      qos: 0,
+      topic: 'default',
+      payload: ''
+    }
+    const publishPacket: IPublishPacket = {...defaultPublishPacket, ...packet}
     this._clientLogger.trace(`publishing packet ${JSON.stringify(publishPacket)}`)
     write(this, publishPacket);
 
     // deallocate the messageId used.
     this._numberAllocator.free(messageId)
     return;
+  }
+
+  private async _destroyClient(force?: boolean) {
+    this._clientLogger.trace(`destroying client...`);
+    this.conn.removeAllListeners('error')
+    this.conn.on('error', () => {});
+    
+    if (force) {
+      this._clientLogger.trace(`force destroying the underlying connection stream...`);
+      this.conn.destroy()
+    } else {
+      this._clientLogger.trace(`gracefully ending the underlying connection stream...`);
+      this.conn.end()
+      // once the stream.end() method has been called, and all the data has been flushed to the underlying system, the 'finish' event is emitted.
+      this.conn.once('finish', () => {
+        this._clientLogger.trace('all data has been flushed from stream.')
+        this.emit('')
+      })
+    }
+    return this;
   }
 
   public async disconnect({ force, options = {} }: { force?: boolean; options?: any } = {}): Promise<MqttClient> {
@@ -184,9 +213,6 @@ export class MqttClient extends EventEmitter {
 
     // 
     this.disconnecting = true
-    
-    this.conn.removeAllListeners('error')
-    this.conn.on('error', () => {})
 
     this._clientLogger.trace('disconnecting client...')
     const packet: IDisconnectPacket = {
@@ -203,17 +229,7 @@ export class MqttClient extends EventEmitter {
     // once write is done, then switch state to disconnected
     this.connected = false
     this.connecting = false
-    
-    if (force) {
-      this.conn.destroy()
-    } else {
-      this.conn.end()
-      // once the stream.end() method has been called, and all the data has been flushed to the underlying system, the 'finish' event is emitted.
-      this.conn.once('finish', () => {
-        this._clientLogger.trace('all data has been flushed from stream.')
-        this.emit('')
-      })
-    }
+    this._destroyClient(force);
     return this
   }
 
@@ -255,6 +271,6 @@ export class MqttClient extends EventEmitter {
     this.errored = true;
     this.conn.removeAllListeners('error');
     this.conn.on('error', () => {});
-    this.disconnect({ force: true })
+    this._destroyClient(true)
   }
 }

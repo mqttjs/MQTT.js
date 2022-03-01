@@ -42,7 +42,7 @@ async function connect (options: ConnectOptions) {
   logger.trace('creating new client...')
   const client = new MqttClient(options);
   const connackPacket = await client.connect();
-  logger.trace(`client connected. ${connackPacket}`)
+  logger.trace(`connack packet: ${JSON.stringify(connackPacket)}`)
   logger.trace('returning client...')
   return client
 }
