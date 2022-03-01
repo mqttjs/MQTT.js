@@ -1,16 +1,17 @@
 import {pino} from "pino"
 
-
 export const logger = pino({
   name: 'mqtt',
-  level: 'debug',
+  level: 'trace',
   customLevels: {
     test: 35
   },
   transport: {
     target: 'pino-pretty',
     options: {
-      colorize: true
+      colorize: true,
+      ignore: 'time,hostname',
+      translateTime: 'yyy-dd-mm, h:MM:ss TT'
     }
   }
 })

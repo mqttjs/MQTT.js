@@ -2,7 +2,7 @@ import test from 'ava'
 import { connect } from '../dist/index.js'
 import { logger } from '../dist/utils/logger.js'
 import { cleanupAfterAllTestsMacro, cleanupBetweenTestsMacro, serverFactoryMacro } from './util/testing_server_factory.js'
-import { uniquePort } from './util/generate_unique_port_number.js'
+
 const port = 1883
 /* ===================== BEGIN before/beforeEach HOOKS ===================== */
 test.before('set up aedes broker', serverFactoryMacro, port)
@@ -13,6 +13,14 @@ test.before('set up aedes broker', serverFactoryMacro, port)
 /* NOTE: Use unique clientId to de-conflict tests since they run in parallel */
 
 test('should disconnect and clean up connection stream', async t => {
+  const clientDisconnectListenerPromise = new Promise((resolve) => {
+    const clientDisconnectListener = async (client) => {
+      logger.test(`client ${client.id} is disconnected.`)
+      t.context.broker.removeListener('clientDisconnect', clientDisconnectListener)
+      resolve(client)
+    }
+    t.context.broker.on('clientDisconnect', clientDisconnectListener)
+  })
   const connectReceivedListener = async (packet) => {
     logger.test(`connectReceivedListener called with packet ${packet}`)
     t.context.broker.removeListener('connectReceived', connectReceivedListener)
@@ -21,21 +29,10 @@ test('should disconnect and clean up connection stream', async t => {
 
   const client = await connect({ brokerUrl: `mqtt://localhost:${port}` })
   logger.test(`client connected. disconnecting...`)
-  t.context.broker.on('clientDisconnect', (client) => {
-    logger.test(`client ${client.id} is disconnected.`)
-  })
   await client.disconnect()
-  await new Promise((resolve, reject) => {
-    try {
-      client.conn.write('', (e) => {
-        t.assert(e.code === 'ERR_STREAM_WRITE_AFTER_END')
-        resolve()
-      })
-    } catch (e) {
-      logger.test(e)
-      reject(e)
-    }
-  })
+  const cFromBroker = await clientDisconnectListenerPromise
+  // TODO: Should ._options.clientId be reformatted as .id?
+  t.assert(client._options.clientId === cFromBroker.id)
 })
 test.todo('should mark the client as disconnected')
 test.todo('should stop ping timer if stream closes')

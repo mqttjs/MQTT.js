@@ -1,10 +1,7 @@
 import test from 'ava'
-import aedes from 'aedes'
-import { createServer } from 'node:net'
 import { connect } from '../dist/index.js'
 import { logger } from '../dist/utils/logger.js'
 import { serverFactoryMacro, cleanupAfterAllTestsMacro, cleanupBetweenTestsMacro } from './util/testing_server_factory.js'
-import { uniquePort } from './util/generate_unique_port_number.js'
 
 const port = 1884
 

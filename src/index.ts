@@ -6,11 +6,12 @@
  */
 
 import { MqttClient } from './client.js'
-import { ConnectOptions } from './interfaces/connectOptions.js'
-import { protocols } from './utils/constants.js'
-import { logger } from './utils/logger.js'
+import { ConnectOptions } from './interface/connectOptions.js'
+import { protocols } from './util/constants.js'
+import { logger } from './util/logger.js'
 
 import { URL } from 'url'
+
 
 /**
  * connect()
@@ -19,7 +20,7 @@ import { URL } from 'url'
  *   2) Instantiate a new client.
  *   3) Return the client to the user.
  */
-function connect (options: ConnectOptions) {
+async function connect (options: ConnectOptions) {
   logger.info(`validating options...`)
   if (typeof(options.brokerUrl) === 'string') {
     options.brokerUrl = new URL(options.brokerUrl) 
@@ -38,7 +39,11 @@ function connect (options: ConnectOptions) {
     throw validationErr
   }
 
-  const client = MqttClient.connect(options)
+  logger.trace('creating new client...')
+  const client = new MqttClient(options);
+  const connackPacket = await client.connect();
+  logger.trace(`connack packet: ${JSON.stringify(connackPacket)}`)
+  logger.trace('returning client...')
   return client
 }
 

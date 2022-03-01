@@ -1,4 +1,4 @@
-import { ConnectOptions } from "../interfaces/connectOptions.js";
+import { ConnectOptions } from "../interface/connectOptions.js";
 
 export const defaultConnectOptions: ConnectOptions = {
   keepalive: 60,

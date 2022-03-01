@@ -2,7 +2,7 @@
   "//": "TODO: author, contributors",
   "name": "mqtt",
   "version": "5.0.0",
-  "description": "A MQTT client library",
+  "description": "TODO: Should we move MQTT.js to @mqtt/client in npm? A MQTT client library",
   "keywords": [
     "mqtt",
     "publish",
@@ -27,7 +27,10 @@
   "types": "dist",
   "scripts": {
     "build": "tsc",
-    "test": "npm run build && nyc ava | pino-pretty"
+    "test": "npm run build && nyc ava | pino-pretty",
+    "lint": "eslint . --ext .ts",
+    "prettier": "eslint-config-prettier .",
+    "prettier-format": "prettier --config .prettierrc 'src/**/*.ts' --write"
   },
   "dependencies": {
     "duplexify": "^4.1.2",
@@ -42,11 +45,17 @@
     "@types/end-of-stream": "^1.4.1",
     "@types/node": "^14.18.10",
     "@types/ws": "^8.2.2",
+    "@typescript-eslint/eslint-plugin": "^5.12.1",
+    "@typescript-eslint/parser": "^5.12.1",
     "aedes": "^0.46.2",
     "ava": "^4.0.1",
+    "eslint": "^7.21.0",
+    "eslint-config-prettier": "^8.4.0",
+    "eslint-plugin-prettier": "^4.0.0",
     "nyc": "^15.1.0",
     "pino-pretty": "^7.5.0",
-    "typescript": "^4.6.0-beta"
+    "prettier": "^2.5.1",
+    "typescript": "^4.7.0-dev.20220223"
   },
   "ava": {
     "files": [
@@ -64,5 +73,24 @@
       "--trace-deprecation",
       "--napi-modules"
     ]
+  },
+  "eslintConfig": {
+    "root": true,
+    "parser": "@typescript-eslint/parser",
+    "plugins": [
+      "@typescript-eslint",
+      "prettier"
+    ],
+    "extends": [
+      "eslint:recommended",
+      "plugin:@typescript-eslint/eslint-recommended",
+      "plugin:@typescript-eslint/recommended",
+      "prettier"
+    ],
+    "rules": {
+      "@typescript-eslint/no-empty-function": 0,
+      "@typescript-eslint/no-explicit-any": 0,
+      "typescript-eslint/no-unused-vars": 0
+    }
   }
 }

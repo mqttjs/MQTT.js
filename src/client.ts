@@ -1,14 +1,17 @@
-import { IConnackPacket, IConnectPacket, IDisconnectPacket, Packet, parser as mqttParser, Parser as MqttParser } from 'mqtt-packet'
+import { IConnackPacket, IConnectPacket, IDisconnectPacket, IPublishPacket, Packet, parser as mqttParser, Parser as MqttParser } from 'mqtt-packet'
 import { write } from './write.js'
-import { ConnectOptions } from './interfaces/connectOptions.js'
+import { ConnectOptions } from './interface/connectOptions.js'
 import { Duplex } from 'stream'
 import { EventEmitter } from 'node:events'
 import { connectionFactory } from './connectionFactory/index.js'
 import eos from 'end-of-stream'
-import { defaultConnectOptions } from './utils/constants.js'
-import { ReasonCodeErrors } from './errors.js'
-import { logger } from './utils/logger.js'
-import { defaultClientId } from './utils/defaultClientId.js'
+import { defaultConnectOptions } from './util/constants.js'
+import { ReasonCodeErrors } from './util/errors.js'
+import { logger } from './util/logger.js'
+import { defaultClientId } from './util/defaultClientId.js'
+import { PublishPacket } from './interface/packets.js'
+import { NumberAllocator } from 'number-allocator'
+import { Logger } from 'pino'
 
 function eosPromisified(stream: NodeJS.ReadableStream | NodeJS.WritableStream): Promise<void> {
   return new Promise<void>((resolve, reject) => {
@@ -25,6 +28,8 @@ export class MqttClient extends EventEmitter {
   errored: boolean
   _eos: Promise<void> | undefined
   conn: Duplex
+  _clientLogger: Logger
+  private _numberAllocator: NumberAllocator
 
 
   constructor(options: ConnectOptions) {
@@ -36,12 +41,16 @@ export class MqttClient extends EventEmitter {
     this.disconnecting = false
 
     // Using this method to clean up the constructor to do options handling 
-    logger.debug(`populating internal client options object...`);
+    logger.trace(`populating internal client options object...`);
     this._options = {
       clientId: defaultClientId(),
       ...defaultConnectOptions,
       ...options
     }
+
+    this._clientLogger = logger.child({id: this._options.clientId});
+
+    this._numberAllocator = new NumberAllocator(1, 65535)
 
     this.conn = this._options.customStreamFactory? this._options.customStreamFactory(this._options) : connectionFactory(this._options);
   
@@ -60,26 +69,27 @@ export class MqttClient extends EventEmitter {
     // We could look at maybe pushing errors in different directions depending on how we should
     // respond to the different errors.
     this._incomingPacketParser.on('error', (err: any) => {
-      logger.error(`error in incomingPacketParser.`)
+      this._clientLogger.error(`error in incomingPacketParser.`)
       this.emit('clientError', err)
     });
 
     this.once('connected', () => {
-      logger.debug(`client is connected.`);
+      this._clientLogger.trace(`client is connected.`);
     })
     this.on('close', () => {
-      logger.debug(`client is closed.`);
+      this._clientLogger.trace(`client is closed.`);
       this.connected = false
     })
 
     this.conn.on('readable', () => {
-      logger.debug(`data available to be read from the 'conn' stream...`);
-      let data
+      this._clientLogger.trace(`data available to be read from the 'conn' stream...`);
+      let data = this.conn.read()
 
-      while (data = this.conn.read()) {
-        logger.debug(`process the data..`);
+      while (data) {
+        this._clientLogger.trace(`process the data..`);
         // process the data
         this._incomingPacketParser.parse(data)
+        data = this.conn.read()
       }
     })
 
@@ -94,7 +104,7 @@ export class MqttClient extends EventEmitter {
   }
 
   async handleIncomingPacket(packet: Packet): Promise<void> {
-    logger.debug(`handleIncomingPacket packet.cmd=${packet.cmd}`);
+    this._clientLogger.trace(`handleIncomingPacket packet.cmd=${packet.cmd}`);
     switch (packet.cmd) {
       case 'connack':
         this.emit('connack', packet)
@@ -107,53 +117,110 @@ export class MqttClient extends EventEmitter {
    * @param options 
    * @returns 
    */
-  public static async connect(options: ConnectOptions): Promise<MqttClient> {
-    logger.debug('creating new client...')
-    const client = new MqttClient(options)
-    logger.debug('sending connect...')
-    client.connecting = true
-    const connackPromise = client._awaitConnack()
+  // TODO: Should this be moved up to the index.ts file, or should it live here?
+  public async connect(): Promise<IConnackPacket> {
+    logger.trace('sending connect...')
+    this.connecting = true
+    
+    const connackPromise = this._awaitConnack()
     const packet: IConnectPacket = {
       cmd: 'connect',
-      clientId: client._options.clientId as string,
-      protocolVersion: client._options.protocolVersion,
-      protocolId: client._options.protocolId,
-      clean: client._options.clean,
-      keepalive: client._options.keepalive,
-      username: client._options.username,
-      password: client._options.password,
-      will: client._options.will,
-      properties: client._options.properties
+      clientId: this._options.clientId as string,
+      protocolVersion: this._options.protocolVersion,
+      protocolId: this._options.protocolId,
+      clean: this._options.clean,
+      keepalive: this._options.keepalive,
+      username: this._options.username,
+      password: this._options.password,
+      will: this._options.will,
+      properties: this._options.properties
     }
-    await write(client, packet)
-    logger.debug('waiting for connack...')
+    logger.trace(`writing connect...`);
+    await write(this, packet)
+    logger.trace('waiting for connack...')
     const connack = await connackPromise
-    client._onConnected(connack)
-    client.connecting = false
-    logger.debug('client connected. returning client...')
-    return client
+    await this._onConnected(connack)
+    this.connecting = false
+    logger.trace('client connected. returning client...')
+    return connack
+  }
+
+  /**
+   * publish - publish <message> to <topic>
+   * Currently only supports QoS 0 Publish
+   * 
+   * @param {PublishPacket} packet - publish packet
+   * @returns {Promise<void>} - Promise will be resolved 
+   * when the message has been sent, but not acked.
+   */
+  public async publish(packet: PublishPacket): Promise<void> {
+    if (!this.connected) {
+      throw new Error('client must be connected to publish.');
+    }
+    // NumberAllocator's firstVacant method has a Time Complexity of O(1).
+    // Will return the first vacant number, or null if all numbers are occupied.
+    // eslint-disable-next-line @typescript-eslint/ban-types
+    const messageId: Number | null = this._numberAllocator.alloc();
+    if (messageId === null) {
+      logger.error('All messageId\'s are allocated.');
+      this.emit(`error in numberAllocator during publish`);
+      return;
+    }
+    const defaultPublishPacket: IPublishPacket = {
+      cmd: 'publish', 
+      retain: false,
+      dup: false, 
+      messageId: messageId as number,
+      qos: 0,
+      topic: 'default',
+      payload: ''
+    }
+    const publishPacket: IPublishPacket = {...defaultPublishPacket, ...packet}
+    this._clientLogger.trace(`publishing packet ${JSON.stringify(publishPacket)}`)
+    write(this, publishPacket);
+
+    // deallocate the messageId used.
+    this._numberAllocator.free(messageId)
+    return;
+  }
+
+  private async _destroyClient(force?: boolean) {
+    this._clientLogger.trace(`destroying client...`);
+    this.conn.removeAllListeners('error')
+    this.conn.on('error', () => {});
+    
+    if (force) {
+      this._clientLogger.trace(`force destroying the underlying connection stream...`);
+      this.conn.destroy()
+    } else {
+      this._clientLogger.trace(`gracefully ending the underlying connection stream...`);
+      this.conn.end()
+      // once the stream.end() method has been called, and all the data has been flushed to the underlying system, the 'finish' event is emitted.
+      this.conn.once('finish', () => {
+        this._clientLogger.trace('all data has been flushed from stream.')
+        this.emit('')
+      })
+    }
+    return this;
   }
 
   public async disconnect({ force, options = {} }: { force?: boolean; options?: any } = {}): Promise<MqttClient> {
     // if client is already disconnecting, do nothing.
     if (this.disconnecting) {
-      logger.debug(`client already disconnecting.`)
+      this._clientLogger.trace(`client already disconnecting.`)
       return this
     }
 
     // 
     this.disconnecting = true
-    
-    this.conn.removeAllListeners('error')
-    this.conn.on('error', () => {})
 
-    logger.debug('disconnecting client...')
+    this._clientLogger.trace('disconnecting client...')
     const packet: IDisconnectPacket = {
       cmd: 'disconnect',
       reasonCode: options.reasonCode,
       properties: options.properties
     }
-    logger.debug('writing disconnect...')
+    this._clientLogger.trace('writing disconnect...')
     // close the network connection
     // ensure NO control packets are sent on the network connection.
     // disconnect packet is the final control packet sent from the client to the server. It indicates the client is disconnecting cleanly.
@@ -162,30 +229,20 @@ export class MqttClient extends EventEmitter {
     // once write is done, then switch state to disconnected
     this.connected = false
     this.connecting = false
-    
-    if (force) {
-      this.conn.destroy()
-    } else {
-      this.conn.end()
-      // once the stream.end() method has been called, and all the data has been flushed to the underlying system, the 'finish' event is emitted.
-      this.conn.once('finish', () => {
-        logger.debug('all data has been flushed from stream.')
-        this.emit('')
-      })
-    }
+    this._destroyClient(force);
     return this
   }
 
-  private _awaitConnack(): Promise<IConnackPacket> {
-    logger.debug(`in awaitConnect. setting connackTimeout.`);
+  private async _awaitConnack(): Promise<IConnackPacket> {
+    this._clientLogger.trace(`in awaitConnect. setting connackTimeout.`);
     return new Promise((resolve, reject) => {
       const connackTimeout = setTimeout(
           () => { reject(new Error('Connection timed out')) },
           this._options.connectTimeout
       );
-      logger.debug(`listening for 'connack'`);
+      this._clientLogger.trace(`listening for 'connack'`);
       this.once('connack', (connackPacket: IConnackPacket) => {
-        logger.debug(`connack received. clearing connackTimeout...`);
+        this._clientLogger.trace(`connack received. clearing connackTimeout...`);
         clearTimeout(connackTimeout);
         resolve(connackPacket)
       })
@@ -193,6 +250,7 @@ export class MqttClient extends EventEmitter {
   }
 
   private _onConnected(connackPacket: IConnackPacket) {
+    logger.trace(`updating client state on connected...`);
     const rc = connackPacket.returnCode
     if (typeof rc !== 'number') {
       throw new Error('Invalid connack packet');
@@ -213,6 +271,6 @@ export class MqttClient extends EventEmitter {
     this.errored = true;
     this.conn.removeAllListeners('error');
     this.conn.on('error', () => {});
-    this.disconnect({ force: true })
+    this._destroyClient(true)
   }
 }
