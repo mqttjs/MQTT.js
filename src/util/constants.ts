@@ -1,8 +1,6 @@
 import { ConnectOptions } from "../interface/connectOptions.js";
-import {URL} from 'url'
 
 export const defaultConnectOptions: ConnectOptions = {
-  brokerUrl: new URL('mqtt:localhost'),
   keepalive: 60,
   reschedulePings: true,
   protocolId: 'MQTT',
