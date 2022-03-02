@@ -245,9 +245,19 @@ export class MqttClient extends EventEmitter {
 
   private async _awaitConnack(): Promise<IConnackPacket> {
     return new Promise((resolve, reject) => {
+      if (this._inflightPackets.has('connack')) {
+        reject(new Error('connack packet callback already exists'))
+        return;
+      }
       this._inflightPackets.set('connack', (err, packet) => {
         err ? reject(err) : resolve(packet as IConnackPacket)
       })
+      let connackTimeout: NodeJS.Timeout | null = setTimeout(() => {
+        this._inflightPackets.delete('connack')
+        clearTimeout(connackTimeout as NodeJS.Timeout)
+        connackTimeout = null
+        reject(new Error('connack packet timeout'))
+      }, this._options.connectTimeout)
     })
   }
 
