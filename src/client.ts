@@ -1,4 +1,4 @@
-import { IConnackPacket, IConnectPacket, IDisconnectPacket, IPublishPacket, Packet, parser as mqttParser, Parser as MqttParser } from 'mqtt-packet'
+import { IPacket, IConnackPacket, IConnectPacket, IDisconnectPacket, IPublishPacket, Packet, parser as mqttParser, Parser as MqttParser } from 'mqtt-packet'
 import { write } from './write.js'
 import { ConnectOptions } from './interface/connectOptions.js'
 import { Duplex } from 'stream'
@@ -29,6 +29,11 @@ export class MqttClient extends EventEmitter {
   _eos: Promise<void> | undefined
   conn: Duplex
   _clientLogger: Logger
+  /**
+   * Use packet ID as key if there is one (e.g., SUBACK)
+   * Use packet type as key if there is no packet ID (e.g., CONNACK)
+   */
+  _inflightPackets: Map<string | number, (err: Error | null, packet: IPacket) => void>
   private _numberAllocator: NumberAllocator
 
 
@@ -39,6 +44,7 @@ export class MqttClient extends EventEmitter {
     this.connected = false
     this.errored = false
     this.disconnecting = false
+    this._inflightPackets = new Map()
 
     // Using this method to clean up the constructor to do options handling 
     logger.trace(`populating internal client options object...`);
@@ -107,7 +113,11 @@ export class MqttClient extends EventEmitter {
     this._clientLogger.trace(`handleIncomingPacket packet.cmd=${packet.cmd}`);
     switch (packet.cmd) {
       case 'connack':
-        this.emit('connack', packet)
+        const connackCallback = this._inflightPackets.get('connack')
+        if (connackCallback) {
+          this._inflightPackets.delete('connack')
+          connackCallback(null, packet as IConnackPacket)
+        }
         break;
     }
   }
@@ -234,18 +244,20 @@ export class MqttClient extends EventEmitter {
   }
 
   private async _awaitConnack(): Promise<IConnackPacket> {
-    this._clientLogger.trace(`in awaitConnect. setting connackTimeout.`);
     return new Promise((resolve, reject) => {
-      const connackTimeout = setTimeout(
-          () => { reject(new Error('Connection timed out')) },
-          this._options.connectTimeout
-      );
-      this._clientLogger.trace(`listening for 'connack'`);
-      this.once('connack', (connackPacket: IConnackPacket) => {
-        this._clientLogger.trace(`connack received. clearing connackTimeout...`);
-        clearTimeout(connackTimeout);
-        resolve(connackPacket)
+      if (this._inflightPackets.has('connack')) {
+        reject(new Error('connack packet callback already exists'))
+        return;
+      }
+      this._inflightPackets.set('connack', (err, packet) => {
+        err ? reject(err) : resolve(packet as IConnackPacket)
       })
+      let connackTimeout: NodeJS.Timeout | null = setTimeout(() => {
+        this._inflightPackets.delete('connack')
+        clearTimeout(connackTimeout as NodeJS.Timeout)
+        connackTimeout = null
+        reject(new Error('connack packet timeout'))
+      }, this._options.connectTimeout)
     })
   }
 
