@@ -112,13 +112,14 @@ export class MqttClient extends EventEmitter {
   async handleIncomingPacket(packet: Packet): Promise<void> {
     this._clientLogger.trace(`handleIncomingPacket packet.cmd=${packet.cmd}`);
     switch (packet.cmd) {
-      case 'connack':
+      case 'connack': {
         const connackCallback = this._inflightPackets.get('connack')
         if (connackCallback) {
           this._inflightPackets.delete('connack')
           connackCallback(null, packet as IConnackPacket)
         }
         break;
+      }
     }
   }
 
@@ -196,7 +197,9 @@ export class MqttClient extends EventEmitter {
 
   private async _destroyClient(force?: boolean) {
     this._clientLogger.trace(`destroying client...`);
-    this.conn.removeAllListeners('error')
+    this.conn.removeAllListeners('error');
+    this.conn.removeAllListeners('close');
+    this.conn.on('close', () => {});
     this.conn.on('error', () => {});
     
     if (force) {
@@ -204,11 +207,12 @@ export class MqttClient extends EventEmitter {
       this.conn.destroy()
     } else {
       this._clientLogger.trace(`gracefully ending the underlying connection stream...`);
-      this.conn.end()
+      this.conn.end(() => {
+        this._clientLogger.trace('END all data has been flushed from stream.')
+      })
       // once the stream.end() method has been called, and all the data has been flushed to the underlying system, the 'finish' event is emitted.
       this.conn.once('finish', () => {
         this._clientLogger.trace('all data has been flushed from stream.')
-        this.emit('')
       })
     }
     return this;
