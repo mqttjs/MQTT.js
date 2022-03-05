@@ -1,10 +1,11 @@
-import { IPacket, IConnackPacket, IConnectPacket, IDisconnectPacket, IPublishPacket, Packet, parser as mqttParser, Parser as MqttParser } from 'mqtt-packet'
+import { ISubackPacket, ISubscribePacket, IConnackPacket, IConnectPacket, IDisconnectPacket, IPublishPacket, ISubscription, Packet, parser as mqttParser, Parser as MqttParser } from 'mqtt-packet'
 import { write } from './write.js'
 import { ConnectOptions } from './interface/connectOptions.js'
 import { Duplex } from 'stream'
 import { EventEmitter } from 'node:events'
 import { connectionFactory } from './connectionFactory/index.js'
 import eos from 'end-of-stream'
+import { InflightPacketContainer } from './inflightPacketContainer.js'
 import { defaultConnectOptions } from './util/constants.js'
 import { ReasonCodeErrors } from './util/errors.js'
 import { logger } from './util/logger.js'
@@ -29,11 +30,7 @@ export class MqttClient extends EventEmitter {
   _eos: Promise<void> | undefined
   conn: Duplex
   _clientLogger: Logger
-  /**
-   * Use packet ID as key if there is one (e.g., SUBACK)
-   * Use packet type as key if there is no packet ID (e.g., CONNACK)
-   */
-  _inflightPackets: Map<string | number, (err: Error | null, packet: IPacket) => void>
+  _inflightPacketContainer: InflightPacketContainer
   private _numberAllocator: NumberAllocator
 
 
@@ -44,7 +41,7 @@ export class MqttClient extends EventEmitter {
     this.connected = false
     this.errored = false
     this.disconnecting = false
-    this._inflightPackets = new Map()
+    this._inflightPacketContainer = new InflightPacketContainer()
 
     // Using this method to clean up the constructor to do options handling 
     logger.trace(`populating internal client options object...`);
@@ -109,16 +106,13 @@ export class MqttClient extends EventEmitter {
     })
   }
 
-  async handleIncomingPacket(packet: Packet): Promise<void> {
+  handleIncomingPacket(packet: Packet) {
+    // TODO: handle errors with incoming packets
     this._clientLogger.trace(`handleIncomingPacket packet.cmd=${packet.cmd}`);
     switch (packet.cmd) {
       case 'connack': {
-        const connackCallback = this._inflightPackets.get('connack')
-        if (connackCallback) {
-          this._inflightPackets.delete('connack')
-          connackCallback(null, packet as IConnackPacket)
-        }
-        break;
+        this._inflightPacketContainer.resolvePacket('connack', packet)
+        break
       }
     }
   }
@@ -133,7 +127,7 @@ export class MqttClient extends EventEmitter {
     logger.trace('sending connect...')
     this.connecting = true
     
-    const connackPromise = this._awaitConnack()
+    const connackPromise = this._inflightPacketContainer.awaitPacket('connack')
     const packet: IConnectPacket = {
       cmd: 'connect',
       clientId: this._options.clientId as string,
@@ -149,7 +143,7 @@ export class MqttClient extends EventEmitter {
     logger.trace(`writing connect...`);
     await write(this, packet)
     logger.trace('waiting for connack...')
-    const connack = await connackPromise
+    const connack = await connackPromise as IConnackPacket
     await this._onConnected(connack)
     this.connecting = false
     logger.trace('client connected. returning client...')
@@ -171,17 +165,17 @@ export class MqttClient extends EventEmitter {
     // NumberAllocator's firstVacant method has a Time Complexity of O(1).
     // Will return the first vacant number, or null if all numbers are occupied.
     // eslint-disable-next-line @typescript-eslint/ban-types
-    const messageId: Number | null = this._numberAllocator.alloc();
+    const messageId = this._numberAllocator.alloc();
     if (messageId === null) {
       logger.error('All messageId\'s are allocated.');
-      this.emit(`error in numberAllocator during publish`);
+      this.emit('error', new Error('error in numberAllocator during publish'));
       return;
     }
     const defaultPublishPacket: IPublishPacket = {
       cmd: 'publish', 
       retain: false,
       dup: false, 
-      messageId: messageId as number,
+      messageId,
       qos: 0,
       topic: 'default',
       payload: ''
@@ -247,23 +241,6 @@ export class MqttClient extends EventEmitter {
     return this
   }
 
-  private async _awaitConnack(): Promise<IConnackPacket> {
-    return new Promise((resolve, reject) => {
-      if (this._inflightPackets.has('connack')) {
-        reject(new Error('connack packet callback already exists'))
-        return;
-      }
-      this._inflightPackets.set('connack', (err, packet) => {
-        err ? reject(err) : resolve(packet as IConnackPacket)
-      })
-      let connackTimeout: NodeJS.Timeout | null = setTimeout(() => {
-        this._inflightPackets.delete('connack')
-        clearTimeout(connackTimeout as NodeJS.Timeout)
-        connackTimeout = null
-        reject(new Error('connack packet timeout'))
-      }, this._options.connectTimeout)
-    })
-  }
 
   private _onConnected(connackPacket: IConnackPacket) {
     logger.trace(`updating client state on connected...`);
@@ -280,6 +257,23 @@ export class MqttClient extends EventEmitter {
       this.emit('clientError', err)
       throw err
     }
+  }
+
+  public async subscribe(subscriptions: ISubscription | ISubscription[]): Promise<ISubackPacket> {
+    const messageId = this._numberAllocator.alloc()
+    if (messageId === null) {
+      throw new Error('All messageId\'s are allocated.');
+    }
+    const subscribePacket: ISubscribePacket = {
+      cmd: 'subscribe',
+      subscriptions: Array.isArray(subscriptions) ? subscriptions : [subscriptions],
+      messageId
+    }
+    const subackPromise = this._inflightPacketContainer.awaitPacket(messageId)
+    await write(this, subscribePacket)
+    const suback = await subackPromise as ISubackPacket
+    this._numberAllocator.free(messageId)
+    return suback
   }
 
   onError(err?: Error | null | undefined) {

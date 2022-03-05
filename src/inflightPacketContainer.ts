@@ -30,6 +30,10 @@ export class InflightPacketContainer {
     callback(new Error(`Packet ${packetId} timed out`), null)
     this._inflightPackets.delete(packetId)
     const nextValue = this._inflightPackets.values().next()
+    /**
+     * TODO: should we iterate and find all packets that have expired, or is it
+     * acceptable to let the next timer expire the next packet? 
+     */
     this._expiryTimer = (nextValue.done ? null : setTimeout(this.timeoutCallback, Math.max(0, nextValue.value.expiryTime - Date.now())))
   }
 
@@ -71,7 +75,7 @@ export class InflightPacketContainer {
     this._inflightPackets.delete(packetId)
     callback(err ? err : null, null)
   }
-  
+
   cancelAllPackets(err?: Error): void {
     if (this._expiryTimer !== null) {
       clearTimeout(this._expiryTimer)
