@@ -1,5 +1,5 @@
-let originalPort = 1884
+let originalPort = 1884;
 
 export function uniquePort() {
-    return originalPort++
+  return originalPort++;
 }

@@ -1,10 +1,10 @@
-import { Packet } from "mqtt-packet"
-import {Readable} from 'stream'
+import { Packet } from 'mqtt-packet';
+import { Readable } from 'stream';
 
-const streamsOpts = { objectMode: true }
+const streamsOpts = { objectMode: true };
 const defaultStoreOptions = {
-  clean: true
-}
+  clean: true,
+};
 
 /**
  * In-memory implementation of the message store
@@ -12,13 +12,13 @@ const defaultStoreOptions = {
  *
  * @param {Object} [options] - store options
  */
-export class Store  {
-  private _inflights: any
-  options: any
+export class Store {
+  private _inflights: any;
+  options: any;
 
   constructor(options: any = {}) {
-    this.options = {...options, defaultStoreOptions}
-    this._inflights = new Map()
+    this.options = { ...options, defaultStoreOptions };
+    this._inflights = new Map();
   }
 
   /**
@@ -26,80 +26,78 @@ export class Store  {
    * anything that has a messageId property.
    *
    */
-  async put (packet: Packet): Promise<Store> {
-    this._inflights.set(packet.messageId, packet)
-    return this
+  async put(packet: Packet): Promise<Store> {
+    this._inflights.set(packet.messageId, packet);
+    return this;
   }
 
   /**
    * Creates a stream with all the packets in the store
    *
    */
-  async createStream () {
-    const stream = new Readable(streamsOpts)
-    let destroyed = false
-    const values: any[] = []
-    let i = 0
+  async createStream() {
+    const stream = new Readable(streamsOpts);
+    let destroyed = false;
+    const values: any[] = [];
+    let i = 0;
 
     this._inflights.forEach((value: any) => {
-      values.push(value)
-    })
+      values.push(value);
+    });
 
     stream._read = function () {
       if (!destroyed && i < values.length) {
-        this.push(values[i++])
+        this.push(values[i++]);
       } else {
-        this.push(null)
+        this.push(null);
       }
-    }
+    };
 
     stream.destroy = function (_error?: Error | undefined): Readable {
       if (!destroyed) {
-        destroyed = true
+        destroyed = true;
         setTimeout(() => {
-          this.emit('close')
-        }, 0)
+          this.emit('close');
+        }, 0);
       }
-      return stream
-    }
+      return stream;
+    };
 
-    return stream
+    return stream;
   }
 
   /**
    * deletes a packet from the store.
    */
-  async del (packet: Packet): Promise<Packet> {
-    packet = this._inflights.get(packet.messageId)
+  async del(packet: Packet): Promise<Packet> {
+    packet = this._inflights.get(packet.messageId);
     if (packet) {
-      this._inflights.delete(packet.messageId)
-      return packet
+      this._inflights.delete(packet.messageId);
+      return packet;
     } else {
-      throw new Error('missing packet')
+      throw new Error('missing packet');
     }
   }
-
-
 
   /**
    * get a packet from the store.
    */
-  async get (packet: Packet): Promise<Packet> {
-    packet = this._inflights.get(packet.messageId)
+  async get(packet: Packet): Promise<Packet> {
+    packet = this._inflights.get(packet.messageId);
     if (packet) {
-      return packet
+      return packet;
     } else {
-      throw new Error('missing packet')
+      throw new Error('missing packet');
     }
   }
 
   /**
    * Close the store
    */
-  async close () {
+  async close() {
     if (this.options.clean) {
-      this._inflights = null
+      this._inflights = null;
     }
-    return
+    return;
   }
 }
