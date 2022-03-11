@@ -1,5 +1,5 @@
 import test from 'ava';
-import { logger } from '../dist/utils/logger.js';
+import { logger } from '../dist/util/logger.js';
 import { serverFactoryMacro, cleanupAfterAllTestsMacro, cleanupBetweenTestsMacro } from './util/testing_server_factory.js';
 import { connect } from '../dist/index.js';
 

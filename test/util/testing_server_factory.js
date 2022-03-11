@@ -1,7 +1,7 @@
 import test from 'ava';
 import aedes from 'aedes';
 import { createServer } from 'node:net';
-import { logger } from '../../dist/utils/logger.js';
+import { logger } from '../../dist/util/logger.js';
 
 /* ===================== BEGIN before/beforeEach HOOKS ===================== */
 export const serverFactoryMacro = test.macro(async (t, port) => {

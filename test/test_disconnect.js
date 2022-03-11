@@ -1,9 +1,9 @@
 import test from 'ava';
 import { connect } from '../dist/index.js';
-import { logger } from '../dist/utils/logger.js';
+import { logger } from '../dist/util/logger.js';
 import { cleanupAfterAllTestsMacro, cleanupBetweenTestsMacro, serverFactoryMacro } from './util/testing_server_factory.js';
 
-const port = 1883;
+const port = 1885;
 /* ===================== BEGIN before/beforeEach HOOKS ===================== */
 test.before('set up aedes broker', serverFactoryMacro, port);
 /* ====================== END before/beforeEach HOOKS ====================== */

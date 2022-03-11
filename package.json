@@ -28,7 +28,7 @@
   "scripts": {
     "build": "tsc",
     "test": "npm run build && nyc ava -r pino-debug | pino-pretty",
-    "lint": "eslint . --ext .ts",
+    "lint": "eslint .",
     "prettier": "prettier 'src/**/*.ts' 'test/**/*.js' --write"
   },
   "dependencies": {
@@ -90,7 +90,7 @@
     "rules": {
       "@typescript-eslint/no-empty-function": 0,
       "@typescript-eslint/no-explicit-any": 0,
-      "typescript-eslint/no-unused-vars": 0
+      "@typescript-eslint/no-unused-vars": 0
     }
   }
 }
