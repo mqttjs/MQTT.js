@@ -1,40 +1,45 @@
-import net from 'net'
-import { Duplex } from 'stream'
-import tls from 'tls'
-import { URL } from "url";
-import { ConnectOptions } from '../interface/connectOptions.js'
-import { buildWebSocketStream } from './buildWebSocketStream.js'
-import { WebSocketOptions } from './interfaces/webSocketOptions.js'
-import { logger } from "../util/logger.js";
+import net from 'net';
+import { Duplex } from 'stream';
+import tls from 'tls';
+import { URL } from 'url';
+import { ConnectOptions } from '../interface/connectOptions.js';
+import { buildWebSocketStream } from './buildWebSocketStream.js';
+import { WebSocketOptions } from './interfaces/webSocketOptions.js';
+import { logger } from '../util/logger.js';
 
-export function connectionFactory (options: ConnectOptions): Duplex {
-  const brokerUrl: URL = options.brokerUrl as URL
-  const tlsOptions = options.tlsOptions
+export function connectionFactory(options: ConnectOptions): Duplex {
+  const brokerUrl: URL = options.brokerUrl as URL;
+  const tlsOptions = options.tlsOptions;
   switch (brokerUrl.protocol) {
     case 'tcp:': /* fall through */
     case 'mqtt:': {
-      const port: number = parseInt(brokerUrl.port) || 1883
-      const host: string = brokerUrl.hostname || brokerUrl.host || 'localhost'
-      
+      const port: number = parseInt(brokerUrl.port) || 1883;
+      const host: string = brokerUrl.hostname || brokerUrl.host || 'localhost';
+
       // logger.info('port %d and host %s', port, host)
-      return net.createConnection(port, host)
+      return net.createConnection(port, host);
     }
     case 'tls:': /* fall through */
     case 'mqtts:': {
-      const port: number = parseInt(brokerUrl.port) || 8883
-      const host: string = brokerUrl.hostname || brokerUrl.host || 'localhost'
-      const servername: string = brokerUrl.host
+      const port: number = parseInt(brokerUrl.port) || 8883;
+      const host: string = brokerUrl.hostname || brokerUrl.host || 'localhost';
+      const servername: string = brokerUrl.host;
 
-      logger.info(`port ${port} host ${host} servername ${servername}`)
+      logger.info(`port ${port} host ${host} servername ${servername}`);
 
-      const connection: tls.TLSSocket = tls.connect({port: port, host: host, servername: servername, ...options.tlsOptions})
+      const connection: tls.TLSSocket = tls.connect({
+        port: port,
+        host: host,
+        servername: servername,
+        ...options.tlsOptions,
+      });
 
       const handleTLSerrors = (err: Error) => {
         // How can I get verify this error is a tls error?
-        // TODO: In the old version this was emitted via the client. 
+        // TODO: In the old version this was emitted via the client.
         // We need to make this better.
         if (options.tlsOptions as any['rejectUnauthorized']) {
-          connection.emit('error', err)
+          connection.emit('error', err);
         }
 
         // close this connection to match the behaviour of net
@@ -42,27 +47,24 @@ export function connectionFactory (options: ConnectOptions): Duplex {
         // and close event doesn't fire. This is a work around
         // to enable the reconnect code to work the same as with
         // net.createConnection
-        connection.end()
-      }
+        connection.end();
+      };
 
       /* eslint no-use-before-define: [2, "nofunc"] */
       connection.on('secureConnect', function () {
-        if (tlsOptions as any['rejectUnauthorized'] && !connection.authorized) {
-          connection.emit('error', new Error('TLS not authorized'))
+        if ((tlsOptions as any['rejectUnauthorized']) && !connection.authorized) {
+          connection.emit('error', new Error('TLS not authorized'));
         } else {
-          connection.removeListener('error', handleTLSerrors)
+          connection.removeListener('error', handleTLSerrors);
         }
-      })
+      });
 
-      connection.on('error', handleTLSerrors)
-      return connection
+      connection.on('error', handleTLSerrors);
+      return connection;
     }
     case 'ws:': {
-      const url = options.transformWsUrl ? options.transformWsUrl(options.brokerUrl) : options.brokerUrl as URL
-      const websocketSubProtocol =
-      (options.protocolId === 'MQIsdp') && (options.protocolVersion === 3)
-        ? 'mqttv3.1'
-        : 'mqtt'  
+      const url = options.transformWsUrl ? options.transformWsUrl(options.brokerUrl) : (options.brokerUrl as URL);
+      const websocketSubProtocol = options.protocolId === 'MQIsdp' && options.protocolVersion === 3 ? 'mqttv3.1' : 'mqtt';
       const webSocketOptions: WebSocketOptions = {
         url: url,
         hostname: url.hostname || 'localhost',
@@ -71,12 +73,12 @@ export function connectionFactory (options: ConnectOptions): Duplex {
         protocolId: options.protocolId,
         websocketSubProtocol: websocketSubProtocol,
         path: url.pathname || '/',
-        wsOptions: options.wsOptions || {}
-      }
-      const wsStream = buildWebSocketStream(webSocketOptions)
-      return wsStream
-    } default:
-    throw new Error('Unrecognized protocol')
+        wsOptions: options.wsOptions || {},
+      };
+      const wsStream = buildWebSocketStream(webSocketOptions);
+      return wsStream;
+    }
+    default:
+      throw new Error('Unrecognized protocol');
   }
 }
-

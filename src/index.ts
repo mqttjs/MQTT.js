@@ -5,13 +5,12 @@
  * See LICENSE for more information
  */
 
-import { MqttClient } from './client.js'
-import { ConnectOptions } from './interface/connectOptions.js'
-import { protocols } from './util/constants.js'
-import { logger } from './util/logger.js'
+import { MqttClient } from './client.js';
+import { ConnectOptions } from './interface/connectOptions.js';
+import { protocols } from './util/constants.js';
+import { logger } from './util/logger.js';
 
-import { URL } from 'url'
-
+import { URL } from 'url';
 
 /**
  * connect()
@@ -20,10 +19,10 @@ import { URL } from 'url'
  *   2) Instantiate a new client.
  *   3) Return the client to the user.
  */
-async function connect (options: ConnectOptions) {
-  logger.info(`validating options...`)
-  if (typeof(options.brokerUrl) === 'string') {
-    options.brokerUrl = new URL(options.brokerUrl) 
+async function connect(options: ConnectOptions) {
+  logger.info(`validating options...`);
+  if (typeof options.brokerUrl === 'string') {
+    options.brokerUrl = new URL(options.brokerUrl);
   }
 
   if (!options?.brokerUrl?.protocol) {
@@ -31,56 +30,58 @@ async function connect (options: ConnectOptions) {
       `Missing protocol. \
       To provide a protocol, you have two options:\
       - Format the brokerUrl with a protocol, for example: 'mqtt://test.mosquitto.org'.
-      - Pass in the protocol via the protocol option.`)
+      - Pass in the protocol via the protocol option.`
+    );
   }
 
-  const validationErr: Error | undefined = _validateProtocol(options)
+  const validationErr: Error | undefined = _validateProtocol(options);
   if (validationErr) {
-    throw validationErr
+    throw validationErr;
   }
 
-  logger.trace('creating new client...')
+  logger.trace('creating new client...');
   const client = new MqttClient(options);
   const connackPacket = await client.connect();
-  logger.trace(`connack packet: ${JSON.stringify(connackPacket)}`)
-  logger.trace('returning client...')
-  return client
+  logger.trace(`connack packet: ${JSON.stringify(connackPacket)}`);
+  logger.trace('returning client...');
+  return client;
 }
 
 function _validateProtocol(opts: ConnectOptions): Error | undefined {
-  logger.info(`validating protocol options...`)
+  logger.info(`validating protocol options...`);
   if (opts.tlsOptions && 'cert' in opts.tlsOptions && 'key' in opts.tlsOptions) {
-    const urlProtocol = (opts.brokerUrl as URL).protocol
+    const urlProtocol = (opts.brokerUrl as URL).protocol;
     if (urlProtocol) {
       if (protocols.secure.indexOf(urlProtocol) === -1) {
-        const protocolError: Error = formatSecureProtocolError(urlProtocol)
-        return protocolError
+        const protocolError: Error = formatSecureProtocolError(urlProtocol);
+        return protocolError;
       }
     } else {
       // A cert and key was provided, however no protocol was specified, so we will throw an error.
       // TODO: Git Blame on this line. I don't understand the error message at all.
-      return new Error('Missing secure protocol key')
+      return new Error('Missing secure protocol key');
     }
   }
-  return undefined
+  return undefined;
 }
 
 function formatSecureProtocolError(protocol: string): Error {
-  logger.info('secure protocol error! formatting secure protocol error... ')
+  logger.info('secure protocol error! formatting secure protocol error... ');
   let secureProtocol: string;
   switch (protocol) {
     case 'mqtt':
-      secureProtocol = 'mqtts'
-      break
+      secureProtocol = 'mqtts';
+      break;
     case 'ws':
-      secureProtocol = 'wss'
-      break
+      secureProtocol = 'wss';
+      break;
     default:
-      return new Error('Unknown protocol for secure connection: "' + protocol + '"!')
+      return new Error('Unknown protocol for secure connection: "' + protocol + '"!');
   }
   return new Error(
     `user provided cert and key , but protocol ${protocol} is insecure. 
-    Use ${secureProtocol} instead.`)
+    Use ${secureProtocol} instead.`
+  );
 }
 
-export { connect }
+export { connect };

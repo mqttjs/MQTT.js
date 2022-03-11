@@ -7,40 +7,40 @@
  * @param {String} topic - A topic
  * @returns {Boolean} If the topic is valid, returns true. Otherwise, returns false.
  */
-export function validateTopic (topic: string) {
-  const parts: string[] = topic.split('/')
+export function validateTopic(topic: string) {
+  const parts: string[] = topic.split('/');
 
   for (let i = 0; i < parts.length; i++) {
     if (parts[i] === '+') {
-      continue
+      continue;
     }
 
     if (parts[i] === '#') {
       // for Rule #2
-      return i === parts.length - 1
+      return i === parts.length - 1;
     }
 
     if ((parts[i] as string).indexOf('+') !== -1 || (parts[i] as string).indexOf('#') !== -1) {
-      return false
+      return false;
     }
   }
 
-  return true
+  return true;
 }
 
 /**
  * Validate an array of topics to see if any of them is valid or not
-  * @param {Array} topics - Array of topics
+ * @param {Array} topics - Array of topics
  * @returns {String} If the topics is valid, returns null. Otherwise, returns the invalid one
  */
-export function validateTopics (topics: Array<string>) {
+export function validateTopics(topics: Array<string>) {
   if (topics.length === 0) {
-    return 'empty_topic_list'
+    return 'empty_topic_list';
   }
   for (let i = 0; i < topics.length; i++) {
     if (!validateTopic(topics[i] as string)) {
-      return topics[i]
+      return topics[i];
     }
   }
-  return null
+  return null;
 }
