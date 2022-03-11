@@ -1,4 +1,4 @@
-import { ConnectOptions } from "../interface/connectOptions.js";
+import { ConnectOptions } from '../interface/connectOptions.js';
 
 export const defaultConnectOptions: ConnectOptions = {
   keepalive: 60,
@@ -8,22 +8,11 @@ export const defaultConnectOptions: ConnectOptions = {
   reconnectPeriod: 1000,
   connectTimeout: 30 * 1000,
   clean: true,
-  resubscribe: true
-}
+  resubscribe: true,
+};
 
 export const protocols = {
-  all : [
-    'mqtt',
-    'mqtts',
-    'ws',
-    'wss'
-  ],
-  secure: [
-    'mqtts',
-    'ws'
-  ],
-  insecure: [
-    'mqtt',
-    'wss'
-  ]
-}
+  all: ['mqtt', 'mqtts', 'ws', 'wss'],
+  secure: ['mqtts', 'ws'],
+  insecure: ['mqtt', 'wss'],
+};

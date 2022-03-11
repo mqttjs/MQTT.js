@@ -29,8 +29,7 @@
     "build": "tsc",
     "test": "npm run build && nyc ava -r pino-debug | pino-pretty",
     "lint": "eslint . --ext .ts",
-    "prettier": "eslint-config-prettier .",
-    "prettier-format": "prettier --config .prettierrc 'src/**/*.ts' --write"
+    "prettier": "prettier 'src/**/*.ts' 'test/**/*.js' --write"
   },
   "dependencies": {
     "duplexify": "^4.1.2",

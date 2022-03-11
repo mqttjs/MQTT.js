@@ -41,5 +41,5 @@ export const ReasonCodeErrors = {
   159: 'Connection rate exceeded',
   160: 'Maximum connect time',
   161: 'Subscription Identifiers not supported',
-  162: 'Wildcard Subscriptions not supported'
-}
+  162: 'Wildcard Subscriptions not supported',
+};
