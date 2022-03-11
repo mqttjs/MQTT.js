@@ -22,9 +22,7 @@ import { PublishPacket } from './interface/packets.js';
 import { NumberAllocator } from 'number-allocator';
 import { Logger } from 'pino';
 
-function eosPromisified(
-  stream: NodeJS.ReadableStream | NodeJS.WritableStream
-): Promise<void> {
+function eosPromisified(stream: NodeJS.ReadableStream | NodeJS.WritableStream): Promise<void> {
   return new Promise<void>((resolve, reject) => {
     eos(stream, (err: any) => (err instanceof Error ? reject(err) : resolve()));
   });
@@ -44,10 +42,7 @@ export class MqttClient extends EventEmitter {
    * Use packet ID as key if there is one (e.g., SUBACK)
    * Use packet type as key if there is no packet ID (e.g., CONNACK)
    */
-  _inflightPackets: Map<
-    string | number,
-    (err: Error | null, packet: IPacket) => void
-  >;
+  _inflightPackets: Map<string | number, (err: Error | null, packet: IPacket) => void>;
   private _numberAllocator: NumberAllocator;
 
   constructor(options: ConnectOptions) {
@@ -84,10 +79,7 @@ export class MqttClient extends EventEmitter {
     // NOTE: THis is only handling incoming packets from the
     // readable stream of the conn stream.
     // we need to make sure that the function called on 'packet' is bound to the context of 'MQTTClient'
-    this._incomingPacketParser.on(
-      'packet',
-      this.handleIncomingPacket.bind(this)
-    );
+    this._incomingPacketParser.on('packet', this.handleIncomingPacket.bind(this));
 
     // Echo connection errors this.emit('clientError')
     // We could look at maybe pushing errors in different directions depending on how we should
@@ -106,9 +98,7 @@ export class MqttClient extends EventEmitter {
     });
 
     this.conn.on('readable', () => {
-      this._clientLogger.trace(
-        `data available to be read from the 'conn' stream...`
-      );
+      this._clientLogger.trace(`data available to be read from the 'conn' stream...`);
       let data = this.conn.read();
 
       while (data) {
@@ -212,9 +202,7 @@ export class MqttClient extends EventEmitter {
       ...defaultPublishPacket,
       ...packet,
     };
-    this._clientLogger.trace(
-      `publishing packet ${JSON.stringify(publishPacket)}`
-    );
+    this._clientLogger.trace(`publishing packet ${JSON.stringify(publishPacket)}`);
     write(this, publishPacket);
 
     // deallocate the messageId used.
@@ -230,14 +218,10 @@ export class MqttClient extends EventEmitter {
     this.conn.on('error', () => {});
 
     if (force) {
-      this._clientLogger.trace(
-        `force destroying the underlying connection stream...`
-      );
+      this._clientLogger.trace(`force destroying the underlying connection stream...`);
       this.conn.destroy();
     } else {
-      this._clientLogger.trace(
-        `gracefully ending the underlying connection stream...`
-      );
+      this._clientLogger.trace(`gracefully ending the underlying connection stream...`);
       this.conn.end(() => {
         this._clientLogger.trace('END all data has been flushed from stream.');
       });
@@ -310,8 +294,7 @@ export class MqttClient extends EventEmitter {
       return;
     } else if (rc > 0) {
       const err: any = new Error(
-        'Connection refused: ' +
-          ReasonCodeErrors[rc as keyof typeof ReasonCodeErrors]
+        'Connection refused: ' + ReasonCodeErrors[rc as keyof typeof ReasonCodeErrors]
       );
       err.code = rc;
       this.emit('clientError', err);

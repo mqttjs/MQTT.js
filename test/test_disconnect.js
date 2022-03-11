@@ -19,10 +19,7 @@ test('should disconnect and clean up connection stream', async (t) => {
   const clientDisconnectListenerPromise = new Promise((resolve) => {
     const clientDisconnectListener = async (client) => {
       logger.test(`client ${client.id} is disconnected.`);
-      t.context.broker.removeListener(
-        'clientDisconnect',
-        clientDisconnectListener
-      );
+      t.context.broker.removeListener('clientDisconnect', clientDisconnectListener);
       resolve(client);
     };
     t.context.broker.on('clientDisconnect', clientDisconnectListener);
@@ -44,12 +41,8 @@ test.todo('should mark the client as disconnected');
 test.todo('should stop ping timer if stream closes');
 test.todo('should emit close after end called');
 test.todo('should emit end after end classed and client must be disconnected');
-test.todo(
-  'should pass store close error to end callback but not to end listeners (incomingStore)'
-);
-test.todo(
-  'should pass store close error to end callback but not to end listeners (outgoingStore)'
-);
+test.todo('should pass store close error to end callback but not to end listeners (incomingStore)');
+test.todo('should pass store close error to end callback but not to end listeners (outgoingStore)');
 test.todo('should emit end only once');
 test.todo('should stop ping timer after end called');
 

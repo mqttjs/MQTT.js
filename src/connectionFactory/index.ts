@@ -52,10 +52,7 @@ export function connectionFactory(options: ConnectOptions): Duplex {
 
       /* eslint no-use-before-define: [2, "nofunc"] */
       connection.on('secureConnect', function () {
-        if (
-          (tlsOptions as any['rejectUnauthorized']) &&
-          !connection.authorized
-        ) {
+        if ((tlsOptions as any['rejectUnauthorized']) && !connection.authorized) {
           connection.emit('error', new Error('TLS not authorized'));
         } else {
           connection.removeListener('error', handleTLSerrors);
@@ -70,9 +67,7 @@ export function connectionFactory(options: ConnectOptions): Duplex {
         ? options.transformWsUrl(options.brokerUrl)
         : (options.brokerUrl as URL);
       const websocketSubProtocol =
-        options.protocolId === 'MQIsdp' && options.protocolVersion === 3
-          ? 'mqttv3.1'
-          : 'mqtt';
+        options.protocolId === 'MQIsdp' && options.protocolVersion === 3 ? 'mqttv3.1' : 'mqtt';
       const webSocketOptions: WebSocketOptions = {
         url: url,
         hostname: url.hostname || 'localhost',

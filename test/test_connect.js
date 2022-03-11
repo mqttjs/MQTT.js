@@ -23,10 +23,7 @@ test('should send a CONNECT packet with the correct default parameters', async (
       /* Ensure default mqttjs client ID is used */
       if (!packet.clientId.startsWith('mqttjs_')) return;
 
-      t.context.broker.removeListener(
-        'connectReceived',
-        connectReceivedListener
-      );
+      t.context.broker.removeListener('connectReceived', connectReceivedListener);
 
       /* Ensure default options are used in connect packet */
       t.falsy(packet.will);
@@ -52,9 +49,7 @@ test.todo('can send a PINGREQ at any time');
 test.todo(
   'should close the network connection to the server if client does not receive PINGRESP within a reasonable amount of time'
 );
-test.todo(
-  'a keepalive of zero (0) has the effect of turning off the keepalive mechanism'
-);
+test.todo('a keepalive of zero (0) has the effect of turning off the keepalive mechanism');
 test.todo('user can specify value of keepalive');
 test.todo('maximum value of keepalive is 18 hours, 12 minutes and 15 seconds');
 test.todo('the client identifier (clientId) must be present');
