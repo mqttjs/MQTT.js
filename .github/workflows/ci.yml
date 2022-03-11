@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node-version: [^12.22, ^14.17, ^16.4, ^17]
+        node-version: [^14.17, ^16.4, ^17]
         os: [ubuntu-latest, windows-latest]
     steps:
       - uses: actions/checkout@v2
@@ -44,7 +44,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v2
         with:
-          node-version: ^12.22
+          node-version: ^16.4
           cache: npm
       - name: Upgrade npm
         run: npm install --global npm@^8.1.2
@@ -63,7 +63,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v2
         with:
-          node-version: ^12.22
+          node-version: ^16.4
           cache: npm
       - name: Upgrade npm
         run: if [[ "$(npm -v)" != "8.1.2" ]]; then npm install --global npm@8.1.2; fi
@@ -85,7 +85,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions/setup-node@v2
         with:
-          node-version: ^12.22
+          node-version: ^16.4
       - name: Upgrade npm
         run: npm install --global npm@^8.1.2
       - run: npm install --no-shrinkwrap --no-audit
