@@ -1,2 +1,3 @@
 semi: true
 singleQuote: true
+printWidth: 132

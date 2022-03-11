@@ -20,10 +20,7 @@ export function validateTopic(topic: string) {
       return i === parts.length - 1;
     }
 
-    if (
-      (parts[i] as string).indexOf('+') !== -1 ||
-      (parts[i] as string).indexOf('#') !== -1
-    ) {
+    if ((parts[i] as string).indexOf('+') !== -1 || (parts[i] as string).indexOf('#') !== -1) {
       return false;
     }
   }

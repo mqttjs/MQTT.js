@@ -49,11 +49,7 @@ async function connect(options: ConnectOptions) {
 
 function _validateProtocol(opts: ConnectOptions): Error | undefined {
   logger.info(`validating protocol options...`);
-  if (
-    opts.tlsOptions &&
-    'cert' in opts.tlsOptions &&
-    'key' in opts.tlsOptions
-  ) {
+  if (opts.tlsOptions && 'cert' in opts.tlsOptions && 'key' in opts.tlsOptions) {
     const urlProtocol = (opts.brokerUrl as URL).protocol;
     if (urlProtocol) {
       if (protocols.secure.indexOf(urlProtocol) === -1) {
@@ -80,9 +76,7 @@ function formatSecureProtocolError(protocol: string): Error {
       secureProtocol = 'wss';
       break;
     default:
-      return new Error(
-        'Unknown protocol for secure connection: "' + protocol + '"!'
-      );
+      return new Error('Unknown protocol for secure connection: "' + protocol + '"!');
   }
   return new Error(
     `user provided cert and key , but protocol ${protocol} is insecure. 

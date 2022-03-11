@@ -1,10 +1,6 @@
 import test from 'ava';
 import { logger } from '../dist/util/logger.js';
-import {
-  serverFactoryMacro,
-  cleanupAfterAllTestsMacro,
-  cleanupBetweenTestsMacro,
-} from './util/testing_server_factory.js';
+import { serverFactoryMacro, cleanupAfterAllTestsMacro, cleanupBetweenTestsMacro } from './util/testing_server_factory.js';
 import { connect } from '../dist/index.js';
 
 const port = 1888;

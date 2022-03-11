@@ -16,9 +16,7 @@ export function validateTopic(topic: string, message: string): boolean {
         // #
         const notAtTheEnd = i !== end;
         if (notAtTheEnd || slashInPreEnd) {
-          const err = new Error(
-            '# is only allowed in ' + message + ' in the last position'
-          );
+          const err = new Error('# is only allowed in ' + message + ' in the last position');
           logger.info(err);
           return false;
         }
@@ -29,9 +27,7 @@ export function validateTopic(topic: string, message: string): boolean {
         const pastChar = i < end - 1 && topic.charCodeAt(i + 1) !== 47;
         const preChar = i > 1 && topic.charCodeAt(i - 1) !== 47;
         if (pastChar || preChar) {
-          const err = new Error(
-            '+ is only allowed in ' + message + ' between /'
-          );
+          const err = new Error('+ is only allowed in ' + message + ' between /');
           logger.info(err);
           return false;
         }

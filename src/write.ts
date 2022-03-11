@@ -2,13 +2,9 @@ import * as mqtt from 'mqtt-packet';
 import { MqttClient } from './client.js';
 import { logger } from './util/logger.js';
 
-export async function write(
-  client: MqttClient,
-  packet: mqtt.Packet
-): Promise<void> {
+export async function write(client: MqttClient, packet: mqtt.Packet): Promise<void> {
   logger.trace(`writing packet: ${JSON.stringify(packet)}`);
-  if (!client.connected && !client.connecting)
-    throw new Error('connection closed');
+  if (!client.connected && !client.connecting) throw new Error('connection closed');
 
   /**
    * If writeToStream returns true, we can immediately continue. Otherwise,
@@ -25,6 +21,5 @@ export async function write(
    * work, but it's not clear if it's the right thing to do. See Aedes:
    * https://github.com/moscajs/aedes/blob/39ccdb554d9e32113216e5f7180d3297314e5e12/lib/client.js#L193-L196
    */
-  if (!client.errored)
-    return new Promise((resolve) => client.conn.once('drain', resolve));
+  if (!client.errored) return new Promise((resolve) => client.conn.once('drain', resolve));
 }

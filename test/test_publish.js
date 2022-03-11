@@ -1,10 +1,6 @@
 import test from 'ava';
 import { logger } from '../dist/util/logger.js';
-import {
-  serverFactoryMacro,
-  cleanupAfterAllTestsMacro,
-  cleanupBetweenTestsMacro,
-} from './util/testing_server_factory.js';
+import { serverFactoryMacro, cleanupAfterAllTestsMacro, cleanupBetweenTestsMacro } from './util/testing_server_factory.js';
 import { connect } from '../dist/index.js';
 
 const port = 1887;
@@ -20,10 +16,7 @@ test.only('publish QoS 0', async (t) => {
     const connectReceivedListener = (packet) => {
       logger.info(`connect received: ${packet}`);
       if (!packet.clientId.startsWith('mqttjs_')) return;
-      t.context.broker.removeListener(
-        'connectReceived',
-        connectReceivedListener
-      );
+      t.context.broker.removeListener('connectReceived', connectReceivedListener);
       resolve(packet);
     };
     t.context.broker.on('connectReceived', connectReceivedListener);
@@ -67,10 +60,7 @@ test('handles error on malformed publish packet', async (t) => {
     const connectReceivedListener = (packet) => {
       logger.info(`connect received: ${packet}`);
       if (!packet.clientId.startsWith('mqttjs_')) return;
-      t.context.broker.removeListener(
-        'connectReceived',
-        connectReceivedListener
-      );
+      t.context.broker.removeListener('connectReceived', connectReceivedListener);
       resolve(packet);
     };
     t.context.broker.on('connectReceived', connectReceivedListener);
