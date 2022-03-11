@@ -63,11 +63,8 @@ export function connectionFactory(options: ConnectOptions): Duplex {
       return connection;
     }
     case 'ws:': {
-      const url = options.transformWsUrl
-        ? options.transformWsUrl(options.brokerUrl)
-        : (options.brokerUrl as URL);
-      const websocketSubProtocol =
-        options.protocolId === 'MQIsdp' && options.protocolVersion === 3 ? 'mqttv3.1' : 'mqtt';
+      const url = options.transformWsUrl ? options.transformWsUrl(options.brokerUrl) : (options.brokerUrl as URL);
+      const websocketSubProtocol = options.protocolId === 'MQIsdp' && options.protocolVersion === 3 ? 'mqttv3.1' : 'mqtt';
       const webSocketOptions: WebSocketOptions = {
         url: url,
         hostname: url.hostname || 'localhost',

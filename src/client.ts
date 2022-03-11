@@ -233,10 +233,7 @@ export class MqttClient extends EventEmitter {
     return this;
   }
 
-  public async disconnect({
-    force,
-    options = {},
-  }: { force?: boolean; options?: any } = {}): Promise<MqttClient> {
+  public async disconnect({ force, options = {} }: { force?: boolean; options?: any } = {}): Promise<MqttClient> {
     // if client is already disconnecting, do nothing.
     if (this.disconnecting) {
       this._clientLogger.trace(`client already disconnecting.`);
@@ -293,9 +290,7 @@ export class MqttClient extends EventEmitter {
       this.connected = true;
       return;
     } else if (rc > 0) {
-      const err: any = new Error(
-        'Connection refused: ' + ReasonCodeErrors[rc as keyof typeof ReasonCodeErrors]
-      );
+      const err: any = new Error('Connection refused: ' + ReasonCodeErrors[rc as keyof typeof ReasonCodeErrors]);
       err.code = rc;
       this.emit('clientError', err);
       throw err;

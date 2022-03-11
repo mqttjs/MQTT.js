@@ -1,11 +1,7 @@
 import test from 'ava';
 import { connect } from '../dist/index.js';
 import { logger } from '../dist/utils/logger.js';
-import {
-  cleanupAfterAllTestsMacro,
-  cleanupBetweenTestsMacro,
-  serverFactoryMacro,
-} from './util/testing_server_factory.js';
+import { cleanupAfterAllTestsMacro, cleanupBetweenTestsMacro, serverFactoryMacro } from './util/testing_server_factory.js';
 
 const port = 1883;
 /* ===================== BEGIN before/beforeEach HOOKS ===================== */
