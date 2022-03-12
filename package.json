@@ -17,17 +17,17 @@
   "bugs": "https://github.com/mqttjs/MQTT.js/issues",
   "license": "MIT",
   "type": "module",
-  "exports": "./dist/index.js",
   "engines": {
     "node": ">=14.13.1"
   },
   "files": [
     "dist"
   ],
-  "types": "dist",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "test": "npm run build && nyc ava -r pino-debug | pino-pretty",
+    "test": "npm run build && c8 ava -r pino-debug | pino-pretty",
     "lint": "eslint .",
     "prettier": "prettier 'src/**/*.ts' 'test/**/*.js' --write"
   },
@@ -40,7 +40,6 @@
     "ws": "^8.4.2"
   },
   "devDependencies": {
-    "pino-debug": "^2.0.0",
     "@types/duplexify": "^3.6.1",
     "@types/end-of-stream": "^1.4.1",
     "@types/node": "^14.18.10",
@@ -49,10 +48,11 @@
     "@typescript-eslint/parser": "^5.12.1",
     "aedes": "^0.46.2",
     "ava": "^4.0.1",
+    "c8": "^7.11.0",
     "eslint": "^7.21.0",
     "eslint-config-prettier": "^8.4.0",
     "eslint-plugin-prettier": "^4.0.0",
-    "nyc": "^15.1.0",
+    "pino-debug": "^2.0.0",
     "pino-pretty": "^7.5.0",
     "prettier": "^2.5.1",
     "typescript": "^4.7.0-dev.20220223"
@@ -92,5 +92,29 @@
       "@typescript-eslint/no-explicit-any": 0,
       "@typescript-eslint/no-unused-vars": 0
     }
+  },
+  "c8": {
+    "reporter": [
+      "html",
+      "text",
+      "lcov"
+    ],
+    "extensions": [
+      ".ts"
+    ],
+    "include": [
+      "**/src/**/*.ts",
+      "**/dist/**/*.js"
+    ],
+    "exclude": [
+      "**/interfaces/",
+      "**/interface/"
+    ],
+    "all": true,
+    "check-coverage": true,
+    "lines": 56,
+    "functions": 58,
+    "branches": 45,
+    "statements": 56
   }
 }

@@ -3,6 +3,7 @@
   "include": ["src"],
   "compilerOptions": {
     "outDir": "dist",
+    "sourceMap": true,
     "exactOptionalPropertyTypes": false,
     "strict": true,
     "noFallthroughCasesInSwitch": true,

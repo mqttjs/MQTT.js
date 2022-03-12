@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node-version: [^12.22, ^14.17, ^16.4, ^17]
+        node-version: [^14.17, ^16.4, ^17]
         os: [ubuntu-latest, windows-latest]
     steps:
       - uses: actions/checkout@v2
@@ -24,49 +24,24 @@ jobs:
         run: |
           git config core.symlinks true
           git reset --hard
-      - run: rm .npmrc
       - uses: actions/setup-node@v2
         with:
           node-version: ${{ matrix.node-version }}
           cache: npm
       - name: Upgrade npm
         run: npm install --global npm@^8.1.2
-      - run: npm install --no-audit
+      - run: npm ci --no-audit
       - run: npm run test
         name: ${{ matrix.os }}/${{ matrix.node-version }}
-
-  typescript:
-    name: TypeScript compatibility
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        ts-version: [~4.4, ~4.5]
-    steps:
-      - uses: actions/checkout@v2
-      - run: rm .npmrc
-      - uses: actions/setup-node@v2
-        with:
-          node-version: ^12.22
-          cache: npm
-      - name: Upgrade npm
-        run: npm install --global npm@^8.1.2
-      - run: npm install --no-audit
-      - run: npm i typescript@${TS_VERSION}
-        env:
-          TS_VERSION: ${{ matrix.ts-version }}
-      - run: npm ls typescript
-        continue-on-error: true
-      - run: npx tsd
 
   lockfile_churn:
     name: Test package-lock for unexpected modifications
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - run: rm .npmrc
       - uses: actions/setup-node@v2
         with:
-          node-version: ^12.22
+          node-version: ^16.4
           cache: npm
       - name: Upgrade npm
         run: if [[ "$(npm -v)" != "8.1.2" ]]; then npm install --global npm@8.1.2; fi
@@ -86,26 +61,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - run: rm .npmrc
       - uses: actions/setup-node@v2
         with:
-          node-version: ^12.22
+          node-version: ^16.4
       - name: Upgrade npm
         run: npm install --global npm@^8.1.2
       - run: npm install --no-shrinkwrap --no-audit
-      - run: npm run cover
 
   linting:
     name: Lint source files
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - run: rm .npmrc
       - uses: actions/setup-node@v2
         with:
           node-version: ^16.4
           cache: npm
       - name: Upgrade npm
         run: npm install --global npm@^8.1.2
-      - run: npm install --no-audit
+      - run: npm ci --no-audit
       - run: npm run lint
