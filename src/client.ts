@@ -21,6 +21,7 @@ import { defaultClientId } from './util/defaultClientId.js';
 import { PublishPacket } from './interface/packets.js';
 import { NumberAllocator } from 'number-allocator';
 import { Logger } from 'pino';
+import * as sequencer from './sequencer.js';
 
 function eosPromisified(stream: NodeJS.ReadableStream | NodeJS.WritableStream): Promise<void> {
   return new Promise<void>((resolve, reject) => {
@@ -42,8 +43,10 @@ export class MqttClient extends EventEmitter {
    * Use packet ID as key if there is one (e.g., SUBACK)
    * Use packet type as key if there is no packet ID (e.g., CONNACK)
    */
+  // TODO: This should be removed after we remove CONNECT into the sequencer
   _inflightPackets: Map<string | number, (err: Error | null, packet: IPacket) => void>;
   private _numberAllocator: NumberAllocator;
+  private _packetSequencer = new sequencer.MqttPacketSequencer(this._sendPacketCallback.bind(this));
 
   constructor(options: ConnectOptions) {
     super();
@@ -121,6 +124,15 @@ export class MqttClient extends EventEmitter {
     });
   }
 
+  private _sendPacketCallback(packetType: sequencer.PacketType, message: sequencer.Message): void {
+    if (packetType == 'publish') {
+      write(this, message as IPublishPacket);
+    } else {
+      logger.error(`Unexpected packet type: ${packetType}`);
+      throw new Error(`Unexpected packet type: ${packetType}`);
+    }
+  }
+
   async handleIncomingPacket(packet: Packet): Promise<void> {
     this._clientLogger.trace(`handleIncomingPacket packet.cmd=${packet.cmd}`);
     switch (packet.cmd) {
@@ -130,6 +142,15 @@ export class MqttClient extends EventEmitter {
           this._inflightPackets.delete('connack');
           connackCallback(null, packet as IConnackPacket);
         }
+        break;
+      }
+      case 'puback': {
+        // We should be sending almost every packet into the incoming packet sequencer including publish
+        // When we add publish, we may need another callback function so the seqencer can tell us when a new publish packet comes in.
+        // (We need the sequencer to do this because it has to send puback messages and it needs to do the whole QOS-2 thing when packets come in.)
+        //
+        // Also, another random thought, when we get suback back from the broker, it will include granted QOS values and we'll need to return those.
+        this._packetSequencer.handleIncomingPacket('puback', (packet as unknown) as sequencer.Packet);
         break;
       }
     }
@@ -202,10 +223,11 @@ export class MqttClient extends EventEmitter {
       ...defaultPublishPacket,
       ...packet,
     };
-    this._clientLogger.trace(`publishing packet ${JSON.stringify(publishPacket)}`);
-    write(this, publishPacket);
+    // TODO: remove this ugly cast
+    await this._packetSequencer.runSequence('publish', (publishPacket as unknown) as sequencer.Message);
 
     // deallocate the messageId used.
+    // TODO: this should be in a finally block
     this._numberAllocator.free(messageId);
     return;
   }
