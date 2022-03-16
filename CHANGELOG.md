@@ -1,20 +1,36 @@
 # Release History
 
+## 4.3.7
+
+### PR
+
+fix: regression from #1401 and allow CI test failures to break gitthub workflow (#1443)
+
 ## 4.3.6
 
+### PR
+
 chore: update CI
+
 fix(browser): require buffer (#1420)
+
 fix(types): connect function proper overloads (#1416)
 
 ## 4.3.5
+
+### PR
 
 fix(drain-leak): fix regression introduced in #1301 (#1401)
 
 ## 4.3.4
 
+### PR
+
 fix(dependency): migrate LruMap from collections to lru-cache (#1396)
 
 ## 4.3.3
+
+### PR
 
 fix(publish): call callback when messageId available (#1393)
 
