@@ -79,7 +79,7 @@ export class MqttClient extends EventEmitter {
     this._incomingPacketParser = mqttParser(this._options);
 
     // Handle incoming packets this are parsed
-    // NOTE: THis is only handling incoming packets from the
+    // NOTE: This is only handling incoming packets from the
     // readable stream of the conn stream.
     // we need to make sure that the function called on 'packet' is bound to the context of 'MQTTClient'
     this._incomingPacketParser.on('packet', this.handleIncomingPacket.bind(this));
@@ -146,7 +146,7 @@ export class MqttClient extends EventEmitter {
       }
       case 'puback': {
         // We should be sending almost every packet into the incoming packet sequencer including publish
-        // When we add publish, we may need another callback function so the seqencer can tell us when a new publish packet comes in.
+        // When we add publish, we may need another callback function so the sequencer can tell us when a new publish packet comes in.
         // (We need the sequencer to do this because it has to send puback messages and it needs to do the whole QOS-2 thing when packets come in.)
         //
         // Also, another random thought, when we get suback back from the broker, it will include granted QOS values and we'll need to return those.
@@ -204,17 +204,17 @@ export class MqttClient extends EventEmitter {
     // NumberAllocator's firstVacant method has a Time Complexity of O(1).
     // Will return the first vacant number, or null if all numbers are occupied.
     // eslint-disable-next-line @typescript-eslint/ban-types
-    const messageId: Number | null = this._numberAllocator.alloc();
+    const messageId = this._numberAllocator.alloc();
     if (messageId === null) {
       logger.error("All messageId's are allocated.");
-      this.emit(`error in numberAllocator during publish`);
+      this.emit(`error in numberAllocator during publish`); // TODO: this is probably not the event name we want to emit
       return;
     }
     const defaultPublishPacket: IPublishPacket = {
       cmd: 'publish',
       retain: false,
       dup: false,
-      messageId: messageId as number,
+      messageId,
       qos: 0,
       topic: 'default',
       payload: '',
@@ -223,13 +223,13 @@ export class MqttClient extends EventEmitter {
       ...defaultPublishPacket,
       ...packet,
     };
-    // TODO: remove this ugly cast
-    await this._packetSequencer.runSequence('publish', (publishPacket as unknown) as sequencer.Message);
 
-    // deallocate the messageId used.
-    // TODO: this should be in a finally block
-    this._numberAllocator.free(messageId);
-    return;
+    try {
+      // TODO: remove this ugly cast
+      await this._packetSequencer.runSequence('publish', (publishPacket as unknown) as sequencer.Message);
+    } finally {
+      this._numberAllocator.free(messageId);
+    }
   }
 
   private async _destroyClient(force?: boolean) {

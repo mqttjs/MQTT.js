@@ -14,12 +14,12 @@ export interface Packet {
   messageId: number | undefined;
 }
 
-// It's called SendPacketFuncton, but it accepts a Message. Maybe we need to rethink this.
+// It's called SendPacketFunction, but it accepts a Message. Maybe we need to rethink this.
 // The more I think about this, the more I think it should accept a `Packet` object, and it
 // should use `Packet.cmd` instead of accepting a separate `PacketType` parameter.
 export type SendPacketFunction = (packetType: PacketType, message: Message) => void;
 
-type InFlightMessageMap = { [key: number]: SequenceMachine };
+type InFlightMessageMap = Map<number, SequenceMachine>
 
 // These should be documented so callers can change them. Do we want these to be specific for each packet type (pubRelInterval, maxPubRe, etc)?
 /* eslint prefer-const: 0 */
@@ -30,7 +30,7 @@ type DoneFunction = (err?: Error) => void;
 
 export class MqttPacketSequencer {
   sendPacketFunction: SendPacketFunction;
-  inFlightMessages: InFlightMessageMap = {};
+  inFlightMessages: InFlightMessageMap = new Map();
 
   constructor(sendPacketFunction: SendPacketFunction) {
     this.sendPacketFunction = sendPacketFunction;
@@ -52,7 +52,7 @@ export class MqttPacketSequencer {
             sequenceMachine = new PublishQos2(message, this.sendPacketFunction, done);
             break;
         }
-        this.inFlightMessages[message.messageId as number] = sequenceMachine;
+        this.inFlightMessages.set(message.messageId as number, sequenceMachine);
       // SUBSCRIBE also goes into the inFlightMesages map. CONNECT maybe goes somewhere else?
     }
 
@@ -78,7 +78,7 @@ export class MqttPacketSequencer {
 
   // `Packet` has an `cmd` value. Should we use this?  Probably?
   handleIncomingPacket(packetType: PacketType, packet: Packet) {
-    const sequenceMachine = this.inFlightMessages[packet.messageId as number];
+    const sequenceMachine = this.inFlightMessages.get(packet.messageId as number);
 
     if (sequenceMachine) {
       sequenceMachine.handleIncomingPacket(packetType, packet);
@@ -92,6 +92,7 @@ abstract class SequenceMachine {
   message: Message;
   sendPacketFunction: SendPacketFunction;
   done: DoneFunction;
+  // TODO: investigate whether it's a problem that every sequence machine has a timer.
   timeout: NodeJS.Timeout | number = 0;
 
   constructor(message: Message, sendPacketFunction: SendPacketFunction, done: DoneFunction) {
