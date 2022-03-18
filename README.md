@@ -789,13 +789,16 @@ About data consumption, obviously, QoS 2 > QoS 1 > QoS 0, if that's a concern to
 This repo bundles TypeScript definition files for use in TypeScript projects and to support tools that can read `.d.ts` files.
 
 ### Pre-requisites
-Before you can begin using these TypeScript definitions with your project, you need to make sure your project meets a few of these requirements:
+Before you can begin using these TypeScript definitions with your project, you need to make sure your project meets these requirements:
  * TypeScript >= 2.1
  * Set tsconfig.json: `{"compilerOptions" : {"moduleResolution" : "node"}, ...}`
- * Includes the TypeScript definitions for node. You can use npm to install this by typing the following into a terminal window:
-   `npm install --save-dev @types/node`
-   
-### Typescript example
+ * Includes the TypeScript definitions for Node and [ws](https://www.npmjs.com/package/ws). These types are used as
+   parameters to some of the MQTT client's APIs and if you don't install them they get treated as `any`, which means you lose type
+   safety.
+   Use npm to install them by typing the following into a terminal window:
+   `npm install --save-dev @types/node @types/ws`
+
+### TypeScript example
 ```
 import * as mqtt from "mqtt"
 let client : mqtt.MqttClient = mqtt.connect('mqtt://test.mosquitto.org')
