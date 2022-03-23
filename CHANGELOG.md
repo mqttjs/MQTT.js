@@ -1,5 +1,11 @@
 # Release History
 
+## 4.3.8
+
+### PR
+
+fix(dependency): update minimist to fix security issue with previous version
+
 ## 4.3.7
 
 ### PR
