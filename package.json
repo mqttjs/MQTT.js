@@ -68,7 +68,7 @@
     "help-me": "^3.0.0",
     "inherits": "^2.0.3",
     "lru-cache": "^6.0.0",
-    "minimist": "^1.2.5",
+    "minimist": "^1.2.6",
     "mqtt-packet": "^6.8.0",
     "number-allocator": "^1.0.9",
     "pump": "^3.0.0",
