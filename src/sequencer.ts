@@ -1,155 +1,195 @@
 import { logger } from './util/logger.js';
+import { Packet } from 'mqtt-packet';
+import { NumberAllocator } from 'number-allocator'
 
-export declare type PacketType = 'publish' | 'puback' | 'pubrec' | 'pubrel' | 'pubcomp';
+type SequenceId = number | 'connect' | 'pingreq';
+type InFlightSequenceMap = Map<SequenceId, SequenceMachine>
+type SendPacketFunction = (packet: Packet) => Promise<void>
+type DoneFunction = (err?: Error) => void
+type SequenceMachineConstructor = new (
+  initialPacket: Packet,
+  sendPacketFunction: SendPacketFunction,
+  doneFunction: DoneFunction
+) => SequenceMachine
 
-export declare type SequenceType = 'publish';
+const notImplementedError = new Error('Not implemented');
 
-export interface Message {
-  qos: 0 | 1 | 2;
-  cmd: PacketType;
-  messageId: number | undefined;
-}
-
-export interface Packet {
-  messageId: number | undefined;
-}
-
-// It's called SendPacketFunction, but it accepts a Message. Maybe we need to rethink this.
-// The more I think about this, the more I think it should accept a `Packet` object, and it
-// should use `Packet.cmd` instead of accepting a separate `PacketType` parameter.
-export type SendPacketFunction = (packetType: PacketType, message: Message) => void;
-
-type InFlightMessageMap = Map<number, SequenceMachine>
-
-// These should be documented so callers can change them. Do we want these to be specific for each packet type (pubRelInterval, maxPubRe, etc)?
-/* eslint prefer-const: 0 */
-let pubAckInterval = 2000;
-let maxPublishCount = 5;
-
-type DoneFunction = (err?: Error) => void;
+// TODO: Change these value to be user-configurable.
+const retryIntervalInMs = 30 * 1000;
+const maxRetryCount = 5;
 
 export class MqttPacketSequencer {
-  sendPacketFunction: SendPacketFunction;
-  inFlightMessages: InFlightMessageMap = new Map();
+  _sendPacketFunction: (packet: Packet) => Promise<void>;
+  _inFlightSequences: InFlightSequenceMap = new Map();
+  _numberAllocator: NumberAllocator = new NumberAllocator(1, 65535);
 
-  constructor(sendPacketFunction: SendPacketFunction) {
-    this.sendPacketFunction = sendPacketFunction;
+  constructor(sendPacketFunction: (packet: Packet) => Promise<void>) {
+    this._sendPacketFunction = sendPacketFunction;
   }
 
-  _runSequence(sequenceType: SequenceType, message: Message, done: DoneFunction) {
-    let sequenceMachine: SequenceMachine;
+  async runSequence(initialPacket: Packet) {
+    let sequenceMachineConstructor: SequenceMachineConstructor;
+    let sequenceId: SequenceId;
+    const invalidMessageIdError = new Error('Message ID must be assigned by the sequencer');
+    const noMoreMessageIdsError = new Error('No more message IDs available');
 
-    switch (sequenceType) {
+    switch (initialPacket.cmd) {      
+      /* FALLTHROUGH */
+      case 'pingreq':
+      case 'subscribe':
+      case 'unsubscribe':
+        throw notImplementedError;
+
+      case 'connect':
+        // TODO: enhanced authentication
+        sequenceId = 'connect';
+        sequenceMachineConstructor = ConnectSequenceMachine;
+        break;
+      case 'disconnect':
+        // fire-and-forget
+        await this._sendPacketFunction(initialPacket);
+        return;
       case 'publish':
-        switch (message.qos) {
-          case 0:
-            sequenceMachine = new PublishQos0(message, this.sendPacketFunction, done);
-            break;
+        if (initialPacket.qos === 0) {
+          // fire-and-forget
+          await this._sendPacketFunction(initialPacket);
+          return;
+        }
+        // TODO: non-zero QoS
+        if (initialPacket.messageId) {
+          throw invalidMessageIdError;
+        }
+        if (this._numberAllocator.firstVacant() === null) {
+          throw noMoreMessageIdsError;
+        }
+        // Cast is safe because we checked firstVacant() above.
+        sequenceId = this._numberAllocator.alloc() as number;
+        initialPacket.messageId = sequenceId;
+        switch (initialPacket.qos) {
           case 1:
-            sequenceMachine = new PublishQos1(message, this.sendPacketFunction, done);
+            sequenceMachineConstructor = PublishQos1;
             break;
           case 2:
-            sequenceMachine = new PublishQos2(message, this.sendPacketFunction, done);
+            sequenceMachineConstructor = PublishQos2;
             break;
+          default:
+            throw new Error('Invalid QoS');
         }
-        this.inFlightMessages.set(message.messageId as number, sequenceMachine);
-      // SUBSCRIBE also goes into the inFlightMesages map. CONNECT maybe goes somewhere else?
+        break;
+      
+      default:
+        throw new Error('Invalid initial control packet type');
+    }
+    if (this._inFlightSequences.has(sequenceId)) {
+      throw new Error('Sequence with matching ID already in flight');
     }
 
-    sequenceMachine.start();
-  }
-
-  // TODO: Is there an easier way to Promisify this?
-  runSequence(sequenceType: SequenceType, message: Message, done?: DoneFunction) {
-    if (done) {
-      return this._runSequence(sequenceType, message, done);
-    } else {
-      return new Promise<void>((resolve, reject) => {
-        this._runSequence(sequenceType, message, (err: Error | void) => {
-          if (err) {
-            reject(err);
-          } else {
-            resolve();
-          }
-        });
+    try {
+      await new Promise<void>((resolve, reject) => {
+        // You're only going to have an inflight sequence if you are waiting for a response from the server. So every case except QoS 0 Publish, and Disconnect.
+        this._inFlightSequences.set(sequenceId, new sequenceMachineConstructor(
+          initialPacket,
+          this._sendPacketFunction,
+          (err?: Error) => { err ? reject(err) : resolve() }
+        ));
       });
+    } finally {
+      this._inFlightSequences.delete(sequenceId);
     }
   }
 
-  // `Packet` has an `cmd` value. Should we use this?  Probably?
-  handleIncomingPacket(packetType: PacketType, packet: Packet) {
-    const sequenceMachine = this.inFlightMessages.get(packet.messageId as number);
+  handleIncomingPacket(packet: Packet) {
+    let sequenceMachine: SequenceMachine | undefined;
+    switch (packet.cmd) {
+      /* FALLTHROUGH */
+      case 'auth':
+      case 'disconnect':
+      case 'pingresp':
+      case 'puback':
+      case 'pubcomp':
+      case 'publish':
+      case 'pubrel':
+      case 'pubrec':
+      case 'suback':
+      case 'unsuback':
+        throw notImplementedError;
 
-    if (sequenceMachine) {
-      sequenceMachine.handleIncomingPacket(packetType, packet);
-    } else {
-      logger.info('blah');
+      case 'connack':
+        sequenceMachine = this._inFlightSequences.get('connect');
+        break;
+
+      default:
+        throw new Error('Invalid incoming control packet type');
     }
+    if (!sequenceMachine) {
+      throw new Error('No matching sequence machine for incoming packet');
+    }
+    sequenceMachine.handleIncomingPacket(packet);
   }
 }
 
+// TODO: have better error messages on all SequenceMachine implementations.
 abstract class SequenceMachine {
-  message: Message;
   sendPacketFunction: SendPacketFunction;
   done: DoneFunction;
+  initialPacket: Packet;
   // TODO: investigate whether it's a problem that every sequence machine has a timer.
-  timeout: NodeJS.Timeout | number = 0;
+  timeout: NodeJS.Timeout | null = null;
 
-  constructor(message: Message, sendPacketFunction: SendPacketFunction, done: DoneFunction) {
-    this.message = message;
+  constructor(initialPacket: Packet, sendPacketFunction: SendPacketFunction, done: DoneFunction) {
+    this.initialPacket = initialPacket;
     this.sendPacketFunction = sendPacketFunction;
     this.done = done;
   }
 
   abstract start(): void;
-  abstract handleIncomingPacket(packetType: PacketType, packet: Packet): void;
+  abstract handleIncomingPacket(packet: Packet): void;
   abstract cancel(): void;
 
-  _setTimer(callback: () => void, interval: number): void {
+  _setTimer(callback: () => void, timeInMs: number): void {
     this._clearTimer();
-    this.timeout = setTimeout(callback, interval);
+    this.timeout = setTimeout(callback, timeInMs);
   }
 
   _clearTimer(): void {
     if (this.timeout) {
-      clearTimeout(this.timeout as NodeJS.Timeout);
-      this.timeout = 0;
+      clearTimeout(this.timeout);
+      this.timeout = null;
     }
   }
 }
 
-enum Qos0State {
+enum ConnectState {
   New,
+  AwaitingConnack,
   Done,
-  Failed,
+  Failed
 }
 
-class PublishQos0 extends SequenceMachine {
-  state = Qos0State.New;
+class Connect extends SequenceMachine {
+  state = ConnectState.New;
+  sendConnectCount = 0;
 
   start(): void {
-    this._sendPublish();
+    this._sendConnect();
   }
 
-  _sendPublish() {
-    try {
-      this.sendPacketFunction('publish', this.message);
-      this.state == Qos0State.Done;
-      this.done();
-    } catch (e: any) {
-      this.state = Qos0State.Failed;
-      this.done(e);
+  async _sendConnect() {
+    if (++this.sendConnectCount > maxRetryCount) {
+      this._clearTimer();
+      this.state = ConnectState.Failed;
+      this.done(new Error('Max retry count exceeded'));
+      return;      
     }
-  }
+    this.state = ConnectState.AwaitingConnack;
+    try {
+      await this.sendPacketFunction(this.initialPacket);
 
-  handleIncomingPacket(packetType: PacketType, packet: Packet): void {
-    packetType;
-    packet;
-    logger.info('blah');
-  }
-
-  cancel() {
-    logger.info('blah');
+    } catch (err) {
+      this._clearTimer();
+      this.state = ConnectState.Failed;
+      this.done(err as Error);
+    }
   }
 }
 
@@ -178,7 +218,7 @@ class PublishQos1 extends SequenceMachine {
     } else {
       // Set the state and start the timer before you send anything, just
       // in case the ack comes back before sendPacketFunction returns.
-      this.state == Qos1State.WaitingForPubAck;
+      this.state = Qos1State.WaitingForPubAck;
       try {
         this.sendPacketFunction('publish', this.message);
         this._setTimer(this._sendPublish.bind(this), pubAckInterval);
@@ -231,7 +271,7 @@ class PublishQos2 extends SequenceMachine {
     this.sendPublishCount++;
     if (this.sendPublishCount > maxPublishCount) {
       this.state = Qos2State.Failed;
-      this.done(new Error());
+      this.done(new Error(''));
     } else {
       // Set the state before you send anything, just
       // in case the ack comes back before sendPacketFunction returns.

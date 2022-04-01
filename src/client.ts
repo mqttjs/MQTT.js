@@ -11,6 +11,7 @@ import {
 import { write } from './write.js';
 import { ConnectOptions } from './interface/connectOptions.js';
 import { Duplex } from 'stream';
+import { Socket } from 'net';
 import { EventEmitter } from 'node:events';
 import { connectionFactory } from './connectionFactory/index.js';
 import eos from 'end-of-stream';
@@ -19,7 +20,6 @@ import { ReasonCodeErrors } from './util/errors.js';
 import { logger } from './util/logger.js';
 import { defaultClientId } from './util/defaultClientId.js';
 import { PublishPacket } from './interface/packets.js';
-import { NumberAllocator } from 'number-allocator';
 import { Logger } from 'pino';
 import * as sequencer from './sequencer.js';
 
@@ -37,7 +37,7 @@ export class MqttClient extends EventEmitter {
   connected: boolean;
   errored: boolean;
   _eos: Promise<void> | undefined;
-  conn: Duplex;
+  conn: Duplex | Socket;
   _clientLogger: Logger;
   /**
    * Use packet ID as key if there is one (e.g., SUBACK)
@@ -45,8 +45,7 @@ export class MqttClient extends EventEmitter {
    */
   // TODO: This should be removed after we remove CONNECT into the sequencer
   _inflightPackets: Map<string | number, (err: Error | null, packet: IPacket) => void>;
-  private _numberAllocator: NumberAllocator;
-  private _packetSequencer = new sequencer.MqttPacketSequencer(this._sendPacketCallback.bind(this));
+  private _packetSequencer = new sequencer.MqttPacketSequencer(write.bind(null, this));
 
   constructor(options: ConnectOptions) {
     super();
@@ -66,8 +65,6 @@ export class MqttClient extends EventEmitter {
     };
 
     this._clientLogger = logger.child({ id: this._options.clientId });
-
-    this._numberAllocator = new NumberAllocator(1, 65535);
 
     this.conn = this._options.customStreamFactory
       ? this._options.customStreamFactory(this._options)
@@ -122,15 +119,6 @@ export class MqttClient extends EventEmitter {
     this._eos.catch((err: any) => {
       this.emit('error', err);
     });
-  }
-
-  private _sendPacketCallback(packetType: sequencer.PacketType, message: sequencer.Message): void {
-    if (packetType == 'publish') {
-      write(this, message as IPublishPacket);
-    } else {
-      logger.error(`Unexpected packet type: ${packetType}`);
-      throw new Error(`Unexpected packet type: ${packetType}`);
-    }
   }
 
   async handleIncomingPacket(packet: Packet): Promise<void> {
@@ -319,11 +307,27 @@ export class MqttClient extends EventEmitter {
     }
   }
 
+  // TODO: follow up on Aedes to see if there is a better way than breaking the Node Streams contract and accessing _writableState
+  // to make sure that the write callback is cleaned up in case of error.
   onError(err?: Error | null | undefined) {
     this.emit('error', err);
     this.errored = true;
     this.conn.removeAllListeners('error');
     this.conn.on('error', () => {});
+    // hack to clean up the write callbacks in case of error
+    this.hackyCleanupWriteCallback();
     this._destroyClient(true);
+  }
+
+  hackyCleanupWriteCallback() {
+    // _writableState is not part of the public API for Duplex or Socket, so we have to do some typecasting here to work with it as the stream state.
+    // See https://github.com/nodejs/node/issues/445 for information on this.
+    const state = (this.conn as any)._writableState;
+    if (typeof state.getBuffer !== 'function') {
+      // See https://github.com/nodejs/node/pull/31165
+      throw new Error('_writableState.buffer is EOL. _writableState should have getBuffer() as a function.');
+    }
+    const list: any[] = state.getBuffer();
+    list.forEach((req) => {req.callback()});
   }
 }
