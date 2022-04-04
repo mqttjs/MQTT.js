@@ -1,5 +1,5 @@
 import { logger } from './util/logger.js';
-import { Packet } from 'mqtt-packet';
+import { IConnectPacket, IConnackPacket, Packet } from 'mqtt-packet';
 import { NumberAllocator } from 'number-allocator'
 
 type SequenceId = number | 'connect' | 'pingreq';
@@ -183,12 +183,41 @@ class Connect extends SequenceMachine {
     }
     this.state = ConnectState.AwaitingConnack;
     try {
+      /** 
+       * TODO: Do we want to set the timer before or after sendPacketFunction
+       * resolves? If we set it before, we need to figure out a way to bail
+       * out of awaiting sendPacketFunction when the timer fires.
+       */
       await this.sendPacketFunction(this.initialPacket);
-
+      this._setTimer(this._sendConnect.bind(this), retryIntervalInMs);
     } catch (err) {
       this._clearTimer();
       this.state = ConnectState.Failed;
       this.done(err as Error);
+    }
+  }
+
+  handleIncomingPacket(packet: IConnackPacket): void {
+    switch ((this.initialPacket as IConnectPacket).protocolVersion) {
+      case 4:
+        if (typeof packet.returnCode !== 'number') {
+          // TODO: fail because packet is malformed
+        }
+        if (packet.returnCode !== 0) {
+          // TODO: fail because Server rejected
+        }
+        break;
+      case 5:
+        if (typeof packet.reasonCode !== 'number') {
+          // TODO: fail because packet is malformed
+        }
+        if (packet.reasonCode >= 0) {
+          // TODO: fail because Server rejected
+        }
+        break;
+      default:
+        // TODO: fail because protocol version is unsupported
+        break;
     }
   }
 }
