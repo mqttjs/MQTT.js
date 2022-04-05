@@ -159,29 +159,40 @@ abstract class SequenceMachine {
   }
 }
 
-enum ConnectState {
+enum BasicConnectState {
   New,
   AwaitingConnack,
   Done,
-  Failed
+  Failed,
+  Cancelled
 }
 
-class Connect extends SequenceMachine {
-  state = ConnectState.New;
+class BasicConnect extends SequenceMachine {
+  override initialPacket: IConnectPacket;
+  state = BasicConnectState.New;
   sendConnectCount = 0;
+
+  constructor(initialPacket: IConnectPacket, sendPacketFunction: SendPacketFunction, done: DoneFunction) {
+    super(initialPacket, sendPacketFunction, done);
+    this.initialPacket = initialPacket;
+  }
 
   start(): void {
     this._sendConnect();
   }
 
+  cancel(err?: Error) {
+    this._clearTimer();
+    this.state = err ? BasicConnectState.Failed : BasicConnectState.Cancelled;
+    this.done(err);
+  }
+
   async _sendConnect() {
     if (++this.sendConnectCount > maxRetryCount) {
-      this._clearTimer();
-      this.state = ConnectState.Failed;
-      this.done(new Error('Max retry count exceeded'));
+      this.cancel(new Error('Max retry count exceeded'));
       return;      
     }
-    this.state = ConnectState.AwaitingConnack;
+    this.state = BasicConnectState.AwaitingConnack;
     try {
       /** 
        * TODO: Do we want to set the timer before or after sendPacketFunction
@@ -192,27 +203,34 @@ class Connect extends SequenceMachine {
       this._setTimer(this._sendConnect.bind(this), retryIntervalInMs);
     } catch (err) {
       this._clearTimer();
-      this.state = ConnectState.Failed;
+      this.state = BasicConnectState.Failed;
       this.done(err as Error);
     }
   }
 
   handleIncomingPacket(packet: IConnackPacket): void {
-    switch ((this.initialPacket as IConnectPacket).protocolVersion) {
+    if (packet.cmd !== 'connack') {
+      logger.warn('Unexpected packet type: ', packet.cmd);
+      return;
+    }
+    const invalidConnackError = new Error('Invalid CONNACK packet');
+    switch (this.initialPacket.protocolVersion) {
       case 4:
         if (typeof packet.returnCode !== 'number') {
-          // TODO: fail because packet is malformed
+          this.cancel(invalidConnackError);
+          return;
         }
         if (packet.returnCode !== 0) {
-          // TODO: fail because Server rejected
+          this.cancel(/* TODO: ERROR */);
+          return;
         }
         break;
       case 5:
         if (typeof packet.reasonCode !== 'number') {
-          // TODO: fail because packet is malformed
+          this.cancel(invalidConnackError);
         }
-        if (packet.reasonCode >= 0) {
-          // TODO: fail because Server rejected
+        if (packet.reasonCode >= 128) {
+          this.cancel(/* TODO: ERROR */);
         }
         break;
       default:
