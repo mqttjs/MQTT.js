@@ -24,19 +24,19 @@ export function validateTopic(topic: string) {
   }
   const levels: string[] = topic.split('/');
 
-  for (let i = 0; i < levels.length; i++) {
+  for (const [i, level] of levels.entries()) {
     // If SLWC, MUST occupy entire level.
-    if (levels[i] === '+') {
+    if (level === '+') {
       continue;
     }
 
-    if (levels[i] === '#') {
+    if (level === '#') {
       // Validate MLWC at end of topic filter.
       return i === levels.length - 1;
     }
 
     // Level must not contain more than one MLWC or SLWC character.
-    if ((levels[i] as string).indexOf('+') !== -1 || (levels[i] as string).indexOf('#') !== -1) {
+    if (level.includes('+') || levels.includes('#')) {
       return false;
     }
   }
