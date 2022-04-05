@@ -36,7 +36,7 @@ export function validateTopic(topic: string) {
     }
 
     // Level must not contain more than one MLWC or SLWC character.
-    if (level.includes('+') || levels.includes('#')) {
+    if (level.includes('+') || level.includes('#')) {
       return false;
     }
   }
