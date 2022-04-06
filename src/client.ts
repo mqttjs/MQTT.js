@@ -16,7 +16,7 @@ import { EventEmitter } from 'node:events';
 import { connectionFactory } from './connectionFactory/index.js';
 import eos from 'end-of-stream';
 import { defaultConnectOptions } from './util/constants.js';
-import { ReasonCodeErrors } from './util/errors.js';
+import { ReasonCodeErrors } from './util/reason_codes.js';
 import { logger } from './util/logger.js';
 import { defaultClientId } from './util/defaultClientId.js';
 import { PublishPacket } from './interface/packets.js';
@@ -138,7 +138,7 @@ export class MqttClient extends EventEmitter {
         // (We need the sequencer to do this because it has to send puback messages and it needs to do the whole QOS-2 thing when packets come in.)
         //
         // Also, another random thought, when we get suback back from the broker, it will include granted QOS values and we'll need to return those.
-        this._packetSequencer.handleIncomingPacket('puback', (packet as unknown) as sequencer.Packet);
+        this._packetSequencer.handleIncomingPacket((packet as unknown) as sequencer.Packet);
         break;
       }
     }
