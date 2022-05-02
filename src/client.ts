@@ -10,13 +10,13 @@ import {
 } from 'mqtt-packet';
 import { write } from './write.js';
 import { ConnectOptions } from './interface/connectOptions.js';
-import { Duplex } from 'stream';
-import { Socket } from 'net';
+import { Duplex } from 'node:stream';
+import { Socket } from 'node:net';
 import { EventEmitter } from 'node:events';
 import { connectionFactory } from './connectionFactory/index.js';
 import eos from 'end-of-stream';
 import { defaultConnectOptions } from './util/constants.js';
-import { ReasonCodeErrors } from './util/reason_codes.js';
+import { ReasonCodeErrors } from './util/reasonCodes.js';
 import { logger } from './util/logger.js';
 import { defaultClientId } from './util/defaultClientId.js';
 import { PublishPacket } from './interface/packets.js';
@@ -153,7 +153,7 @@ export class MqttClient extends EventEmitter {
   public async connect(): Promise<IConnackPacket> {
     logger.trace('sending connect...');
     this.connecting = true;
-
+    
     const connackPromise = this._awaitConnack();
     const packet: IConnectPacket = {
       cmd: 'connect',
@@ -167,7 +167,8 @@ export class MqttClient extends EventEmitter {
       will: this._options.will,
       properties: this._options.properties,
     };
-    logger.trace(`writing connect...`);
+    this._packetSequencer.runSequence(packet)
+    logger.trace(`running connect sequence...`);
     await write(this, packet);
     logger.trace('waiting for connack...');
     const connack = await connackPromise;

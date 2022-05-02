@@ -3,6 +3,7 @@ import { MqttClient } from './client.js';
 import { logger } from './util/logger.js';
 
 export async function write(client: MqttClient, packet: mqtt.Packet): Promise<void> {
+  /* TODO: Enforce maximum packet size */
   logger.trace(`writing packet: ${JSON.stringify(packet)}`);
   if (!client.connected && !client.connecting) throw new Error('connection closed');
 
