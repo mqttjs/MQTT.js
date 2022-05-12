@@ -1,0 +1,118 @@
+// Reason Codes are part of the MQTT 5 specification
+export const ReasonCodes = {
+  'connack': {
+    0x00: 'Success',
+    0x80: 'Unspecified error',
+    0x81: 'Malformed Packet',
+    0x82: 'Protocol Error',
+    0x83: 'Implementation specific error',
+    0x84: 'Unsupported Protocol Version',
+    0x85: 'Client Identifier not valid',
+    0x86: 'Bad User Name or Password',
+    0x87: 'Not authorized',
+    0x88: 'Server unavailable',
+    0x89: 'Server busy',
+    0x8A: 'Banned',
+    0x8C: 'Bad authentication method',
+    0x90: 'Topic Name invalid',
+    0x95: 'Packet too large',
+    0x97: 'Quota exceeded',
+    0x99: 'Payload format invalid',
+    0x9A: 'Retain not supported',
+    0x9B: 'QoS not supported',
+    0x9C: 'Use another server',
+    0x9D: 'Server moved',
+    0x9F: 'Connection rate exceeded',
+  },
+  'puback': {
+    0x00: 'Success',
+    0x10: 'No matching subscribers',
+    0x80: 'Unspecified error',
+    0x83: 'Implementation specific error',
+    0x87: 'Not authorized',
+    0x90: 'Topic Name invalid',
+    0x91: 'Packet identifier in use',
+    0x97: 'Quota exceeded',
+    0x99: 'Payload format invalid',
+  },
+  'pubrec': {
+    0x00: 'Success',
+    0x10: 'No matching subscribers.',
+    0x80: 'Unspecified error',
+    0x83: 'Implementation specific error',
+    0x87: 'Not authorized',
+    0x90: 'Topic Name invalid',
+    0x91: 'Packet Identifier in use',
+    0x97: 'Quota exceeded',
+    0x99: 'Payload format invalid'
+  },
+  'pubrel': {
+    0x00: 'Success',
+    0x92: 'Packet Identifier not found'
+  },
+  'pubcomp': {
+    0x00: 'Success',
+    0x92: 'Packet Identifier not found'
+  },
+  'suback': {
+    0x00: 'Granted QoS 0',
+    0x01: 'Granted QoS 1',
+    0x02: 'Granted QoS 2',
+    0x80: 'Unspecified error',
+    0x83: 'Implementation specific error',
+    0x87: 'Not authorized',
+    0x8F: 'Topic Filter invalid',
+    0x91: 'Packet Identifier in use',
+    0x97: 'Quota exceeded',
+    0x9E: 'Shared Subscriptions not supported',
+    0xA1: 'Subscription Identifiers not supported',
+    0xA2: 'Wildcard Subscriptions not supported'
+  },
+  'unsuback': {
+    0x00: 'Success',
+    0x11: 'No subscription existed',
+    0x80: 'Unspecified error',
+    0x83: 'Implementation specific error',
+    0x87: 'Not authorized',
+    0x8F: 'Topic Filter invalid',
+    0x91: 'Packet Identifier in use'
+  },
+  'disconnect': {
+    0x00: 'Normal disconnection',
+    /* This reason code can only be received by a server */
+    // 0x04: 'Disconnect with Will Message',
+    0x80: 'Unspecified error',
+    0x81: 'Malformed Packet',
+    0x82: 'Protocol Error',
+    0x83: 'Implementation specific error',
+    0x87: 'Not authorized',
+    0x89: 'Server busy',
+    0x8B: 'Server shutting down',
+    0x8D: 'Keep Alive timeout',
+    0x8E: 'Session taken over',
+    0x8F: 'Topic Filter invalid',
+    0x90: 'Topic Name invalid',
+    0x93: 'Receive Maximum exceeded',
+    0x94: 'Topic Alias invalid',
+    0x95: 'Packet too large',
+    0x96: 'Message rate too high',
+    0x97: 'Quota exceeded',
+    0x98: 'Administrative action',
+    0x99: 'Payload format invalid',
+    0x9A: 'Retain not supported',
+    0x9B: 'QoS not supported',
+    0x9C: 'Use another server',
+    0x9D: 'Server moved',
+    0x9E: 'Shared Subscriptions not supported',
+    0x9F: 'Connection rate exceeded',
+    0xA0: 'Maximum connect time',
+    0xA1: 'Subscription Identifiers not supported',
+    0xA2: 'Wildcard Subscriptions not supported'
+  },
+  'auth': {
+    0x00: 'Success',
+    0x18: 'Continue authentication',
+    /* This reason code can only be received by a server */
+    // 0x19: 'Re-authenticate'
+  }
+}

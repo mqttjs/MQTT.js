@@ -1,306 +1,255 @@
 import { logger } from './util/logger.js';
+import { IConnectPacket, IConnackPacket, Packet, IDisconnectPacket } from 'mqtt-packet';
+import { NumberAllocator } from 'number-allocator'
+import { ReturnCodes } from './util/returnCodes.js';
+import { ReasonCodes } from './util/reasonCodes.js';
+import { ClientOptions } from './interface/clientOptions.js'
 
-export declare type PacketType = 'publish' | 'puback' | 'pubrec' | 'pubrel' | 'pubcomp';
+type SequenceId = number | 'connect' | 'pingreq' | 'disconnect';
+type InFlightSequenceMap = Map<SequenceId, SequenceMachine>
+type SendPacketFunction = (packet: Packet) => Promise<void>
+type DoneFunction = (finalPacket: Packet | null, err?: Error) => void
+type SequenceMachineConstructor = new (
+  initialPacket: Packet,
+  sendPacketFunction: SendPacketFunction,
+  doneFunction: DoneFunction
+) => SequenceMachine
 
-export declare type SequenceType = 'publish';
-
-export interface Message {
-  qos: 0 | 1 | 2;
-  cmd: PacketType;
-  messageId: number | undefined;
-}
-
-export interface Packet {
-  messageId: number | undefined;
-}
-
-// It's called SendPacketFunction, but it accepts a Message. Maybe we need to rethink this.
-// The more I think about this, the more I think it should accept a `Packet` object, and it
-// should use `Packet.cmd` instead of accepting a separate `PacketType` parameter.
-export type SendPacketFunction = (packetType: PacketType, message: Message) => void;
-
-type InFlightMessageMap = Map<number, SequenceMachine>
-
-// These should be documented so callers can change them. Do we want these to be specific for each packet type (pubRelInterval, maxPubRe, etc)?
-/* eslint prefer-const: 0 */
-let pubAckInterval = 2000;
-let maxPublishCount = 5;
-
-type DoneFunction = (err?: Error) => void;
+const notImplementedErrorMessage = 'Not implemented';
+const operationStartedErrorMessage = 'Operation can only be started once.';
 
 export class MqttPacketSequencer {
-  sendPacketFunction: SendPacketFunction;
-  inFlightMessages: InFlightMessageMap = new Map();
+  private _sendPacketFunction: (packet: Packet) => Promise<void>;
+  private _inFlightSequences: InFlightSequenceMap = new Map();
+  private _numberAllocator: NumberAllocator = new NumberAllocator(1, 65535);
+  private _clientOptions: ClientOptions;
 
-  constructor(sendPacketFunction: SendPacketFunction) {
-    this.sendPacketFunction = sendPacketFunction;
+  constructor(clientOptions: ClientOptions, sendPacketFunction: SendPacketFunction) {
+    this._clientOptions = clientOptions;
+    this._sendPacketFunction = sendPacketFunction;
   }
 
-  _runSequence(sequenceType: SequenceType, message: Message, done: DoneFunction) {
-    let sequenceMachine: SequenceMachine;
+  async runSequence(initialPacket: Packet) {
+    let sequenceMachineConstructor: SequenceMachineConstructor;
+    let sequenceId: SequenceId;
 
-    switch (sequenceType) {
+    switch (initialPacket.cmd) {      
+      /* FALLTHROUGH */
+      case 'pingreq':
+      case 'subscribe':
+      case 'unsubscribe':
       case 'publish':
-        switch (message.qos) {
-          case 0:
-            sequenceMachine = new PublishQos0(message, this.sendPacketFunction, done);
-            break;
-          case 1:
-            sequenceMachine = new PublishQos1(message, this.sendPacketFunction, done);
-            break;
-          case 2:
-            sequenceMachine = new PublishQos2(message, this.sendPacketFunction, done);
-            break;
-        }
-        this.inFlightMessages.set(message.messageId as number, sequenceMachine);
-      // SUBSCRIBE also goes into the inFlightMesages map. CONNECT maybe goes somewhere else?
+        throw new Error(notImplementedErrorMessage);
+
+      case 'connect':
+        // TODO: enhanced authentication
+        sequenceId = 'connect';
+        sequenceMachineConstructor = BasicConnect as SequenceMachineConstructor;
+        break;
+      case 'disconnect':
+        sequenceId = 'disconnect';
+        sequenceMachineConstructor = Disconnect as SequenceMachineConstructor;
+        break;
+      
+      default:
+        throw new Error('Invalid initial control packet type');
+    }
+    if (this._inFlightSequences.has(sequenceId)) {
+      throw new Error('Sequence with matching ID already in flight');
     }
 
-    sequenceMachine.start();
-  }
-
-  // TODO: Is there an easier way to Promisify this?
-  runSequence(sequenceType: SequenceType, message: Message, done?: DoneFunction) {
-    if (done) {
-      return this._runSequence(sequenceType, message, done);
-    } else {
-      return new Promise<void>((resolve, reject) => {
-        this._runSequence(sequenceType, message, (err: Error | void) => {
-          if (err) {
-            reject(err);
-          } else {
-            resolve();
-          }
-        });
+    try {
+      await new Promise<void>((resolve, reject) => {
+        // You're only going to have an inflight sequence if you are waiting for a response from the server. So every case except QoS 0 Publish, and Disconnect.
+        this._inFlightSequences.set(sequenceId, new sequenceMachineConstructor(
+          initialPacket,
+          this._sendPacketFunction,
+          (err?: Error) => { err ? reject(err) : resolve() }
+        ));
       });
+    } finally {
+      this._inFlightSequences.delete(sequenceId);
     }
   }
 
-  // `Packet` has an `cmd` value. Should we use this?  Probably?
-  handleIncomingPacket(packetType: PacketType, packet: Packet) {
-    const sequenceMachine = this.inFlightMessages.get(packet.messageId as number);
+  handleIncomingPacket(packet: Packet) {
+    let sequenceMachine: SequenceMachine | undefined;
+    switch (packet.cmd) {
+      /* FALLTHROUGH */
+      case 'auth':
+      case 'disconnect':
+      case 'pingresp':
+      case 'puback':
+      case 'pubcomp':
+      case 'publish':
+      case 'pubrel':
+      case 'pubrec':
+      case 'suback':
+      case 'unsuback':
+        throw new Error(notImplementedErrorMessage);
 
-    if (sequenceMachine) {
-      sequenceMachine.handleIncomingPacket(packetType, packet);
-    } else {
-      logger.info('blah');
+      case 'connack':
+        sequenceMachine = this._inFlightSequences.get('connect');
+        break;
+
+      default:
+        throw new Error('Invalid incoming control packet type');
     }
+    if (!sequenceMachine) {
+      throw new Error('No matching sequence machine for incoming packet');
+    }
+    sequenceMachine.handleIncomingPacket(packet);
   }
 }
 
 abstract class SequenceMachine {
-  message: Message;
-  sendPacketFunction: SendPacketFunction;
-  done: DoneFunction;
-  // TODO: investigate whether it's a problem that every sequence machine has a timer.
-  timeout: NodeJS.Timeout | number = 0;
+  protected _sendPacketFunction: SendPacketFunction;
+  protected _done: DoneFunction;
+  protected _initialPacket: Packet;
+  protected _clientOptions: ClientOptions;
 
-  constructor(message: Message, sendPacketFunction: SendPacketFunction, done: DoneFunction) {
-    this.message = message;
-    this.sendPacketFunction = sendPacketFunction;
-    this.done = done;
+  constructor(initialPacket: Packet, clientOptions: ClientOptions, sendPacketFunction: SendPacketFunction, done: DoneFunction) {
+    this._initialPacket = initialPacket;
+    this._sendPacketFunction = sendPacketFunction;
+    this._done = done;
+    this._clientOptions = clientOptions
   }
 
   abstract start(): void;
-  abstract handleIncomingPacket(packetType: PacketType, packet: Packet): void;
-  abstract cancel(): void;
+  abstract handleIncomingPacket(packet: Packet): void;
+  abstract cancel(error?: Error): void;
+}
 
-  _setTimer(callback: () => void, interval: number): void {
-    this._clearTimer();
-    this.timeout = setTimeout(callback, interval);
+enum BasicConnectState {
+  New,
+  AwaitingConnack,
+  Done,
+  Cancelled,
+  Failed
+}
+
+class BasicConnect extends SequenceMachine {
+  /**TODO:
+   * - handle keepalive
+   * - handle session present, expiry
+   * - max QoS
+   * - max packet size
+   * - assigned client id
+   * - retained messages
+   * - topic alias max
+   * - reason string
+   * - features available: wildcard subscription, subscription identifier, shared subscriptions
+   * - response information
+   */
+  private _state = BasicConnectState.New;
+
+  constructor(initialPacket: IConnectPacket, clientOptions: ClientOptions, sendPacketFunction: SendPacketFunction, done: DoneFunction) {
+    super(initialPacket, clientOptions, sendPacketFunction, done);
+    if (initialPacket.cmd !== 'connect') {
+      throw new Error('BasicConnect must have a connect packet as the initial packet.');
+    }
+    if (initialPacket.protocolId !== 'MQTT') {
+      throw new Error('BasicConnect must have a MQTT protocol ID.');
+    }
+    if (initialPacket.protocolVersion !== clientOptions.protocolVersion) {
+      throw new Error('Protocol version in connect packet must match client options.');
+    }
+    if (!initialPacket.clean) {
+      throw new Error('Connecting with an existing session is not supported yet.');
+    }
   }
 
-  _clearTimer(): void {
-    if (this.timeout) {
-      clearTimeout(this.timeout as NodeJS.Timeout);
-      this.timeout = 0;
+  start() {
+    if (this._state !== BasicConnectState.New) {
+      throw new Error(operationStartedErrorMessage);
     }
+    this._sendConnect();
+  }
+
+  handleIncomingPacket(packet: IConnackPacket) {
+    if (packet.cmd !== 'connack') {
+      this._finishWithFailure(new Error(`Expected connack, but received ${packet.cmd}`))
+      return;
+    }
+    this._clientOptions.protocolVersion === 4 ? this._handleMqtt4Connack(packet) : this._handleMqtt5Connack(packet);
+  }
+
+  cancel(error?: Error) {
+    this._state = error ? BasicConnectState.Failed : BasicConnectState.Cancelled;
+    this._done(null, error);
+  }
+
+  private _finishWithFailure(error: Error) {
+    this._state = BasicConnectState.Failed;
+    this._done(null, error);
+  }
+
+  private _finishWithSuccess(finalPacket: IConnackPacket) {
+    this._state = BasicConnectState.Done;
+    this._done(finalPacket);
+  }
+
+  private _sendConnect() {
+    /* TODO: Allow CONNACK timeout to be configurable */
+    this._state = BasicConnectState.AwaitingConnack;
+    this._sendPacketFunction(this._initialPacket)
+      .then(() => setTimeout(this._finishWithFailure.bind(this), 60 * 1000, new Error('Timed out waiting for CONNACK')))
+      .catch(this._finishWithFailure.bind(this));
+  }
+
+  private _handleMqtt4Connack(packet: IConnackPacket) {
+    /* TODO: check server sent a valid packet */
+    const returnCode = packet.returnCode as keyof typeof ReturnCodes.connack
+    const returnCodeMessage = ReturnCodes.connack[returnCode];
+    if (returnCodeMessage === undefined) {
+      this._finishWithFailure(new Error('Server sent invalid CONNACK return code'));
+      return;
+    }
+    if (returnCode !== 0) {
+      this._finishWithFailure(new Error(`Server returned error: ${returnCodeMessage}`));
+      return;
+    }
+    this._finishWithSuccess(packet);
+  }
+
+  private _handleMqtt5Connack(packet: IConnackPacket) {
+    /* TODO: check server sent a valid packet */
+    const reasonCode = packet.reasonCode as keyof typeof ReasonCodes.connack
+    const reasonCodeMessage = ReasonCodes.connack[reasonCode];
+    if (reasonCodeMessage === undefined) {
+      this._finishWithFailure(new Error('Server sent invalid CONNACK reason code'));
+      return;
+    }
+    if (reasonCode >= 0x80) {
+      this._finishWithFailure(new Error(`Server returned error: ${reasonCodeMessage}`));
+      return;
+    }
+    this._finishWithSuccess(packet);
   }
 }
 
-enum Qos0State {
+enum ClientDisconnectState {
   New,
   Done,
-  Failed,
+  Failed
 }
 
-class PublishQos0 extends SequenceMachine {
-  state = Qos0State.New;
+class ClientDisconnect extends SequenceMachine {
+  private _state = ClientDisconnectState.New;
 
-  start(): void {
-    this._sendPublish();
-  }
-
-  _sendPublish() {
-    try {
-      this.sendPacketFunction('publish', this.message);
-      this.state == Qos0State.Done;
-      this.done();
-    } catch (e: any) {
-      this.state = Qos0State.Failed;
-      this.done(e);
+  constructor(initialPacket: IDisconnectPacket, clientOptions: ClientOptions, sendPacketFunction: SendPacketFunction, done: DoneFunction) {
+    super(initialPacket, clientOptions, sendPacketFunction, done);
+    if (initialPacket.cmd !== 'disconnect') {
+      throw new Error('ClientDisconnect must have a disconnect packet as the initial packet.');
     }
+    /* err if MQTT v4 and reason code */
+    /* err if MQTT v4 and properties */
+    /* err if MQTT v5 and invalid client reason code */
   }
 
-  handleIncomingPacket(packetType: PacketType, packet: Packet): void {
-    packetType;
-    packet;
-    logger.info('blah');
-  }
-
-  cancel() {
-    logger.info('blah');
-  }
-}
-
-// TODO: do we want a state for Cancelled?
-enum Qos1State {
-  New,
-  WaitingForPubAck,
-  Done,
-  Failed,
-}
-
-class PublishQos1 extends SequenceMachine {
-  state = Qos1State.New;
-  sendPublishCount = 0;
-
-  start(): void {
-    this._sendPublish();
-  }
-
-  _sendPublish() {
-    this.sendPublishCount++;
-    if (this.sendPublishCount > maxPublishCount) {
-      this._clearTimer();
-      this.state = Qos1State.Failed;
-      this.done(new Error());
-    } else {
-      // Set the state and start the timer before you send anything, just
-      // in case the ack comes back before sendPacketFunction returns.
-      this.state == Qos1State.WaitingForPubAck;
-      try {
-        this.sendPacketFunction('publish', this.message);
-        this._setTimer(this._sendPublish.bind(this), pubAckInterval);
-      } catch (e) {
-        this.state = Qos1State.Failed;
-        this.done(e as Error);
-      }
-    }
-  }
-
-  handleIncomingPacket(packetType: PacketType, packet: Packet): void {
-    packet;
-    if (packetType == 'puback' && this.state == Qos1State.WaitingForPubAck) {
-      this._clearTimer();
-      this.state = Qos1State.Done;
-      this.done();
-    } else {
-      logger.info('blah');
-    }
-  }
-
-  cancel() {
-    this._clearTimer();
-    if (this.state in [Qos1State.New, Qos1State.WaitingForPubAck]) {
-      this.done(new Error());
-      this.state = Qos1State.Failed;
-    }
-  }
-}
-
-enum Qos2State {
-  New,
-  WaitingForPubRec,
-  WaitingForPubComp,
-  Done,
-  Failed,
-}
-
-class PublishQos2 extends SequenceMachine {
-  state = Qos2State.New;
-  sendPublishCount = 0;
-  sendPubRelCount = 0;
-
-  start(): void {
-    this._sendPublish();
-  }
-
-  _sendPublish() {
-    this._clearTimer();
-    this.sendPublishCount++;
-    if (this.sendPublishCount > maxPublishCount) {
-      this.state = Qos2State.Failed;
-      this.done(new Error());
-    } else {
-      // Set the state before you send anything, just
-      // in case the ack comes back before sendPacketFunction returns.
-      this.state == Qos2State.WaitingForPubRec;
-      try {
-        this.sendPacketFunction('publish', this.message);
-        this._setTimer(this._sendPublish.bind(this), pubAckInterval);
-      } catch (e) {
-        this.state = Qos2State.Failed;
-        this.done(e as Error);
-      }
-    }
-  }
-
-  _sendPubRel() {
-    this._clearTimer();
-    this.sendPubRelCount++;
-    if (this.sendPubRelCount > maxPublishCount) {
-      this.state = Qos2State.Failed;
-      this.done(new Error());
-    } else {
-      // Set the state before you send anything, just
-      // in case the ack comes back before sendPacketFunction returns.
-      this.state == Qos2State.WaitingForPubComp;
-      try {
-        this.sendPacketFunction('pubrel', this.message);
-        this._setTimer(this._sendPubRel.bind(this), pubAckInterval);
-      } catch (e) {
-        this.state = Qos2State.Failed;
-        this.done(e as Error);
-      }
-    }
-  }
-
-  handleIncomingPacket(packetType: PacketType, packet: Packet) {
-    packet;
-    if (packetType == 'pubrec') {
-      if (this.state in [Qos2State.WaitingForPubRec, Qos2State.WaitingForPubComp]) {
-        // Set the state before you send anything, just
-        // in case the ack comes back before sendPacketFunction returns.
-        this.state = Qos2State.WaitingForPubComp;
-        this._sendPubRel();
-      }
-    } else if (packetType == 'pubcomp') {
-      if (this.state == Qos2State.WaitingForPubComp) {
-        this._clearTimer();
-        this.state = Qos2State.Done;
-        this.done();
-      } else {
-        logger.info('blah');
-      }
-    } else {
-      logger.info('blah');
-    }
-  }
-
-  // Note: after this has been proven, we need to flush out
-  // the code so we handle any action in any state. Mostly we
-  // just log that we're ignoring something, but we also want
-  // to check state on the _send methods. If state == done or
-  // failed, then we don't send anything -- this just means
-  // we had a timer fire or an ack come back late. But if we
-  // call _send in some other unexpected state, we might want
-  // to except.
-
-  cancel() {
-    if (this.state in [Qos2State.New, Qos2State.WaitingForPubRec, Qos2State.WaitingForPubComp]) {
-      this.done(new Error());
-      this.state = Qos2State.Failed;
+  start() {
+    if (this._state !== ClientDisconnectState.New) {
+      throw new Error(operationStartedErrorMessage);
     }
   }
 }
