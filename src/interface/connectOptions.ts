@@ -3,20 +3,59 @@ import { Duplex } from 'stream';
 import { TlsOptions } from 'tls';
 import { WsOptions } from './wsOptions.js';
 
+/**
+ * User-facing options for connect() method
+ */
 export interface ConnectOptions {
+  /**
+   * The URL of the MQTT broker to connect to in the following format:
+   * <mqtt, mqtts>://<hostname>:<port>
+   * If the port is omitted, it will be set to 1883 for mqtt and 8883 for mqtts.
+   * Default: 'mqtt://localhost'
+   */
+  brokerUrl?: string | URL;
+
+  /**
+   * The MQTT protocol level to use. Use 4 for MQTT v3.1.1 and 5 for MQTT v5.0
+   * Default: 4
+   */
+  protocolVersion?: 4 | 5;
+
+  /**
+   * The client ID to use. If not provided, one will be generated.
+   */
+  clientId?: string;
+
+  /**
+   * The value of the Clean Session/Clean Start flag. If true, the client will
+   * will connect with a brand new session. If false, the client attempt to
+   * resume a session if one exists on the server.
+   * Default: true
+   */
+  clean?: boolean;
+
+  /**
+   * The keep alive value, in seconds. Set to 0 to disable.
+   * Default: 60
+   */
+  keepalive?: number;
+
+  /**
+   * The username to use to authenticate with the server.
+   */
+  username?: string;
+
+  /**
+   * The password to use to authenticate with the server. 
+   */
+  password?: Buffer;
+
+
   objectMode?: any;
   autoUseTopicAlias?: any;
   autoAssignTopicAlias?: any;
   topicAliasMaximum?: number;
   queueLimit?: number;
-  cmd?: 'connect';
-  clientId?: string;
-  protocolVersion?: 4 | 5 | 3;
-  protocolId?: 'MQTT' | 'MQIsdp';
-  clean?: boolean;
-  keepalive?: number;
-  username?: string;
-  password?: Buffer;
   will?: {
     topic: string;
     payload: Buffer;
@@ -43,7 +82,6 @@ export interface ConnectOptions {
     authenticationMethod?: string;
     authenticationData?: Buffer;
   };
-  brokerUrl?: URL;
   wsOptions?: { [key: string]: WsOptions | unknown };
   tlsOptions?: { [key: string]: TlsOptions | unknown };
   reschedulePings?: any;

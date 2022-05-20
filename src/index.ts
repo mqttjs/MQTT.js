@@ -10,7 +10,8 @@ import { ConnectOptions } from './interface/connectOptions.js';
 import { protocols } from './util/constants.js';
 import { logger } from './util/logger.js';
 
-import { URL } from 'url';
+import { URL } from 'node:url';
+import { ClientOptions, generateDefaultClientOptions } from './interface/clientOptions.js';
 
 /**
  * connect()
@@ -21,33 +22,46 @@ import { URL } from 'url';
  */
 async function connect(options: ConnectOptions) {
   logger.info(`validating options...`);
-  if (typeof options.brokerUrl === 'string') {
-    options.brokerUrl = new URL(options.brokerUrl);
+  if (options.clean === false && typeof options.clientId === undefined) {
+    throw new Error('Client ID must be specified when cleanSession is false');
+  }
+  const mergedOptions: ClientOptions = {
+    ...generateDefaultClientOptions(),
+    ...options
+  }
+  if (mergedOptions.clean === false) {
+    throw new Error('connecting with an existing session is not yet supported')
+  }
+  if (mergedOptions.protocolVersion === 5) {
+    throw new Error('Protocol version 5 is not yet supported');
+  }
+  if (mergedOptions.protocolVersion !== 4 && mergedOptions.protocolVersion !== 5) {
+    throw new Error('Invalid protocol version specified');
+  }
+  if (typeof mergedOptions.brokerUrl === 'string') {
+    mergedOptions.brokerUrl = new URL(mergedOptions.brokerUrl);
+  }
+  if (!['mqtt:', 'mqtts:'].includes(mergedOptions.brokerUrl.protocol)) {
+    throw new Error('Invalid protocol. Only mqtt and mqtts are supported');
+  }
+  if (mergedOptions.brokerUrl.port === '') {
+    mergedOptions.brokerUrl.port = mergedOptions.brokerUrl.protocol === 'mqtt:' ? '1883' : '8883';
   }
 
-  if (!options?.brokerUrl?.protocol) {
-    throw new Error(
-      `Missing protocol. \
-      To provide a protocol, you have two options:\
-      - Format the brokerUrl with a protocol, for example: 'mqtt://test.mosquitto.org'.
-      - Pass in the protocol via the protocol option.`
-    );
-  }
-
-  const validationErr: Error | undefined = _validateProtocol(options);
+  const validationErr: Error | undefined = _validateProtocol(mergedOptions);
   if (validationErr) {
     throw validationErr;
   }
 
   logger.trace('creating new client...');
-  const client = new MqttClient(options);
+  const client = new MqttClient(mergedOptions);
   const connackPacket = await client.connect();
   logger.trace(`connack packet: ${JSON.stringify(connackPacket)}`);
   logger.trace('returning client...');
   return client;
 }
 
-function _validateProtocol(opts: ConnectOptions): Error | undefined {
+function _validateProtocol(opts: ClientOptions): Error | undefined {
   logger.info(`validating protocol options...`);
   if (opts.tlsOptions && 'cert' in opts.tlsOptions && 'key' in opts.tlsOptions) {
     const urlProtocol = (opts.brokerUrl as URL).protocol;

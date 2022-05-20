@@ -11,6 +11,7 @@ type SendPacketFunction = (packet: Packet) => Promise<void>
 type DoneFunction = (finalPacket: Packet | null, err?: Error) => void
 type SequenceMachineConstructor = new (
   initialPacket: Packet,
+  clientOptions: ClientOptions,
   sendPacketFunction: SendPacketFunction,
   doneFunction: DoneFunction
 ) => SequenceMachine
@@ -36,6 +37,7 @@ export class MqttPacketSequencer {
     switch (initialPacket.cmd) {      
       /* FALLTHROUGH */
       case 'pingreq':
+      case 'disconnect':
       case 'subscribe':
       case 'unsubscribe':
       case 'publish':
@@ -46,10 +48,6 @@ export class MqttPacketSequencer {
         sequenceId = 'connect';
         sequenceMachineConstructor = BasicConnect as SequenceMachineConstructor;
         break;
-      case 'disconnect':
-        sequenceId = 'disconnect';
-        sequenceMachineConstructor = Disconnect as SequenceMachineConstructor;
-        break;
       
       default:
         throw new Error('Invalid initial control packet type');
@@ -57,19 +55,21 @@ export class MqttPacketSequencer {
     if (this._inFlightSequences.has(sequenceId)) {
       throw new Error('Sequence with matching ID already in flight');
     }
-
+    let sequenceResult: Packet | null;
     try {
-      await new Promise<void>((resolve, reject) => {
+      sequenceResult = await new Promise<Packet | null>((resolve, reject) => {
         // You're only going to have an inflight sequence if you are waiting for a response from the server. So every case except QoS 0 Publish, and Disconnect.
         this._inFlightSequences.set(sequenceId, new sequenceMachineConstructor(
           initialPacket,
+          this._clientOptions,
           this._sendPacketFunction,
-          (err?: Error) => { err ? reject(err) : resolve() }
+          (finalPacket: null | Packet, err?: Error) => { err ? reject(err) : resolve(finalPacket) }
         ));
       });
     } finally {
       this._inFlightSequences.delete(sequenceId);
     }
+    return sequenceResult;
   }
 
   handleIncomingPacket(packet: Packet) {
@@ -143,34 +143,15 @@ class BasicConnect extends SequenceMachine {
    */
   private _state = BasicConnectState.New;
 
-  constructor(initialPacket: IConnectPacket, clientOptions: ClientOptions, sendPacketFunction: SendPacketFunction, done: DoneFunction) {
-    super(initialPacket, clientOptions, sendPacketFunction, done);
-    if (initialPacket.cmd !== 'connect') {
-      throw new Error('BasicConnect must have a connect packet as the initial packet.');
-    }
-    if (initialPacket.protocolId !== 'MQTT') {
-      throw new Error('BasicConnect must have a MQTT protocol ID.');
-    }
-    if (initialPacket.protocolVersion !== clientOptions.protocolVersion) {
-      throw new Error('Protocol version in connect packet must match client options.');
-    }
-    if (!initialPacket.clean) {
-      throw new Error('Connecting with an existing session is not supported yet.');
-    }
-  }
-
   start() {
-    if (this._state !== BasicConnectState.New) {
-      throw new Error(operationStartedErrorMessage);
-    }
-    this._sendConnect();
+    /* TODO: Allow CONNACK timeout to be configurable */
+    this._state = BasicConnectState.AwaitingConnack;
+    this._sendPacketFunction(this._initialPacket)
+      .then(() => setTimeout(this._finishWithFailure.bind(this), 60 * 1000, new Error('Timed out waiting for CONNACK')))
+      .catch(this._finishWithFailure.bind(this));
   }
 
   handleIncomingPacket(packet: IConnackPacket) {
-    if (packet.cmd !== 'connack') {
-      this._finishWithFailure(new Error(`Expected connack, but received ${packet.cmd}`))
-      return;
-    }
     this._clientOptions.protocolVersion === 4 ? this._handleMqtt4Connack(packet) : this._handleMqtt5Connack(packet);
   }
 
@@ -187,14 +168,6 @@ class BasicConnect extends SequenceMachine {
   private _finishWithSuccess(finalPacket: IConnackPacket) {
     this._state = BasicConnectState.Done;
     this._done(finalPacket);
-  }
-
-  private _sendConnect() {
-    /* TODO: Allow CONNACK timeout to be configurable */
-    this._state = BasicConnectState.AwaitingConnack;
-    this._sendPacketFunction(this._initialPacket)
-      .then(() => setTimeout(this._finishWithFailure.bind(this), 60 * 1000, new Error('Timed out waiting for CONNACK')))
-      .catch(this._finishWithFailure.bind(this));
   }
 
   private _handleMqtt4Connack(packet: IConnackPacket) {
