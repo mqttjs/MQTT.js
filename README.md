@@ -8,7 +8,7 @@ in JavaScript for node.js and the browser.
 
 | :boom: MQTT.js vNext          |
 |:---------------------------|
-| Want to contribute to the next generation of **MQTT.js**? Join the discussion [here](https://github.com/mqttjs/MQTT.js/discussions/1324).       |
+| Want to contribute to the next generation of **MQTT.js**? Join the check out the developments [here](https://github.com/mqttjs/mqttjs-v5).       |
 
 ## Table of Contents
 * [__MQTT.js vNext__](#vnext)
@@ -31,8 +31,8 @@ MQTT.js is an OPEN Open Source Project, see the [Contributing](#contributing) se
 Guide](https://cdn.rawgit.com/feross/standard/master/badge.svg)](https://github.com/feross/standard)
 
 <a name="vnext"></a>
-## Discussion on the next major version of MQTT.js
-There are discussions happening on the future of MQTT.js and the next major version (vNext). We invite the community to provide their thoughts and feedback in [this GitHub discussion](https://github.com/mqttjs/MQTT.js/discussions/1324)
+## Next major version of MQTT.js
+There is work being done on the next generation of MQTT.js (vNext). We invite the community to provide their contributions [this repository](https://github.com/mqttjs/mqttjs-v5)
 
 <a name="notes"></a>
 ## Important notes for existing users
