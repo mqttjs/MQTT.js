@@ -8,7 +8,7 @@ in JavaScript for node.js and the browser.
 
 | :boom: MQTT.js vNext          |
 |:---------------------------|
-| Want to contribute to the next generation of **MQTT.js**? Join the check out the developments [here](https://github.com/mqttjs/mqttjs-v5).       |
+| Want to contribute to the next generation of **MQTT.js**? Check out the developments [here](https://github.com/mqttjs/mqttjs-v5).       |
 
 ## Table of Contents
 * [__MQTT.js vNext__](#vnext)
