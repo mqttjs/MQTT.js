@@ -5,6 +5,7 @@
  * See LICENSE for more information
  */
 
+const validations = require('./lib/validations')
 const MqttClient = require('./lib/client')
 const connect = require('./lib/connect')
 const Store = require('./lib/store')
@@ -19,3 +20,4 @@ module.exports.Client = MqttClient
 module.exports.Store = Store
 module.exports.DefaultMessageIdProvider = DefaultMessageIdProvider
 module.exports.UniqueMessageIdProvider = UniqueMessageIdProvider
+module.exports.validations = validations
