@@ -36,7 +36,7 @@ export interface IClientOptions extends ISecureClientOptions {
    */
   clean?: boolean
   /**
-   * 1000 milliseconds, interval between two reconnections
+   * 1000 milliseconds, interval between two re-connections
    */
   reconnectPeriod?: number
   /**
@@ -90,31 +90,106 @@ export interface IClientOptions extends ISecureClientOptions {
      * the retain flag
      */
     retain: boolean,
-    /*
-    *  properies object of will
-    * */
+    /**
+     * Properties object of will by MQTT 5.0.
+     */
     properties?: {
+      /**
+       * Representing the Will Delay Interval in seconds.
+       * @type {number}
+       */
       willDelayInterval?: number,
+      /**
+       * Will Message is UTF-8 Encoded Character Data or not.
+       * @type {boolean}
+       */
       payloadFormatIndicator?: boolean,
+      /**
+       * Value is the lifetime of the Will Message in seconds and is sent as the Publication Expiry Interval when the Server publishes the Will Message.
+       * @type {number}
+       */
       messageExpiryInterval?: number,
+      /**
+       * Describing the content of the Will Message.
+       * @type {string}
+       */
       contentType?: string,
+      /**
+       * String which is used as the Topic Name for a response message
+       * @type {string}
+       */
       responseTopic?: string,
+      /**
+       * The Correlation Data is used by the sender of the Request Message to identify which request the Response Message is for when it is received.
+       * @type {Buffer}
+       */
       correlationData?: Buffer,
+      /**
+       * The User Property is allowed to appear multiple times to represent multiple name, value pairs. 
+       */
       userProperties?: UserProperties
     }
   }
+  /**
+   * A Function For ws/wss protocols only. Can be used to implement signing urls which upon reconnect can have become expired.
+   */
   transformWsUrl?: (url: string, options: IClientOptions, client: MqttClient) => string,
+  /**
+   * Properties MQTT 5.0.
+   * @type {object}
+   */
   properties?: {
+    /**
+     * Representing the Session Expiry Interval in seconds.
+     * @type {number}
+     */
     sessionExpiryInterval?: number,
+    /**
+     * Representing the Receive Maximum value.
+     * @type {number}
+     */
     receiveMaximum?: number,
+    /**
+     * Representing the Maximum Packet Size the Client is willing to accept.
+     * @type {number}
+     */
     maximumPacketSize?: number,
+    /**
+     * Representing the Topic Alias Maximum value indicates the highest value that
+     * the Client will accept as a Topic Alias sent by the Server.
+     * @type {number}
+     */
     topicAliasMaximum?: number,
+    /**
+     * The Client uses this value to request the Server to return Response Information in the CONNACK.
+     * @type {boolean}
+     */
     requestResponseInformation?: boolean,
+    /**
+     * The Client uses this value to indicate whether the Reason String or User Properties are sent
+     * in the case of failures.
+     * @type {boolean}
+     */
     requestProblemInformation?: boolean,
+    /**
+     * The User Property is allowed to appear multiple times to represent multiple name, value pairs.
+     * @type {object}
+     */
     userProperties?: UserProperties,
+    /**
+     * The name of the authentication method used for extended authentication.
+     * @type {string}
+     */
     authenticationMethod?: string,
+    /**
+     * Binary Data containing authentication data.
+     * @type {Buffer}
+     */
     authenticationData?: Buffer
   },
+  /**
+   * Custom messageId provider. when new UniqueMessageIdProvider() is set, then non conflict messageId is provided.
+   */
   messageIdProvider?: IMessageIdProvider
 }
 export interface ISecureClientOptions {
@@ -149,17 +224,49 @@ export interface IClientPublishOptions {
    * whether or not mark a message as duplicate
    */
   dup?: boolean
-  /*
+  /**
    *  MQTT 5.0 properties object
    */
   properties?: {
+    /**
+     * Payload is UTF-8 Encoded Character Data or not.
+     * @type {boolean}
+     */
     payloadFormatIndicator?: boolean,
+    /**
+     * The lifetime of the Application Message in seconds.
+     * @type {number}
+     */
     messageExpiryInterval?: number,
+    /**
+     * Value that is used to identify the Topic instead of using the Topic Name.
+     * @type {number}
+     */
     topicAlias?: number,
+    /**
+     * String which is used as the Topic Name for a response message
+     * @type {string}
+     */
     responseTopic?: string,
+    /**
+     * Used by the sender of the Request Message to identify which request the Response Message is for when it is received.
+     * @type {Buffer}
+     */
     correlationData?: Buffer,
+    /**
+     * The User Property is allowed to appear multiple times to represent multiple name, value pairs.
+     * @type {object}
+     */
     userProperties?: UserProperties,
+    /**
+     * Representing the identifier of the subscription.
+     * @type {number}
+     */
     subscriptionIdentifier?: number,
+    /**
+     * String describing the content of the Application Message.
+     * @type {string}
+     */
     contentType?: string
   }
   /**
@@ -172,23 +279,31 @@ export interface IClientSubscribeOptions {
    * the QoS
    */
   qos: QoS,
-  /*
+  /**
   * no local flag
-  * */
+  */
   nl?: boolean,
-  /*
+  /**
   * Retain As Published flag
-  * */
+  */
   rap?: boolean,
-  /*
+  /**
   * Retain Handling option
-  * */
+  */
   rh?: number,
-  /*
-  *  MQTT 5.0 properies object of subscribe
-  * */
+  /**
+  * MQTT 5.0 properties object of subscribe
+  */
   properties?: {
+    /**
+     * Representing the identifier of the subscription.
+     * @type {number}
+     */
     subscriptionIdentifier?: number,
+    /**
+     * The User Property is allowed to appear multiple times to represent multiple name, value pairs.
+     * @type {object}
+     */
     userProperties?: UserProperties
   }
 }

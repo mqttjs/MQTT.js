@@ -19,17 +19,17 @@ export interface ISubscriptionGrant {
    *  is the granted qos level on it, may return 128 on error
    */
   qos: QoS | number
-  /*
+  /**
   * no local flag
-  * */
+  */
   nl?: boolean,
-  /*
+  /**
   * Retain As Published flag
-  * */
+  */
   rap?: boolean,
-  /*
+  /**
   * Retain Handling option
-  * */
+  */
   rh?: number
 }
 export interface ISubscriptionRequest {
@@ -41,17 +41,17 @@ export interface ISubscriptionRequest {
    *  is the granted qos level on it
    */
   qos: QoS
-  /*
+  /**
   * no local flag
-  * */
+  */
   nl?: boolean,
-  /*
+  /**
   * Retain As Published flag
-  * */
+  */
   rap?: boolean,
-  /*
+  /**
   * Retain Handling option
-  * */
+  */
   rh?: number
 }
 export interface ISubscriptionMap {
