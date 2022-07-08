@@ -9,3 +9,5 @@ browsers:
     version: latest
   - name: opera
     version: latest
+  - name: opera
+    version: latest1
