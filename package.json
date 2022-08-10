@@ -69,7 +69,7 @@
     "inherits": "^2.0.3",
     "lru-cache": "^6.0.0",
     "minimist": "^1.2.6",
-    "mqtt-packet": "^6.8.0",
+    "mqtt-packet": "^8.1.1",
     "number-allocator": "^1.0.9",
     "pump": "^3.0.0",
     "readable-stream": "^3.6.0",
