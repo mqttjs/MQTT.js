@@ -2358,6 +2358,27 @@ module.exports = function (server, config) {
       })
     })
 
+    it('should call \'reconnectCallback\' when reconnecting', function (done) {
+      let reconnectEvent = false
+      const client = connect({
+        cbReconnect: (c, next) => {
+          reconnectEvent = true
+          next()
+        }
+      })
+      let tryReconnect = true
+
+      client.on('connect', function () {
+        if (tryReconnect) {
+          client.stream.end()
+          tryReconnect = false
+        } else {
+          assert.isTrue(reconnectEvent)
+          client.end(true, done)
+        }
+      })
+    })
+
     it('should emit \'reconnect\' when reconnecting', function (done) {
       const client = connect()
       let tryReconnect = true

@@ -6,6 +6,7 @@ import { QoS, UserProperties } from 'mqtt-packet'
 import { IMessageIdProvider } from './message-id-provider'
 
 export declare type StorePutCallback = () => void
+export declare type ReconnectCallback = (client: MqttClient, next: () => void) =>  void
 
 export interface IClientOptions extends ISecureClientOptions {
   port?: number // port is made into a number subsequently
@@ -39,6 +40,10 @@ export interface IClientOptions extends ISecureClientOptions {
    * 1000 milliseconds, interval between two reconnections
    */
   reconnectPeriod?: number
+  /**
+   * callback called when reconnection.
+   */
+  cbReconnect?: ReconnectCallback;
   /**
    * 30 * 1000 milliseconds, time to wait before a CONNACK is received
    */
