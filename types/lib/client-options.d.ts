@@ -104,11 +104,13 @@ export interface IClientOptions extends ISecureClientOptions {
     }
   }
   transformWsUrl?: (url: string, options: IClientOptions, client: MqttClient) => string,
+  topicAliasMaximum?: number,
+  autoUseTopicAlias?: boolean,
+  autoAssignTopicAlias?: boolean,
   properties?: {
     sessionExpiryInterval?: number,
     receiveMaximum?: number,
     maximumPacketSize?: number,
-    topicAliasMaximum?: number,
     requestResponseInformation?: boolean,
     requestProblemInformation?: boolean,
     userProperties?: UserProperties,

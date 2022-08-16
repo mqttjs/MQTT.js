@@ -354,6 +354,7 @@ the `connect` event. Typically a `net.Socket`.
       ```js
         customHandleAcks: function(topic, message, packet, done) {/*some logic wit colling done(error, reasonCode)*/}
       ```
+  * `topicAliasMaximum`: representing the Topic Alias Maximum value indicates the highest value that the Client will accept as a Topic Alias sent by the Server `number`. It is automatically set to CONNECT property.
   * `autoUseTopicAlias`: enabling automatic Topic Alias using functionality
   * `autoAssignTopicAlias`: enabling automatic Topic Alias assign functionality
   * `properties`: properties MQTT 5.0.
@@ -361,7 +362,6 @@ the `connect` event. Typically a `net.Socket`.
     * `sessionExpiryInterval`: representing the Session Expiry Interval in seconds `number`,
     * `receiveMaximum`: representing the Receive Maximum value `number`,
     * `maximumPacketSize`: representing the Maximum Packet Size the Client is willing to accept `number`,
-    * `topicAliasMaximum`: representing the Topic Alias Maximum value indicates the highest value that the Client will accept as a Topic Alias sent by the Server `number`,
     * `requestResponseInformation`: The Client uses this value to request the Server to return Response Information in the CONNACK `boolean`,
     * `requestProblemInformation`: The Client uses this value to indicate whether the Reason String or User Properties are sent in the case of failures `boolean`,
     * `userProperties`: The User Property is allowed to appear multiple times to represent multiple name, value pairs `object`,
