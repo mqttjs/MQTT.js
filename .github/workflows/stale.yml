@@ -1,0 +1,25 @@
+name: Close inactive issues
+on:
+  schedule:
+    - cron: "30 1 * * *"
+
+jobs:
+  close-stale:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: actions/stale@v5
+        with:
+          days-before-issue-stale: 365
+          days-before-issue-close: 14
+          stale-issue-label: "stale"
+          stale-issue-message: "This issue has been automatically marked as stale because there is no recent activity. If there is no further activity it will be closed."
+          close-issue-message: "This issue was automatically closed due to inactivity."
+          days-before-pr-stale: -1
+          days-before-pr-close: -1
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          exempt-all-assignees: true
+          exempt-all-milestones: true
+          debug-only: true
