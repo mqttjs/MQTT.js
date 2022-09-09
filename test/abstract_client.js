@@ -179,7 +179,7 @@ module.exports = function (server, config) {
       })
     })
 
-    it.skip('should be able to end even on a failed connection', function (done) {
+    it('should be able to end even on a failed connection', function (done) {
       const client = connect({ host: 'this_hostname_should_not_exist' })
 
       const timeout = setTimeout(function () {
@@ -194,7 +194,7 @@ module.exports = function (server, config) {
       }, 200)
     })
 
-    it.skip('should emit end even on a failed connection', function (done) {
+    it('should emit end even on a failed connection', function (done) {
       const client = connect({ host: 'this_hostname_should_not_exist' })
 
       const timeout = setTimeout(function () {
@@ -235,12 +235,12 @@ module.exports = function (server, config) {
 
   describe('connecting', function () {
     it('should connect to the broker', function (done) {
+      this.timeout(10000)
       const client = connect()
       client.on('error', done)
 
       server.once('client', function () {
-        done()
-        client.end()
+        client.end(done)
       })
     })
 
@@ -2489,7 +2489,7 @@ module.exports = function (server, config) {
       })
     })
 
-    it.skip('should always cleanup successfully on reconnection', function (done) {
+    it('should always cleanup successfully on reconnection', function (done) {
       const client = connect({ host: 'this_hostname_should_not_exist', connectTimeout: 0, reconnectPeriod: 1 })
       // bind client.end so that when it is called it is automatically passed in the done callback
       setTimeout(() => {
@@ -2499,7 +2499,7 @@ module.exports = function (server, config) {
     })
 
     it('should resend in-flight QoS 1 publish messages from the client', function (done) {
-      this.timeout(4000)
+      this.timeout(10000)
       const client = connect({ reconnectPeriod: 200 })
       let serverPublished = false
       let clientCalledBack = false
