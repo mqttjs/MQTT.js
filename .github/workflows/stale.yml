@@ -22,4 +22,3 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           exempt-all-assignees: true
           exempt-all-milestones: true
-          debug-only: true
