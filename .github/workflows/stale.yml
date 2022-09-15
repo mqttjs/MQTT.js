@@ -15,11 +15,19 @@ jobs:
           days-before-issue-stale: 365
           days-before-issue-close: 14
           stale-issue-label: "stale"
-          stale-issue-message: "This issue has been automatically marked as stale because there is no recent activity. If there is no further activity it will be closed."
+          stale-issue-message: |
+            This is an automated message to let you know that this issue has
+            gone 365 days without any activity. In order to ensure that we work
+            on issues that still matter, this issue will be closed in 14 days.
+
+            If this issue is still important, you can simply comment with a
+            "bump" to keep it open.
+
+            Thank you for your contribution.
           close-issue-message: "This issue was automatically closed due to inactivity."
           days-before-pr-stale: -1
           days-before-pr-close: -1
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           exempt-all-assignees: true
           exempt-all-milestones: true
-          debug-only: true
+          debug-only: false
