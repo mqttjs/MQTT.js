@@ -30,4 +30,6 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           exempt-all-assignees: true
           exempt-all-milestones: true
+          ascending: false
+          operations-per-run: 100
           debug-only: false
