@@ -5,15 +5,13 @@
  * See LICENSE for more information
  */
 
-const MqttClient = require('./lib/client')
-const connect = require('./lib/connect')
-const Store = require('./lib/store')
-const DefaultMessageIdProvider = require('./lib/default-message-id-provider')
-const UniqueMessageIdProvider = require('./lib/unique-message-id-provider')
+const MqttClient = require('./dist/client').MqttClient
+const connect = require('./dist/connect')
+const Store = require('./dist/store')
+const DefaultMessageIdProvider = require('./dist/default-message-id-provider').DefaultMessageIdProvider
+const UniqueMessageIdProvider = require('./dist/unique-message-id-provider').UniqueMessageIdProvider
 
 module.exports.connect = connect
-
-// Expose MqttClient
 module.exports.MqttClient = MqttClient
 module.exports.Client = MqttClient
 module.exports.Store = Store
