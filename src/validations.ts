@@ -33,9 +33,9 @@ function validateTopic(topic: string): boolean {
 /**
  * Validate an array of topics to see if any of them is valid or not
  * @param {Array} topics - Array of topics
- * @return {String} If the topics is valid, returns undefined. Otherwise, returns the invalid one
+ * @return {String} If the topics is valid, returns null. Otherwise, returns the invalid one
  */
-export function validateTopics(topics: Array<string>): string | undefined {
+export function validateTopics(topics: Array<string>): string | null {
   if (topics.length === 0) {
     return 'empty_topic_list';
   }
@@ -44,5 +44,5 @@ export function validateTopics(topics: Array<string>): string | undefined {
       return topics[i] as string;
     }
   }
-  return undefined;
+  return null;
 }

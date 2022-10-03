@@ -65,13 +65,13 @@ function connect(brokerUrlParam?: string | undefined | MqttClientOptions, optsPa
 
   if (brokerUrl) {
     const parsed: any = url.parse(brokerUrl, true) as any;
-    if (parsed.port != undefined) {
+    if (parsed.port != null) {
       parsed.port = Number(parsed.port);
     }
 
     opts = { ...parsed, ...opts };
 
-    if (opts.protocol == undefined) {
+    if (opts.protocol == null) {
       throw new Error('Missing protocol');
     }
 

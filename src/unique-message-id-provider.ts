@@ -4,7 +4,7 @@ import { NumberAllocator } from 'number-allocator';
 
 export class UniqueMessageIdProvider {
   private numberAllocator: NumberAllocator;
-  private lastId: number | undefined;
+  private lastId: number | null;
 
   /**
    * UniqueMessageAllocator constructor
@@ -12,7 +12,7 @@ export class UniqueMessageIdProvider {
    */
 
   constructor() {
-    this.lastId = undefined;
+    this.lastId = null;
     this.numberAllocator = new NumberAllocator(1, 65535);
   }
 
@@ -20,11 +20,11 @@ export class UniqueMessageIdProvider {
    * allocate
    *
    * Get the next messageId.
-   * @return if messageId is fully allocated then return undefined,
+   * @return if messageId is fully allocated then return null,
    *         otherwise return the smallest usable unsigned int messageId.
    */
-  public allocate(): number | undefined {
-    this.lastId = this.numberAllocator.alloc() || undefined;
+  public allocate(): number | null {
+    this.lastId = this.numberAllocator.alloc();
     return this.lastId;
   }
 
@@ -33,7 +33,7 @@ export class UniqueMessageIdProvider {
    * Get the last allocated messageId.
    * @return unsigned int
    */
-  public getLastAllocated(): number | undefined {
+  public getLastAllocated(): number | null {
     return this.lastId;
   }
 

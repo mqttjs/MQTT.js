@@ -354,7 +354,7 @@ export default class MqttClient extends EventEmitter {
     this.messageIdToTopic = {};
 
     // Ping timer, setup in _setupPingTimer
-    this.pingTimer = undefined;
+    this.pingTimer = null;
     // Is the client connected?
     this.connected = false;
     // Are we disconnecting?
@@ -362,9 +362,9 @@ export default class MqttClient extends EventEmitter {
     // Packet queue
     this.queue = [];
     // connack timer
-    this.connackTimer = undefined;
+    this.connackTimer = null;
     // Reconnect timer
-    this.reconnectTimer = undefined;
+    this.reconnectTimer = null;
     // Is processing store?
     this._storeProcessing = false;
     // Packet Ids are put into the store during store processing
@@ -433,9 +433,9 @@ export default class MqttClient extends EventEmitter {
       clearTimeout(this.connackTimer);
 
       debug('close :: clearing ping timer');
-      if (this.pingTimer != undefined) {
+      if (this.pingTimer != null) {
         this.pingTimer.clear();
-        this.pingTimer = undefined;
+        this.pingTimer = null;
       }
 
       if (this.topicAliasRecv) {
@@ -835,7 +835,7 @@ export default class MqttClient extends EventEmitter {
     }
 
     if (!subs.length) {
-      callback(undefined, []);
+      callback(null, []);
       return this;
     }
 
@@ -1186,7 +1186,7 @@ export default class MqttClient extends EventEmitter {
     debug('_clearReconnect : clearing reconnect timer');
     if (this.reconnectTimer) {
       clearInterval(this.reconnectTimer);
-      this.reconnectTimer = undefined;
+      this.reconnectTimer = null;
     }
   }
 
@@ -1219,10 +1219,10 @@ export default class MqttClient extends EventEmitter {
       this._setupReconnect();
     }
 
-    if (this.pingTimer != undefined) {
+    if (this.pingTimer != null) {
       debug('_cleanUp :: clearing pingTimer');
       this.pingTimer.clear();
-      this.pingTimer = undefined;
+      this.pingTimer = null;
     }
 
     if (done && !this.connected) {
@@ -1827,14 +1827,10 @@ for now i just suppressed the warnings
    * @api private
    */
   private _onConnect(packet: mqttPacket.IConnackPacket) {
-    debug('_onConnect');
     if (this.disconnected) {
-      debug('emitting connect');
       this.emit('connect', packet);
       return;
     }
-
-    debug('connect handling');
 
     this.connackPacket = packet;
     this.messageIdProvider.clear();
@@ -1914,7 +1910,6 @@ for now i just suppressed the warnings
       };
 
       outStore.on('end', (): void => {
-        console.log('outStore.on(end');
         let allProcessed = true;
         for (const id in this._packetIdsDuringStoreProcessing) {
           if (!this._packetIdsDuringStoreProcessing[id]) {
@@ -1931,7 +1926,6 @@ for now i just suppressed the warnings
           startStreamProcess();
         }
       });
-      console.log('outStore.storeDeliver');
       storeDeliver();
     };
     // start flowing
