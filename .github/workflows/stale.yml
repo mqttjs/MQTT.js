@@ -31,5 +31,5 @@ jobs:
           exempt-all-assignees: true
           exempt-all-milestones: true
           ascending: true
-          operations-per-run: 100
+          operations-per-run: 300
           debug-only: false
