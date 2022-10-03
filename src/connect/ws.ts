@@ -81,8 +81,8 @@ function setDefaultBrowserOpts(opts: MqttClientOptions): MqttClientOptions {
 
   // objectMode should be defined for logic
   // TODO: maybe this should be webSocketObjectMode?
-  if (options.objectMode === undefined) {
-    options.objectMode = !(options.binary === true || options.binary === undefined);
+  if (options.objectMode == undefined) {
+    options.objectMode = !(options.binary === true || options.binary == undefined);
   }
 
   return options;
@@ -191,7 +191,6 @@ function browserStreamBuilder(client: MqttClient, opts: MqttClientOptions): Dupl
   }
 
   function onopen(): void {
-    // TODO: "as any" indicates unsafe code
     (stream as any).setReadable(proxy);
     (stream as any).setWritable(proxy);
     stream.emit('connect');
@@ -209,7 +208,7 @@ function browserStreamBuilder(client: MqttClient, opts: MqttClientOptions): Dupl
   function onmessage(event: WebSocket.MessageEvent): void {
     let data = event.data;
     if (data instanceof ArrayBuffer) data = Buffer.from(data);
-    else data = Buffer.from(data as any, 'utf8'); // TODO: make this typesafe - no "as any"
+    else data = Buffer.from(data as any, 'utf8');
     proxy.push(data);
   }
 
@@ -230,7 +229,6 @@ function browserStreamBuilder(client: MqttClient, opts: MqttClientOptions): Dupl
   function socketWriteBrowser(chunk: any, enc: string, next: (err?: Error | null) => void): void {
     if (socket.bufferedAmount > bufferSize) {
       // throttle data until buffered amount is reduced.
-      // TODO: what is this function?
       setTimeout(socketWriteBrowser, bufferTimeout, chunk, enc, next);
     }
 
@@ -252,7 +250,6 @@ function browserStreamBuilder(client: MqttClient, opts: MqttClientOptions): Dupl
     done();
   }
 
-  // TODO: what are these methods (socketEndBrowser, etc)?
   // end methods for browserStreamBuilder
 
   return stream as any;

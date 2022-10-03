@@ -11,7 +11,6 @@ export class TopicAliasSend {
   topicToAlias: { [key: string]: number };
   numberAllocator: NumberAllocator;
   max: number;
-  length: number;
 
   /**
    * Topic Alias sending manager
@@ -19,13 +18,18 @@ export class TopicAliasSend {
    * @param {Number} [max] - topic alias maximum entries
    */
   constructor(max: number) {
-    // TODO: raise on <= 0
+    if (max <= 0) {
+      throw new RangeError('max must be > 0');
+    }
 
     this.aliasToTopic = new LruCache<number, string>({ max: max });
     this.topicToAlias = {};
     this.numberAllocator = new NumberAllocator(1, max);
     this.max = max;
-    this.length = 0; // TODO: use a property here instead of a copy of hte value.
+  }
+
+  public get length(): number {
+    return this.aliasToTopic.size;
   }
 
   /**
@@ -45,7 +49,6 @@ export class TopicAliasSend {
     this.aliasToTopic.set(alias, topic);
     this.topicToAlias[topic] = alias;
     this.numberAllocator.use(alias);
-    this.length = this.aliasToTopic.size;
     return true;
   }
 
@@ -78,7 +81,6 @@ export class TopicAliasSend {
     this.aliasToTopic.reset();
     this.topicToAlias = {};
     this.numberAllocator.clear();
-    this.length = 0;
   }
 
   /**

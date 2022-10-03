@@ -15,7 +15,15 @@ const defaultStoreOptions: StoreOptions = {
 
 type Packet = any;
 
-export default class Store {
+export interface IStore {
+  put(packet: any, cb: (err?: Error) => void): this;
+  createStream(): Readable;
+  del(packet: any, cb: Function): this;
+  get(packet: any, cb: (err?: Error, packet?: Packet) => void): this;
+  close(cb: (err?: Error) => void): void;
+}
+
+export default class Store implements IStore {
   options: StoreOptions;
   private _inflights: Map<string, Packet>;
 
@@ -122,7 +130,6 @@ export default class Store {
   /**
    * Close the store
    */
-  // TODO: store needs to be an interface since we except others to write to it
   public close(cb: (err?: Error) => void): void {
     if (this.options.clean) {
       this._inflights = new Map<string, Packet>();

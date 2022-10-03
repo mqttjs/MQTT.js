@@ -9,8 +9,6 @@ import url from 'url';
 import debugModule from 'debug';
 const debug = debugModule('mqttjs');
 
-// TODO: replace xtend with {...bar, ...foo}
-
 const protocols: { [key: string]: StreamBuilderFunction } = {};
 
 // eslint-disable-next-line camelcase
@@ -52,7 +50,6 @@ function parseAuthOptions(opts: MqttClientOptions): void {
  * @param {String} [brokerUrl] - url of the broker, optional
  * @param {Object} opts - see MqttClient#constructor
  */
-// TODO: try writing this with default paramter values
 function connect(brokerUrlParam?: string | undefined | MqttClientOptions, optsParam?: MqttClientOptions | undefined) {
   debug('connecting to an MQTT broker...');
   let brokerUrl: string;
@@ -68,13 +65,13 @@ function connect(brokerUrlParam?: string | undefined | MqttClientOptions, optsPa
 
   if (brokerUrl) {
     const parsed: any = url.parse(brokerUrl, true) as any;
-    if (parsed.port != null) {
+    if (parsed.port != undefined) {
       parsed.port = Number(parsed.port);
     }
 
     opts = { ...parsed, ...opts };
 
-    if (opts.protocol === null) {
+    if (opts.protocol == undefined) {
       throw new Error('Missing protocol');
     }
 
@@ -135,7 +132,7 @@ function connect(brokerUrlParam?: string | undefined | MqttClientOptions, optsPa
   }
 
   function wrapper(client: MqttClient): _IDuplex {
-    // TODO: _reconnectCount looks like dead code. What about opts.servers? Oh, it's used here and only here.  aargh
+    // TODO: this is a crazy way to do server list.
     if (opts.servers) {
       if (!client._reconnectCount || client._reconnectCount === opts.servers.length) {
         client._reconnectCount = 0;
@@ -161,7 +158,7 @@ function connect(brokerUrlParam?: string | undefined | MqttClientOptions, optsPa
   return client;
 }
 
-// TODO: we can do this better
+// TODO: This is very nodey. Do we need to redefine this interface?
 module.exports = connect;
 module.exports.connect = connect;
 module.exports.MqttClient = MqttClient;

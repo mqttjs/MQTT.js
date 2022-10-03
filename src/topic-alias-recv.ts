@@ -8,12 +8,14 @@ export class TopicAliasRecv {
    */
   aliasToTopic: { [key: number]: string };
   max: number;
-  length: number;
 
   constructor(max: number) {
     this.aliasToTopic = {};
     this.max = max;
-    this.length = 0; // TODO; is this even used? If so, make it a property
+  }
+
+  public get length(): number {
+    return Object.keys(this.aliasToTopic).length;
   }
 
   /**
@@ -27,7 +29,6 @@ export class TopicAliasRecv {
       return false;
     }
     this.aliasToTopic[alias] = topic;
-    this.length = Object.keys(this.aliasToTopic).length;
     return true;
   }
 

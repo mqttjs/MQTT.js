@@ -21,9 +21,6 @@ import { StreamBuilderFunction } from './connect/interface';
 const debug = debugModule('mqttjs:client');
 const clone = rfdc();
 
-// TODO: move mqtt-packet imports to mqttPacket indirection
-// TODO: what is the difference between null and undefined?  strictNullChecks option important here.
-
 const defaultConnectOptions: MqttClientOptions = {
   keepalive: 60,
   reschedulePings: true,
@@ -36,7 +33,6 @@ const defaultConnectOptions: MqttClientOptions = {
 };
 
 export interface PublishOptions {
-  // TODO: can this import from mqtt-packet?
   qos?: mqttPacket.QoS;
   retain?: boolean;
   dup?: boolean;
@@ -58,12 +54,12 @@ interface OutgoingQueueEntry {
 type OutgoingQueue = { [key: string]: OutgoingQueueEntry };
 
 type SendPacketCompleteCallback = (err?: Error) => void;
-type StorePutCompleteCallback = (err?: Error) => void; // TODO: This isn't consistent
+type StorePutCompleteCallback = (err?: Error) => void;
 
 interface StoreProcessingQueueEntry {
   invoke: () => boolean;
   cbStorePut?: StorePutCompleteCallback;
-  callback: (err?: Error) => void; // TODO: is this SendPacketCompleteCallback?
+  callback: SendPacketCompleteCallback;
 }
 // Other Socket Errors: EADDRINUSE, ECONNRESET, ENOTFOUND.
 type ErrorOnlyCallback = (err?: Error) => void;
@@ -195,8 +191,6 @@ function removeTopicAliasAndRecoverTopicName(client: MqttClient, packet: mqttPac
   return undefined;
 }
 
-// TODO: topicAliasSend and topicAliasRcv should be required?
-
 function sendPacket(client: MqttClient, packet: mqttPacket.Packet, cb?: () => void): void {
   debug('sendPacket :: packet: %O', packet);
   debug('sendPacket :: emitting `packetsend`');
@@ -296,15 +290,15 @@ export default class MqttClient extends EventEmitter {
   private messageIdToTopic: { [messageId: number]: string[] };
   private queue: { packet: mqttPacket.Packet; cb: (err?: Error) => void }[];
   private _storeProcessing: boolean;
-  private _packetIdsDuringStoreProcessing: { [id: number]: any }; // TODO: type for values
-  private _storeProcessingQueue: StoreProcessingQueueEntry[]; // TODO: type - what is this anyway?
+  private _packetIdsDuringStoreProcessing: { [id: number]: boolean };
+  private _storeProcessingQueue: StoreProcessingQueueEntry[];
   private _resubscribeTopics: ResubscribeTopicList;
   private _deferredReconnect?: () => void;
   public reconnecting?: boolean;
   private connackPacket?: mqttPacket.IConnackPacket;
   public disconnected?: boolean;
   public pingResp?: boolean;
-  public _reconnectCount?: number; // TODO: this is dead!
+  public _reconnectCount?: number;
 
   /**
    * MqttClient constructor
@@ -316,13 +310,11 @@ export default class MqttClient extends EventEmitter {
   constructor(streamBuilder: StreamBuilderFunction, options: MqttClientOptions = {}) {
     super();
 
-    console.log('Creating typescript MQTT-JS object');
-
     this.options = options || {};
 
     // Defaults
     for (const k in defaultConnectOptions as any) {
-      if (typeof (this.options as any)[k] === 'undefined') {
+      if ((this.options as any)[k] == undefined) {
         (this.options as any)[k] = (defaultConnectOptions as any)[k];
       }
     }
@@ -341,20 +333,19 @@ export default class MqttClient extends EventEmitter {
       options.protocolVersion === 5 && options.customHandleAcks
         ? options.customHandleAcks
         : (_topic: string, _message: any, _packet: mqttPacket.Packet, callback: (err?: Error, code?: any) => void): void => {
-            callback(undefined, 0); // TODO: What's up with the zero here? What does this "code" mean?
+            callback(undefined, 0);
           };
 
     this.streamBuilder = streamBuilder;
 
-    this.messageIdProvider =
-      typeof this.options.messageIdProvider === 'undefined' ? new DefaultMessageIdProvider() : this.options.messageIdProvider;
+    this.messageIdProvider = this.options.messageIdProvider || new DefaultMessageIdProvider();
 
     // Inflight message storages
     this.outgoingStore = options.outgoingStore || new Store();
     this.incomingStore = options.incomingStore || new Store();
 
     // Should QoS zero messages be queued when the connection is broken?
-    this.queueQoSZero = options.queueQoSZero === undefined ? true : options.queueQoSZero;
+    this.queueQoSZero = options.queueQoSZero == undefined ? true : options.queueQoSZero;
 
     // map of subscribed topics to support reconnection
     this._resubscribeTopics = {};
@@ -363,7 +354,7 @@ export default class MqttClient extends EventEmitter {
     this.messageIdToTopic = {};
 
     // Ping timer, setup in _setupPingTimer
-    this.pingTimer = null;
+    this.pingTimer = undefined;
     // Is the client connected?
     this.connected = false;
     // Are we disconnecting?
@@ -371,9 +362,9 @@ export default class MqttClient extends EventEmitter {
     // Packet queue
     this.queue = [];
     // connack timer
-    this.connackTimer = null;
+    this.connackTimer = undefined;
     // Reconnect timer
-    this.reconnectTimer = null;
+    this.reconnectTimer = undefined;
     // Is processing store?
     this._storeProcessing = false;
     // Packet Ids are put into the store during store processing
@@ -402,7 +393,7 @@ export default class MqttClient extends EventEmitter {
       const deliver = (): void => {
         const entry = queue.shift();
         debug('deliver :: entry %o', entry);
-        let packet = null;
+        let packet = undefined;
 
         if (!entry) {
           this._resubscribe();
@@ -442,9 +433,9 @@ export default class MqttClient extends EventEmitter {
       clearTimeout(this.connackTimer);
 
       debug('close :: clearing ping timer');
-      if (this.pingTimer !== null) {
+      if (this.pingTimer != undefined) {
         this.pingTimer.clear();
-        this.pingTimer = null;
+        this.pingTimer = undefined;
       }
 
       if (this.topicAliasRecv) {
@@ -591,7 +582,7 @@ export default class MqttClient extends EventEmitter {
       options.protocolVersion === 5 &&
       options.properties &&
       options.properties.maximumPacketSize &&
-      options.properties.maximumPacketSize < (packet.length as number) // TODO: is `as number` safe here since length is optional?
+      options.properties.maximumPacketSize < (packet.length as number)
     ) {
       this.emit('error', new Error('exceeding packets size ' + packet.cmd));
       this.end({ reasonCode: 149, properties: { reasonString: 'Maximum packet size was exceeded' } });
@@ -692,7 +683,7 @@ export default class MqttClient extends EventEmitter {
       let messageId = 0;
       if (opts.qos === 1 || opts.qos === 2) {
         messageId = this._nextId();
-        if (messageId === null) {
+        if (messageId == undefined) {
           debug('No messageId left');
           return false;
         }
@@ -701,10 +692,10 @@ export default class MqttClient extends EventEmitter {
         cmd: 'publish',
         topic: topic,
         payload: message,
-        qos: opts.qos || 0, // TODO: default?
-        retain: opts.retain || false, // TODO: default?
+        qos: opts.qos || 0,
+        retain: opts.retain || false,
         messageId: messageId,
-        dup: opts.dup || false, // TODO: default?
+        dup: opts.dup || false,
       };
 
       if (options.protocolVersion === 5) {
@@ -758,7 +749,6 @@ export default class MqttClient extends EventEmitter {
    * @example client.subscribe('topic', console.log);
    */
   public subscribe(...args: any[]) {
-    // TODO: dear god this function needs work!
     const subs: ISubscriptionExtended[] = [];
     let obj: any = args.shift();
     const resubscribe = obj.resubscribe;
@@ -778,7 +768,7 @@ export default class MqttClient extends EventEmitter {
     }
 
     const invalidTopic = validations.validateTopics(obj);
-    if (invalidTopic !== null) {
+    if (invalidTopic != undefined) {
       setImmediate(callback, new Error('Invalid topic ' + invalidTopic));
       return this;
     }
@@ -803,7 +793,7 @@ export default class MqttClient extends EventEmitter {
         debug('subscribe: array topic %s', topic);
         if (
           !Object.prototype.hasOwnProperty.call(this._resubscribeTopics, topic) ||
-          (this._resubscribeTopics[topic] as ISubscriptionExtended).qos < opts.qos || // TODO: is this cast safe? This whole "dict of subscriptions plus one boolean structure sucks"
+          (this._resubscribeTopics[topic] as ISubscriptionExtended).qos < opts.qos ||
           resubscribe
         ) {
           const currentOpts: ISubscriptionExtended = {
@@ -833,7 +823,6 @@ export default class MqttClient extends EventEmitter {
             qos: obj[k].qos,
           };
           if (version === 5) {
-            // TODO: all these option structures with nl and rap need to be typed.
             currentOpts.nl = obj[k].nl;
             currentOpts.rap = obj[k].rap;
             currentOpts.rh = obj[k].rh;
@@ -846,19 +835,18 @@ export default class MqttClient extends EventEmitter {
     }
 
     if (!subs.length) {
-      callback(null, []);
+      callback(undefined, []);
       return this;
     }
 
     const subscribeProc = (): boolean => {
       const messageId = this._nextId();
-      if (messageId === null) {
+      if (messageId == undefined) {
         debug('No messageId left');
         return false;
       }
 
       const packet: any = {
-        // TODO: this is almost an mqttPacket.ISubscribePacket, except for qos, retain, and dup.
         cmd: 'subscribe',
         qos: 1,
         retain: false,
@@ -888,18 +876,16 @@ export default class MqttClient extends EventEmitter {
             topics.push(sub.topic);
           }
         });
-        this.messageIdToTopic[packet.messageId as number] = topics; // TODO: unsafe cast?
+        this.messageIdToTopic[packet.messageId as number] = topics;
       }
 
       this.outgoing[packet.messageId as number] = {
-        // TODO: unsafe cast?
         volatile: true,
         cb: (err?: Error, packet?: mqttPacket.Packet): void => {
-          // TODO: is mqttPacket.ISubAckPacket correct
           if (!err) {
             const granted = (packet as mqttPacket.ISubackPacket).granted;
             for (let i = 0; i < granted.length; i += 1) {
-              subs[i]!.qos = granted[i] as mqttPacket.QoS; // TODO: unsafe bang on lhs and unsafe cast on rhs? There must be a better way to write this loop.
+              subs[i]!.qos = granted[i] as mqttPacket.QoS;
             }
           }
 
@@ -952,7 +938,7 @@ export default class MqttClient extends EventEmitter {
     }
 
     const invalidTopic = validations.validateTopics(topic);
-    if (invalidTopic !== null) {
+    if (invalidTopic != undefined) {
       setImmediate(callback, new Error('Invalid topic ' + invalidTopic));
       return this;
     }
@@ -963,7 +949,7 @@ export default class MqttClient extends EventEmitter {
 
     const unsubscribeProc = (): boolean => {
       const messageId = this._nextId();
-      if (messageId === null) {
+      if (messageId == undefined) {
         debug('No messageId left');
         return false;
       }
@@ -1020,8 +1006,6 @@ export default class MqttClient extends EventEmitter {
    *
    * @api public
    */
-  // TODO: chaining on public functions? It is documented after all, right?
-  // TODO: Function overloading sucks in JS
   public end(force?: boolean | {} | ErrorOnlyCallback, opts?: {} | ErrorOnlyCallback, cb?: ErrorOnlyCallback): this {
     if (force == undefined || typeof force !== 'boolean') {
       cb = opts as any;
@@ -1079,7 +1063,6 @@ export default class MqttClient extends EventEmitter {
       );
     };
 
-    // TODO: this.disconnecting? bad state storage. Should this be a local that gets captured into a closure?
     if (this.disconnecting) {
       cb();
       return this;
@@ -1203,7 +1186,7 @@ export default class MqttClient extends EventEmitter {
     debug('_clearReconnect : clearing reconnect timer');
     if (this.reconnectTimer) {
       clearInterval(this.reconnectTimer);
-      this.reconnectTimer = null;
+      this.reconnectTimer = undefined;
     }
   }
 
@@ -1212,7 +1195,6 @@ export default class MqttClient extends EventEmitter {
    * @api private
    */
   private _cleanUp(forced?: boolean, done?: (err?: Error) => void, opts?: any) {
-    // TODO: type for opts
     if (done) {
       debug('_cleanUp :: done callback provided for on stream close');
       this.stream.on('close', done);
@@ -1237,10 +1219,10 @@ export default class MqttClient extends EventEmitter {
       this._setupReconnect();
     }
 
-    if (this.pingTimer !== null) {
+    if (this.pingTimer != undefined) {
       debug('_cleanUp :: clearing pingTimer');
       this.pingTimer.clear();
-      this.pingTimer = null;
+      this.pingTimer = undefined;
     }
 
     if (done && !this.connected) {
@@ -1322,7 +1304,6 @@ export default class MqttClient extends EventEmitter {
    * @api private
    */
   private _storePacket(packet: mqttPacket.Packet, cb: SendPacketCompleteCallback, cbStorePut?: StorePutCompleteCallback) {
-    // TODO: use typing of SendPacketCompleteCallback and StorePutCompleteCallback everywhere
     debug('_storePacket :: packet: %o', packet);
     debug('_storePacket :: cb? %s', !!cb);
     cbStorePut = cbStorePut || nop;
@@ -1340,7 +1321,6 @@ export default class MqttClient extends EventEmitter {
     }
     // check that the packet is not a qos of 0, or that the command is not a publish
     if ((((storePacket as any).qos || 0) === 0 && this.queueQoSZero) || storePacket.cmd !== 'publish') {
-      // TODO: unsafe cast on storePacket.qos?
       this.queue.push({ packet: storePacket, cb: cb });
     } else if (storePacket.qos > 0) {
       const innerCallback = this.outgoing[storePacket.messageId as number]?.cb;
@@ -1461,7 +1441,6 @@ export default class MqttClient extends EventEmitter {
   }
 
   private _handleAuth(packet: any): void {
-    // TODO: add type for auth packet
     const options = this.options;
     const version = options.protocolVersion;
     const rc: number = version === 5 ? (packet.reasonCode as number) : (packet.returnCode as number);
@@ -1481,7 +1460,7 @@ export default class MqttClient extends EventEmitter {
 
       if (rc === 24) {
         this.reconnecting = false;
-        this._sendPacket(packet as mqttPacket.Packet); // TODO could be undefined
+        this._sendPacket(packet as mqttPacket.Packet);
       } else {
         const error = new Error('Connection refused: ' + errors[rc]);
         (err as any).code = rc;
@@ -1496,7 +1475,6 @@ export default class MqttClient extends EventEmitter {
    * @api public
    */
   public handleAuth(_packet: any, callback: (err?: Error, packet?: mqttPacket.Packet) => void): void {
-    // TODO: type for auth packet
     callback();
   }
 
@@ -1532,7 +1510,7 @@ for now i just suppressed the warnings
 */
   private _handlePublish(packet: mqttPacket.IPublishPacket, done: (err?: Error) => void): void {
     debug('_handlePublish: packet %o', packet);
-    done = typeof done !== 'undefined' ? done : nop;
+    done = done || nop;
     let topic = packet.topic.toString();
     const message = packet.payload;
     const qos = packet.qos;
@@ -1544,10 +1522,10 @@ for now i just suppressed the warnings
       if (packet.properties) {
         alias = packet.properties.topicAlias;
       }
-      if (typeof alias !== 'undefined') {
+      if (alias != undefined) {
         if (topic.length === 0) {
           if (alias > 0 && alias <= 0xffff) {
-            const gotTopic = (this.topicAliasRecv as TopicAliasRecv).getTopicByAlias(alias); // TODO: unsafe cast?
+            const gotTopic = this.topicAliasRecv!.getTopicByAlias(alias);
             if (gotTopic) {
               topic = gotTopic;
               debug('_handlePublish :: topic complemented by alias. topic: %s - alias: %d', topic, alias);
@@ -1562,8 +1540,7 @@ for now i just suppressed the warnings
             return;
           }
         } else {
-          if ((this.topicAliasRecv as TopicAliasRecv).put(topic, alias)) {
-            // TODO: unsafe cast
+          if (this.topicAliasRecv!.put(topic, alias)) {
             debug('_handlePublish :: registered topic: %s - alias: %d', topic, alias);
           } else {
             debug('_handlePublish :: topic alias out of range. alias: %d', alias);
@@ -1576,12 +1553,8 @@ for now i just suppressed the warnings
     debug('_handlePublish: qos %d', qos);
     switch (qos) {
       case 2: {
-        // TODO: this is that "zero" in the callback parameter. We need to change that.
-        options.customHandleAcks!(topic, message, packet, (error?: Error, code?: any): void => {
-          // TODO: unsafe bang operator?
-          // TODO: type for "code"
-          // TODO: better comparison for undefined and null on error.  f'in overloads
-          if (error != undefined && error != null && !(error instanceof Error)) {
+        options.customHandleAcks!(topic, message, packet, (error?: Error, code?: number): void => {
+          if (error != undefined && !(error instanceof Error)) {
             code = error;
             error = undefined;
           }
@@ -1589,7 +1562,7 @@ for now i just suppressed the warnings
             this.emit('error', error);
             return;
           }
-          if (validReasonCodes.indexOf(code) === -1) {
+          if (validReasonCodes.indexOf(code as number) === -1) {
             this.emit('error', new Error('Wrong reason code for pubrec'));
             return;
           }
@@ -1606,14 +1579,10 @@ for now i just suppressed the warnings
       case 1: {
         // emit the message event
         options.customHandleAcks!(topic, message, packet, (error?: Error, code?: number): void => {
-          // TODO: this overloading sucks.  Hopefully we can remove this.
-          // TODO: unsafe bang?
-          // TODO: there's a better undefined/null check, right?
-          if (error != undefined && error != null && !(error instanceof Error)) {
+          if (error != undefined && !(error instanceof Error)) {
             code = error;
             error = undefined;
           }
-          // TODO: rewrite with else instead of return
           if (error) {
             this.emit('error', error);
             return;
@@ -1623,7 +1592,6 @@ for now i just suppressed the warnings
             return;
           }
           if (!code) {
-            // TODO: this should never be hit, right? for undefined at least
             this.emit('message', topic, message, packet);
           }
           this.handleMessage(packet, (err?: Error): void => {
@@ -1771,7 +1739,7 @@ for now i just suppressed the warnings
    */
   private _handlePubrel(packet: mqttPacket.IPubrelPacket, callback: (err?: Error) => void): void {
     debug('handling pubrel packet');
-    callback = typeof callback !== 'undefined' ? callback : nop;
+    callback = callback || nop;
     const messageId = packet.messageId;
 
     const comp: mqttPacket.IPubcompPacket = { cmd: 'pubcomp', messageId: messageId };
@@ -1828,18 +1796,18 @@ for now i just suppressed the warnings
     const _resubscribeTopicsKeys: string[] = Object.keys(this._resubscribeTopics);
     if (
       !this._firstConnection &&
-      (this.options.clean || (this.options.protocolVersion === 5 && !this.connackPacket!.sessionPresent)) && // TODO: unsafe bang that assumes this.connackPacket is set.
+      (this.options.clean || (this.options.protocolVersion === 5 && !this.connackPacket!.sessionPresent)) &&
       _resubscribeTopicsKeys.length > 0
     ) {
       if (this.options.resubscribe) {
         if (this.options.protocolVersion === 5) {
           debug('_resubscribe: protocolVersion 5');
           for (let topicI = 0; topicI < _resubscribeTopicsKeys.length; topicI++) {
-            const resubscribeTopic: { [topic: string]: any; resubscribe?: boolean } = {}; // TODO: this needs a type badly
+            const resubscribeTopic: { [topic: string]: any; resubscribe?: boolean } = {};
             resubscribeTopic[_resubscribeTopicsKeys[topicI] as string] =
-              this._resubscribeTopics[_resubscribeTopicsKeys[topicI] as string]; // TODO: are these casts safe?
+              this._resubscribeTopics[_resubscribeTopicsKeys[topicI] as string];
             resubscribeTopic.resubscribe = true;
-            this.subscribe(resubscribeTopic, { properties: resubscribeTopic[_resubscribeTopicsKeys[topicI] as string].properties }); // TODO: are these casts safe?
+            this.subscribe(resubscribeTopic, { properties: resubscribeTopic[_resubscribeTopicsKeys[topicI] as string].properties });
           }
         } else {
           this._resubscribeTopics.resubscribe = true;
@@ -1859,10 +1827,14 @@ for now i just suppressed the warnings
    * @api private
    */
   private _onConnect(packet: mqttPacket.IConnackPacket) {
+    debug('_onConnect');
     if (this.disconnected) {
+      debug('emitting connect');
       this.emit('connect', packet);
       return;
     }
+
+    debug('connect handling');
 
     this.connackPacket = packet;
     this.messageIdProvider.clear();
@@ -1922,7 +1894,6 @@ for now i just suppressed the warnings
           this.outgoing[packet.messageId] = {
             volatile: false,
             cb: (err?: Error, status?: any): void => {
-              // TODO: type for status parameter
               // Ensure that the original callback passed in to publish gets invoked
               if (innerCallback) {
                 innerCallback(err, status);
@@ -1943,6 +1914,7 @@ for now i just suppressed the warnings
       };
 
       outStore.on('end', (): void => {
+        console.log('outStore.on(end');
         let allProcessed = true;
         for (const id in this._packetIdsDuringStoreProcessing) {
           if (!this._packetIdsDuringStoreProcessing[id]) {
@@ -1959,6 +1931,7 @@ for now i just suppressed the warnings
           startStreamProcess();
         }
       });
+      console.log('outStore.storeDeliver');
       storeDeliver();
     };
     // start flowing

@@ -10,23 +10,30 @@ export interface Server {
   protocol?: string;
 }
 
+export type CustomHandleAckFunction = (
+  topic: string,
+  message: any,
+  packet: Packet,
+  cb: (err?: Error, code?: number) => void
+) => void;
+
 export interface MqttClientOptions {
   hostname?: string;
   host?: string;
   path?: string;
   username?: string;
   password?: string;
-  wsOptions?: any; // TODO: type
+  wsOptions?: any;
   transformWsUrl?: (url: string, opts: MqttClientOptions, client: MqttClient) => string;
   protocol?: string;
   port?: number;
   protocolId?: string;
   protocolVersion?: number;
-  my?: any; // TODO: this is ali only, right? Maybe add {[key: string]: string}
+  my?: any;
   auth?: string;
   query?: { [key: string]: string }; // querystring from parsed URL.
-  cert?: any; // TODO: type
-  key?: any; // TODO: type
+  cert?: any;
+  key?: any;
   clientId?: string;
   clean?: boolean;
   defaultProtocol?: string;
@@ -38,8 +45,7 @@ export interface MqttClientOptions {
   resubscribe?: boolean;
   autoAssignTopicAlias?: boolean;
   autoUseTopicAlias?: boolean;
-  // TODO: type for "code" parameter in customHandleAck. Also for message parameter
-  customHandleAcks?: (topic: string, message: any, packet: Packet, cb: (err?: Error, code?: any) => void) => void;
+  customHandleAcks?: CustomHandleAckFunction;
   messageIdProvider?: MessageIdProvider;
   rejectUnauthorized?: boolean;
   outgoingStore?: Store;
@@ -47,13 +53,13 @@ export interface MqttClientOptions {
   queueQoSZero?: boolean;
   properties?: {
     authenticationMethod?: boolean; // TODO: why a sub-object
-    authenticationData?: any; // TODO: type
+    authenticationData?: any;
     maximumPacketSize?: number;
   };
   topicAliasMaximum?: number;
-  authPacket?: any; // TODO: type
-  objectMode?: boolean; // TODO: websocket only?
-  binary?: boolean; // TODO: websocket only?
-  browserBufferSize?: number; // TODO: websocket only
-  browserBufferTimeout?: number; // TODO: websocket only
+  authPacket?: any;
+  objectMode?: boolean;
+  binary?: boolean;
+  browserBufferSize?: number;
+  browserBufferTimeout?: number;
 }
