@@ -2,11 +2,11 @@
 import net from 'net';
 import debugModule from 'debug';
 import { _IDuplex } from 'readable-stream';
-import MqttClient from '../client';
-import { MqttClientOptions } from '../options';
+import { MqttClient } from '../client';
+import { IClientOptions } from '../client-options';
 const debug = debugModule('mqttjs:tcp');
 
-export function streamBuilder(_client: MqttClient, opts: MqttClientOptions): _IDuplex {
+export function streamBuilder(_client: MqttClient, opts: IClientOptions): _IDuplex {
   opts.port = opts.port || 1883;
   opts.hostname = opts.hostname || opts.host || 'localhost';
 

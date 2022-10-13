@@ -15,7 +15,7 @@ export class TopicAliasSend {
   /**
    * Topic Alias sending manager
    * This holds both topic to alias and alias to topic map
-   * @param {Number} [max] - topic alias maximum entries
+   * @param {number} [max] - topic alias maximum entries
    */
   constructor(max: number) {
     if (max <= 0) {
@@ -34,9 +34,9 @@ export class TopicAliasSend {
 
   /**
    * Insert or update topic - alias entry.
-   * @param {String} [topic] - topic
-   * @param {Number} [alias] - topic alias
-   * @return {Boolean} - if success return true otherwise false
+   * @param {string} [topic] - topic
+   * @param {number} [alias] - topic alias
+   * @return {boolean} - if success return true otherwise false
    */
   public put(topic: string, alias: number): boolean {
     if (alias === 0 || alias > this.max) {
@@ -54,8 +54,8 @@ export class TopicAliasSend {
 
   /**
    * Get topic by alias
-   * @param {Number} [alias] - topic alias
-   * @return {String} - if mapped topic exists return topic, otherwise return undefined
+   * @param {number} [alias] - topic alias
+   * @return {string} - if mapped topic exists return topic, otherwise return undefined
    */
   public getTopicByAlias(alias: number): string | undefined {
     return this.aliasToTopic.get(alias);
@@ -63,8 +63,8 @@ export class TopicAliasSend {
 
   /**
    * Get topic by alias
-   * @param {String} [topic] - topic
-   * @return {Number} - if mapped topic exists return topic alias, otherwise return undefined
+   * @param {string} [topic] - topic
+   * @return {number} - if mapped topic exists return topic alias, otherwise return undefined
    */
   public getAliasByTopic(topic: string): number | undefined {
     const alias = this.topicToAlias[topic];
@@ -85,7 +85,7 @@ export class TopicAliasSend {
 
   /**
    * Get Least Recently Used (LRU) topic alias
-   * @return {Number} - if vacant alias exists then return it, otherwise then return LRU alias
+   * @return {number} - if vacant alias exists then return it, otherwise then return LRU alias
    */
   public getLruAlias(): number {
     const alias = this.numberAllocator.firstVacant();

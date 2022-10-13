@@ -6,8 +6,8 @@
  * - Rule #1: If any part of the topic is not `+` or `#`, then it must not contain `+` and '#'
  * - Rule #2: Part `#` must be located at the end of the mailbox
  *
- * @param {String} topic - A topic
- * @return {Boolean} If the topic is valid, returns true. Otherwise, returns false.
+ * @param {string} topic - A topic
+ * @return {boolean} If the topic is valid, returns true. Otherwise, returns false.
  */
 function validateTopic(topic: string): boolean {
   const parts = topic.split('/');
@@ -33,7 +33,7 @@ function validateTopic(topic: string): boolean {
 /**
  * Validate an array of topics to see if any of them is valid or not
  * @param {Array} topics - Array of topics
- * @return {String} If the topics is valid, returns null. Otherwise, returns the invalid one
+ * @return {string} If the topics is valid, returns null. Otherwise, returns the invalid one
  */
 export function validateTopics(topics: Array<string>): string | null {
   if (topics.length === 0) {

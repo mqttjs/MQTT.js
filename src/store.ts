@@ -6,34 +6,29 @@
 import { Readable } from 'readable-stream';
 const streamsOpts = { objectMode: true };
 
-export interface StoreOptions {
-  clean: boolean;
+export interface IStoreOptions {
+  /**
+   * true, clear _inflights at close
+   */
+  clean?: boolean;
 }
-const defaultStoreOptions: StoreOptions = {
+const defaultStoreOptions: IStoreOptions = {
   clean: true,
 };
 
 type Packet = any;
 
-export interface IStore {
-  put(packet: any, cb: (err?: Error) => void): this;
-  createStream(): Readable;
-  del(packet: any, cb: Function): this;
-  get(packet: any, cb: (err?: Error, packet?: Packet) => void): this;
-  close(cb: (err?: Error) => void): void;
-}
-
-export default class Store implements IStore {
-  options: StoreOptions;
+export class Store {
+  options: IStoreOptions;
   private _inflights: Map<string, Packet>;
 
   /**
    * In-memory implementation of the message store
    * This can actually be saved into files.
    *
-   * @param {Object} [options] - store options
+   * @param {IStoreOptions} [options] - store options
    */
-  constructor(options?: StoreOptions) {
+  constructor(options?: IStoreOptions) {
     // Defaults
     if (options) {
       this.options = { ...defaultStoreOptions, ...options };
@@ -139,5 +134,3 @@ export default class Store implements IStore {
     }
   }
 }
-
-module.exports = Store;

@@ -1,18 +1,18 @@
 'use strict';
 
-import { StreamBuilderFunction } from './interface';
-import { MqttClientOptions } from '../options';
-import MqttClient from '../client';
-import Store from '../store';
-import { _IDuplex } from 'readable-stream';
+import { IClientOptions } from '../client-options';
+import { MqttClient } from '../client';
 import url from 'url';
 import debugModule from 'debug';
 const debug = debugModule('mqttjs');
-
-const protocols: { [key: string]: StreamBuilderFunction } = {};
+import events from 'events';
 
 // eslint-disable-next-line camelcase
 declare const __webpack_require__: any;
+
+export type StreamBuilder = (client: MqttClient, opts: IClientOptions) => IStream;
+
+const protocols: { [key: string]: StreamBuilder } = {};
 
 // eslint-disable-next-line camelcase
 if ((typeof process !== 'undefined' && process.title !== 'browser') || typeof __webpack_require__ !== 'function') {
@@ -26,12 +26,18 @@ if ((typeof process !== 'undefined' && process.title !== 'browser') || typeof __
 protocols['ws'] = require('./ws');
 protocols['wss'] = require('./ws');
 
+export interface IStream extends events.EventEmitter {
+  pipe(to: any): any;
+  destroy(): any;
+  end(): any;
+}
+
 /**
  * Parse the auth attribute and merge username and password in the options object.
  *
- * @param {Object} [opts] option object
+ * @param {IClientOptions} [opts] option object
  */
-function parseAuthOptions(opts: MqttClientOptions): void {
+function parseAuthOptions(opts: IClientOptions): void {
   let matches;
   if (opts.auth) {
     matches = opts.auth.match(/^(.+):(.+)$/);
@@ -47,13 +53,23 @@ function parseAuthOptions(opts: MqttClientOptions): void {
 /**
  * connect - connect to an MQTT broker.
  *
- * @param {String} [brokerUrl] - url of the broker, optional
- * @param {Object} opts - see MqttClient#constructor
+ * @param {IClientOptions} opts - see MqttClient#constructor
  */
-function connect(brokerUrlParam?: string | undefined | MqttClientOptions, optsParam?: MqttClientOptions | undefined) {
+export function connect(opts: IClientOptions): MqttClient;
+/**
+ * connect - connect to an MQTT broker.
+ *
+ * @param {string} brokerUrl - url of the broker
+ * @param {IClientOptions} opts - see MqttClient#constructor
+ */
+// eslint-disable-next-line no-redeclare
+export function connect(brokerUrl: string, opts?: IClientOptions): MqttClient;
+
+// eslint-disable-next-line no-redeclare
+export function connect(brokerUrlParam?: string | undefined | IClientOptions, optsParam?: IClientOptions | undefined) {
   debug('connecting to an MQTT broker...');
   let brokerUrl: string;
-  let opts: MqttClientOptions;
+  let opts: IClientOptions;
 
   if (typeof brokerUrlParam === 'object' && !optsParam) {
     opts = brokerUrlParam;
@@ -88,19 +104,13 @@ function connect(brokerUrlParam?: string | undefined | MqttClientOptions, optsPa
 
   if (opts.cert && opts.key) {
     if (opts.protocol) {
-      if (['mqtts', 'wss', 'wxs', 'alis'].indexOf(opts.protocol) === -1) {
+      if (['mqtts', 'wss'].indexOf(opts.protocol) === -1) {
         switch (opts.protocol) {
           case 'mqtt':
             opts.protocol = 'mqtts';
             break;
           case 'ws':
             opts.protocol = 'wss';
-            break;
-          case 'wx':
-            opts.protocol = 'wxs';
-            break;
-          case 'ali':
-            opts.protocol = 'alis';
             break;
           default:
             throw new Error('Unknown protocol for secure connection: "' + opts.protocol + '"!');
@@ -114,7 +124,7 @@ function connect(brokerUrlParam?: string | undefined | MqttClientOptions, optsPa
 
   if (!protocols[opts.protocol as string]) {
     const isSecure = ['mqtts', 'wss'].indexOf(opts.protocol as string) !== -1;
-    opts.protocol = ['mqtt', 'mqtts', 'ws', 'wss', 'wx', 'wxs', 'ali', 'alis'].filter(function (key, index) {
+    opts.protocol = ['mqtt', 'mqtts', 'ws', 'wss'].filter(function (key, index) {
       if (isSecure && index % 2 === 0) {
         // Skip insecure protocols when requesting a secure one.
         return false;
@@ -131,7 +141,7 @@ function connect(brokerUrlParam?: string | undefined | MqttClientOptions, optsPa
     opts.defaultProtocol = opts.protocol;
   }
 
-  function wrapper(client: MqttClient): _IDuplex {
+  function wrapper(client: MqttClient): IStream {
     // TODO: this is a crazy way to do server list.
     if (opts.servers) {
       if (!client._reconnectCount || client._reconnectCount === opts.servers.length) {
@@ -158,8 +168,4 @@ function connect(brokerUrlParam?: string | undefined | MqttClientOptions, optsPa
   return client;
 }
 
-// TODO: This is very nodey. Do we need to redefine this interface?
-module.exports = connect;
-module.exports.connect = connect;
-module.exports.MqttClient = MqttClient;
-module.exports.Store = Store;
+export { MqttClient };

@@ -5,9 +5,8 @@
  */
 const should = require('chai').should
 const sinon = require('sinon')
-const mqtt = require('../')
-const xtend = require('xtend')
-const Store = require('./../dist/store')
+const mqtt = require('..')
+const Store = require('..').Store
 const assert = require('chai').assert
 const ports = require('./helpers/port_list')
 const serverBuilder = require('./server_helpers_for_client_tests').serverBuilder
@@ -16,7 +15,7 @@ module.exports = function (server, config) {
   const version = config.protocolVersion || 4
 
   function connect (opts) {
-    opts = xtend(config, opts)
+    opts = {...config, ...opts}
     return mqtt.connect(opts)
   }
 
@@ -235,13 +234,13 @@ module.exports = function (server, config) {
 
   describe('connecting', function () {
     it('should connect to the broker', function (done) {
-      const client = connect()
-      client.on('error', done)
-
       server.once('client', function () {
         done()
         client.end()
       })
+
+      const client = connect()
+      client.on('error', done)
     })
 
     it('should send a default client id', function (done) {

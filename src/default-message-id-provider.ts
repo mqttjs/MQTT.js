@@ -1,9 +1,15 @@
 'use strict';
+import { IMessageIdProvider } from './message-id-provider';
 
-export class DefaultMessageIdProvider {
+/**
+ * DefaultMessageIdProvider
+ * This is compatible behavior with the original MQTT.js internal messageId allocation.
+ */
+export class DefaultMessageIdProvider implements IMessageIdProvider {
   private nextId: number;
   /**
    * DefaultMessageAllocator constructor
+   * Randomize initial messageId
    * @constructor
    */
   constructor() {
@@ -15,10 +21,8 @@ export class DefaultMessageIdProvider {
   }
 
   /**
-   * allocate
-   *
-   * Get the next messageId.
-   * @return unsigned int
+   * Return the current messageId and increment the current messageId.
+   * @return {number} - messageId
    */
   public allocate(): number {
     // id becomes current state of this.nextId and increments afterwards
@@ -31,34 +35,33 @@ export class DefaultMessageIdProvider {
   }
 
   /**
-   * getLastAllocated
    * Get the last allocated messageId.
-   * @return unsigned int
+   * @return {number} - messageId.
    */
   public getLastAllocated(): number {
     return this.nextId === 1 ? 65535 : this.nextId - 1;
   }
 
   /**
-   * register
-   * Register messageId. If success return true, otherwise return false.
-   * @param { unsigned int } - messageId to register,
-   * @return boolean
+   * Register the messageId.
+   * This function actually does nothing and always return true.
+   * @param {number} num - The messageId to request use.
+   * @return {boolean} - If `num` was not occupied, then return true, otherwise return false.
    */
   public register(_messageId: number): boolean {
     return true;
   }
 
   /**
-   * deallocate
-   * Deallocate messageId.
-   * @param { unsigned int } - messageId to deallocate,
+   * Deallocate the messageId.
+   * This function actually does nothing.
+   * @param {number} num - The messageId to deallocate.
    */
   public deallocate(_messageId: number): void {}
 
   /**
-   * clear
-   * Deallocate all messageIds.
+   * Clear all occupied messageIds.
+   * This function actually does nothing.
    */
   public clear(): void {}
 }

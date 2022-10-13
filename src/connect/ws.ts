@@ -1,8 +1,8 @@
 'use strict';
 
 import { Buffer } from 'buffer';
-import MqttClient from '../client';
-import { MqttClientOptions } from '../options';
+import { MqttClient } from '../client';
+import { IClientOptions } from '../client-options';
 
 import WebSocket from 'ws';
 import debugModule from 'debug';
@@ -18,7 +18,7 @@ const WSS_OPTIONS = ['rejectUnauthorized', 'ca', 'cert', 'key', 'pfx', 'passphra
 // eslint-disable-next-line camelcase
 const IS_BROWSER = (typeof process !== 'undefined' && process.title === 'browser') || typeof __webpack_require__ === 'function';
 
-function buildUrl(opts: MqttClientOptions, client: MqttClient): string {
+function buildUrl(opts: IClientOptions, client: MqttClient): string {
   let url = opts.protocol + '://' + opts.hostname + ':' + opts.port + opts.path;
   if (typeof opts.transformWsUrl === 'function') {
     url = opts.transformWsUrl(url, opts, client);
@@ -26,7 +26,7 @@ function buildUrl(opts: MqttClientOptions, client: MqttClient): string {
   return url;
 }
 
-function setDefaultOpts(opts: MqttClientOptions): MqttClientOptions {
+function setDefaultOpts(opts: IClientOptions): IClientOptions {
   const options = opts; // TODO: I think this line does not do what you think it does. Why alias it here?
   if (!opts.hostname) {
     options.hostname = 'localhost';
@@ -49,7 +49,7 @@ function setDefaultOpts(opts: MqttClientOptions): MqttClientOptions {
     // Add cert/key/ca etc options
     WSS_OPTIONS.forEach(function (prop) {
       if (Object.prototype.hasOwnProperty.call(opts, prop) && !Object.prototype.hasOwnProperty.call(opts.wsOptions, prop)) {
-        options.wsOptions[prop] = (opts as any)[prop];
+        (options.wsOptions as any)[prop] = (opts as any)[prop];
       }
     });
   }
@@ -57,8 +57,8 @@ function setDefaultOpts(opts: MqttClientOptions): MqttClientOptions {
   return options;
 }
 
-function setDefaultBrowserOpts(opts: MqttClientOptions): MqttClientOptions {
-  const options: MqttClientOptions = setDefaultOpts(opts);
+function setDefaultBrowserOpts(opts: IClientOptions): IClientOptions {
+  const options: IClientOptions = setDefaultOpts(opts);
 
   if (!options.hostname) {
     options.hostname = options.host;
@@ -88,17 +88,17 @@ function setDefaultBrowserOpts(opts: MqttClientOptions): MqttClientOptions {
   return options;
 }
 
-function createWebSocket(_client: MqttClient, url: string, opts: MqttClientOptions): WebSocket {
+function createWebSocket(_client: MqttClient, url: string, opts: IClientOptions): WebSocket {
   debug('createWebSocket');
   debug('protocol: ' + opts.protocolId + ' ' + opts.protocolVersion);
   const websocketSubProtocol = opts.protocolId === 'MQIsdp' && opts.protocolVersion === 3 ? 'mqttv3.1' : 'mqtt';
 
   debug('creating new Websocket for url: ' + url + ' and protocol: ' + websocketSubProtocol);
-  const socket = new WebSocket(url, [websocketSubProtocol], opts.wsOptions);
+  const socket = new WebSocket(url, [websocketSubProtocol], opts.wsOptions as any);
   return socket;
 }
 
-function createBrowserWebSocket(client: MqttClient, opts: MqttClientOptions): WebSocket {
+function createBrowserWebSocket(client: MqttClient, opts: IClientOptions): WebSocket {
   const websocketSubProtocol = opts.protocolId === 'MQIsdp' && opts.protocolVersion === 3 ? 'mqttv3.1' : 'mqtt';
 
   const url = buildUrl(opts, client);
@@ -107,12 +107,12 @@ function createBrowserWebSocket(client: MqttClient, opts: MqttClientOptions): We
   return socket;
 }
 
-function streamBuilder(client: MqttClient, opts: MqttClientOptions): _IDuplex {
+function streamBuilder(client: MqttClient, opts: IClientOptions): _IDuplex {
   debug('streamBuilder');
   const options = setDefaultOpts(opts);
   const url = buildUrl(options, client);
   const socket = createWebSocket(client, url, options);
-  const webSocketStream = WebSocket.createWebSocketStream(socket, options.wsOptions);
+  const webSocketStream = WebSocket.createWebSocketStream(socket, options.wsOptions as any);
   (webSocketStream as any).url = url;
   socket.on('close', () => {
     webSocketStream.destroy();
@@ -120,7 +120,7 @@ function streamBuilder(client: MqttClient, opts: MqttClientOptions): _IDuplex {
   return webSocketStream as unknown as _IDuplex;
 }
 
-function browserStreamBuilder(client: MqttClient, opts: MqttClientOptions): Duplex {
+function browserStreamBuilder(client: MqttClient, opts: IClientOptions): Duplex {
   debug('browserStreamBuilder');
   let stream: Transform | duplexify.Duplexify;
   const options = setDefaultBrowserOpts(opts);
@@ -176,7 +176,7 @@ function browserStreamBuilder(client: MqttClient, opts: MqttClientOptions): Dupl
   // methods for browserStreamBuilder
 
   function buildProxy(
-    options: MqttClientOptions,
+    options: IClientOptions,
     socketWrite: (chunk: any, encoding: string, callback: (error?: Error | null) => void) => void,
     socketEnd: (callback: (err?: Error | null | undefined, data?: any) => void) => void
   ): Transform {

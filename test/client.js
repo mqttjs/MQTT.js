@@ -1,6 +1,6 @@
 'use strict'
 
-const mqtt = require('../mqtt')
+const mqtt = require('..')
 const assert = require('chai').assert
 const { fork } = require('child_process')
 const path = require('path')

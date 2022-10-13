@@ -6,8 +6,8 @@
  */
 
 const MqttClient = require('./dist/client').MqttClient
-const connect = require('./dist/connect')
-const Store = require('./dist/store')
+const connect = require('./dist/connect').connect
+const Store = require('./dist/store').Store
 const DefaultMessageIdProvider = require('./dist/default-message-id-provider').DefaultMessageIdProvider
 const UniqueMessageIdProvider = require('./dist/unique-message-id-provider').UniqueMessageIdProvider
 

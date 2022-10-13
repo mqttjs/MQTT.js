@@ -1,39 +1,38 @@
-'use strict';
-
-export interface MessageIdProvider {
+/**
+ * MessageIdProvider
+ */
+export interface IMessageIdProvider {
   /**
-   * allocate
-   *
-   * Get the next messageId.
-   * @return unsigned int
+   * Allocate the first vacant messageId. The messageId become occupied status.
+   * @return {number} - The first vacant messageId. If all messageIds are occupied, return null.
    */
-  allocate: () => number;
+  allocate(): number | null;
 
   /**
-   * getLastAllocated
    * Get the last allocated messageId.
-   * @return unsigned int
+   * @return {number} - messageId.
    */
-  getLastAllocated: () => number;
+  getLastAllocated(): number | null;
 
   /**
-   * register
-   * Register messageId. If success return true, otherwise return false.
-   * @param { unsigned int } - messageId to register,
-   * @return boolean
+   * Register the messageId. The messageId become occupied status.
+   * If the messageId has already been occupied, then return false.
+   * @param {number} num - The messageId to request use.
+   * @return {boolean} - If `num` was not occupied, then return true, otherwise return false.
    */
-  register: (messageId: number) => boolean;
+  register(num: number): Boolean;
 
   /**
-   * deallocate
-   * Deallocate messageId.
-   * @param { unsigned int } - messageId to deallocate,
+   * Deallocate the messageId. The messageId become vacant status.
+   * @param {number} num - The messageId to deallocate. The messageId must be occupied status.
+   *                       In other words, the messageId must be allocated by allocate() or
+   *                       occupied by register().
    */
-  deallocate: (messageId: number) => void;
+  deallocate(num: number): void;
 
   /**
-   * clear
-   * Deallocate all messageIds.
+   * Clear all occupied messageIds.
+   * The all messageIds are set to vacant status.
    */
-  clear: () => void;
+  clear(): void;
 }

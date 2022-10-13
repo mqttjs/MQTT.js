@@ -1,27 +1,27 @@
 'use strict';
 
 import { NumberAllocator } from 'number-allocator';
+import { IMessageIdProvider } from './message-id-provider';
 
-export class UniqueMessageIdProvider {
+/**
+ * UniqueMessageIdProvider
+ */
+export class UniqueMessageIdProvider implements IMessageIdProvider {
   private numberAllocator: NumberAllocator;
   private lastId: number | null;
 
   /**
-   * UniqueMessageAllocator constructor
+   * UniqueMessageIdProvider constructor.
    * @constructor
    */
-
   constructor() {
     this.lastId = null;
     this.numberAllocator = new NumberAllocator(1, 65535);
   }
 
   /**
-   * allocate
-   *
-   * Get the next messageId.
-   * @return if messageId is fully allocated then return null,
-   *         otherwise return the smallest usable unsigned int messageId.
+   * Allocate the first vacant messageId. The messageId become occupied status.
+   * @return {number} - The first vacant messageId. If all messageIds are occupied, return null.
    */
   public allocate(): number | null {
     this.lastId = this.numberAllocator.alloc();
@@ -29,36 +29,36 @@ export class UniqueMessageIdProvider {
   }
 
   /**
-   * getLastAllocated
    * Get the last allocated messageId.
-   * @return unsigned int
+   * @return {number} - messageId.
    */
   public getLastAllocated(): number | null {
     return this.lastId;
   }
 
   /**
-   * register
-   * Register messageId. If success return true, otherwise return false.
-   * @param { unsigned int } - messageId to register,
-   * @return boolean
+   * Register the messageId. The messageId become occupied status.
+   * If the messageId has already been occupied, then return false.
+   * @param {number} num - The messageId to request use.
+   * @return {boolean} - If `num` was not occupied, then return true, otherwise return false.
    */
   public register(messageId: number): boolean {
     return this.numberAllocator.use(messageId).valueOf();
   }
 
   /**
-   * deallocate
-   * Deallocate messageId.
-   * @param { unsigned messageId } - messageId to deallocate,
+   * Deallocate the messageId. The messageId become vacant status.
+   * @param {number} num - The messageId to deallocate. The messageId must be occupied status.
+   *                       In other words, the messageId must be allocated by allocate() or
+   *                       occupied by register().
    */
   public deallocate(messageId: number): void {
     this.numberAllocator.free(messageId);
   }
 
   /**
-   * clear
-   * Deallocate all messageIds.
+   * Clear all occupied messageIds.
+   * The all messageIds are set to vacant status.
    */
   public clear(): void {
     this.numberAllocator.clear();

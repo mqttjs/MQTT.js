@@ -4,7 +4,7 @@
  * Module dependencies
  */
 import { EventEmitter } from 'events';
-import Store from './store';
+import { Store } from './store';
 import { TopicAliasRecv } from './topic-alias-recv';
 import { TopicAliasSend } from './topic-alias-send';
 import mqttPacket from 'mqtt-packet';
@@ -14,14 +14,21 @@ const reInterval = require('reinterval');
 import rfdc from 'rfdc';
 import * as validations from './validations';
 import debugModule from 'debug';
-import { MqttClientOptions } from './options';
-import { MessageIdProvider } from './message-id-provider';
-import { StreamBuilderFunction } from './connect/interface';
+import {
+  IClientOptions,
+  StorePutCompleteCallback,
+  SendPacketCompleteCallback,
+  IClientPublishOptions,
+  IClientReconnectOptions,
+  IClientSubscribeOptions,
+} from './client-options';
+import { IMessageIdProvider } from './message-id-provider';
+import { StreamBuilder } from './connect';
 
 const debug = debugModule('mqttjs:client');
 const clone = rfdc();
 
-const defaultConnectOptions: MqttClientOptions = {
+const defaultConnectOptions: IClientOptions = {
   keepalive: 60,
   reschedulePings: true,
   protocolId: 'MQTT',
@@ -32,18 +39,6 @@ const defaultConnectOptions: MqttClientOptions = {
   resubscribe: true,
 };
 
-export interface PublishOptions {
-  qos?: mqttPacket.QoS;
-  retain?: boolean;
-  dup?: boolean;
-  cbStorePut?: () => void;
-  properties?: mqttPacket.IPublishPacket['properties'];
-}
-
-export interface ISubscriptionExtended extends mqttPacket.ISubscription {
-  properties?: {};
-}
-
 const socketErrors = ['ECONNREFUSED', 'EADDRINUSE', 'ECONNRESET', 'ENOTFOUND'];
 
 type OutgoingQueueEntryCallback = (err?: Error, packet?: mqttPacket.Packet) => void;
@@ -52,9 +47,6 @@ interface OutgoingQueueEntry {
   cb: OutgoingQueueEntryCallback;
 }
 type OutgoingQueue = { [key: string]: OutgoingQueueEntry };
-
-type SendPacketCompleteCallback = (err?: Error) => void;
-type StorePutCompleteCallback = (err?: Error) => void;
 
 interface StoreProcessingQueueEntry {
   invoke: () => boolean;
@@ -66,7 +58,7 @@ type ErrorOnlyCallback = (err?: Error) => void;
 
 interface ResubscribeTopicList {
   resubscribe?: boolean;
-  [key: string]: ISubscriptionExtended | boolean | undefined;
+  [topic: string]: IClientSubscribeOptions | boolean | undefined;
 }
 
 const errors: { [errno: number]: string } = {
@@ -114,6 +106,55 @@ const errors: { [errno: number]: string } = {
   161: 'Subscription Identifiers not supported',
   162: 'Wildcard Subscriptions not supported',
 };
+
+export interface ISubscriptionGrant {
+  /**
+   *  is a subscribed to topic
+   */
+  topic: string;
+  /**
+   *  is the granted qos level on it, may return 128 on error
+   */
+  qos: mqttPacket.QoS | number;
+  /*
+   * no local flag
+   * */
+  nl?: boolean;
+  /*
+   * Retain As Published flag
+   * */
+  rap?: boolean;
+  /*
+   * Retain Handling option
+   * */
+  rh?: number;
+}
+export interface ISubscriptionMap {
+  /**
+   * object which has topic names as object keys and as value the options, like {'test1': {qos: 0}, 'test2': {qos: 2}}.
+   */
+  [topic: string]: {
+    qos: mqttPacket.QoS;
+    nl?: boolean;
+    rap?: boolean;
+    rh?: number;
+  };
+}
+
+interface IClientSubscribeOptionsWithTopic extends IClientSubscribeOptions {
+  topic?: string;
+}
+
+export declare type OnConnectCallback = (packet: mqttPacket.IConnackPacket) => void;
+export declare type OnDisconnectCallback = (packet: mqttPacket.IDisconnectPacket) => void;
+export declare type ClientSubscribeCallback = (err: Error, granted: ISubscriptionGrant[]) => void;
+export declare type OnMessageCallback = (topic: string, payload: Buffer, packet: mqttPacket.IPublishPacket) => void;
+export declare type OnPacketCallback = (packet: mqttPacket.Packet) => void;
+export declare type OnCloseCallback = () => void;
+export declare type OnErrorCallback = (error: Error) => void;
+
+export declare type PacketCallback = (error?: Error, packet?: mqttPacket.Packet) => any;
+export declare type CloseCallback = (error?: Error) => void;
 
 function defaultId(): string {
   return 'mqttjs_' + Math.random().toString(16).substr(2, 8);
@@ -270,22 +311,34 @@ function nop(error?: Error): void {
   debug('nop ::', error);
 }
 
-export default class MqttClient extends EventEmitter {
-  public options: MqttClientOptions;
-  public topicAliasSend?: TopicAliasSend;
-  public topicAliasRecv?: TopicAliasRecv;
-  public outgoingStore: Store;
-  public incomingStore: Store;
-  public outgoing: OutgoingQueue;
-  public stream: any;
-  public streamBuilder: StreamBuilderFunction;
-  public messageIdProvider: MessageIdProvider;
-  public queueQoSZero: boolean;
-  public connected: boolean;
-  public disconnecting: boolean;
-  public connackTimer: any;
-  public reconnectTimer: any;
-  public pingTimer: any;
+// https://stackoverflow.com/questions/39142858/declaring-events-in-a-typescript-class-which-extends-eventemitter
+export declare interface MqttClient {
+  on(event: 'connect', cb: OnConnectCallback): this;
+  on(event: 'message', cb: OnMessageCallback): this;
+  on(event: 'packetsend' | 'packetreceive', cb: OnPacketCallback): this;
+  on(event: 'disconnect', cb: OnDisconnectCallback): this;
+  on(event: 'error', cb: OnErrorCallback): this;
+  on(event: 'close', cb: OnCloseCallback): this;
+  on(event: 'end' | 'reconnect' | 'offline' | 'outgoingEmpty', cb: () => void): this;
+
+  once(event: 'connect', cb: OnConnectCallback): this;
+  once(event: 'message', cb: OnMessageCallback): this;
+  once(event: 'packetsend' | 'packetreceive', cb: OnPacketCallback): this;
+  once(event: 'disconnect', cb: OnDisconnectCallback): this;
+  once(event: 'error', cb: OnErrorCallback): this;
+  once(event: 'close', cb: OnCloseCallback): this;
+  once(event: 'end' | 'reconnect' | 'offline' | 'outgoingEmpty', cb: () => void): this;
+}
+
+// eslint-disable-next-line no-redeclare
+export class MqttClient extends EventEmitter {
+  private topicAliasRecv?: TopicAliasRecv;
+  private outgoing: OutgoingQueue;
+  private streamBuilder: StreamBuilder;
+  private messageIdProvider: IMessageIdProvider;
+  private connackTimer: any;
+  private reconnectTimer: any;
+  private pingTimer: any;
   private _firstConnection: boolean;
   private messageIdToTopic: { [messageId: number]: string[] };
   private queue: { packet: mqttPacket.Packet; cb: (err?: Error) => void }[];
@@ -294,20 +347,32 @@ export default class MqttClient extends EventEmitter {
   private _storeProcessingQueue: StoreProcessingQueueEntry[];
   private _resubscribeTopics: ResubscribeTopicList;
   private _deferredReconnect?: () => void;
-  public reconnecting?: boolean;
   private connackPacket?: mqttPacket.IConnackPacket;
-  public disconnected?: boolean;
   public pingResp?: boolean;
   public _reconnectCount?: number;
+
+  // public because of static code
+  public topicAliasSend?: TopicAliasSend;
+  public stream: any;
+
+  // public according to types
+  public connected: boolean;
+  public disconnecting: boolean;
+  public disconnected: boolean;
+  public reconnecting: boolean;
+  public incomingStore: Store;
+  public outgoingStore: Store;
+  public options: IClientOptions;
+  public queueQoSZero: boolean;
 
   /**
    * MqttClient constructor
    *
    * @param {Stream} stream - stream
-   * @param {Object} [options] - connection options
+   * @param {IClientOptions} [options] - connection options
    * (see Connection#connect)
    */
-  constructor(streamBuilder: StreamBuilderFunction, options: MqttClientOptions = {}) {
+  constructor(streamBuilder: StreamBuilder, options: IClientOptions = {}) {
     super();
 
     this.options = options || {};
@@ -359,6 +424,10 @@ export default class MqttClient extends EventEmitter {
     this.connected = false;
     // Are we disconnecting?
     this.disconnecting = false;
+    // Are we disconnected?
+    this.disconnected = false;
+    // Are we reconnecting
+    this.reconnecting = false;
     // Packet queue
     this.queue = [];
     // connack timer
@@ -645,34 +714,51 @@ export default class MqttClient extends EventEmitter {
    * publish - publish <message> to <topic>
    *
    * @param {String} topic - topic to publish to
-   * @param {String, Buffer} message - message to publish
-   * @param {Object} [opts] - publish options, includes:
-   *    {Number} qos - qos level to publish on
-   *    {Boolean} retain - whether or not to retain the message
-   *    {Boolean} dup - whether or not mark a message as duplicate
-   *    {Function} cbStorePut - function(){} called when message is put into `outgoingStore`
+   * @param {(String|Buffer)} message - message to publish
+   *
+   * @param {Object}    [opts] - publish options, includes:
+   *   @param {Number}  [opts.qos] - qos level to publish on
+   *   @param {Boolean} [opts.retain] - whether or not to retain the message
+   *   @param {Function}[opts.cbStorePut] - function(){}
+   *       called when message is put into `outgoingStore`
+   *
    * @param {Function} [callback] - function(err){}
    *    called when publish succeeds or fails
-   * @returns {MqttClient} this - for chaining
+   *
+   * @returns {Client} this - for chaining
    * @api public
    *
-   * @example client.publish('topic', 'message');
+   * @example client.publish('topic', 'message')
    * @example
-   *     client.publish('topic', 'message', {qos: 1, retain: true, dup: true});
-   * @example client.publish('topic', 'message', console.log);
+   *     client.publish('topic', 'message', {qos: 1, retain: true})
+   * @example client.publish('topic', 'message', console.log)
    */
-  public publish(topic: string, message: string | Buffer, opts: PublishOptions, callback: (err?: Error) => void): this {
+  public publish(topic: string, message: string | Buffer, opts: IClientPublishOptions, callback?: PacketCallback): this;
+  // eslint-disable-next-line no-dupe-class-members
+  public publish(topic: string, message: string | Buffer, callback?: PacketCallback): this;
+  // eslint-disable-next-line no-dupe-class-members
+  public publish(
+    topic: string,
+    message: string | Buffer,
+    param3?: IClientPublishOptions | PacketCallback,
+    param4?: PacketCallback
+  ): this {
     debug('publish :: message `%s` to topic `%s`', message, topic);
     const options = this.options;
 
+    let opts: IClientPublishOptions = {};
+    let callback: PacketCallback;
+
     // .publish(topic, payload, cb);
-    if (typeof opts === 'function') {
-      callback = opts;
-      opts = {};
+    if (typeof param3 === 'function') {
+      callback = param3;
+    } else {
+      opts = param3 || {};
+      callback = param4 || nop;
     }
 
     // default opts
-    const defaultOpts: PublishOptions = { qos: 0, retain: false, dup: false };
+    const defaultOpts: IClientPublishOptions = { qos: 0, retain: false, dup: false };
     opts = { ...defaultOpts, ...opts };
 
     if (this._checkDisconnecting(callback)) {
@@ -680,10 +766,10 @@ export default class MqttClient extends EventEmitter {
     }
 
     const publishProc = (): boolean => {
-      let messageId = 0;
+      let messageId: number | undefined;
       if (opts.qos === 1 || opts.qos === 2) {
-        messageId = this._nextId();
-        if (messageId == undefined) {
+        messageId = this._nextId() || undefined;
+        if (messageId == null) {
           debug('No messageId left');
           return false;
         }
@@ -737,23 +823,31 @@ export default class MqttClient extends EventEmitter {
    *
    * @param {String, Array, Object} topic - topic(s) to subscribe to, supports objects in the form {'topic': qos}
    * @param {Object} [opts] - optional subscription options, includes:
-   *    {Number} qos - subscribe qos level
+   * @param  {Number} [opts.qos] - subscribe qos level
    * @param {Function} [callback] - function(err, granted){} where:
    *    {Error} err - subscription error (none at the moment!)
    *    {Array} granted - array of {topic: 't', qos: 0}
    * @returns {MqttClient} this - for chaining
    * @api public
-   * @example client.subscribe('topic');
-   * @example client.subscribe('topic', {qos: 1});
-   * @example client.subscribe({'topic': {qos: 0}, 'topic2': {qos: 1}}, console.log);
-   * @example client.subscribe('topic', console.log);
+   * @example client.subscribe('topic')
+   * @example client.subscribe('topic', {qos: 1})
+   * @example client.subscribe({'topic': 0, 'topic2': 1}, console.log)
+   * @example client.subscribe('topic', console.log)
    */
+  public subscribe(
+    topic: string | string[] | ISubscriptionMap,
+    opts: IClientSubscribeOptions,
+    callback?: ClientSubscribeCallback
+  ): this;
+  // eslint-disable-next-line no-dupe-class-members
+  public subscribe(topic: string | string[] | ISubscriptionMap, callback?: ClientSubscribeCallback): this;
+  // eslint-disable-next-line no-dupe-class-members
   public subscribe(...args: any[]) {
-    const subs: ISubscriptionExtended[] = [];
+    const subs: IClientSubscribeOptionsWithTopic[] = [];
     let obj: any = args.shift();
     const resubscribe = obj.resubscribe;
     let callback = args.pop() || nop;
-    let opts: ISubscriptionExtended = args.pop();
+    let opts: IClientSubscribeOptions = args.pop() || {};
     const version = this.options.protocolVersion;
 
     delete obj.resubscribe;
@@ -793,10 +887,10 @@ export default class MqttClient extends EventEmitter {
         debug('subscribe: array topic %s', topic);
         if (
           !Object.prototype.hasOwnProperty.call(this._resubscribeTopics, topic) ||
-          (this._resubscribeTopics[topic] as ISubscriptionExtended).qos < opts.qos ||
+          (this._resubscribeTopics[topic] as IClientSubscribeOptions).qos < opts.qos ||
           resubscribe
         ) {
-          const currentOpts: ISubscriptionExtended = {
+          const currentOpts: IClientSubscribeOptionsWithTopic = {
             topic: topic,
             qos: opts.qos,
           };
@@ -815,10 +909,10 @@ export default class MqttClient extends EventEmitter {
         debug('subscribe: object topic %s', k);
         if (
           !Object.prototype.hasOwnProperty.call(this._resubscribeTopics, k) ||
-          (this._resubscribeTopics[k] as ISubscriptionExtended).qos < obj[k].qos ||
+          (this._resubscribeTopics[k] as IClientSubscribeOptions).qos < obj[k].qos ||
           resubscribe
         ) {
-          const currentOpts: ISubscriptionExtended = {
+          const currentOpts: IClientSubscribeOptionsWithTopic = {
             topic: k,
             qos: obj[k].qos,
           };
@@ -911,20 +1005,17 @@ export default class MqttClient extends EventEmitter {
    * unsubscribe - unsubscribe from topic(s)
    *
    * @param {String, Array} topic - topics to unsubscribe from
-   * @param {Object} [opts] - optional subscription options, includes:
-   *    {Object} properties - properties of unsubscribe packet
+   * @param {Object} opts - opts of unsubscribe
    * @param {Function} [callback] - callback fired on unsuback
    * @returns {MqttClient} this - for chaining
    * @api public
-   * @example client.unsubscribe('topic');
-   * @example client.unsubscribe('topic', console.log);
+   * @example client.unsubscribe('topic')
+   * @example client.unsubscribe('topic', console.log)
+   * @example client.unsubscribe('topic', opts, console.log)
    */
-  public unsubscribe() {
-    const args = new Array(arguments.length);
-    for (let i = 0; i < arguments.length; i++) {
-      /* eslint prefer-rest-params: "off" */
-      args[i] = arguments[i];
-    }
+  public unsubscribe(topic: string | string[], opts?: Object, callback?: PacketCallback): this;
+  // eslint-disable-next-line no-dupe-class-members
+  public unsubscribe(...args: any[]) {
     let topic = args.shift();
     let callback = args.pop() || nop;
     let opts = args.pop();
@@ -1000,13 +1091,19 @@ export default class MqttClient extends EventEmitter {
    * end - close connection
    *
    * @returns {MqttClient} this - for chaining
-   * @param {Boolean} force - do not wait for all in-flight messages to be acked
-   * @param {Object} opts - added to the disconnect packet
-   * @param {Function} cb - called when the client has been closed
+   * @param {boolean} force - do not wait for all in-flight messages to be acked
+   * @param {object} opts - opts disconnect
+   * @param {function} cb - called when the client has been closed
    *
    * @api public
    */
-  public end(force?: boolean | {} | ErrorOnlyCallback, opts?: {} | ErrorOnlyCallback, cb?: ErrorOnlyCallback): this {
+  public end(force?: boolean, opts?: Object, cb?: CloseCallback): this;
+  // eslint-disable-next-line no-dupe-class-members
+  public end(opts?: Object, cb?: CloseCallback): this;
+  // eslint-disable-next-line no-dupe-class-members
+  public end(cb?: CloseCallback): this;
+  // eslint-disable-next-line no-dupe-class-members
+  public end(force?: boolean | {} | ErrorOnlyCallback, opts?: {} | ErrorOnlyCallback, cb?: CloseCallback): this {
     if (force == undefined || typeof force !== 'boolean') {
       cb = opts as any;
       opts = force as any;
@@ -1087,13 +1184,13 @@ export default class MqttClient extends EventEmitter {
    * removeOutgoingMessage - remove a message in outgoing store
    * the outgoing callback will be called withe Error('Message removed') if the message is removed
    *
-   * @param {Number} messageId - messageId to remove message
-   * @return {MqttClient} this - for chaining
+   * @param {number} messageId - messageId to remove message
+   * @returns {MqttClient} this - for chaining
    * @api public
    *
-   * @example client.removeOutgoingMessage(client.getLastAllocated());
+   * @example client.removeOutgoingMessage(client.getLastMessageId());
    */
-  public removeOutgoingMessage(messageId: number): void {
+  public removeOutgoingMessage(messageId: number): this {
     const cb = this.outgoing[messageId]?.cb;
     delete this.outgoing[messageId];
     this.outgoingStore.del({ messageId: messageId }, (): void => {
@@ -1101,6 +1198,7 @@ export default class MqttClient extends EventEmitter {
         cb(new Error('Message removed'));
       }
     });
+    return this;
   }
 
   /**
@@ -1110,11 +1208,12 @@ export default class MqttClient extends EventEmitter {
    *    {Store} incomingStore - a store for the incoming packets
    *    {Store} outgoingStore - a store for the outgoing packets
    *    if opts is not given, current stores are used
-   * @return {MqttClient} this - for chaining
+   *
+   * @returns {MqttClient} this - for chaining
    *
    * @api public
    */
-  public reconnect(opts: { incomingStore?: Store; outgoingStore?: Store }) {
+  public reconnect(opts?: IClientReconnectOptions): this {
     debug('client reconnect');
     const f = (): void => {
       if (opts) {
@@ -1470,11 +1569,25 @@ export default class MqttClient extends EventEmitter {
   }
 
   /**
-   * @param packet the packet received by the broker
-   * @return the auth packet to be returned to the broker
+   * Handle auth packages for MQTT 5 enhanced authentication methods such
+   * as challenge response authentication.
+   *
+   * Challenge-response authentication flow would look something like this:
+   *
+   * --> CONNECT | authMethod = "mathChallenge" -->
+   * <-- AUTH | authMethod = "mathChallenge", authData = "12 + 34" <--
+   * --> AUTH | authMethod = "mathChallenge", authData = "46" -->
+   * <-- CONNACK | reasonCode = SUCCESS <--
+   *
+   * This form of authentication has several advantages over traditional
+   * credential-based approaches. For instance authentication without the direct
+   * exchange of authentication secrets.
+   *
+   * @param packet the auth packet to handle
+   * @param callback call when finished
    * @api public
    */
-  public handleAuth(_packet: any, callback: (err?: Error, packet?: mqttPacket.Packet) => void): void {
+  public handleAuth(_packet: mqttPacket.IAuthPacket, callback: PacketCallback): void {
     callback();
   }
 
@@ -1623,11 +1736,11 @@ for now i just suppressed the warnings
    * Handle messages with backpressure support, one at a time.
    * Override at will.
    *
-   * @param mqttPacket.Packet packet the packet
-   * @param Function callback call when finished
+   * @param packet packet the packet
+   * @param callback callback call when finished
    * @api public
    */
-  public handleMessage(_packet: mqttPacket.Packet, callback: (err?: Error) => void): void {
+  public handleMessage(_packet: mqttPacket.Packet, callback: PacketCallback): void {
     callback();
   }
 
@@ -1775,7 +1888,7 @@ for now i just suppressed the warnings
    * _nextId
    * @return unsigned int
    */
-  private _nextId() {
+  private _nextId(): number | null {
     return this.messageIdProvider.allocate();
   }
 
@@ -1783,7 +1896,7 @@ for now i just suppressed the warnings
    * getLastMessageId
    * @return unsigned int
    */
-  public getLastMessageId() {
+  public getLastMessageId(): number | null {
     return this.messageIdProvider.getLastAllocated();
   }
 
@@ -1807,11 +1920,13 @@ for now i just suppressed the warnings
             resubscribeTopic[_resubscribeTopicsKeys[topicI] as string] =
               this._resubscribeTopics[_resubscribeTopicsKeys[topicI] as string];
             resubscribeTopic.resubscribe = true;
-            this.subscribe(resubscribeTopic, { properties: resubscribeTopic[_resubscribeTopicsKeys[topicI] as string].properties });
+            this.subscribe(resubscribeTopic, {
+              properties: resubscribeTopic[_resubscribeTopicsKeys[topicI] as string].properties,
+            } as any);
           }
         } else {
           this._resubscribeTopics.resubscribe = true;
-          this.subscribe(this._resubscribeTopics);
+          this.subscribe(this._resubscribeTopics as any);
         }
       } else {
         this._resubscribeTopics = {};
@@ -1957,5 +2072,3 @@ for now i just suppressed the warnings
     this._storeProcessingQueue.splice(0);
   }
 }
-
-exports.MqttClient = MqttClient;

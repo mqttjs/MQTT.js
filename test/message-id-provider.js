@@ -1,7 +1,7 @@
 'use strict'
 const assert = require('chai').assert
-const DefaultMessageIdProvider = require('../lib/default-message-id-provider')
-const UniqueMessageIdProvider = require('../lib/unique-message-id-provider')
+const DefaultMessageIdProvider = require('..').DefaultMessageIdProvider
+const UniqueMessageIdProvider = require('..').UniqueMessageIdProvider
 
 describe('message id provider', function () {
   describe('default', function () {

@@ -2,12 +2,12 @@
 import tls from 'tls';
 import net from 'net';
 import debugModule from 'debug';
-import MqttClient from '../client';
-import { MqttClientOptions } from '../options';
+import { MqttClient } from '../client';
+import { IClientOptions } from '../client-options';
 import { _IDuplex } from 'readable-stream';
 const debug = debugModule('mqttjs:tls');
 
-function buildBuilder(mqttClient: MqttClient, opts: MqttClientOptions): _IDuplex {
+function buildBuilder(mqttClient: MqttClient, opts: IClientOptions): _IDuplex {
   opts.port = opts.port || 8883;
   opts.host = opts.hostname || opts.host || 'localhost';
 

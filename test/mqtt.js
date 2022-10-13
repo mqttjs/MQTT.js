@@ -2,7 +2,7 @@
 
 const fs = require('fs')
 const path = require('path')
-const mqtt = require('../')
+const mqtt = require('..')
 
 describe('mqtt', function () {
   describe('#connect', function () {
