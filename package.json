@@ -85,7 +85,7 @@
     "@types/ws": "^7.4.7",
     "aedes": "^0.46.2",
     "airtap": "^4.0.4",
-    "browserify": "^16.5.0",
+    "browserify": "^17.0.0",
     "chai": "^4.2.0",
     "chokidar": "^3.5.3",
     "codecov": "^3.0.4",
