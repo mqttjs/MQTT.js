@@ -628,6 +628,8 @@ In-memory implementation of the message store.
 
 Other implementations of `mqtt.Store`:
 
+* [mqtt-jsonl-store](https://github.com/robertsLando/mqtt-jsonl-store) which uses
+  [jsonl-db](https://github.com/AlCalzone/jsonl-db) to store inflight data, it works only on Node.
 * [mqtt-level-store](http://npm.im/mqtt-level-store) which uses
   [Level-browserify](http://npm.im/level-browserify) to store the inflight
   data, making it usable both in Node and the Browser.
