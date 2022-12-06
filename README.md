@@ -6,10 +6,6 @@
 MQTT.js is a client library for the [MQTT](http://mqtt.org/) protocol, written
 in JavaScript for node.js and the browser.
 
-| :boom: MQTT.js vNext          |
-|:---------------------------|
-| Want to contribute to the next generation of **MQTT.js**? Check out the developments [here](https://github.com/mqttjs/mqttjs-v5).       |
-
 ## Table of Contents
 * [__MQTT.js vNext__](#vnext)
 * [Upgrade notes](#notes)
