@@ -3199,4 +3199,43 @@ module.exports = function (server, config) {
       })
     })
   })
+
+  describe('message id to subscription topic mapping', () => {
+    it('should not create a mapping if resubscribe is disabled', function (done) {
+      const client = connect({ resubscribe: false })
+      client.subscribe('test1')
+      client.subscribe('test2')
+      assert.strictEqual(Object.keys(client.messageIdToTopic).length, 0)
+      client.end(true, done)
+    })
+
+    it('should create a mapping for each subscribe call', function (done) {
+      const client = connect()
+      client.subscribe('test1')
+      assert.strictEqual(Object.keys(client.messageIdToTopic).length, 1)
+      client.subscribe('test2')
+      assert.strictEqual(Object.keys(client.messageIdToTopic).length, 2)
+
+      client.subscribe(['test3', 'test4'])
+      assert.strictEqual(Object.keys(client.messageIdToTopic).length, 3)
+      client.subscribe(['test5', 'test6'])
+      assert.strictEqual(Object.keys(client.messageIdToTopic).length, 4)
+
+      client.end(true, done)
+    })
+
+    it('should remove the mapping after suback', function (done) {
+      const client = connect()
+      client.once('connect', function () {
+        client.subscribe('test1', { qos: 2 }, function () {
+          assert.strictEqual(Object.keys(client.messageIdToTopic).length, 0)
+
+          client.subscribe(['test2', 'test3'], { qos: 2 }, function () {
+            assert.strictEqual(Object.keys(client.messageIdToTopic).length, 0)
+            client.end(done)
+          })
+        })
+      })
+    })
+  })
 }
