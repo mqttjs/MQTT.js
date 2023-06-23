@@ -203,7 +203,7 @@ Example (update clientId & username on each reconnect):
       client.options.username = `token=${this.get_current_auth_token()}`;
       client.options.clientId = `${this.get_updated_clientId()}`;
 
-      return `${this.get_signed_cloud_url(url)`;
+      return `${this.get_signed_cloud_url(url)}`;
     }
 
     const connection = await mqtt.connectAsync(<wss url>, {
