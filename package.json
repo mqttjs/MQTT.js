@@ -70,7 +70,7 @@
     "lru-cache": "^6.0.0",
     "minimist": "^1.2.6",
     "mqtt-packet": "^8.1.2",
-    "number-allocator": "^1.0.9",
+    "number-allocator": "^1.0.14",
     "pump": "^3.0.0",
     "readable-stream": "^4.1.0",
     "reinterval": "^1.1.0",
