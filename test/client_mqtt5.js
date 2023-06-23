@@ -20,7 +20,9 @@ describe('MQTT 5.0', function () {
       host: 'localhost',
       port: ports.PORTAND103,
       protocolVersion: 5,
-      topicAliasMaximum: 3
+      properties: {
+        topicAliasMaximum: 3
+      }
     }
     const client = mqtt.connect(opts)
     let publishCount = 0
@@ -468,7 +470,9 @@ describe('MQTT 5.0', function () {
       host: 'localhost',
       port: ports.PORTAND103,
       protocolVersion: 5,
-      topicAliasMaximum: 3
+      properties: {
+        topicAliasMaximum: 3
+      }
     }
     const client = mqtt.connect(opts)
     const server103 = new MqttServer(function (serverClient) {
@@ -502,7 +506,9 @@ describe('MQTT 5.0', function () {
       host: 'localhost',
       port: ports.PORTAND103,
       protocolVersion: 5,
-      topicAliasMaximum: 3
+      properties: {
+        topicAliasMaximum: 3
+      }
     }
     const client = mqtt.connect(opts)
     const server103 = new MqttServer(function (serverClient) {
@@ -536,7 +542,9 @@ describe('MQTT 5.0', function () {
       host: 'localhost',
       port: ports.PORTAND103,
       protocolVersion: 5,
-      topicAliasMaximum: 3
+      properties: {
+        topicAliasMaximum: 3
+      }
     }
     const client = mqtt.connect(opts)
     const server103 = new MqttServer(function (serverClient) {
