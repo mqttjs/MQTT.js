@@ -6,7 +6,8 @@
     "Adam Rudd <adamvrr@gmail.com>",
     "Matteo Collina <matteo.collina@gmail.com> (https://github.com/mcollina)",
     "Siarhei Buntsevich <scarry0506@gmail.com> (https://github.com/scarry1992)",
-    "Yoseph Maguire <yomaguir@microsoft.com> (https://github.com/YoDaMa)"
+    "Yoseph Maguire <yomaguir@microsoft.com> (https://github.com/YoDaMa)",
+    "Daniel Lando <daniel.sorridi@gmail.com> (https://github.com/robertsLando)"
   ],
   "keywords": [
     "mqtt",
@@ -32,7 +33,26 @@
     "test:node": "npm run unit-test:node && codecov",
     "test:browser": "npm run browser-build && npm run unit-test:browser",
     "test:typescript": "npm run typescript-compile-test && npm run typescript-compile-execute",
-    "test": "npm run test:node && npm run test:typescript"
+    "test": "npm run test:node && npm run test:typescript",
+    "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s && git add CHANGELOG.md",
+    "changelog-init": "conventional-changelog -p angular -i CHANGELOG.md -s -r 0",
+    "release": "read -p 'GITHUB_TOKEN: ' GITHUB_TOKEN && export GITHUB_TOKEN=$GITHUB_TOKEN && release-it"
+  },
+  "release-it": {
+    "github": {
+      "release": true
+    },
+    "git": {
+      "tagName": "v${version}"
+    },
+    "hooks": {
+      "after:bump": [
+        "npm run changelog"
+      ]
+    },
+    "npm": {
+      "publish": true
+    }
   },
   "pre-commit": [
     "pretest"
@@ -80,6 +100,7 @@
     "xtend": "^4.0.2"
   },
   "devDependencies": {
+    "@release-it/conventional-changelog": "^5.1.1",
     "@types/node": "^12.20.55",
     "@types/tape": "^4.13.2",
     "@types/ws": "^7.4.7",
@@ -89,6 +110,7 @@
     "chai": "^4.2.0",
     "chokidar": "^3.5.3",
     "codecov": "^3.0.4",
+    "conventional-changelog-cli": "^3.0.0",
     "end-of-stream": "^1.4.1",
     "global": "^4.3.2",
     "mkdirp": "^0.5.1",
@@ -96,6 +118,7 @@
     "mqtt-connection": "^4.0.0",
     "nyc": "^15.0.1",
     "pre-commit": "^1.2.2",
+    "release-it": "^15.11.0",
     "rimraf": "^3.0.2",
     "should": "^13.2.1",
     "sinon": "^9.0.0",
