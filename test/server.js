@@ -1,66 +1,55 @@
 'use strict'
 
-var net = require('net')
-var tls = require('tls')
-var inherits = require('inherits')
-var Connection = require('mqtt-connection')
-var MqttServer
-var FastMqttServer
-var MqttSecureServer
+const net = require('net')
+const tls = require('tls')
+const Connection = require('mqtt-connection')
 
-function setupConnection (duplex) {
-  var that = this
-  var connection = new Connection(duplex, function () {
-    that.emit('client', connection)
-  })
-}
-
-/*
+/**
  * MqttServer
  *
  * @param {Function} listener - fired on client connection
  */
-MqttServer = module.exports = function Server (listener) {
-  if (!(this instanceof Server)) {
-    return new Server(listener)
+class MqttServer extends net.Server {
+  constructor (listener) {
+    super()
+    this.connectionList = []
+
+    const that = this
+    this.on('connection', function (duplex) {
+      this.connectionList.push(duplex)
+      const connection = new Connection(duplex, function () {
+        that.emit('client', connection)
+      })
+    })
+
+    if (listener) {
+      this.on('client', listener)
+    }
   }
-
-  net.Server.call(this)
-
-  this.on('connection', setupConnection)
-
-  if (listener) {
-    this.on('client', listener)
-  }
-
-  return this
 }
-inherits(MqttServer, net.Server)
 
-/*
- * FastMqttServer(w/o waiting for initialization)
+/**
+ * MqttServerNoWait (w/o waiting for initialization)
  *
  * @param {Function} listener - fired on client connection
  */
-FastMqttServer = module.exports.FastMqttServer = function Server (listener) {
-  if (!(this instanceof Server)) {
-    return new Server(listener)
+class MqttServerNoWait extends net.Server {
+  constructor (listener) {
+    super()
+    this.connectionList = []
+
+    this.on('connection', function (duplex) {
+      this.connectionList.push(duplex)
+      const connection = new Connection(duplex)
+      // do not wait for connection to return to send it to the client.
+      this.emit('client', connection)
+    })
+
+    if (listener) {
+      this.on('client', listener)
+    }
   }
-
-  net.Server.call(this)
-
-  this.on('connection', function (duplex) {
-    var connection = new Connection(duplex)
-    this.emit('client', connection)
-  })
-
-  if (listener) {
-    this.on('client', listener)
-  }
-
-  return this
 }
-inherits(FastMqttServer, net.Server)
 
 /**
  * MqttSecureServer
@@ -68,26 +57,38 @@ inherits(FastMqttServer, net.Server)
  * @param {Object} opts - server options
  * @param {Function} listener
  */
-MqttSecureServer = module.exports.SecureServer =
-  function SecureServer (opts, listener) {
-    if (!(this instanceof SecureServer)) {
-      return new SecureServer(opts, listener)
-    }
-
-    // new MqttSecureServer(function(){})
+class MqttSecureServer extends tls.Server {
+  constructor (opts, listener) {
     if (typeof opts === 'function') {
       listener = opts
       opts = {}
     }
 
-    tls.Server.call(this, opts)
+    // sets a listener for the 'connection' event
+    super(opts)
+    this.connectionList = []
+
+    this.on('secureConnection', function (socket) {
+      this.connectionList.push(socket)
+      const that = this
+      const connection = new Connection(socket, function () {
+        that.emit('client', connection)
+      })
+    })
 
     if (listener) {
       this.on('client', listener)
     }
-
-    this.on('secureConnection', setupConnection)
-
-    return this
   }
-inherits(MqttSecureServer, tls.Server)
+
+  setupConnection (duplex) {
+    const that = this
+    const connection = new Connection(duplex, function () {
+      that.emit('client', connection)
+    })
+  }
+}
+
+exports.MqttServer = MqttServer
+exports.MqttServerNoWait = MqttServerNoWait
+exports.MqttSecureServer = MqttSecureServer

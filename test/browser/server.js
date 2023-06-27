@@ -1,13 +1,12 @@
 'use strict'
 
-var handleClient
-var websocket = require('websocket-stream')
-var WebSocketServer = require('ws').Server
-var Connection = require('mqtt-connection')
-var http = require('http')
+const WS = require('ws')
+const WebSocketServer = WS.Server
+const Connection = require('mqtt-connection')
+const http = require('http')
 
-handleClient = function (client) {
-  var self = this
+const handleClient = function (client) {
+  const self = this
 
   if (!self.clients) {
     self.clients = {}
@@ -15,16 +14,16 @@ handleClient = function (client) {
 
   client.on('connect', function (packet) {
     if (packet.clientId === 'invalid') {
-      client.connack({returnCode: 2})
+      client.connack({ returnCode: 2 })
     } else {
-      client.connack({returnCode: 0})
+      client.connack({ returnCode: 0 })
     }
     self.clients[packet.clientId] = client
     client.subscriptions = []
   })
 
   client.on('publish', function (packet) {
-    var i, k, c, s, publish
+    let k, c, s, publish
     switch (packet.qos) {
       case 0:
         break
@@ -40,7 +39,7 @@ handleClient = function (client) {
       c = self.clients[k]
       publish = false
 
-      for (i = 0; i < c.subscriptions.length; i++) {
+      for (let i = 0; i < c.subscriptions.length; i++) {
         s = c.subscriptions[i]
 
         if (s.test(packet.topic)) {
@@ -50,7 +49,7 @@ handleClient = function (client) {
 
       if (publish) {
         try {
-          c.publish({topic: packet.topic, payload: packet.payload})
+          c.publish({ topic: packet.topic, payload: packet.payload })
         } catch (error) {
           delete self.clients[k]
         }
@@ -71,12 +70,10 @@ handleClient = function (client) {
   })
 
   client.on('subscribe', function (packet) {
-    var qos
-    var topic
-    var reg
-    var granted = []
+    let qos, topic, reg
+    const granted = []
 
-    for (var i = 0; i < packet.subscriptions.length; i++) {
+    for (let i = 0; i < packet.subscriptions.length; i++) {
       qos = packet.subscriptions[i].qos
       topic = packet.subscriptions[i].topic
       reg = new RegExp(topic.replace('+', '[^/]+').replace('#', '.+') + '$')
@@ -85,7 +82,7 @@ handleClient = function (client) {
       client.subscriptions.push(reg)
     }
 
-    client.suback({messageId: packet.messageId, granted: granted})
+    client.suback({ messageId: packet.messageId, granted: granted })
   })
 
   client.on('unsubscribe', function (packet) {
@@ -98,19 +95,17 @@ handleClient = function (client) {
 }
 
 function start (startPort, done) {
-  var server = http.createServer()
-  var wss = new WebSocketServer({server: server})
+  const server = http.createServer()
+  const wss = new WebSocketServer({ server: server })
 
   wss.on('connection', function (ws) {
-    var stream, connection
-
     if (!(ws.protocol === 'mqtt' ||
           ws.protocol === 'mqttv3.1')) {
       return ws.close()
     }
 
-    stream = websocket(ws)
-    connection = new Connection(stream)
+    const stream = WS.createWebSocketStream(ws)
+    const connection = new Connection(stream)
     handleClient.call(server, connection)
   })
   server.listen(startPort, done)
@@ -122,11 +117,11 @@ function start (startPort, done) {
 }
 
 if (require.main === module) {
-  start(process.env.PORT || process.env.ZUUL_PORT, function (err) {
+  start(process.env.PORT || process.env.AIRTAP_PORT, function (err) {
     if (err) {
       console.error(err)
       return
     }
-    console.log('tunnelled server started on port', process.env.PORT || process.env.ZUUL_PORT)
+    console.log('tunnelled server started on port', process.env.PORT || process.env.AIRTAP_PORT)
   })
 }

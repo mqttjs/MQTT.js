@@ -8,7 +8,7 @@ import {
   IClientReconnectOptions
 } from './client-options'
 import { Store } from './store'
-import { Packet, QoS } from 'mqtt-packet'
+import { IAuthPacket, IConnectPacket, IPublishPacket, IDisconnectPacket, IConnackPacket, Packet, QoS } from 'mqtt-packet'
 
 export interface ISubscriptionGrant {
   /**
@@ -66,12 +66,15 @@ export interface ISubscriptionMap {
   }
 }
 
+export declare type OnConnectCallback = (packet: IConnackPacket) => void
+export declare type OnDisconnectCallback = (packet: IDisconnectPacket) => void
 export declare type ClientSubscribeCallback = (err: Error, granted: ISubscriptionGrant[]) => void
-export declare type OnMessageCallback = (topic: string, payload: Buffer, packet: Packet) => void
+export declare type OnMessageCallback = (topic: string, payload: Buffer, packet: IPublishPacket) => void
 export declare type OnPacketCallback = (packet: Packet) => void
+export declare type OnCloseCallback = () => void
 export declare type OnErrorCallback = (error: Error) => void
 export declare type PacketCallback = (error?: Error, packet?: Packet) => any
-export declare type CloseCallback = () => void
+export declare type CloseCallback = (error?: Error) => void
 
 export interface IStream extends events.EventEmitter {
   pipe (to: any): any
@@ -97,16 +100,22 @@ export declare class MqttClient extends events.EventEmitter {
 
   constructor (streamBuilder: (client: MqttClient) => IStream, options: IClientOptions)
 
+  public on (event: 'connect', cb: OnConnectCallback): this
   public on (event: 'message', cb: OnMessageCallback): this
   public on (event: 'packetsend' | 'packetreceive', cb: OnPacketCallback): this
+  public on (event: 'disconnect', cb: OnDisconnectCallback): this
   public on (event: 'error', cb: OnErrorCallback): this
+  public on (event: 'close', cb: OnCloseCallback): this
+  public on (event: 'end' | 'reconnect' | 'offline' | 'outgoingEmpty', cb: () => void): this
   public on (event: string, cb: Function): this
 
+  public once (event: 'connect', cb: OnConnectCallback): this
   public once (event: 'message', cb: OnMessageCallback): this
-  public once (event:
-                'packetsend'
-                | 'packetreceive', cb: OnPacketCallback): this
+  public once (event: 'packetsend' | 'packetreceive', cb: OnPacketCallback): this
+  public once (event: 'disconnect', cb: OnDisconnectCallback): this
   public once (event: 'error', cb: OnErrorCallback): this
+  public once (event: 'close', cb: OnCloseCallback): this
+  public once (event: 'end' | 'reconnect' | 'offline' | 'outgoingEmpty', cb: () => void): this
   public once (event: string, cb: Function): this
 
   /**
@@ -222,6 +231,27 @@ export declare class MqttClient extends events.EventEmitter {
    * @api public
    */
   public handleMessage (packet: Packet, callback: PacketCallback): void
+
+  /**
+   * Handle auth packages for MQTT 5 enhanced authentication methods such
+   * as challenge response authentication.
+   *
+   * Challenge-response authentication flow would look something like this:
+   *
+   * --> CONNECT | authMethod = "mathChallenge" -->
+   * <-- AUTH | authMethod = "mathChallenge", authData = "12 + 34" <--
+   * --> AUTH | authMethod = "mathChallenge", authData = "46" -->
+   * <-- CONNACK | reasonCode = SUCCESS <--
+   *
+   * This form of authentication has several advantages over traditional
+   * credential-based approaches. For instance authentication without the direct
+   * exchange of authentication secrets.
+   *
+   * @param packet the auth packet to handle
+   * @param callback call when finished
+   * @api public
+   */
+  public handleAuth (packet: IAuthPacket, callback: PacketCallback): void
 
   /**
    * getLastMessageId
