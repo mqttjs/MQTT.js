@@ -1,29 +1,31 @@
 'use strict'
 
-var mqtt = require('mqtt')
-var url = require('url')
-var HttpsProxyAgent = require('https-proxy-agent')
+const mqtt = require('mqtt')
+const url = require('url')
+const HttpsProxyAgent = require('https-proxy-agent')
 /*
 host: host of the endpoint you want to connect e.g. my.mqqt.host.com
 path: path to you endpoint e.g. '/foo/bar/mqtt'
 */
-var endpoint = 'wss://<host><path>'
+const endpoint = 'wss://<host><path>'
 /* create proxy agent
 proxy: your proxy e.g. proxy.foo.bar.com
 port: http proxy port e.g. 8080
 */
-var proxy = process.env.http_proxy || 'http://<proxy>:<port>'
-var parsed = url.parse(endpoint)
-var proxyOpts = url.parse(proxy)
+const proxy = process.env.http_proxy || 'http://<proxy>:<port>'
+// eslint-disable-next-line
+const parsed = url.parse(endpoint)
+// eslint-disable-next-line
+const proxyOpts = url.parse(proxy)
 // true for wss
 proxyOpts.secureEndpoint = parsed.protocol ? parsed.protocol === 'wss:' : true
-var agent = new HttpsProxyAgent(proxyOpts)
-var wsOptions = {
+const agent = new HttpsProxyAgent(proxyOpts)
+const wsOptions = {
   agent: agent
   // other wsOptions
   // foo:'bar'
 }
-var mqttOptions = {
+const mqttOptions = {
   keepalive: 60,
   reschedulePings: true,
   protocolId: 'MQTT',
@@ -35,7 +37,7 @@ var mqttOptions = {
   wsOptions: wsOptions
 }
 
-var client = mqtt.connect(parsed, mqttOptions)
+const client = mqtt.connect(parsed, mqttOptions)
 
 client.on('connect', function () {
   console.log('connected')

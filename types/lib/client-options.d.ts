@@ -131,6 +131,10 @@ export interface ISecureClientOptions {
    */
   ca?: string | string[] | Buffer | Buffer[]
   rejectUnauthorized?: boolean
+  /**
+   * optional alpn's
+   */
+  ALPNProtocols?: string[] | Buffer[] | Uint8Array[] | Buffer | Uint8Array
 }
 export interface IClientPublishOptions {
   /**
@@ -149,9 +153,9 @@ export interface IClientPublishOptions {
    *  MQTT 5.0 properties object
    */
   properties?: {
-    payloadFormatIndicator?: number,
+    payloadFormatIndicator?: boolean,
     messageExpiryInterval?: number,
-    topicAlias?: string,
+    topicAlias?: number,
     responseTopic?: string,
     correlationData?: Buffer,
     userProperties?: UserProperties,
@@ -179,7 +183,14 @@ export interface IClientSubscribeOptions {
   /*
   * Retain Handling option
   * */
-  rh?: number
+  rh?: number,
+  /*
+  *  MQTT 5.0 properies object of subscribe
+  * */
+  properties?: {
+    subscriptionIdentifier?: number,
+    userProperties?: UserProperties
+  }
 }
 export interface IClientReconnectOptions {
   /**

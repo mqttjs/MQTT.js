@@ -5,11 +5,11 @@
  * See LICENSE for more information
  */
 
-var MqttClient = require('./lib/client')
-var connect = require('./lib/connect')
-var Store = require('./lib/store')
-var DefaultMessageIdProvider = require('./lib/default-message-id-provider')
-var UniqueMessageIdProvider = require('./lib/unique-message-id-provider')
+const MqttClient = require('./lib/client')
+const connect = require('./lib/connect')
+const Store = require('./lib/store')
+const DefaultMessageIdProvider = require('./lib/default-message-id-provider')
+const UniqueMessageIdProvider = require('./lib/unique-message-id-provider')
 
 module.exports.connect = connect
 
