@@ -18,3 +18,5 @@ test/typescript/*.map
 # VS Code stuff
 **/typings/**
 **/.vscode/**
+
+.npmrc
