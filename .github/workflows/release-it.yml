@@ -48,7 +48,7 @@ jobs:
 
       - name: Make the release
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }} 
         run: | 
           npx release-it ${{github.event.inputs.type}} --ci --verbose
