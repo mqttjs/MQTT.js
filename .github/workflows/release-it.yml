@@ -7,13 +7,12 @@ on:
   workflow_dispatch:
     inputs:
       type:
-        description: 'Type. Can be `patch` `minor` or `major`'
+        description: 'Type. Can be `beta`, `patch`, `minor` or `major`'
         required: true
         default: 'patch'
 
 jobs:
-  release-it:
-    if: github.actor == 'robertsLando'
+  release:
     runs-on: [ubuntu-latest]
     strategy:
       matrix:
