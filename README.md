@@ -21,7 +21,7 @@ in JavaScript for node.js and the browser.
 - [TypeScript](#typescript)
 - [Weapp and Ali support](#weapp-alipay)
 - [Contributing](#contributing)
-- [Sponsors](#sponsors)
+- [Sponsor](#sponsor)
 - [License](#license)
 
 MQTT.js is an OPEN Open Source Project, see the [Contributing](#contributing) section to find out what this means.
@@ -925,9 +925,9 @@ MQTT.js is only possible due to the excellent work of the following contributors
 | Siarhei Buntsevich | [GitHub/scarry1992](https://github.com/scarry1992) |                                                            |
 | Daniel Lando    | [GitHub/robertsLando](https://github.com/robertsLando) |                                                           |
 
-<a name="sponsors"></a>
+<a name="sponsor"></a>
 
-## Sponsors
+## Sponsor
 
 If you want to sponsor MQTT.js, consider sponsoring his main author and active maintainers:
 
