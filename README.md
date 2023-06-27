@@ -1,24 +1,23 @@
 ![mqtt.js](https://raw.githubusercontent.com/mqttjs/MQTT.js/137ee0e3940c1f01049a30248c70f24dc6e6f829/MQTT.js.png)
 =======
 
-[![Build Status](https://travis-ci.org/mqttjs/MQTT.js.svg)](https://travis-ci.org/mqttjs/MQTT.js) [![codecov](https://codecov.io/gh/mqttjs/MQTT.js/branch/master/graph/badge.svg)](https://codecov.io/gh/mqttjs/MQTT.js)
-
-[![NPM](https://nodei.co/npm-dl/mqtt.png)](https://nodei.co/npm/mqtt/) [![NPM](https://nodei.co/npm/mqtt.png)](https://nodei.co/npm/mqtt/)
-
-[![Sauce Test Status](https://saucelabs.com/browser-matrix/mqttjs.svg)](https://saucelabs.com/u/mqttjs)
+![Github Test Status](https://github.com/mqttjs/MQTT.js/workflows/MQTT.js%20CI/badge.svg)  [![codecov](https://codecov.io/gh/mqttjs/MQTT.js/branch/master/graph/badge.svg)](https://codecov.io/gh/mqttjs/MQTT.js)
 
 MQTT.js is a client library for the [MQTT](http://mqtt.org/) protocol, written
 in JavaScript for node.js and the browser.
 
+## Table of Contents
+* [__MQTT.js vNext__](#vnext)
 * [Upgrade notes](#notes)
 * [Installation](#install)
 * [Example](#example)
+* [Import Styles](#example)
 * [Command Line Tools](#cli)
 * [API](#api)
 * [Browser](#browser)
-* [Weapp](#weapp)
 * [About QoS](#qos)
 * [TypeScript](#typescript)
+* [Weapp and Ali support](#weapp-alipay)
 * [Contributing](#contributing)
 * [License](#license)
 
@@ -27,26 +26,31 @@ MQTT.js is an OPEN Open Source Project, see the [Contributing](#contributing) se
 [![JavaScript Style
 Guide](https://cdn.rawgit.com/feross/standard/master/badge.svg)](https://github.com/feross/standard)
 
+<a name="vnext"></a>
+## Discussion on the next major version of MQTT.js
+There are discussions happening on the future of MQTT.js and the next major version (vNext). We invite the community to provide their thoughts and feedback in [this GitHub discussion](https://github.com/mqttjs/MQTT.js/discussions/1324)
 
 <a name="notes"></a>
 ## Important notes for existing users
 
-v2.0.0 removes support for node v0.8, v0.10 and v0.12, and it is 3x faster in sending
+__v4.0.0__ (Released 04/2020) removes support for all end of life node versions, and now supports node v12 and v14. It also adds improvements to
+debug logging, along with some feature additions.
+
+As a __breaking change__, by default a error handler is built into the MQTT.js client, so if any
+errors are emitted and the user has not created an event handler on the client for errors, the client will
+not break as a result of unhandled errors. Additionally, typical TLS errors like `ECONNREFUSED`, `ECONNRESET` have been
+added to a list of TLS errors that will be emitted from the MQTT.js client, and so can be handled as connection errors.
+
+__v3.0.0__ adds support for MQTT 5, support for node v10.x, and many fixes to improve reliability.
+
+__Note:__ MQTT v5 support is experimental as it has not been implemented by brokers yet.
+
+__v2.0.0__ removes support for node v0.8, v0.10 and v0.12, and it is 3x faster in sending
 packets. It also removes all the deprecated functionality in v1.0.0,
 mainly `mqtt.createConnection` and `mqtt.Server`. From v2.0.0,
 subscriptions are restored upon reconnection if `clean: true`.
 v1.x.x is now in *LTS*, and it will keep being supported as long as
 there are v0.8, v0.10 and v0.12 users.
-
-v1.0.0 improves the overall architecture of the project, which is now
-split into three components: MQTT.js keeps the Client,
-[mqtt-connection](http://npm.im/mqtt-connection) includes the barebone
-Connection code for server-side usage, and [mqtt-packet](http://npm.im/mqtt-packet)
-includes the protocol parser and generator. The new Client improves
-performance by a 30% factor, embeds Websocket support
-([MOWS](http://npm.im/mows) is now deprecated), and it has a better
-support for QoS 1 and 2. The previous API is still supported but
-deprecated, as such, it id not documented in this README.
 
 As a __breaking change__, the `encoding` option in the old client is
 removed, and now everything is UTF-8 with the exception of the
@@ -55,6 +59,16 @@ which are `Buffer`.
 
 Another __breaking change__ is that MQTT.js now defaults to MQTT v3.1.1,
 so to support old brokers, please read the [client options doc](#client).
+
+__v1.0.0__ improves the overall architecture of the project, which is now
+split into three components: MQTT.js keeps the Client,
+[mqtt-connection](http://npm.im/mqtt-connection) includes the barebone
+Connection code for server-side usage, and [mqtt-packet](http://npm.im/mqtt-packet)
+includes the protocol parser and generator. The new Client improves
+performance by a 30% factor, embeds Websocket support
+([MOWS](http://npm.im/mows) is now deprecated), and it has a better
+support for QoS 1 and 2. The previous API is still supported but
+deprecated, as such, it is not documented in this README.
 
 <a name="install"></a>
 ## Installation
@@ -69,12 +83,15 @@ npm install mqtt --save
 For the sake of simplicity, let's put the subscriber and the publisher in the same file:
 
 ```js
-var mqtt = require('mqtt')
-var client  = mqtt.connect('mqtt://test.mosquitto.org')
+const mqtt = require('mqtt')
+const client  = mqtt.connect('mqtt://test.mosquitto.org')
 
 client.on('connect', function () {
-  client.subscribe('presence')
-  client.publish('presence', 'Hello mqtt')
+  client.subscribe('presence', function (err) {
+    if (!err) {
+      client.publish('presence', 'Hello mqtt')
+    }
+  })
 })
 
 client.on('message', function (topic, message) {
@@ -91,14 +108,33 @@ Hello mqtt
 
 If you want to run your own MQTT broker, you can use
 [Mosquitto](http://mosquitto.org) or
-[Mosca](http://mcollina.github.io/mosca/), and launch it.
-You can also use a test instance: test.mosquitto.org and test.mosca.io
-are both public.
+[Aedes-cli](https://github.com/moscajs/aedes-cli), and launch it.
+
+You can also use a test instance: test.mosquitto.org.
 
 If you do not want to install a separate broker, you can try using the
-[mqtt-connection](https://www.npmjs.com/package/mqtt-connection).
+[Aedes](https://github.com/moscajs/aedes).
 
 to use MQTT.js in the browser see the [browserify](#browserify) section
+
+<a name="import_styles"></a>
+## Import styles
+### CommonJS (Require)
+```js
+const mqtt = require('mqtt')  // require mqtt
+const client = mqtt.connect('test.mosquitto.org')  // create a client
+```
+### ES6 Modules (Import)
+#### Aliased wildcard import
+```js
+import * as mqtt from "mqtt"  // import everything inside the mqtt module and give it the namespace "mqtt"
+let client = mqtt.connect('mqtt://test.mosquitto.org') // create a client
+```
+#### Importing individual components
+```js
+import { connect } from "mqtt"  // import connect from mqtt
+let client = connect('mqtt://test.mosquitto.org') // create a client
+```
 
 <a name="promises"></a>
 ## Promise support
@@ -130,8 +166,109 @@ mqtt pub -t 'hello' -h 'test.mosquitto.org' -m 'from MQTT.js'
 
 See `mqtt help <command>` for the command help.
 
+<a name="debug"></a>
+## Debug Logs
+
+MQTT.js uses the [debug](https://www.npmjs.com/package/debug#cmd) package for debugging purposes. To enable debug logs, add the following environment variable on runtime :
+```ps
+# (example using PowerShell, the VS Code default)
+$env:DEBUG='mqttjs*'
+
+```
+
+<a name="reconnecting"></a>
+## About Reconnection
+
+An important part of any websocket connection is what to do when a connection
+drops off and the client needs to reconnect. MQTT has built-in reconnection
+support that can be configured to behave in ways that suit the application.
+
+#### Refresh Authentication Options / Signed Urls with `transformWsUrl` (Websocket Only)
+
+When an mqtt connection drops and needs to reconnect, it's common to require
+that any authentication associated with the connection is kept current with
+the underlying auth mechanism. For instance some applications may pass an auth
+token with connection options on the initial connection, while other cloud
+services may require a url be signed with each connection.
+
+By the time the reconnect happens in the application lifecycle, the original
+auth data may have expired.
+
+To address this we can use a hook called `transformWsUrl` to manipulate
+either of the connection url or the client options at the time of a reconnect.
+
+Example (update clientId & username on each reconnect):
+```
+    const transformWsUrl = (url, options, client) => {
+      client.options.username = `token=${this.get_current_auth_token()}`;
+      client.options.clientId = `${this.get_updated_clientId()}`;
+
+      return `${this.get_signed_cloud_url(url)`;
+    }
+
+    const connection = await mqtt.connectAsync(<wss url>, {
+      ...,
+      transformWsUrl: transformUrl,
+    });
+
+```
+Now every time a new WebSocket connection is opened (hopefully not too often),
+we will get a fresh signed url or fresh auth token data.
+
+Note: Currently this hook does _not_ support promises, meaning that in order to
+use the latest auth token, you must have some outside mechanism running that
+handles application-level authentication refreshing so that the websocket
+connection can simply grab the latest valid token or signed url.
+
+
+#### Enabling Reconnection with `reconnectPeriod` option
+
+To ensure that the mqtt client automatically tries to reconnect when the
+connection is dropped, you must set the client option `reconnectPeriod` to a
+value greater than 0. A value of 0 will disable reconnection and then terminate
+the final connection when it drops.
+
+The default value is 1000 ms which means it will try to reconnect 1 second
+after losing the connection.
+
+<a name="topicalias"></a>
+## About Topic Alias Management
+
+### Enabling automatic Topic Alias using
+If the client sets the option `autoUseTopicAlias:true` then MQTT.js uses existing topic alias automatically.
+
+example scenario:
+```
+1. PUBLISH topic:'t1', ta:1                   (register)
+2. PUBLISH topic:'t1'       -> topic:'', ta:1 (auto use existing map entry)
+3. PUBLISH topic:'t2', ta:1                   (register overwrite)
+4. PUBLISH topic:'t2'       -> topic:'', ta:1 (auto use existing map entry based on the receent map)
+5. PUBLISH topic:'t1'                         (t1 is no longer mapped to ta:1)
+```
+
+User doesn't need to manage which topic is mapped to which topic alias.
+If the user want to register topic alias, then publish topic with topic alias.
+If the user want to use topic alias, then publish topic without topic alias. If there is a mapped topic alias then added it as a property and update the topic to empty string.
+
+### Enabling  automatic Topic Alias assign
+
+If the client sets the option `autoAssignTopicAlias:true` then MQTT.js uses existing topic alias automatically.
+If no topic alias exists, then assign a new vacant topic alias automatically. If topic alias is fully used, then LRU(Least Recently Used) topic-alias entry is overwritten.
+
+example scenario:
+```
+The broker returns CONNACK (TopicAliasMaximum:3)
+1. PUBLISH topic:'t1' -> 't1', ta:1 (auto assign t1:1 and register)
+2. PUBLISH topic:'t1' -> ''  , ta:1 (auto use existing map entry)
+3. PUBLISH topic:'t2' -> 't2', ta:2 (auto assign t1:2 and register. 2 was vacant)
+4. PUBLISH topic:'t3' -> 't3', ta:3 (auto assign t1:3 and register. 3 was vacant)
+5. PUBLISH topic:'t4' -> 't4', ta:1 (LRU entry is overwritten)
+```
+
+Also user can manually register topic-alias pair using PUBLISH topic:'some', ta:X. It works well with automatic topic alias assign.
+
 <a name="api"></a>
-## API
+## API
 
   * <a href="#connect"><code>mqtt.<b>connect()</b></code></a>
   * <a href="#client"><code>mqtt.<b>Client()</b></code></a>
@@ -159,7 +296,7 @@ Connects to the broker specified by the given url and options and
 returns a [Client](#client).
 
 The URL can be on the following protocols: 'mqtt', 'mqtts', 'tcp',
-'tls', 'ws', 'wss'. The URL can also be an object as returned by
+'tls', 'ws', 'wss', 'wxs', 'alis'. The URL can also be an object as returned by
 [`URL.parse()`](http://nodejs.org/api/url.html#url_url_parse_urlstr_parsequerystring_slashesdenotehost),
 in that case the two objects are merged, i.e. you can pass a single
 object with both the URL and the connect options.
@@ -201,7 +338,7 @@ the `connect` event. Typically a `net.Socket`.
   * `clean`: `true`, set to false to receive QoS 1 and 2 messages while
     offline
   * `reconnectPeriod`: `1000` milliseconds, interval between two
-    reconnections
+    reconnections. Disable auto reconnect by setting to `0`.
   * `connectTimeout`: `30 * 1000` milliseconds, time to wait before a
     CONNACK is received
   * `username`: the username required by your broker, if any
@@ -209,17 +346,44 @@ the `connect` event. Typically a `net.Socket`.
   * `incomingStore`: a [Store](#store) for the incoming packets
   * `outgoingStore`: a [Store](#store) for the outgoing packets
   * `queueQoSZero`: if connection is broken, queue outgoing QoS zero messages (default `true`)
+  * `customHandleAcks`: MQTT 5 feature of custom handling puback and pubrec packets. Its callback:
+      ```js
+        customHandleAcks: function(topic, message, packet, done) {/*some logic wit colling done(error, reasonCode)*/}
+      ```
+  * `autoUseTopicAlias`: enabling automatic Topic Alias using functionality
+  * `autoAssignTopicAlias`: enabling automatic Topic Alias assign functionality
+  * `properties`: properties MQTT 5.0.
+  `object` that supports the following properties:
+    * `sessionExpiryInterval`: representing the Session Expiry Interval in seconds `number`,
+    * `receiveMaximum`: representing the Receive Maximum value `number`,
+    * `maximumPacketSize`: representing the Maximum Packet Size the Client is willing to accept `number`,
+    * `topicAliasMaximum`: representing the Topic Alias Maximum value indicates the highest value that the Client will accept as a Topic Alias sent by the Server `number`,
+    * `requestResponseInformation`: The Client uses this value to request the Server to return Response Information in the CONNACK `boolean`,
+    * `requestProblemInformation`: The Client uses this value to indicate whether the Reason String or User Properties are sent in the case of failures `boolean`,
+    * `userProperties`: The User Property is allowed to appear multiple times to represent multiple name, value pairs `object`,
+    * `authenticationMethod`: the name of the authentication method used for extended authentication `string`,
+    * `authenticationData`: Binary Data containing authentication data `binary`
+  * `authPacket`: settings for auth packet `object`
   * `will`: a message that will sent by the broker automatically when
      the client disconnect badly. The format is:
     * `topic`: the topic to publish
     * `payload`: the message to publish
     * `qos`: the QoS
     * `retain`: the retain flag
+    * `properties`: properties of will by MQTT 5.0:
+      * `willDelayInterval`: representing the Will Delay Interval in seconds `number`,
+      * `payloadFormatIndicator`: Will Message is UTF-8 Encoded Character Data or not `boolean`,
+      * `messageExpiryInterval`: value is the lifetime of the Will Message in seconds and is sent as the Publication Expiry Interval when the Server publishes the Will Message `number`,
+      * `contentType`: describing the content of the Will Message `string`,
+      * `responseTopic`: String which is used as the Topic Name for a response message `string`,
+      * `correlationData`: The Correlation Data is used by the sender of the Request Message to identify which request the Response Message is for when it is received `binary`,
+      * `userProperties`: The User Property is allowed to appear multiple times to represent multiple name, value pairs `object`
   * `transformWsUrl` : optional `(url, options, client) => url` function
         For ws/wss protocols only. Can be used to implement signing
         urls which upon reconnect can have become expired.
   * `resubscribe` : if connection is broken and reconnects,
      subscribed topics are automatically subscribed again (default `true`)
+  * `messageIdProvider`: custom messageId provider. when `new UniqueMessageIdProvider()` is set, then non conflict messageId is provided.
 
 In case mqtts (mqtt over tls) is required, the `options` object is
 passed through to
@@ -262,6 +426,12 @@ Emitted when a reconnect starts.
 
 Emitted after a disconnection.
 
+#### Event `'disconnect'`
+
+`function (packet) {}`
+
+Emitted after receiving disconnect packet from broker. MQTT 5.0 feature.
+
 #### Event `'offline'`
 
 `function () {}`
@@ -275,7 +445,22 @@ Emitted when the client goes offline.
 Emitted when the client cannot connect (i.e. connack rc != 0) or when a
 parsing error occurs.
 
-### Event `'message'`
+The following TLS errors will be emitted as an `error` event:
+
+* `ECONNREFUSED`
+* `ECONNRESET`
+* `EADDRINUSE`
+* `ENOTFOUND`
+
+#### Event `'end'`
+
+`function () {}`
+
+Emitted when <a href="#end"><code>mqtt.Client#<b>end()</b></code></a> is called.
+If a callback was passed to `mqtt.Client#end()`, this event is emitted once the
+callback returns.
+
+#### Event `'message'`
 
 `function (topic, message, packet) {}`
 
@@ -285,7 +470,7 @@ Emitted when the client receives a publish packet
 * `packet` received packet, as defined in
   [mqtt-packet](https://github.com/mcollina/mqtt-packet#publish)
 
-### Event `'packetsend'`
+#### Event `'packetsend'`
 
 `function (packet) {}`
 
@@ -294,7 +479,7 @@ as well as packets used by MQTT for managing subscriptions and connections
 * `packet` received packet, as defined in
   [mqtt-packet](https://github.com/mcollina/mqtt-packet)
 
-### Event `'packetreceive'`
+#### Event `'packetreceive'`
 
 `function (packet) {}`
 
@@ -316,6 +501,16 @@ Publish a message to a topic
   * `qos` QoS level, `Number`, default `0`
   * `retain` retain flag, `Boolean`, default `false`
   * `dup` mark as duplicate flag, `Boolean`, default `false`
+  * `properties`: MQTT 5.0 properties `object`
+    * `payloadFormatIndicator`: Payload is UTF-8 Encoded Character Data or not `boolean`,
+    * `messageExpiryInterval`: the lifetime of the Application Message in seconds `number`,
+    * `topicAlias`: value that is used to identify the Topic instead of using the Topic Name `number`,
+    * `responseTopic`: String which is used as the Topic Name for a response message `string`,
+    * `correlationData`: used by the sender of the Request Message to identify which request the Response Message is for when it is received `binary`,
+    * `userProperties`: The User Property is allowed to appear multiple times to represent multiple name, value pairs `object`,
+    * `subscriptionIdentifier`: representing the identifier of the subscription `number`,
+    * `contentType`: String describing the content of the Application Message `string`
+  * `cbStorePut` - `function ()`, fired when message is put into `outgoingStore` if QoS is `1` or `2`.
 * `callback` - `function (err)`, fired when the QoS handling completes,
   or at the next tick if QoS 0. An error occurs if client is disconnecting.
 
@@ -327,54 +522,70 @@ Subscribe to a topic or topics
 
 * `topic` is a `String` topic to subscribe to or an `Array` of
   topics to subscribe to. It can also be an object, it has as object
-  keys the topic name and as value the QoS, like `{'test1': 0, 'test2': 1}`.
+  keys the topic name and as value the QoS, like `{'test1': {qos: 0}, 'test2': {qos: 1}}`.
   MQTT `topic` wildcard characters are supported (`+` - for single level and `#` - for multi level)
 * `options` is the options to subscribe with, including:
-  * `qos` qos subscription level, default 0
+  * `qos` QoS subscription level, default 0
+  * `nl` No Local MQTT 5.0 flag (If the value is true, Application Messages MUST NOT be forwarded to a connection with a ClientID equal to the ClientID of the publishing connection)
+  * `rap` Retain as Published MQTT 5.0 flag (If true, Application Messages forwarded using this subscription keep the RETAIN flag they were published with. If false, Application Messages forwarded using this subscription have the RETAIN flag set to 0.)
+  * `rh` Retain Handling MQTT 5.0 (This option specifies whether retained messages are sent when the subscription is established.)
+  * `properties`: `object`
+    * `subscriptionIdentifier`:  representing the identifier of the subscription `number`,
+    * `userProperties`: The User Property is allowed to appear multiple times to represent multiple name, value pairs `object`
 * `callback` - `function (err, granted)`
   callback fired on suback where:
   * `err` a subscription error or an error that occurs when client is disconnecting
   * `granted` is an array of `{topic, qos}` where:
     * `topic` is a subscribed to topic
-    * `qos` is the granted qos level on it
+    * `qos` is the granted QoS level on it
 
 -------------------------------------------------------
 <a name="unsubscribe"></a>
-### mqtt.Client#unsubscribe(topic/topic array, [callback])
+### mqtt.Client#unsubscribe(topic/topic array, [options], [callback])
 
 Unsubscribe from a topic or topics
 
 * `topic` is a `String` topic or an array of topics to unsubscribe from
+* `options`: options of unsubscribe.
+  * `properties`: `object`
+      * `userProperties`: The User Property is allowed to appear multiple times to represent multiple name, value pairs `object`
 * `callback` - `function (err)`, fired on unsuback. An error occurs if client is disconnecting.
 
 -------------------------------------------------------
 <a name="end"></a>
-### mqtt.Client#end([force], [cb])
+### mqtt.Client#end([force], [options], [callback])
 
 Close the client, accepts the following options:
 
 * `force`: passing it to true will close the client right away, without
   waiting for the in-flight messages to be acked. This parameter is
   optional.
-* `cb`: will be called when the client is closed. This parameter is
+* `options`: options of disconnect.
+  * `reasonCode`: Disconnect Reason Code `number`
+  * `properties`: `object`
+    * `sessionExpiryInterval`: representing the Session Expiry Interval in seconds `number`,
+    * `reasonString`: representing the reason for the disconnect `string`,
+    * `userProperties`: The User Property is allowed to appear multiple times to represent multiple name, value pairs `object`,
+    * `serverReference`: String which can be used by the Client to identify another Server to use `string`
+* `callback`: will be called when the client is closed. This parameter is
   optional.
 
 -------------------------------------------------------
 <a name="removeOutgoingMessage"></a>
-### mqtt.Client#removeOutgoingMessage(mid)
+### mqtt.Client#removeOutgoingMessage(mId)
 
 Remove a message from the outgoingStore.
-The outgoing callback will be called withe Error('Message removed') if the message is removed.
+The outgoing callback will be called with Error('Message removed') if the message is removed.
 
 After this function is called, the messageId is released and becomes reusable.
 
-* `mid`: The messageId of the message in the outgoingStore.
+* `mId`: The messageId of the message in the outgoingStore.
 
 -------------------------------------------------------
 <a name="reconnect"></a>
 ### mqtt.Client#reconnect()
 
-Connect again using the same options.
+Connect again using the same options as connect()
 
 -------------------------------------------------------
 <a name="handleMessage"></a>
@@ -416,9 +627,12 @@ Other implementations of `mqtt.Store`:
 * [mqtt-level-store](http://npm.im/mqtt-level-store) which uses
   [Level-browserify](http://npm.im/level-browserify) to store the inflight
   data, making it usable both in Node and the Browser.
-* [mqtt-nedbb-store](https://github.com/behrad/mqtt-nedb-store) which
+* [mqtt-nedb-store](https://github.com/behrad/mqtt-nedb-store) which
   uses [nedb](https://www.npmjs.com/package/nedb) to store the inflight
   data.
+* [mqtt-localforage-store](http://npm.im/mqtt-localforage-store) which uses
+  [localForage](http://npm.im/localforage) to store the inflight
+  data, making it usable in the Browser without browserify.
 
 -------------------------------------------------------
 <a name="put"></a>
@@ -458,41 +672,30 @@ The MQTT.js bundle is available through http://unpkg.com, specifically
 at https://unpkg.com/mqtt/dist/mqtt.min.js.
 See http://unpkg.com for the full documentation on version ranges.
 
-<a name="weapp"></a>
-## Wexin App
-Surport [Weixin App](https://mp.weixin.qq.com/). See [Doc](https://mp.weixin.qq.com/debug/wxadoc/dev/api/network-socket.html).
-<a name="example"></a>
-
-## Example(js)
-
-```js
-var mqtt = require('mqtt')
-var client  = mqtt.connect('wxs://test.mosquitto.org')
-```
-
-## Example(ts)
-
-```ts
-import { connect } from 'mqtt';
-const client  = connect('wxs://test.mosquitto.org');
-```
-
 <a name="browserify"></a>
 ### Browserify
 
 In order to use MQTT.js as a browserify module you can either require it in your browserify bundles or build it as a stand alone module. The exported module is AMD/CommonJs compatible and it will add an object in the global space.
 
-```javascript
-npm install -g browserify // install browserify
-cd node_modules/mqtt
-npm install . // install dev dependencies
-browserify mqtt.js -s mqtt > browserMqtt.js // require mqtt in your client-side app
+```bash
+mkdir tmpdir
+cd tmpdir
+npm install mqtt
+npm install browserify
+npm install tinyify
+cd node_modules/mqtt/
+npm install .
+npx browserify mqtt.js -s mqtt >browserMqtt.js // use script tag
+# show size for compressed browser transfer
+gzip <browserMqtt.js | wc -c
 ```
+
+**Be sure to only use this bundle with `ws` or `wss` URLs in the browser. Others URL types will likey fail**
 
 <a name="webpack"></a>
 ### Webpack
 
-Just like browserify, export MQTT.js as library. The exported module would be `var mqtt = xxx` and it will add an object in the global space. You could also export module in other [formats (AMD/CommonJS/others)](http://webpack.github.io/docs/configuration.html#output-librarytarget) by setting **output.libraryTarget** in webpack configuration.
+Just like browserify, export MQTT.js as library. The exported module would be `const mqtt = xxx` and it will add an object in the global space. You could also export module in other [formats (AMD/CommonJS/others)](http://webpack.github.io/docs/configuration.html#output-librarytarget) by setting **output.libraryTarget** in webpack configuration.
 
 ```javascript
 npm install -g webpack // install webpack
@@ -512,7 +715,7 @@ you can then use mqtt.js in the browser with the same api than node's one.
 <body>
 <script src="./browserMqtt.js"></script>
 <script>
-  var client = mqtt.connect() // you add a ws:// url here
+  const client = mqtt.connect() // you add a ws:// url here
   client.subscribe("mqtt/demo")
 
   client.on("message", function (topic, payload) {
@@ -526,30 +729,45 @@ you can then use mqtt.js in the browser with the same api than node's one.
 </html>
 ```
 
-Your broker should accept websocket connection (see [MQTT over Websockets](https://github.com/mcollina/mosca/wiki/MQTT-over-Websockets) to setup [Mosca](http://mcollina.github.io/mosca/)).
-
-<a name="signedurls"></a>
-### Signed WebSocket Urls
-
-If you need to sign an url, for example for [AWS IoT](http://docs.aws.amazon.com/iot/latest/developerguide/protocols.html#mqtt-ws),
-then you can pass in a `transformWsUrl` function to the <a href="#connect"><code>mqtt.<b>connect()</b></code></a> options
-This is needed because signed urls have an expiry and eventually upon reconnects, a new signed url needs to be created:
-
-```js
-// This module doesn't actually exist, just an example
-var awsIotUrlSigner = require('awsIotUrlSigner')
-mqtt.connect('wss://a2ukbzaqo9vbpb.iot.ap-southeast-1.amazonaws.com/mqtt', {
-  transformWsUrl: function (url, options, client) {
-    // It's possible to inspect some state on options(pre parsed url components)
-    // and the client (reconnect state etc)
-    return awsIotUrlSigner(url)
-  }
-})
-
-// Now every time a new WebSocket connection is opened (hopefully not that
-// often) we get a freshly signed url
-
+### React
 ```
+npm install -g webpack                    // Install webpack globally
+npm install mqtt                          // Install MQTT library
+cd node_modules/mqtt
+npm install .                             // Install dev deps at current dir
+webpack mqtt.js --output-library mqtt     // Build
+
+// now you can import the library with ES6 import, commonJS not tested
+```
+
+
+```javascript
+import React from 'react';
+import mqtt from 'mqtt';
+
+export default () => {
+  const [connectionStatus, setConnectionStatus] = React.useState(false);
+  const [messages, setMessages] = React.useState([]);
+
+  useEffect(() => {
+    const client = mqtt.connect(SOME_URL);
+    client.on('connect', () => setConnectionStatus(true));
+    client.on('message', (topic, payload, packet) => {
+      setMessages(messages.concat(payload.toString()));
+    });
+  }, []);
+
+  return (
+    <>
+     {messages.map((message) => (
+        <h2>{message}</h2>
+     )
+    </>
+  )
+}
+```
+
+Your broker should accept websocket connection (see [MQTT over Websockets](https://github.com/moscajs/aedes/blob/master/docs/Examples.md#mqtt-server-over-websocket-using-server-factory) to setup [Aedes](https://github.com/moscajs/aedes)).
 
 <a name="qos"></a>
 ## About QoS
@@ -572,6 +790,31 @@ Before you can begin using these TypeScript definitions with your project, you n
  * Set tsconfig.json: `{"compilerOptions" : {"moduleResolution" : "node"}, ...}`
  * Includes the TypeScript definitions for node. You can use npm to install this by typing the following into a terminal window:
    `npm install --save-dev @types/node`
+   
+### Typescript example
+```
+import * as mqtt from "mqtt"
+let client : mqtt.MqttClient = mqtt.connect('mqtt://test.mosquitto.org')
+```
+
+<a name="weapp-alipay"></a>
+## WeChat and Ali Mini Program support
+### WeChat Mini Program
+Supports [WeChat Mini Program](https://mp.weixin.qq.com/). Use the `wxs` protocol. See [the WeChat docs](https://mp.weixin.qq.com/debug/wxadoc/dev/api/network-socket.html).
+
+```js
+const mqtt = require('mqtt')
+const client = mqtt.connect('wxs://test.mosquitto.org')
+```
+
+### Ali Mini Program
+Supports [Ali Mini Program](https://open.alipay.com/channel/miniIndex.htm). Use the `alis` protocol. See [the Alipay docs](https://docs.alipay.com/mini/developer/getting-started).
+<a name="example"></a>
+
+```js
+const mqtt = require('mqtt')
+const client = mqtt.connect('alis://test.mosquitto.org')
+```
 
 <a name="contributing"></a>
 ## Contributing
@@ -590,7 +833,9 @@ MQTT.js is only possible due to the excellent work of the following contributors
 <tr><th align="left">Adam Rudd</th><td><a href="https://github.com/adamvr">GitHub/adamvr</a></td><td><a href="http://twitter.com/adam_vr">Twitter/@adam_vr</a></td></tr>
 <tr><th align="left">Matteo Collina</th><td><a href="https://github.com/mcollina">GitHub/mcollina</a></td><td><a href="http://twitter.com/matteocollina">Twitter/@matteocollina</a></td></tr>
 <tr><th align="left">Maxime Agor</th><td><a href="https://github.com/4rzael">GitHub/4rzael</a></td><td><a href="http://twitter.com/4rzael">Twitter/@4rzael</a></td></tr>
+<tr><th align="left">Siarhei Buntsevich</th><td><a href="https://github.com/scarry1992">GitHub/scarry1992</a></td></tr>
 </tbody></table>
+
 
 <a name="license"></a>
 ## License

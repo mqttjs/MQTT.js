@@ -14,27 +14,28 @@
   <the ip address of the server> stark
  *******************************************************************************/
 
-var mqtt = require('mqtt')
-var fs = require('fs')
-var path = require('path')
-var KEY = fs.readFileSync(path.join(__dirname, '/tls-key.pem'))
-var CERT = fs.readFileSync(path.join(__dirname, '/tls-cert.pem'))
-var TRUSTED_CA_LIST = fs.readFileSync(path.join(__dirname, '/crt.ca.cg.pem'))
+const mqtt = require('mqtt')
+const fs = require('fs')
+const path = require('path')
+const KEY = fs.readFileSync(path.join(__dirname, '/tls-key.pem'))
+const CERT = fs.readFileSync(path.join(__dirname, '/tls-cert.pem'))
+const TRUSTED_CA_LIST = fs.readFileSync(path.join(__dirname, '/crt.ca.cg.pem'))
 
-var PORT = 1883
-var HOST = 'stark'
+const PORT = 1883
+const HOST = 'stark'
 
-var options = {
+const options = {
   port: PORT,
   host: HOST,
   key: KEY,
   cert: CERT,
   rejectUnauthorized: true,
   // The CA list will be used to determine if server is authorized
-  ca: TRUSTED_CA_LIST
+  ca: TRUSTED_CA_LIST,
+  protocol: 'mqtts'
 }
 
-var client = mqtt.connect(options)
+const client = mqtt.connect(options)
 
 client.subscribe('messages')
 client.publish('messages', 'Current time is: ' + new Date())

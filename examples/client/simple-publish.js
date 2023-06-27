@@ -1,7 +1,7 @@
 'use strict'
 
-var mqtt = require('../..')
-var client = mqtt.connect()
+const mqtt = require('../..')
+const client = mqtt.connect()
 
 client.publish('presence', 'hello!')
 client.end()

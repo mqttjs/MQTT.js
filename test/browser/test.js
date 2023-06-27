@@ -1,17 +1,19 @@
 'use strict'
 
-var mqtt = require('../../lib/connect')
-var _URL = require('url')
-var xtend = require('xtend')
-var parsed = _URL.parse(document.URL)
-var isHttps = parsed.protocol === 'https:'
-var port = parsed.port || (isHttps ? 443 : 80)
-var host = parsed.hostname
-var protocol = isHttps ? 'wss' : 'ws'
+const mqtt = require('../../lib/connect')
+const xtend = require('xtend')
+const _URL = require('url')
+// eslint-disable-next-line
+const parsed = _URL.parse(document.URL)
+const isHttps = parsed.protocol === 'https:'
+const port = parsed.port || (isHttps ? 443 : 80)
+const host = parsed.hostname
+const protocol = isHttps ? 'wss' : 'ws'
 
 function clientTests (buildClient) {
-  var client
+  let client
 
+  // eslint-disable-next-line
   beforeEach(function () {
     client = buildClient()
     client.on('offline', function () {
@@ -50,7 +52,7 @@ function suiteFactory (configName, opts) {
     return xtend(base || {}, opts)
   }
 
-  var suiteName = 'MqttClient(' + configName + '=' + JSON.stringify(opts) + ')'
+  const suiteName = 'MqttClient(' + configName + '=' + JSON.stringify(opts) + ')'
   describe(suiteName, function () {
     this.timeout(10000)
 
@@ -70,8 +72,7 @@ function suiteFactory (configName, opts) {
 
     describe('specifying a port and host', function () {
       clientTests(function () {
-        return mqtt.connect(setVersion(
-              { protocol: protocol, port: port, host: host }))
+        return mqtt.connect(setVersion({ protocol: protocol, port: port, host: host }))
       })
     })
 
@@ -83,12 +84,11 @@ function suiteFactory (configName, opts) {
 
     describe('specifying a URL with a path', function () {
       clientTests(function () {
-        return mqtt.connect(protocol + '://' + host + ':' + port + '/mqtt',
-                            setVersion())
+        return mqtt.connect(protocol + '://' + host + ':' + port + '/mqtt', setVersion())
       })
     })
   })
 }
 
-suiteFactory('v3', {protocolId: 'MQIsdp', protocolVersion: 3})
+suiteFactory('v3', { protocolId: 'MQIsdp', protocolVersion: 3 })
 suiteFactory('default', {})

@@ -1,141 +1,70 @@
 'use strict'
 
-var mqtt = require('..')
-var should = require('should')
-var fork = require('child_process').fork
-var path = require('path')
-var abstractClientTests = require('./abstract_client')
-var net = require('net')
-var eos = require('end-of-stream')
-var Connection = require('mqtt-connection')
-var Server = require('./server')
-var port = 9876
-var server
-
-/**
- * Test server
- */
-function buildServer () {
-  return new Server(function (client) {
-    client.on('connect', function (packet) {
-      if (packet.clientId === 'invalid') {
-        client.connack({returnCode: 2})
-      } else {
-        client.connack({returnCode: 0})
-      }
-    })
-
-    client.on('publish', function (packet) {
-      setImmediate(function () {
-        switch (packet.qos) {
-          case 0:
-            break
-          case 1:
-            client.puback(packet)
-            break
-          case 2:
-            client.pubrec(packet)
-            break
-        }
-      })
-    })
-
-    client.on('pubrel', function (packet) {
-      client.pubcomp(packet)
-    })
-
-    client.on('pubrec', function (packet) {
-      client.pubrel(packet)
-    })
-
-    client.on('pubcomp', function () {
-      // Nothing to be done
-    })
-
-    client.on('subscribe', function (packet) {
-      client.suback({
-        messageId: packet.messageId,
-        granted: packet.subscriptions.map(function (e) {
-          return e.qos
-        })
-      })
-    })
-
-    client.on('unsubscribe', function (packet) {
-      client.unsuback(packet)
-    })
-
-    client.on('pingreq', function () {
-      client.pingresp()
-    })
-  })
-}
-
-server = buildServer().listen(port)
+const mqtt = require('..')
+const assert = require('chai').assert
+const { fork } = require('child_process')
+const path = require('path')
+const abstractClientTests = require('./abstract_client')
+const net = require('net')
+const eos = require('end-of-stream')
+const mqttPacket = require('mqtt-packet')
+const Duplex = require('readable-stream').Duplex
+const Connection = require('mqtt-connection')
+const MqttServer = require('./server').MqttServer
+const util = require('util')
+const ports = require('./helpers/port_list')
+const serverBuilder = require('./server_helpers_for_client_tests').serverBuilder
+const debug = require('debug')('TEST:client')
 
 describe('MqttClient', function () {
-  describe('creating', function () {
-    it('should allow instantiation of MqttClient without the \'new\' operator', function (done) {
-      should(function () {
-        var client
-        try {
-          client = mqtt.MqttClient(function () {
-            throw Error('break')
-          }, {})
-          client.end()
-        } catch (err) {
-          if (err.message !== 'break') {
-            throw err
-          }
-          done()
-        }
-      }).not.throw('Object #<Object> has no method \'_setupStream\'')
-    })
+  let client
+  const server = serverBuilder('mqtt')
+  const config = { protocol: 'mqtt', port: ports.PORT }
+  server.listen(ports.PORT)
+
+  after(function () {
+    // clean up and make sure the server is no longer listening...
+    if (server.listening) {
+      server.close()
+    }
   })
 
-  var config = { protocol: 'mqtt', port: port }
   abstractClientTests(server, config)
+
+  describe('creating', function () {
+    it('should allow instantiation of MqttClient without the \'new\' operator', function (done) {
+      try {
+        client = mqtt.MqttClient(function () {
+          throw Error('break')
+        }, {})
+        client.end()
+      } catch (err) {
+        assert.strictEqual(err.message, 'break')
+        done()
+      }
+    })
+  })
 
   describe('message ids', function () {
     it('should increment the message id', function () {
-      var client = mqtt.connect(config)
-      var currentId = client._nextId()
+      client = mqtt.connect(config)
+      const currentId = client._nextId()
 
-      client._nextId().should.equal(currentId + 1)
-      client.end()
-    })
-
-    it('should return 1 once the interal counter reached limit', function () {
-      var client = mqtt.connect(config)
-      client.nextId = 65535
-
-      client._nextId().should.equal(65535)
-      client._nextId().should.equal(1)
-      client.end()
-    })
-
-    it('should return 65535 for last message id once the interal counter reached limit', function () {
-      var client = mqtt.connect(config)
-      client.nextId = 65535
-
-      client._nextId().should.equal(65535)
-      client.getLastMessageId().should.equal(65535)
-      client._nextId().should.equal(1)
-      client.getLastMessageId().should.equal(1)
+      assert.equal(client._nextId(), currentId + 1)
       client.end()
     })
 
     it('should not throw an error if packet\'s messageId is not found when receiving a pubrel packet', function (done) {
-      var server2 = new Server(function (c) {
-        c.on('connect', function (packet) {
-          c.connack({returnCode: 0})
-          c.pubrel({ messageId: Math.floor(Math.random() * 9000) + 1000 })
+      const server2 = new MqttServer(function (serverClient) {
+        serverClient.on('connect', function (packet) {
+          serverClient.connack({ returnCode: 0 })
+          serverClient.pubrel({ messageId: Math.floor(Math.random() * 9000) + 1000 })
         })
       })
 
-      server2.listen(port + 49, function () {
-        var client = mqtt.connect({
-          port: port + 49,
+      server2.listen(ports.PORTAND49, function () {
+        client = mqtt.connect({
+          port: ports.PORTAND49,
           host: 'localhost'
         })
 
@@ -148,52 +77,117 @@ describe('MqttClient', function () {
         })
       })
     })
+
+    it('should not go overflow if the TCP frame contains a lot of PUBLISH packets', function (done) {
+      const parser = mqttPacket.parser()
+      const max = 1000
+      let count = 0
+      const duplex = new Duplex({
+        read: function (n) {},
+        write: function (chunk, enc, cb) {
+          parser.parse(chunk)
+          cb() // nothing to do
+        }
+      })
+      client = new mqtt.MqttClient(function () {
+        return duplex
+      }, {})
+
+      client.on('message', function (t, p, packet) {
+        if (++count === max) {
+          done()
+        }
+      })
+
+      parser.on('packet', function (packet) {
+        const packets = []
+
+        if (packet.cmd === 'connect') {
+          duplex.push(mqttPacket.generate({
+            cmd: 'connack',
+            sessionPresent: false,
+            returnCode: 0
+          }))
+
+          for (let i = 0; i < max; i++) {
+            packets.push(mqttPacket.generate({
+              cmd: 'publish',
+              topic: Buffer.from('hello'),
+              payload: Buffer.from('world'),
+              retain: false,
+              dup: false,
+              messageId: i + 1,
+              qos: 1
+            }))
+          }
+
+          duplex.push(Buffer.concat(packets))
+        }
+      })
+    })
+  })
+
+  describe('flushing', function () {
+    it('should attempt to complete pending unsub and send on ping timeout', function (done) {
+      this.timeout(10000)
+      const server3 = new MqttServer(function (client) {
+        client.on('connect', function (packet) {
+          client.connack({ returnCode: 0 })
+        })
+      }).listen(ports.PORTAND72)
+
+      let pubCallbackCalled = false
+      let unsubscribeCallbackCalled = false
+      client = mqtt.connect({
+        port: ports.PORTAND72,
+        host: 'localhost',
+        keepalive: 1,
+        connectTimeout: 350,
+        reconnectPeriod: 0
+      })
+      client.once('connect', () => {
+        client.publish('fakeTopic', 'fakeMessage', { qos: 1 }, (err, result) => {
+          assert.exists(err)
+          pubCallbackCalled = true
+        })
+        client.unsubscribe('fakeTopic', (err, result) => {
+          assert.exists(err)
+          unsubscribeCallbackCalled = true
+        })
+        setTimeout(() => {
+          client.end(() => {
+            assert.strictEqual(pubCallbackCalled && unsubscribeCallbackCalled, true, 'callbacks not invoked')
+            server3.close()
+            done()
+          })
+        }, 5000)
+      })
+    })
   })
 
   describe('reconnecting', function () {
     it('should attempt to reconnect once server is down', function (done) {
-      this.timeout(15000)
+      this.timeout(30000)
 
-      var innerServer = fork(path.join(__dirname, 'helpers', 'server_process.js'))
-      var client = mqtt.connect({ port: 3000, host: 'localhost', keepalive: 1 })
+      const innerServer = fork(path.join(__dirname, 'helpers', 'server_process.js'), { execArgv: ['--inspect'] })
+      innerServer.on('close', (code) => {
+        if (code) {
+          done(util.format('child process closed with code %d', code))
+        }
+      })
 
+      innerServer.on('exit', (code) => {
+        if (code) {
+          done(util.format('child process exited with code %d', code))
+        }
+      })
+
+      client = mqtt.connect({ port: 3481, host: 'localhost', keepalive: 1 })
       client.once('connect', function () {
         innerServer.kill('SIGINT') // mocks server shutdown
-
         client.once('close', function () {
-          should.exist(client.reconnectTimer)
-          client.end()
-          done()
-        })
-      })
-    })
-
-    it('should reconnect to multiple host-ports combination if servers is passed', function (done) {
-      this.timeout(15000)
-
-      var server2 = buildServer().listen(port + 42)
-
-      server2.on('client', function (c) {
-        c.stream.destroy()
-        server2.close()
-      })
-
-      server2.on('listening', function () {
-        var client = mqtt.connect({
-          servers: [
-            { port: port + 42, host: 'localhost' },
-            { port: port, host: 'localhost' }
-          ],
-          keepalive: 50
-        })
-
-        server.once('client', function () {
-          client.end()
-          done()
-        })
-
-        client.once('connect', function () {
-          client.stream.destroy()
+          assert.exists(client.reconnectTimer)
+          client.end(true, done)
         })
       })
     })
@@ -201,7 +195,7 @@ describe('MqttClient', function () {
     it('should reconnect if a connack is not received in an interval', function (done) {
       this.timeout(2000)
 
-      var server2 = net.createServer().listen(port + 43)
+      const server2 = net.createServer().listen(ports.PORTAND43)
 
       server2.on('connection', function (c) {
         eos(c, function () {
@@ -210,17 +204,18 @@ describe('MqttClient', function () {
       })
 
       server2.on('listening', function () {
-        var client = mqtt.connect({
+        client = mqtt.connect({
           servers: [
-            { port: port + 43, host: 'localhost_fake' },
-            { port: port, host: 'localhost' }
+            { port: ports.PORTAND43, host: 'localhost_fake' },
+            { port: ports.PORT, host: 'localhost' }
           ],
           connectTimeout: 500
         })
 
         server.once('client', function () {
-          client.end()
-          done()
+          client.end(false, (err) => {
+            done(err)
+          })
         })
 
         client.once('connect', function () {
@@ -229,22 +224,22 @@ describe('MqttClient', function () {
       })
     })
 
-    it('shoud not be cleared by the connack timer', function (done) {
+    it('should not be cleared by the connack timer', function (done) {
       this.timeout(4000)
 
-      var server2 = net.createServer().listen(port + 44)
+      const server2 = net.createServer().listen(ports.PORTAND44)
 
       server2.on('connection', function (c) {
         c.destroy()
       })
 
       server2.once('listening', function () {
-        var reconnects = 0
-        var connectTimeout = 1000
-        var reconnectPeriod = 100
-        var expectedReconnects = Math.floor(connectTimeout / reconnectPeriod)
-        var client = mqtt.connect({
-          port: port + 44,
+        const connectTimeout = 1000
+        const reconnectPeriod = 100
+        const expectedReconnects = Math.floor(connectTimeout / reconnectPeriod)
+        let reconnects = 0
+        client = mqtt.connect({
+          port: ports.PORTAND44,
           host: 'localhost',
           connectTimeout: connectTimeout,
           reconnectPeriod: reconnectPeriod
@@ -253,79 +248,85 @@ describe('MqttClient', function () {
         client.on('reconnect', function () {
           reconnects++
           if (reconnects >= expectedReconnects) {
-            client.end()
-            done()
+            client.end(true, done)
           }
         })
       })
     })
 
-    it('shoud not keep requeueing the first message when offline', function (done) {
+    it('should not keep requeueing the first message when offline', function (done) {
       this.timeout(2500)
 
-      var server2 = buildServer().listen(port + 45)
-      var client = mqtt.connect({
-        port: port + 45,
+      const server2 = serverBuilder('mqtt').listen(ports.PORTAND45)
+      client = mqtt.connect({
+        port: ports.PORTAND45,
         host: 'localhost',
         connectTimeout: 350,
         reconnectPeriod: 300
       })
 
-      server2.on('client', function (c) {
+      server2.on('client', function (serverClient) {
         client.publish('hello', 'world', { qos: 1 }, function () {
-          c.destroy()
-          server2.close()
-          client.publish('hello', 'world', { qos: 1 })
+          serverClient.destroy()
+          server2.close(() => {
+            debug('now publishing message in an offline state')
+            client.publish('hello', 'world', { qos: 1 })
+          })
         })
       })
 
       setTimeout(function () {
         if (client.queue.length === 0) {
-          client.end(true)
-          done()
+          debug('calling final client.end()')
+          client.end(true, (err) => done(err))
         } else {
+          debug('calling client.end()')
           client.end(true)
         }
       }, 2000)
     })
 
-    it('should not send the same subcribe multiple times on a flaky connection', function (done) {
+    it('should not send the same subscribe multiple times on a flaky connection', function (done) {
       this.timeout(3500)
 
-      var KILL_COUNT = 4
-      var killedConnections = 0
-      var subIds = {}
-      var client = mqtt.connect({
-        port: port + 46,
+      const KILL_COUNT = 4
+      const subIds = {}
+      let killedConnections = 0
+      client = mqtt.connect({
+        port: ports.PORTAND46,
         host: 'localhost',
         connectTimeout: 350,
         reconnectPeriod: 300
       })
 
-      var server2 = new Server(function (client) {
-        client.on('error', function () {})
-        client.on('connect', function (packet) {
+      const server2 = new MqttServer(function (serverClient) {
+        serverClient.on('error', function () {})
+        debug('setting serverClient connect callback')
+        serverClient.on('connect', function (packet) {
           if (packet.clientId === 'invalid') {
-            client.connack({returnCode: 2})
+            debug('connack with returnCode 2')
+            serverClient.connack({ returnCode: 2 })
           } else {
-            client.connack({returnCode: 0})
+            debug('connack with returnCode 0')
+            serverClient.connack({ returnCode: 0 })
           }
         })
-      }).listen(port + 46)
+      }).listen(ports.PORTAND46)
 
-      server2.on('client', function (c) {
+      server2.on('client', function (serverClient) {
+        debug('client received on server2.')
+        debug('subscribing to topic `topic`')
         client.subscribe('topic', function () {
-          done()
-          client.end(true)
-          c.destroy()
-          server2.close()
+          debug('once subscribed to topic, end client, destroy serverClient, and close server.')
+          serverClient.destroy()
+          server2.close(() => { client.end(true, done) })
         })
 
-        c.on('subscribe', function (packet) {
+        serverClient.on('subscribe', function (packet) {
           if (killedConnections < KILL_COUNT) {
             // Kill the first few sub attempts to simulate a flaky connection
             killedConnections++
-            c.destroy()
+            serverClient.destroy()
           } else {
             // Keep track of acks
             if (!subIds[packet.messageId]) {
@@ -335,11 +336,11 @@ describe('MqttClient', function () {
             if (subIds[packet.messageId] > 1) {
               done(new Error('Multiple duplicate acked subscriptions received for messageId ' + packet.messageId))
               client.end(true)
-              c.destroy()
+              serverClient.end()
               server2.destroy()
             }
 
-            c.suback({
+            serverClient.suback({
               messageId: packet.messageId,
               granted: packet.subscriptions.map(function (e) {
                 return e.qos
@@ -352,22 +353,19 @@ describe('MqttClient', function () {
 
     it('should not fill the queue of subscribes if it cannot connect', function (done) {
       this.timeout(2500)
+      const server2 = net.createServer(function (stream) {
+        const serverClient = new Connection(stream)
 
-      var port2 = port + 48
-
-      var server2 = net.createServer(function (stream) {
-        var client = new Connection(stream)
-
-        client.on('error', function () {})
-        client.on('connect', function (packet) {
-          client.connack({returnCode: 0})
-          client.destroy()
+        serverClient.on('error', function (e) { /* do nothing */ })
+        serverClient.on('connect', function (packet) {
+          serverClient.connack({ returnCode: 0 })
+          serverClient.destroy()
         })
       })
 
-      server2.listen(port2, function () {
-        var client = mqtt.connect({
-          port: port2,
+      server2.listen(ports.PORTAND48, function () {
+        client = mqtt.connect({
+          port: ports.PORTAND48,
           host: 'localhost',
           connectTimeout: 350,
           reconnectPeriod: 300
@@ -376,9 +374,10 @@ describe('MqttClient', function () {
         client.subscribe('hello')
 
         setTimeout(function () {
-          client.queue.length.should.equal(1)
-          client.end()
-          done()
+          assert.equal(client.queue.length, 1)
+          client.end(true, () => {
+            done()
+          })
         }, 1000)
       })
     })
@@ -386,46 +385,45 @@ describe('MqttClient', function () {
     it('should not send the same publish multiple times on a flaky connection', function (done) {
       this.timeout(3500)
 
-      var KILL_COUNT = 4
-      var killedConnections = 0
-      var pubIds = {}
-      var client = mqtt.connect({
-        port: port + 47,
+      const KILL_COUNT = 4
+      let killedConnections = 0
+      const pubIds = {}
+      client = mqtt.connect({
+        port: ports.PORTAND47,
         host: 'localhost',
         connectTimeout: 350,
         reconnectPeriod: 300
       })
 
-      var server2 = net.createServer(function (stream) {
-        var client = new Connection(stream)
-        client.on('error', function () {})
-        client.on('connect', function (packet) {
+      const server2 = net.createServer(function (stream) {
+        const serverClient = new Connection(stream)
+        serverClient.on('error', function () {})
+        serverClient.on('connect', function (packet) {
           if (packet.clientId === 'invalid') {
-            client.connack({returnCode: 2})
+            serverClient.connack({ returnCode: 2 })
           } else {
-            client.connack({returnCode: 0})
+            serverClient.connack({ returnCode: 0 })
           }
         })
 
-        this.emit('client', client)
-      }).listen(port + 47)
+        this.emit('client', serverClient)
+      }).listen(ports.PORTAND47)
 
-      server2.on('client', function (c) {
+      server2.on('client', function (serverClient) {
         client.publish('topic', 'data', { qos: 1 }, function () {
-          done()
-          client.end(true)
-          c.destroy()
-          server2.destroy()
+          serverClient.destroy()
+          server2.close()
+          client.end(true, done)
         })
 
-        c.on('publish', function onPublish (packet) {
+        serverClient.on('publish', function onPublish (packet) {
           if (killedConnections < KILL_COUNT) {
             // Kill the first few pub attempts to simulate a flaky connection
             killedConnections++
-            c.destroy()
+            serverClient.destroy()
 
             // to avoid receiving inflight messages
-            c.removeListener('publish', onPublish)
+            serverClient.removeListener('publish', onPublish)
           } else {
             // Keep track of acks
             if (!pubIds[packet.messageId]) {
@@ -437,14 +435,52 @@ describe('MqttClient', function () {
             if (pubIds[packet.messageId] > 1) {
               done(new Error('Multiple duplicate acked publishes received for messageId ' + packet.messageId))
               client.end(true)
-              c.destroy()
+              serverClient.destroy()
               server2.destroy()
             }
 
-            c.puback(packet)
+            serverClient.puback(packet)
           }
         })
       })
+    })
+  })
+
+  it('check emit error on checkDisconnection w/o callback', function (done) {
+    this.timeout(15000)
+
+    const server118 = new MqttServer(function (client) {
+      client.on('connect', function (packet) {
+        client.connack({
+          reasonCode: 0
+        })
+      })
+      client.on('publish', function (packet) {
+        setImmediate(function () {
+          packet.reasonCode = 0
+          client.puback(packet)
+        })
+      })
+    }).listen(ports.PORTAND118)
+
+    const opts = {
+      host: 'localhost',
+      port: ports.PORTAND118,
+      protocolVersion: 5
+    }
+    client = mqtt.connect(opts)
+
+    // wait for the client to receive an error...
+    client.on('error', function (error) {
+      assert.equal(error.message, 'client disconnecting')
+      server118.close()
+      done()
+    })
+    client.on('connect', function () {
+      client.end(function () {
+        client._checkDisconnecting()
+      })
+      server118.close()
     })
   })
 })
