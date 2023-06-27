@@ -7,8 +7,8 @@ on:
   workflow_dispatch:
     inputs:
       type:
-        description: 'Type. Can be `beta`, `patch`, `minor` or `major`'
-        required: true
+        description: 'Type/Options. `major --preRelease=beta`, `--preRelease`, `major`, `patch`, `minor` or `major`'
+        required: false
         default: 'patch'
 
 jobs:
@@ -49,5 +49,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }} 
-        run: | 
-          npx release-it ${{github.event.inputs.type}} --ci --verbose
+        run: |
+          # When all commits since the latest major tag should be added to the changelog, use --git.tagExclude='*[-]*'
+          npx release-it ${{github.event.inputs.type}} --git.tagExclude='*[-]*' --ci --verbose
