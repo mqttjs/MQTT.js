@@ -6,10 +6,6 @@
 MQTT.js is a client library for the [MQTT](http://mqtt.org/) protocol, written
 in JavaScript for node.js and the browser.
 
-| :boom: MQTT.js vNext          |
-|:---------------------------|
-| Want to contribute to the next generation of **MQTT.js**? Join the discussion [here](https://github.com/mqttjs/MQTT.js/discussions/1324).       |
-
 ## Table of Contents
 * [__MQTT.js vNext__](#vnext)
 * [Upgrade notes](#notes)
@@ -31,8 +27,8 @@ MQTT.js is an OPEN Open Source Project, see the [Contributing](#contributing) se
 Guide](https://cdn.rawgit.com/feross/standard/master/badge.svg)](https://github.com/feross/standard)
 
 <a name="vnext"></a>
-## Discussion on the next major version of MQTT.js
-There are discussions happening on the future of MQTT.js and the next major version (vNext). We invite the community to provide their thoughts and feedback in [this GitHub discussion](https://github.com/mqttjs/MQTT.js/discussions/1324)
+## Next major version of MQTT.js
+There is work being done on the next generation of MQTT.js (vNext). We invite the community to provide their contributions [this repository](https://github.com/mqttjs/mqttjs-v5)
 
 <a name="notes"></a>
 ## Important notes for existing users
@@ -207,7 +203,7 @@ Example (update clientId & username on each reconnect):
       client.options.username = `token=${this.get_current_auth_token()}`;
       client.options.clientId = `${this.get_updated_clientId()}`;
 
-      return `${this.get_signed_cloud_url(url)`;
+      return `${this.get_signed_cloud_url(url)}`;
     }
 
     const connection = await mqtt.connectAsync(<wss url>, {
@@ -628,6 +624,8 @@ In-memory implementation of the message store.
 
 Other implementations of `mqtt.Store`:
 
+* [mqtt-jsonl-store](https://github.com/robertsLando/mqtt-jsonl-store) which uses
+  [jsonl-db](https://github.com/AlCalzone/jsonl-db) to store inflight data, it works only on Node.
 * [mqtt-level-store](http://npm.im/mqtt-level-store) which uses
   [Level-browserify](http://npm.im/level-browserify) to store the inflight
   data, making it usable both in Node and the Browser.
