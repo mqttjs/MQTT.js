@@ -929,7 +929,7 @@ MQTT.js is only possible due to the excellent work of the following contributors
 
 ## Sponsor
 
-If you want to sponsor MQTT.js, consider sponsoring his main author and active maintainers:
+If you would like to support MQTT.js, please consider sponsoring the author and active maintainers:
 
 - [Matteo Collina](https://github.com/sponsors/mcollina): author of MQTT.js
 - [Daniel Lando](https://github.com/sponsors/robertsLando): active maintainer
