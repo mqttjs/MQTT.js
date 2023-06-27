@@ -50,7 +50,7 @@ export interface IClientOptions extends ISecureClientOptions {
   /**
    * the password required by your broker, if any
    */
-  password?: string
+  password?: Buffer | string
   /**
    * a Store for the incoming packets
    */
@@ -60,6 +60,10 @@ export interface IClientOptions extends ISecureClientOptions {
    */
   outgoingStore?: Store
   queueQoSZero?: boolean
+
+  autoUseTopicAlias?: boolean
+  autoAssignTopicAlias?: boolean
+
   reschedulePings?: boolean
   servers?: Array<{
     host: string

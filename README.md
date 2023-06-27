@@ -203,7 +203,7 @@ Example (update clientId & username on each reconnect):
       client.options.username = `token=${this.get_current_auth_token()}`;
       client.options.clientId = `${this.get_updated_clientId()}`;
 
-      return `${this.get_signed_cloud_url(url)`;
+      return `${this.get_signed_cloud_url(url)}`;
     }
 
     const connection = await mqtt.connectAsync(<wss url>, {
@@ -624,6 +624,8 @@ In-memory implementation of the message store.
 
 Other implementations of `mqtt.Store`:
 
+* [mqtt-jsonl-store](https://github.com/robertsLando/mqtt-jsonl-store) which uses
+  [jsonl-db](https://github.com/AlCalzone/jsonl-db) to store inflight data, it works only on Node.
 * [mqtt-level-store](http://npm.im/mqtt-level-store) which uses
   [Level-browserify](http://npm.im/level-browserify) to store the inflight
   data, making it usable both in Node and the Browser.
