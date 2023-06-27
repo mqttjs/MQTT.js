@@ -1,23 +1,23 @@
 'use strict'
 
-var http = require('http')
-var WebSocket = require('ws')
-var MQTTConnection = require('mqtt-connection')
-var abstractClientTests = require('./abstract_client')
-var ports = require('./helpers/port_list')
-var serverBuilder = require('./server_helpers_for_client_tests').serverBuilder
-var mqtt = require('../')
-var xtend = require('xtend')
-var assert = require('assert')
-var port = 9999
-var httpServer = http.createServer()
+const http = require('http')
+const WebSocket = require('ws')
+const MQTTConnection = require('mqtt-connection')
+const abstractClientTests = require('./abstract_client')
+const ports = require('./helpers/port_list')
+const MqttServerNoWait = require('./server').MqttServerNoWait
+const mqtt = require('../')
+const xtend = require('xtend')
+const assert = require('assert')
+const port = 9999
+const httpServer = http.createServer()
 
 function attachWebsocketServer (httpServer) {
-  var webSocketServer = new WebSocket.Server({server: httpServer, perMessageDeflate: false})
+  const webSocketServer = new WebSocket.Server({ server: httpServer, perMessageDeflate: false })
 
   webSocketServer.on('connection', function (ws) {
-    var stream = WebSocket.createWebSocketStream(ws)
-    var connection = new MQTTConnection(stream)
+    const stream = WebSocket.createWebSocketStream(ws)
+    const connection = new MQTTConnection(stream)
     connection.protocol = ws.protocol
     httpServer.emit('client', connection)
     stream.on('error', function () {})
@@ -33,7 +33,7 @@ function attachClientEventHandlers (client) {
       client.connack({ returnCode: 2 })
     } else {
       httpServer.emit('connect', client)
-      client.connack({returnCode: 0})
+      client.connack({ returnCode: 0 })
     }
   })
 
@@ -87,7 +87,7 @@ attachWebsocketServer(httpServer)
 httpServer.on('client', attachClientEventHandlers).listen(port)
 
 describe('Websocket Client', function () {
-  var baseConfig = { protocol: 'ws', port: port }
+  const baseConfig = { protocol: 'ws', port: port }
 
   function makeOptions (custom) {
     // xtend returns a new object. Does not mutate arguments
@@ -104,11 +104,11 @@ describe('Websocket Client', function () {
   })
 
   it('should be able to transform the url (for e.g. to sign it)', function (done) {
-    var baseUrl = 'ws://localhost:9999/mqtt'
-    var sig = '?AUTH=token'
-    var expected = baseUrl + sig
-    var actual
-    var opts = makeOptions({
+    const baseUrl = 'ws://localhost:9999/mqtt'
+    const sig = '?AUTH=token'
+    const expected = baseUrl + sig
+    let actual
+    const opts = makeOptions({
       path: '/mqtt',
       transformWsUrl: function (url, opt, client) {
         assert.equal(url, baseUrl)
@@ -119,7 +119,8 @@ describe('Websocket Client', function () {
         url += sig
         actual = url
         return url
-      }})
+      }
+    })
     mqtt.connect(opts)
       .on('connect', function () {
         assert.equal(this.stream.url, expected)
@@ -133,7 +134,7 @@ describe('Websocket Client', function () {
       assert.strictEqual(client.protocol, 'mqttv3.1')
     })
 
-    var opts = makeOptions({
+    const opts = makeOptions({
       protocolId: 'MQIsdp',
       protocolVersion: 3
     })
@@ -145,27 +146,36 @@ describe('Websocket Client', function () {
 
   describe('reconnecting', () => {
     it('should reconnect to multiple host-ports-protocol combinations if servers is passed', function (done) {
+      let serverPort42Connected = false
+      const handler = function (serverClient) {
+        serverClient.on('connect', function (packet) {
+          serverClient.connack({ returnCode: 0 })
+        })
+      }
       this.timeout(15000)
-      var actualURL41 = 'wss://localhost:9917/'
-      var actualURL42 = 'ws://localhost:9918/'
-      var serverPort41 = serverBuilder(true).listen(ports.PORTAND41)
-      var serverPort42 = serverBuilder(true).listen(ports.PORTAND42)
+      const actualURL41 = 'wss://localhost:9917/'
+      const actualURL42 = 'ws://localhost:9918/'
+      const serverPort41 = new MqttServerNoWait(handler).listen(ports.PORTAND41)
+      const serverPort42 = new MqttServerNoWait(handler).listen(ports.PORTAND42)
 
       serverPort42.on('listening', function () {
-        let client = mqtt.connect({
+        const client = mqtt.connect({
           protocol: 'wss',
           servers: [
-            { port: ports.PORTAND41, host: 'localhost' },
-            { port: ports.PORTAND42, host: 'localhost', protocol: 'ws' }
+            { port: ports.PORTAND42, host: 'localhost', protocol: 'ws' },
+            { port: ports.PORTAND41, host: 'localhost' }
           ],
           keepalive: 50
         })
-        serverPort41.once('client', function () {
+        serverPort41.once('client', function (c) {
           assert.equal(client.stream.url, actualURL41, 'Protocol for second client should use the default protocol: wss, on port: port + 41.')
+          assert(serverPort42Connected)
+          c.stream.destroy()
           client.end(true, done)
           serverPort41.close()
         })
-        serverPort42.on('client', function (c) {
+        serverPort42.once('client', function (c) {
+          serverPort42Connected = true
           assert.equal(client.stream.url, actualURL42, 'Protocol for connection should use ws, on port: port + 42.')
           c.stream.destroy()
           serverPort42.close()
