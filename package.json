@@ -43,7 +43,8 @@
       "release": true
     },
     "git": {
-      "tagName": "v${version}"
+      "tagName": "v${version}",
+      "commitMessage": "chore(release): ${version}"
     },
     "hooks": {
       "before:init": [
