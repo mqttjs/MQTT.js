@@ -46,12 +46,21 @@
       "tagName": "v${version}"
     },
     "hooks": {
+      "before:init": [
+				"npm run test"
+			],
       "after:bump": [
         "npm run changelog"
       ]
     },
     "npm": {
       "publish": true
+    },
+    "plugins": {
+      "@release-it/conventional-changelog": {
+        "preset": "angular",
+        "infile": "CHANGELOG.md"
+      }
     }
   },
   "pre-commit": [
