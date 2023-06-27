@@ -6,10 +6,6 @@
 MQTT.js is a client library for the [MQTT](http://mqtt.org/) protocol, written
 in JavaScript for node.js and the browser.
 
-| :boom: MQTT.js vNext          |
-|:---------------------------|
-| Want to contribute to the next generation of **MQTT.js**? Join the discussion [here](https://github.com/mqttjs/MQTT.js/discussions/1324).       |
-
 ## Table of Contents
 * [__MQTT.js vNext__](#vnext)
 * [Upgrade notes](#notes)
@@ -31,8 +27,8 @@ MQTT.js is an OPEN Open Source Project, see the [Contributing](#contributing) se
 Guide](https://cdn.rawgit.com/feross/standard/master/badge.svg)](https://github.com/feross/standard)
 
 <a name="vnext"></a>
-## Discussion on the next major version of MQTT.js
-There are discussions happening on the future of MQTT.js and the next major version (vNext). We invite the community to provide their thoughts and feedback in [this GitHub discussion](https://github.com/mqttjs/MQTT.js/discussions/1324)
+## Next major version of MQTT.js
+There is work being done on the next generation of MQTT.js (vNext). We invite the community to provide their contributions [this repository](https://github.com/mqttjs/mqttjs-v5)
 
 <a name="notes"></a>
 ## Important notes for existing users
@@ -207,7 +203,7 @@ Example (update clientId & username on each reconnect):
       client.options.username = `token=${this.get_current_auth_token()}`;
       client.options.clientId = `${this.get_updated_clientId()}`;
 
-      return `${this.get_signed_cloud_url(url)`;
+      return `${this.get_signed_cloud_url(url)}`;
     }
 
     const connection = await mqtt.connectAsync(<wss url>, {
@@ -628,6 +624,8 @@ In-memory implementation of the message store.
 
 Other implementations of `mqtt.Store`:
 
+* [mqtt-jsonl-store](https://github.com/robertsLando/mqtt-jsonl-store) which uses
+  [jsonl-db](https://github.com/AlCalzone/jsonl-db) to store inflight data, it works only on Node.
 * [mqtt-level-store](http://npm.im/mqtt-level-store) which uses
   [Level-browserify](http://npm.im/level-browserify) to store the inflight
   data, making it usable both in Node and the Browser.
@@ -789,13 +787,16 @@ About data consumption, obviously, QoS 2 > QoS 1 > QoS 0, if that's a concern to
 This repo bundles TypeScript definition files for use in TypeScript projects and to support tools that can read `.d.ts` files.
 
 ### Pre-requisites
-Before you can begin using these TypeScript definitions with your project, you need to make sure your project meets a few of these requirements:
+Before you can begin using these TypeScript definitions with your project, you need to make sure your project meets these requirements:
  * TypeScript >= 2.1
  * Set tsconfig.json: `{"compilerOptions" : {"moduleResolution" : "node"}, ...}`
- * Includes the TypeScript definitions for node. You can use npm to install this by typing the following into a terminal window:
-   `npm install --save-dev @types/node`
-   
-### Typescript example
+ * Includes the TypeScript definitions for Node and [ws](https://www.npmjs.com/package/ws). These types are used as
+   parameters to some of the MQTT client's APIs and if you don't install them they get treated as `any`, which means you lose type
+   safety.
+   Use npm to install them by typing the following into a terminal window:
+   `npm install --save-dev @types/node @types/ws`
+
+### TypeScript example
 ```
 import * as mqtt from "mqtt"
 let client : mqtt.MqttClient = mqtt.connect('mqtt://test.mosquitto.org')
