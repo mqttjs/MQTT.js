@@ -1,8 +1,8 @@
 'use strict'
 
-var net = require('net')
-var tls = require('tls')
-var Connection = require('mqtt-connection')
+const net = require('net')
+const tls = require('tls')
+const Connection = require('mqtt-connection')
 
 /**
  * MqttServer
@@ -14,10 +14,10 @@ class MqttServer extends net.Server {
     super()
     this.connectionList = []
 
-    var that = this
+    const that = this
     this.on('connection', function (duplex) {
       this.connectionList.push(duplex)
-      var connection = new Connection(duplex, function () {
+      const connection = new Connection(duplex, function () {
         that.emit('client', connection)
       })
     })
@@ -40,7 +40,7 @@ class MqttServerNoWait extends net.Server {
 
     this.on('connection', function (duplex) {
       this.connectionList.push(duplex)
-      var connection = new Connection(duplex)
+      const connection = new Connection(duplex)
       // do not wait for connection to return to send it to the client.
       this.emit('client', connection)
     })
@@ -70,8 +70,8 @@ class MqttSecureServer extends tls.Server {
 
     this.on('secureConnection', function (socket) {
       this.connectionList.push(socket)
-      var that = this
-      var connection = new Connection(socket, function () {
+      const that = this
+      const connection = new Connection(socket, function () {
         that.emit('client', connection)
       })
     })
@@ -82,8 +82,8 @@ class MqttSecureServer extends tls.Server {
   }
 
   setupConnection (duplex) {
-    var that = this
-    var connection = new Connection(duplex, function () {
+    const that = this
+    const connection = new Connection(duplex, function () {
       that.emit('client', connection)
     })
   }

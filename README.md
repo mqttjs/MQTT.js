@@ -6,15 +6,18 @@
 MQTT.js is a client library for the [MQTT](http://mqtt.org/) protocol, written
 in JavaScript for node.js and the browser.
 
+## Table of Contents
+* [__MQTT.js vNext__](#vnext)
 * [Upgrade notes](#notes)
 * [Installation](#install)
 * [Example](#example)
+* [Import Styles](#example)
 * [Command Line Tools](#cli)
 * [API](#api)
 * [Browser](#browser)
-* [Weapp](#weapp)
 * [About QoS](#qos)
 * [TypeScript](#typescript)
+* [Weapp and Ali support](#weapp-alipay)
 * [Contributing](#contributing)
 * [License](#license)
 
@@ -23,6 +26,9 @@ MQTT.js is an OPEN Open Source Project, see the [Contributing](#contributing) se
 [![JavaScript Style
 Guide](https://cdn.rawgit.com/feross/standard/master/badge.svg)](https://github.com/feross/standard)
 
+<a name="vnext"></a>
+## Discussion on the next major version of MQTT.js
+There are discussions happening on the future of MQTT.js and the next major version (vNext). We invite the community to provide their thoughts and feedback in [this GitHub discussion](https://github.com/mqttjs/MQTT.js/discussions/1324)
 
 <a name="notes"></a>
 ## Important notes for existing users
@@ -77,8 +83,8 @@ npm install mqtt --save
 For the sake of simplicity, let's put the subscriber and the publisher in the same file:
 
 ```js
-var mqtt = require('mqtt')
-var client  = mqtt.connect('mqtt://test.mosquitto.org')
+const mqtt = require('mqtt')
+const client  = mqtt.connect('mqtt://test.mosquitto.org')
 
 client.on('connect', function () {
   client.subscribe('presence', function (err) {
@@ -102,14 +108,33 @@ Hello mqtt
 
 If you want to run your own MQTT broker, you can use
 [Mosquitto](http://mosquitto.org) or
-[Mosca](http://mcollina.github.io/mosca/), and launch it.
-You can also use a test instance: test.mosquitto.org and test.mosca.io
-are both public.
+[Aedes-cli](https://github.com/moscajs/aedes-cli), and launch it.
+
+You can also use a test instance: test.mosquitto.org.
 
 If you do not want to install a separate broker, you can try using the
-[mqtt-connection](https://www.npmjs.com/package/mqtt-connection).
+[Aedes](https://github.com/moscajs/aedes).
 
 to use MQTT.js in the browser see the [browserify](#browserify) section
+
+<a name="import_styles"></a>
+## Import styles
+### CommonJS (Require)
+```js
+const mqtt = require('mqtt')  // require mqtt
+const client = mqtt.connect('test.mosquitto.org')  // create a client
+```
+### ES6 Modules (Import)
+#### Aliased wildcard import
+```js
+import * as mqtt from "mqtt"  // import everything inside the mqtt module and give it the namespace "mqtt"
+let client = mqtt.connect('mqtt://test.mosquitto.org') // create a client
+```
+#### Importing individual components
+```js
+import { connect } from "mqtt"  // import connect from mqtt
+let client = connect('mqtt://test.mosquitto.org') // create a client
+```
 
 <a name="promises"></a>
 ## Promise support
@@ -206,7 +231,41 @@ the final connection when it drops.
 The default value is 1000 ms which means it will try to reconnect 1 second
 after losing the connection.
 
+<a name="topicalias"></a>
+## About Topic Alias Management
 
+### Enabling automatic Topic Alias using
+If the client sets the option `autoUseTopicAlias:true` then MQTT.js uses existing topic alias automatically.
+
+example scenario:
+```
+1. PUBLISH topic:'t1', ta:1                   (register)
+2. PUBLISH topic:'t1'       -> topic:'', ta:1 (auto use existing map entry)
+3. PUBLISH topic:'t2', ta:1                   (register overwrite)
+4. PUBLISH topic:'t2'       -> topic:'', ta:1 (auto use existing map entry based on the receent map)
+5. PUBLISH topic:'t1'                         (t1 is no longer mapped to ta:1)
+```
+
+User doesn't need to manage which topic is mapped to which topic alias.
+If the user want to register topic alias, then publish topic with topic alias.
+If the user want to use topic alias, then publish topic without topic alias. If there is a mapped topic alias then added it as a property and update the topic to empty string.
+
+### Enabling  automatic Topic Alias assign
+
+If the client sets the option `autoAssignTopicAlias:true` then MQTT.js uses existing topic alias automatically.
+If no topic alias exists, then assign a new vacant topic alias automatically. If topic alias is fully used, then LRU(Least Recently Used) topic-alias entry is overwritten.
+
+example scenario:
+```
+The broker returns CONNACK (TopicAliasMaximum:3)
+1. PUBLISH topic:'t1' -> 't1', ta:1 (auto assign t1:1 and register)
+2. PUBLISH topic:'t1' -> ''  , ta:1 (auto use existing map entry)
+3. PUBLISH topic:'t2' -> 't2', ta:2 (auto assign t1:2 and register. 2 was vacant)
+4. PUBLISH topic:'t3' -> 't3', ta:3 (auto assign t1:3 and register. 3 was vacant)
+5. PUBLISH topic:'t4' -> 't4', ta:1 (LRU entry is overwritten)
+```
+
+Also user can manually register topic-alias pair using PUBLISH topic:'some', ta:X. It works well with automatic topic alias assign.
 
 <a name="api"></a>
 ## API
@@ -237,7 +296,7 @@ Connects to the broker specified by the given url and options and
 returns a [Client](#client).
 
 The URL can be on the following protocols: 'mqtt', 'mqtts', 'tcp',
-'tls', 'ws', 'wss'. The URL can also be an object as returned by
+'tls', 'ws', 'wss', 'wxs', 'alis'. The URL can also be an object as returned by
 [`URL.parse()`](http://nodejs.org/api/url.html#url_url_parse_urlstr_parsequerystring_slashesdenotehost),
 in that case the two objects are merged, i.e. you can pass a single
 object with both the URL and the connect options.
@@ -291,6 +350,8 @@ the `connect` event. Typically a `net.Socket`.
       ```js
         customHandleAcks: function(topic, message, packet, done) {/*some logic wit colling done(error, reasonCode)*/}
       ```
+  * `autoUseTopicAlias`: enabling automatic Topic Alias using functionality
+  * `autoAssignTopicAlias`: enabling automatic Topic Alias assign functionality
   * `properties`: properties MQTT 5.0.
   `object` that supports the following properties:
     * `sessionExpiryInterval`: representing the Session Expiry Interval in seconds `number`,
@@ -322,6 +383,7 @@ the `connect` event. Typically a `net.Socket`.
         urls which upon reconnect can have become expired.
   * `resubscribe` : if connection is broken and reconnects,
      subscribed topics are automatically subscribed again (default `true`)
+  * `messageIdProvider`: custom messageId provider. when `new UniqueMessageIdProvider()` is set, then non conflict messageId is provided.
 
 In case mqtts (mqtt over tls) is required, the `options` object is
 passed through to
@@ -610,59 +672,30 @@ The MQTT.js bundle is available through http://unpkg.com, specifically
 at https://unpkg.com/mqtt/dist/mqtt.min.js.
 See http://unpkg.com for the full documentation on version ranges.
 
-<a name="weapp"></a>
-## WeChat Mini Program
-Support [WeChat Mini Program](https://mp.weixin.qq.com/). See [Doc](https://mp.weixin.qq.com/debug/wxadoc/dev/api/network-socket.html).
-<a name="example"></a>
-
-## Example(js)
-
-```js
-var mqtt = require('mqtt')
-var client = mqtt.connect('wxs://test.mosquitto.org')
-```
-
-## Example(ts)
-
-```ts
-import { connect } from 'mqtt';
-const client = connect('wxs://test.mosquitto.org');
-```
-
-## Ali Mini Program
-Surport [Ali Mini Program](https://open.alipay.com/channel/miniIndex.htm). See [Doc](https://docs.alipay.com/mini/developer/getting-started).
-<a name="example"></a>
-
-## Example(js)
-
-```js
-var mqtt = require('mqtt')
-var client = mqtt.connect('alis://test.mosquitto.org')
-```
-
-## Example(ts)
-
-```ts
-import { connect } from 'mqtt';
-const client  = connect('alis://test.mosquitto.org');
-```
-
 <a name="browserify"></a>
 ### Browserify
 
 In order to use MQTT.js as a browserify module you can either require it in your browserify bundles or build it as a stand alone module. The exported module is AMD/CommonJs compatible and it will add an object in the global space.
 
-```javascript
-npm install -g browserify // install browserify
-cd node_modules/mqtt
-npm install . // install dev dependencies
-browserify mqtt.js -s mqtt > browserMqtt.js // require mqtt in your client-side app
+```bash
+mkdir tmpdir
+cd tmpdir
+npm install mqtt
+npm install browserify
+npm install tinyify
+cd node_modules/mqtt/
+npm install .
+npx browserify mqtt.js -s mqtt >browserMqtt.js // use script tag
+# show size for compressed browser transfer
+gzip <browserMqtt.js | wc -c
 ```
+
+**Be sure to only use this bundle with `ws` or `wss` URLs in the browser. Others URL types will likey fail**
 
 <a name="webpack"></a>
 ### Webpack
 
-Just like browserify, export MQTT.js as library. The exported module would be `var mqtt = xxx` and it will add an object in the global space. You could also export module in other [formats (AMD/CommonJS/others)](http://webpack.github.io/docs/configuration.html#output-librarytarget) by setting **output.libraryTarget** in webpack configuration.
+Just like browserify, export MQTT.js as library. The exported module would be `const mqtt = xxx` and it will add an object in the global space. You could also export module in other [formats (AMD/CommonJS/others)](http://webpack.github.io/docs/configuration.html#output-librarytarget) by setting **output.libraryTarget** in webpack configuration.
 
 ```javascript
 npm install -g webpack // install webpack
@@ -682,7 +715,7 @@ you can then use mqtt.js in the browser with the same api than node's one.
 <body>
 <script src="./browserMqtt.js"></script>
 <script>
-  var client = mqtt.connect() // you add a ws:// url here
+  const client = mqtt.connect() // you add a ws:// url here
   client.subscribe("mqtt/demo")
 
   client.on("message", function (topic, payload) {
@@ -726,7 +759,7 @@ export default () => {
 
   return (
     <>
-     {lastMessages.map((message) => (
+     {messages.map((message) => (
         <h2>{message}</h2>
      )
     </>
@@ -734,7 +767,7 @@ export default () => {
 }
 ```
 
-Your broker should accept websocket connection (see [MQTT over Websockets](https://github.com/mcollina/mosca/wiki/MQTT-over-Websockets) to setup [Mosca](http://mcollina.github.io/mosca/)).
+Your broker should accept websocket connection (see [MQTT over Websockets](https://github.com/moscajs/aedes/blob/master/docs/Examples.md#mqtt-server-over-websocket-using-server-factory) to setup [Aedes](https://github.com/moscajs/aedes)).
 
 <a name="qos"></a>
 ## About QoS
@@ -757,6 +790,31 @@ Before you can begin using these TypeScript definitions with your project, you n
  * Set tsconfig.json: `{"compilerOptions" : {"moduleResolution" : "node"}, ...}`
  * Includes the TypeScript definitions for node. You can use npm to install this by typing the following into a terminal window:
    `npm install --save-dev @types/node`
+   
+### Typescript example
+```
+import * as mqtt from "mqtt"
+let client : mqtt.MqttClient = mqtt.connect('mqtt://test.mosquitto.org')
+```
+
+<a name="weapp-alipay"></a>
+## WeChat and Ali Mini Program support
+### WeChat Mini Program
+Supports [WeChat Mini Program](https://mp.weixin.qq.com/). Use the `wxs` protocol. See [the WeChat docs](https://mp.weixin.qq.com/debug/wxadoc/dev/api/network-socket.html).
+
+```js
+const mqtt = require('mqtt')
+const client = mqtt.connect('wxs://test.mosquitto.org')
+```
+
+### Ali Mini Program
+Supports [Ali Mini Program](https://open.alipay.com/channel/miniIndex.htm). Use the `alis` protocol. See [the Alipay docs](https://docs.alipay.com/mini/developer/getting-started).
+<a name="example"></a>
+
+```js
+const mqtt = require('mqtt')
+const client = mqtt.connect('alis://test.mosquitto.org')
+```
 
 <a name="contributing"></a>
 ## Contributing
@@ -777,6 +835,7 @@ MQTT.js is only possible due to the excellent work of the following contributors
 <tr><th align="left">Maxime Agor</th><td><a href="https://github.com/4rzael">GitHub/4rzael</a></td><td><a href="http://twitter.com/4rzael">Twitter/@4rzael</a></td></tr>
 <tr><th align="left">Siarhei Buntsevich</th><td><a href="https://github.com/scarry1992">GitHub/scarry1992</a></td></tr>
 </tbody></table>
+
 
 <a name="license"></a>
 ## License

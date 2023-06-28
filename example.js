@@ -1,5 +1,5 @@
-var mqtt = require('./')
-var client = mqtt.connect('mqtt://test.mosquitto.org')
+const mqtt = require('./')
+const client = mqtt.connect('mqtt://test.mosquitto.org')
 
 client.subscribe('presence')
 client.publish('presence', 'Hello mqtt')

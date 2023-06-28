@@ -1,25 +1,37 @@
 'use strict'
 
-var MqttServer = require('./server').MqttServer
-var MqttServerNoWait = require('./server').MqttServerNoWait
-var debug = require('debug')('TEST:server_helpers')
+const MqttServer = require('./server').MqttServer
+const MqttSecureServer = require('./server').MqttSecureServer
+const debug = require('debug')('TEST:server_helpers')
+
+const path = require('path')
+const fs = require('fs')
+const KEY = path.join(__dirname, 'helpers', 'tls-key.pem')
+const CERT = path.join(__dirname, 'helpers', 'tls-cert.pem')
+
+const http = require('http')
+const WebSocket = require('ws')
+const MQTTConnection = require('mqtt-connection')
 
 /**
  * This will build the client for the server to use during testing, and set up the
  * server side client based on mqtt-connection for handling MQTT messages.
- * @param {boolean} fastFlag
+ * @param {String} protocol - 'mqtt', 'mqtts' or 'ws'
+ * @param {Function} handler - event handler
  */
-function serverBuilder (fastFlag) {
-  var handler = function (serverClient) {
+function serverBuilder (protocol, handler) {
+  const defaultHandler = function (serverClient) {
     serverClient.on('auth', function (packet) {
-      var rc = 'reasonCode'
-      var connack = {}
+      if (serverClient.writable) return false
+      const rc = 'reasonCode'
+      const connack = {}
       connack[rc] = 0
       serverClient.connack(connack)
     })
     serverClient.on('connect', function (packet) {
-      var rc = 'returnCode'
-      var connack = {}
+      if (!serverClient.writable) return false
+      let rc = 'returnCode'
+      const connack = {}
       if (serverClient.options && serverClient.options.protocolVersion === 5) {
         rc = 'reasonCode'
         if (packet.clientId === 'invalid') {
@@ -42,6 +54,7 @@ function serverBuilder (fastFlag) {
     })
 
     serverClient.on('publish', function (packet) {
+      if (!serverClient.writable) return false
       setImmediate(function () {
         switch (packet.qos) {
           case 0:
@@ -57,10 +70,12 @@ function serverBuilder (fastFlag) {
     })
 
     serverClient.on('pubrel', function (packet) {
+      if (!serverClient.writable) return false
       serverClient.pubcomp(packet)
     })
 
     serverClient.on('pubrec', function (packet) {
+      if (!serverClient.writable) return false
       serverClient.pubrel(packet)
     })
 
@@ -69,6 +84,7 @@ function serverBuilder (fastFlag) {
     })
 
     serverClient.on('subscribe', function (packet) {
+      if (!serverClient.writable) return false
       serverClient.suback({
         messageId: packet.messageId,
         granted: packet.subscriptions.map(function (e) {
@@ -78,11 +94,13 @@ function serverBuilder (fastFlag) {
     })
 
     serverClient.on('unsubscribe', function (packet) {
+      if (!serverClient.writable) return false
       packet.granted = packet.unsubscriptions.map(function () { return 0 })
       serverClient.unsuback(packet)
     })
 
     serverClient.on('pingreq', function () {
+      if (!serverClient.writable) return false
       serverClient.pingresp()
     })
 
@@ -90,10 +108,41 @@ function serverBuilder (fastFlag) {
       debug('disconnected from server')
     })
   }
-  if (fastFlag) {
-    return new MqttServerNoWait(handler)
-  } else {
+
+  if (!handler) {
+    handler = defaultHandler
+  }
+
+  if (
+    protocol === 'mqtt') {
     return new MqttServer(handler)
+  } else if (
+    protocol === 'mqtts') {
+    return new MqttSecureServer({
+      key: fs.readFileSync(KEY),
+      cert: fs.readFileSync(CERT)
+    },
+    handler)
+  } else if (
+    protocol === 'ws') {
+    const attachWebsocketServer = function (server) {
+      const webSocketServer = new WebSocket.Server({ server: server, perMessageDeflate: false })
+
+      webSocketServer.on('connection', function (ws) {
+        const stream = WebSocket.createWebSocketStream(ws)
+        const connection = new MQTTConnection(stream)
+        connection.protocol = ws.protocol
+        server.emit('client', connection)
+        stream.on('error', function () {})
+        connection.on('error', function () {})
+        connection.on('close', function () {})
+      })
+    }
+
+    const httpServer = http.createServer()
+    attachWebsocketServer(httpServer)
+    httpServer.on('client', handler)
+    return httpServer
   }
 }
 
