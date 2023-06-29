@@ -43,6 +43,19 @@ describe('MqttClient', function () {
         done()
       }
     })
+
+    it('should disable number cache if specified in options', function (done) {
+      try {
+        assert.isTrue(mqttPacket.writeToStream.cacheNumbers)
+        client = mqtt.MqttClient(function () {
+          throw Error('break')
+        }, { writeCache: false })
+        client.end()
+      } catch (err) {
+        assert.isFalse(mqttPacket.writeToStream.cacheNumbers)
+        done()
+      }
+    })
   })
 
   describe('message ids', function () {
@@ -83,7 +96,7 @@ describe('MqttClient', function () {
       const max = 1000
       let count = 0
       const duplex = new Duplex({
-        read: function (n) {},
+        read: function (n) { },
         write: function (chunk, enc, cb) {
           parser.parse(chunk)
           cb() // nothing to do
@@ -300,7 +313,7 @@ describe('MqttClient', function () {
       })
 
       const server2 = new MqttServer(function (serverClient) {
-        serverClient.on('error', function () {})
+        serverClient.on('error', function () { })
         debug('setting serverClient connect callback')
         serverClient.on('connect', function (packet) {
           if (packet.clientId === 'invalid') {
@@ -397,7 +410,7 @@ describe('MqttClient', function () {
 
       const server2 = net.createServer(function (stream) {
         const serverClient = new Connection(stream)
-        serverClient.on('error', function () {})
+        serverClient.on('error', function () { })
         serverClient.on('connect', function (packet) {
           if (packet.clientId === 'invalid') {
             serverClient.connack({ returnCode: 2 })
