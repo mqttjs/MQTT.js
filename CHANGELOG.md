@@ -1,3 +1,14 @@
+# [5.0.0-beta.1](https://github.com/mqttjs/MQTT.js/compare/v5.0.0-beta.0...v5.0.0-beta.1) (2023-06-29)
+
+
+### Bug Fixes
+
+* `_storeProcessing` staying true after outStore got emptied ([#1492](https://github.com/mqttjs/MQTT.js/issues/1492)) ([f3f7be7](https://github.com/mqttjs/MQTT.js/commit/f3f7be76199115a622fde2590d44b1bb0cf57d41))
+* consistency, used `this` instead of `that` ([#1618](https://github.com/mqttjs/MQTT.js/issues/1618)) ([800825b](https://github.com/mqttjs/MQTT.js/commit/800825bf619d83ef713a5b2fa1533bbf6ccac872))
+* prevent store message on store when it's restored ([#1255](https://github.com/mqttjs/MQTT.js/issues/1255)) ([8d68c8c](https://github.com/mqttjs/MQTT.js/commit/8d68c8c3e38aede52741a06838933011a6fccc43))
+
+
+
 # [5.0.0-beta.0](https://github.com/mqttjs/MQTT.js/compare/v4.3.7...v5.0.0-beta.0) (2023-06-27)
 
 
