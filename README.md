@@ -135,8 +135,8 @@ to use MQTT.js in the browser see the [browserify](#browserify) section
 ### CommonJS (Require)
 
 ```js
-const mqtt = require('mqtt')  // require mqtt
-const client = mqtt.connect('test.mosquitto.org')  // create a client
+const mqtt = require("mqtt")  // require mqtt
+const client = mqtt.connect("test.mosquitto.org")  // create a client
 ```
 
 ### ES6 Modules (Import)
