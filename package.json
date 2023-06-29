@@ -49,9 +49,6 @@
     "hooks": {
       "before:init": [
         "npm run test"
-      ],
-      "after:bump": [
-        "npm run changelog"
       ]
     },
     "npm": {
