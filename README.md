@@ -345,6 +345,8 @@ the `connect` event. Typically a `net.Socket`.
   * `password`: the password required by your broker, if any
   * `incomingStore`: a [Store](#store) for the incoming packets
   * `outgoingStore`: a [Store](#store) for the outgoing packets
+  * `writeCache` : `true`, set to false to disable pre-generated write array for sending messages to the mqtt-stream and instead allocate buffers on-the-fly.
+    WARNING: This can affect performance.
   * `queueQoSZero`: if connection is broken, queue outgoing QoS zero messages (default `true`)
   * `customHandleAcks`: MQTT 5 feature of custom handling puback and pubrec packets. Its callback:
       ```js
