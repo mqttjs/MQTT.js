@@ -1,0 +1,54 @@
+# #########################################################################
+# Creates a new release using `workflow_dispatch` event trigger with `type`
+# as input to describe the type of release to create
+name: 'Release-it: Create a new release on demand'
+
+on:
+  workflow_dispatch:
+    inputs:
+      type:
+        description: 'Type/Options. `major --preRelease=beta`, `--preRelease`, `major`, `patch`, `minor` or `major`'
+        required: false
+        default: 'patch'
+
+jobs:
+  release:
+    runs-on: [ubuntu-latest]
+    strategy:
+      matrix:
+        node-version: [18.x]
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v3
+        with:
+          ref: 'main'
+          fetch-depth: 0 # fetch all commits history to create the changelog
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3.6.0
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Initialize Git user
+        run: |
+          git config --global user.email "${{ github.actor }}@users.noreply.github.com }}"
+          git config --global user.name "${{ github.actor }}"
+      
+      - name: Initialize NPM config
+        run: |
+          npm config set //registry.npmjs.org/:_authToken $NPM_TOKEN
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Make the release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }} 
+        run: |
+          # When all commits since the latest major tag should be added to the changelog, use --git.tagExclude='*[-]*'
+          npx release-it ${{github.event.inputs.type}} --git.tagExclude='*[-]*' --ci --verbose

@@ -8,7 +8,7 @@ import {
   IClientReconnectOptions
 } from './client-options'
 import { Store } from './store'
-import { IAuthPacket, IConnectPacket, IPublishPacket, IDisconnectPacket, IConnackPacket, Packet, QoS } from 'mqtt-packet'
+import { IAuthPacket, IPublishPacket, IDisconnectPacket, IConnackPacket, Packet, QoS } from 'mqtt-packet'
 
 export interface ISubscriptionGrant {
   /**
@@ -68,7 +68,7 @@ export interface ISubscriptionMap {
 
 export declare type OnConnectCallback = (packet: IConnackPacket) => void
 export declare type OnDisconnectCallback = (packet: IDisconnectPacket) => void
-export declare type ClientSubscribeCallback = (err: Error, granted: ISubscriptionGrant[]) => void
+export declare type ClientSubscribeCallback = (err: Error | null, granted: ISubscriptionGrant[]) => void
 export declare type OnMessageCallback = (topic: string, payload: Buffer, packet: IPublishPacket) => void
 export declare type OnPacketCallback = (packet: Packet) => void
 export declare type OnCloseCallback = () => void
