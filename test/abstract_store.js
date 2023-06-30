@@ -3,8 +3,9 @@
 require('should')
 
 module.exports = function abstractStoreTest (build) {
-  var store
+  let store
 
+  // eslint-disable-next-line
   beforeEach(function (done) {
     build(function (err, _store) {
       store = _store
@@ -17,7 +18,7 @@ module.exports = function abstractStoreTest (build) {
   })
 
   it('should put and stream in-flight packets', function (done) {
-    var packet = {
+    const packet = {
       topic: 'hello',
       payload: 'world',
       qos: 1,
@@ -35,7 +36,7 @@ module.exports = function abstractStoreTest (build) {
   })
 
   it('should support destroying the stream', function (done) {
-    var packet = {
+    const packet = {
       topic: 'hello',
       payload: 'world',
       qos: 1,
@@ -43,14 +44,14 @@ module.exports = function abstractStoreTest (build) {
     }
 
     store.put(packet, function () {
-      var stream = store.createStream()
+      const stream = store.createStream()
       stream.on('close', done)
       stream.destroy()
     })
   })
 
   it('should add and del in-flight packets', function (done) {
-    var packet = {
+    const packet = {
       topic: 'hello',
       payload: 'world',
       qos: 1,
@@ -70,14 +71,14 @@ module.exports = function abstractStoreTest (build) {
   })
 
   it('should replace a packet when doing put with the same messageId', function (done) {
-    var packet1 = {
+    const packet1 = {
       cmd: 'publish', // added
       topic: 'hello',
       payload: 'world',
       qos: 2,
       messageId: 42
     }
-    var packet2 = {
+    const packet2 = {
       cmd: 'pubrel', // added
       qos: 2,
       messageId: 42
@@ -96,7 +97,7 @@ module.exports = function abstractStoreTest (build) {
   })
 
   it('should return the original packet on del', function (done) {
-    var packet = {
+    const packet = {
       topic: 'hello',
       payload: 'world',
       qos: 1,
@@ -115,7 +116,7 @@ module.exports = function abstractStoreTest (build) {
   })
 
   it('should get a packet with the same messageId', function (done) {
-    var packet = {
+    const packet = {
       topic: 'hello',
       payload: 'world',
       qos: 1,
