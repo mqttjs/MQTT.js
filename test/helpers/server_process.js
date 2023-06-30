@@ -1,9 +1,9 @@
 'use strict'
 
-var Server = require('../server')
+const MqttServer = require('../server').MqttServer
 
-new Server(function (client) {
+new MqttServer(function (client) {
   client.on('connect', function () {
     client.connack({ returnCode: 0 })
   })
-}).listen(3000, 'localhost')
+}).listen(3481, 'localhost')
