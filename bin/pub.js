@@ -2,20 +2,20 @@
 
 'use strict'
 
-var mqtt = require('../')
-var pump = require('pump')
-var path = require('path')
-var fs = require('fs')
-var concat = require('concat-stream')
-var Writable = require('readable-stream').Writable
-var helpMe = require('help-me')({
+const mqtt = require('../')
+const pump = require('pump')
+const path = require('path')
+const fs = require('fs')
+const concat = require('concat-stream')
+const Writable = require('readable-stream').Writable
+const helpMe = require('help-me')({
   dir: path.join(__dirname, '..', 'doc')
 })
-var minimist = require('minimist')
-var split2 = require('split2')
+const minimist = require('minimist')
+const split2 = require('split2')
 
 function send (args) {
-  var client = mqtt.connect(args)
+  const client = mqtt.connect(args)
   client.on('connect', function () {
     client.publish(args.topic, args.message, args, function (err) {
       if (err) {
@@ -31,8 +31,8 @@ function send (args) {
 }
 
 function multisend (args) {
-  var client = mqtt.connect(args)
-  var sender = new Writable({
+  const client = mqtt.connect(args)
+  const sender = new Writable({
     objectMode: true
   })
   sender._write = function (line, enc, cb) {

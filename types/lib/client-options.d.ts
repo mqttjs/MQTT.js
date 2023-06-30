@@ -1,6 +1,11 @@
 import { MqttClient } from './client'
 import { Store } from './store'
-import { QoS } from 'mqtt-packet'
+import { ClientOptions } from 'ws'
+import { ClientRequestArgs } from 'http'
+import { QoS, UserProperties } from 'mqtt-packet'
+import { IMessageIdProvider } from './message-id-provider'
+
+export declare type StorePutCallback = () => void
 
 export interface IClientOptions extends ISecureClientOptions {
   port?: number // port is made into a number subsequently
@@ -9,9 +14,7 @@ export interface IClientOptions extends ISecureClientOptions {
   path?: string
   protocol?: 'wss' | 'ws' | 'mqtt' | 'mqtts' | 'tcp' | 'ssl' | 'wx' | 'wxs'
 
-  wsOptions?: {
-    [x: string]: any
-  }
+  wsOptions?: ClientOptions | ClientRequestArgs
   /**
    *  10 seconds, set to 0 to disable
    */
@@ -78,7 +81,7 @@ export interface IClientOptions extends ISecureClientOptions {
     /**
      * the message to publish
      */
-    payload: string
+    payload: Buffer | string
     /**
      * the QoS
      */
@@ -86,9 +89,33 @@ export interface IClientOptions extends ISecureClientOptions {
     /**
      * the retain flag
      */
-    retain: boolean
+    retain: boolean,
+    /*
+    *  properies object of will
+    * */
+    properties?: {
+      willDelayInterval?: number,
+      payloadFormatIndicator?: boolean,
+      messageExpiryInterval?: number,
+      contentType?: string,
+      responseTopic?: string,
+      correlationData?: Buffer,
+      userProperties?: UserProperties
+    }
   }
-  transformWsUrl?: (url: string, options: IClientOptions, client: MqttClient) => string
+  transformWsUrl?: (url: string, options: IClientOptions, client: MqttClient) => string,
+  properties?: {
+    sessionExpiryInterval?: number,
+    receiveMaximum?: number,
+    maximumPacketSize?: number,
+    topicAliasMaximum?: number,
+    requestResponseInformation?: boolean,
+    requestProblemInformation?: boolean,
+    userProperties?: UserProperties,
+    authenticationMethod?: string,
+    authenticationData?: Buffer
+  },
+  messageIdProvider?: IMessageIdProvider
 }
 export interface ISecureClientOptions {
   /**
@@ -104,12 +131,16 @@ export interface ISecureClientOptions {
    */
   ca?: string | string[] | Buffer | Buffer[]
   rejectUnauthorized?: boolean
+  /**
+   * optional alpn's
+   */
+  ALPNProtocols?: string[] | Buffer[] | Uint8Array[] | Buffer | Uint8Array
 }
 export interface IClientPublishOptions {
   /**
    * the QoS
    */
-  qos: QoS
+  qos?: QoS
   /**
    * the retain flag
    */
@@ -118,12 +149,48 @@ export interface IClientPublishOptions {
    * whether or not mark a message as duplicate
    */
   dup?: boolean
+  /*
+   *  MQTT 5.0 properties object
+   */
+  properties?: {
+    payloadFormatIndicator?: boolean,
+    messageExpiryInterval?: number,
+    topicAlias?: number,
+    responseTopic?: string,
+    correlationData?: Buffer,
+    userProperties?: UserProperties,
+    subscriptionIdentifier?: number,
+    contentType?: string
+  }
+  /**
+   * callback called when message is put into `outgoingStore`
+   */
+  cbStorePut?: StorePutCallback
 }
 export interface IClientSubscribeOptions {
   /**
    * the QoS
    */
-  qos: QoS
+  qos: QoS,
+  /*
+  * no local flag
+  * */
+  nl?: boolean,
+  /*
+  * Retain As Published flag
+  * */
+  rap?: boolean,
+  /*
+  * Retain Handling option
+  * */
+  rh?: number,
+  /*
+  *  MQTT 5.0 properies object of subscribe
+  * */
+  properties?: {
+    subscriptionIdentifier?: number,
+    userProperties?: UserProperties
+  }
 }
 export interface IClientReconnectOptions {
   /**

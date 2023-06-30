@@ -8,7 +8,7 @@ import {
   IClientReconnectOptions
 } from './client-options'
 import { Store } from './store'
-import { Packet, QoS } from 'mqtt-packet'
+import { IAuthPacket, IConnectPacket, IPublishPacket, IDisconnectPacket, IConnackPacket, Packet, QoS } from 'mqtt-packet'
 
 export interface ISubscriptionGrant {
   /**
@@ -19,6 +19,18 @@ export interface ISubscriptionGrant {
    *  is the granted qos level on it, may return 128 on error
    */
   qos: QoS | number
+  /*
+  * no local flag
+  * */
+  nl?: boolean,
+  /*
+  * Retain As Published flag
+  * */
+  rap?: boolean,
+  /*
+  * Retain Handling option
+  * */
+  rh?: number
 }
 export interface ISubscriptionRequest {
   /**
@@ -29,20 +41,40 @@ export interface ISubscriptionRequest {
    *  is the granted qos level on it
    */
   qos: QoS
+  /*
+  * no local flag
+  * */
+  nl?: boolean,
+  /*
+  * Retain As Published flag
+  * */
+  rap?: boolean,
+  /*
+  * Retain Handling option
+  * */
+  rh?: number
 }
 export interface ISubscriptionMap {
   /**
-   * object which has topic names as object keys and as value the QoS, like {'test1': 0, 'test2': 1}.
+   * object which has topic names as object keys and as value the options, like {'test1': {qos: 0}, 'test2': {qos: 2}}.
    */
-  [topic: string]: QoS
+  [topic: string]: {
+    qos: QoS,
+    nl?: boolean,
+    rap?: boolean,
+    rh?: number
+  }
 }
 
+export declare type OnConnectCallback = (packet: IConnackPacket) => void
+export declare type OnDisconnectCallback = (packet: IDisconnectPacket) => void
 export declare type ClientSubscribeCallback = (err: Error, granted: ISubscriptionGrant[]) => void
-export declare type OnMessageCallback = (topic: string, payload: Buffer, packet: Packet) => void
+export declare type OnMessageCallback = (topic: string, payload: Buffer, packet: IPublishPacket) => void
 export declare type OnPacketCallback = (packet: Packet) => void
+export declare type OnCloseCallback = () => void
 export declare type OnErrorCallback = (error: Error) => void
 export declare type PacketCallback = (error?: Error, packet?: Packet) => any
-export declare type CloseCallback = () => void
+export declare type CloseCallback = (error?: Error) => void
 
 export interface IStream extends events.EventEmitter {
   pipe (to: any): any
@@ -68,16 +100,22 @@ export declare class MqttClient extends events.EventEmitter {
 
   constructor (streamBuilder: (client: MqttClient) => IStream, options: IClientOptions)
 
+  public on (event: 'connect', cb: OnConnectCallback): this
   public on (event: 'message', cb: OnMessageCallback): this
   public on (event: 'packetsend' | 'packetreceive', cb: OnPacketCallback): this
+  public on (event: 'disconnect', cb: OnDisconnectCallback): this
   public on (event: 'error', cb: OnErrorCallback): this
+  public on (event: 'close', cb: OnCloseCallback): this
+  public on (event: 'end' | 'reconnect' | 'offline' | 'outgoingEmpty', cb: () => void): this
   public on (event: string, cb: Function): this
 
+  public once (event: 'connect', cb: OnConnectCallback): this
   public once (event: 'message', cb: OnMessageCallback): this
-  public once (event:
-                'packetsend'
-                | 'packetreceive', cb: OnPacketCallback): this
+  public once (event: 'packetsend' | 'packetreceive', cb: OnPacketCallback): this
+  public once (event: 'disconnect', cb: OnDisconnectCallback): this
   public once (event: 'error', cb: OnErrorCallback): this
+  public once (event: 'close', cb: OnCloseCallback): this
+  public once (event: 'end' | 'reconnect' | 'offline' | 'outgoingEmpty', cb: () => void): this
   public once (event: string, cb: Function): this
 
   /**
@@ -89,9 +127,12 @@ export declare class MqttClient extends events.EventEmitter {
    * @param {Object}    [opts] - publish options, includes:
    *   @param {Number}  [opts.qos] - qos level to publish on
    *   @param {Boolean} [opts.retain] - whether or not to retain the message
+   *   @param {Function}[opts.cbStorePut] - function(){}
+   *       called when message is put into `outgoingStore`
    *
    * @param {Function} [callback] - function(err){}
    *    called when publish succeeds or fails
+   *
    * @returns {Client} this - for chaining
    * @api public
    *
@@ -133,24 +174,27 @@ export declare class MqttClient extends events.EventEmitter {
    * unsubscribe - unsubscribe from topic(s)
    *
    * @param {String, Array} topic - topics to unsubscribe from
+   * @param {Object} opts - opts of unsubscribe
    * @param {Function} [callback] - callback fired on unsuback
    * @returns {MqttClient} this - for chaining
    * @api public
    * @example client.unsubscribe('topic')
    * @example client.unsubscribe('topic', console.log)
+   * @example client.unsubscribe('topic', opts, console.log)
    */
-  public unsubscribe (topic: string | string[], callback?: PacketCallback): this
+  public unsubscribe (topic: string | string[], opts?: Object, callback?: PacketCallback): this
 
   /**
    * end - close connection
    *
    * @returns {MqttClient} this - for chaining
    * @param {Boolean} force - do not wait for all in-flight messages to be acked
+   * @param {Object} opts - opts disconnect
    * @param {Function} cb - called when the client has been closed
    *
    * @api public
    */
-  public end (force?: boolean, cb?: CloseCallback): this
+  public end (force?: boolean, opts?: Object, cb?: CloseCallback): this
 
   /**
    * removeOutgoingMessage - remove a message in outgoing store
@@ -187,6 +231,27 @@ export declare class MqttClient extends events.EventEmitter {
    * @api public
    */
   public handleMessage (packet: Packet, callback: PacketCallback): void
+
+  /**
+   * Handle auth packages for MQTT 5 enhanced authentication methods such
+   * as challenge response authentication.
+   *
+   * Challenge-response authentication flow would look something like this:
+   *
+   * --> CONNECT | authMethod = "mathChallenge" -->
+   * <-- AUTH | authMethod = "mathChallenge", authData = "12 + 34" <--
+   * --> AUTH | authMethod = "mathChallenge", authData = "46" -->
+   * <-- CONNACK | reasonCode = SUCCESS <--
+   *
+   * This form of authentication has several advantages over traditional
+   * credential-based approaches. For instance authentication without the direct
+   * exchange of authentication secrets.
+   *
+   * @param packet the auth packet to handle
+   * @param callback call when finished
+   * @api public
+   */
+  public handleAuth (packet: IAuthPacket, callback: PacketCallback): void
 
   /**
    * getLastMessageId
