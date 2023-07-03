@@ -33,7 +33,8 @@ jobs:
 
     - name: Test Browser
       run: |
-        npm run test:browser -- --verbose
+        npm run browser-build
+        npm run unit-test:browser -- --verbose
       env:
         CI: true
         DEBUG: "mqttjs"
