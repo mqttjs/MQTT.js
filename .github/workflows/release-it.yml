@@ -23,7 +23,7 @@ jobs:
         with:
           ref: 'main'
           fetch-depth: 0 # fetch all commits history to create the changelog
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GH_TOKEN }}
 
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v3.6.0
@@ -47,7 +47,7 @@ jobs:
 
       - name: Make the release
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }} 
         run: |
           # When all commits since the latest major tag should be added to the changelog, use --git.tagExclude='*[-]*'
