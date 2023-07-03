@@ -1,3 +1,36 @@
+# [5.0.0-beta.1](https://github.com/mqttjs/MQTT.js/compare/v5.0.0-beta.0...v5.0.0-beta.1) (2023-06-29)
+
+
+### Bug Fixes
+
+* `_storeProcessing` staying true after outStore got emptied ([#1492](https://github.com/mqttjs/MQTT.js/issues/1492)) ([f3f7be7](https://github.com/mqttjs/MQTT.js/commit/f3f7be76199115a622fde2590d44b1bb0cf57d41))
+* consistency, used `this` instead of `that` ([#1618](https://github.com/mqttjs/MQTT.js/issues/1618)) ([800825b](https://github.com/mqttjs/MQTT.js/commit/800825bf619d83ef713a5b2fa1533bbf6ccac872))
+* prevent store message on store when it's restored ([#1255](https://github.com/mqttjs/MQTT.js/issues/1255)) ([8d68c8c](https://github.com/mqttjs/MQTT.js/commit/8d68c8c3e38aede52741a06838933011a6fccc43))
+
+
+
+# [5.0.0-beta.0](https://github.com/mqttjs/MQTT.js/compare/v4.3.7...v5.0.0-beta.0) (2023-06-27)
+
+
+### Bug Fixes
+
+* add missing export of UniqueMessageIdProvider and DefaultMessageIdProvider ([#1572](https://github.com/mqttjs/MQTT.js/issues/1572)) ([aa2e0ad](https://github.com/mqttjs/MQTT.js/commit/aa2e0ad49aadf333141f18cb85d2582abb8e19fc))
+* IS_BROWSER check is now safer and more agnostic about the bundler ([#1571](https://github.com/mqttjs/MQTT.js/issues/1571)) ([b48b4b4](https://github.com/mqttjs/MQTT.js/commit/b48b4b4e79690c96033ea2df387c11f3bc26bf6a))
+* **test:** `topicAliasMaximum` tests ([#1612](https://github.com/mqttjs/MQTT.js/issues/1612)) ([f1e5518](https://github.com/mqttjs/MQTT.js/commit/f1e5518150ea45067b87104abd9fed64ec13a48c))
+* topicAliasMaximum under must be under Connect properties ([#1519](https://github.com/mqttjs/MQTT.js/issues/1519)) ([3b2e1cb](https://github.com/mqttjs/MQTT.js/commit/3b2e1cb7c4bf33ff66bcd1cc3091790a9635f19a))
+* **types:** missing null declaration for error in subscription callback ([#1589](https://github.com/mqttjs/MQTT.js/issues/1589)) ([afc067b](https://github.com/mqttjs/MQTT.js/commit/afc067be2ca83990209b6176adec06f9a4c76a2c))
+* **types:** topic alias controls and password ([#1509](https://github.com/mqttjs/MQTT.js/issues/1509)) ([85c9341](https://github.com/mqttjs/MQTT.js/commit/85c9341bba2676cfd069ec38a1a7cfda71647b68))
+
+
+* chore!: drop support for node 12-14 (#1615) ([a2cbf61](https://github.com/mqttjs/MQTT.js/commit/a2cbf61c2a051a5ee69a50e00688e8ace79e7ef5)), closes [#1615](https://github.com/mqttjs/MQTT.js/issues/1615)
+
+
+### BREAKING CHANGES
+
+* Dropped support for NodeJS 12-14
+
+
+
 ## [4.3.7](https://github.com/mqttjs/MQTT.js/compare/v4.3.6...v4.3.7) (2022-03-14)
 
 
@@ -709,11 +742,4 @@
 # 0.1.0 (2012-01-17)
 
 
-
-## [4.3.7](https://github.com/mqttjs/MQTT.js/compare/v4.3.6...v4.3.7) (2022-03-14)
-
-
-### Bug Fixes
-
-* fix regression from [#1401](https://github.com/mqttjs/MQTT.js/issues/1401) and allow CI test failures to break gitthub workflow ([#1443](https://github.com/mqttjs/MQTT.js/issues/1443)) ([accd78e](https://github.com/mqttjs/MQTT.js/commit/accd78e38aa82c8cc1ea04029e56494276776c87))
 
