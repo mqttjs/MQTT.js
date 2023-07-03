@@ -22,15 +22,19 @@ client.on('reconnect', function () {
 })
 
 test('MQTT.js browser test', function (t) {
-  t.plan(2)
+  t.plan(4)
   client.on('connect', function () {
-    client.on('message', function (msg) {
-      t.equal(msg, 'Hello World!')
+    client.on('message', function (topic, msg) {
+      t.equal(topic, 'hello', 'should match topic')
+      t.equal(msg.toString(), 'Hello World!', 'should match payload')
+      client.end(() => {
+        t.pass('client should close')
+      })
     })
     client.subscribe('hello', function () {
     }).publish('hello', 'Hello World!')
   })
   client.once('close', function () {
-    t.true(true)
+    t.pass('should emit close')
   })
 })

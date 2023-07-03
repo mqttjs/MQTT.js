@@ -116,12 +116,14 @@ function start (startPort, done) {
   return server
 }
 
+const port = process.env.PORT || process.env.AIRTAP_SUPPORT_PORT
+
 if (require.main === module) {
-  start(process.env.PORT || process.env.AIRTAP_PORT, function (err) {
+  start(port, function (err) {
     if (err) {
       console.error(err)
       return
     }
-    console.log('tunnelled server started on port', process.env.PORT || process.env.AIRTAP_PORT)
+    console.log('tunnelled server started on port', port)
   })
 }
