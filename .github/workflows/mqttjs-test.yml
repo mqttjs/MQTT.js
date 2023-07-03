@@ -32,9 +32,10 @@ jobs:
       run: npm ci
 
     - name: Test Browser
+      timeout-minutes: 2
       run: |
+        sudo apt install chromium-browser
         npm run browser-build
-        npx airtap -la
         npm run unit-test:browser -- --silly
       env:
         CI: true
