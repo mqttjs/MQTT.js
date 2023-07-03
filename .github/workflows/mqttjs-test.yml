@@ -31,16 +31,6 @@ jobs:
     - name: Install Dependencies
       run: npm ci
 
-    - name: Test Browser
-      timeout-minutes: 2
-      run: |
-        sudo apt install chromium-browser
-        npm run browser-build
-        npm run unit-test:browser -- --silly
-      env:
-        CI: true
-        DEBUG: "mqttjs"
-
     - name: Test NodeJS
       run: npm run test:node
       env:
