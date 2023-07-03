@@ -38,4 +38,10 @@ jobs:
       env:
         CI: true
         DEBUG: "mqttjs"
+    
+    - name: Test Browser
+      run: npm run test:browser
+      env:
+        CI: true
+        DEBUG: "mqttjs"
 
