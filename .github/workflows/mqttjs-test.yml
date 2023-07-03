@@ -33,8 +33,7 @@ jobs:
 
     - name: Test Browser
       run: |
-        npx playwright install-deps
-        npm run test:browser
+        npm run test:browser -- --verbose
       env:
         CI: true
         DEBUG: "mqttjs"
