@@ -622,9 +622,9 @@ module.exports = function (server, config) {
               break
             case 3:
               assert.strictEqual(packet.payload.toString(), 'payload4')
-              server2.close()
-              done()
-              break
+              client.end((err1) => {
+                server2.close((err2) => done(err1 || err2))
+              })
           }
         })
       })
@@ -683,9 +683,10 @@ module.exports = function (server, config) {
             case 2:
               assert.strictEqual(packet.payload.toString(), 'payload3')
 
-              server2.close()
-              fs.rmdirSync(storePath, { recursive: true })
-              done()
+              server2.close((err) => {
+                fs.rmSync(storePath, { recursive: true })
+                done(err)
+              })
               break
           }
         })
@@ -1425,8 +1426,9 @@ module.exports = function (server, config) {
                 break
               case 2:
                 assert.strictEqual(packet.payload.toString(), 'payload3')
-                server2.close()
-                done()
+                client.end((err1) => {
+                  server2.close((err2) => done(err1 || err2))
+                })
                 break
             }
           }
@@ -2836,8 +2838,9 @@ module.exports = function (server, config) {
           } else {
             assert.isTrue(reconnectEvent)
             assert.strictEqual(Object.keys(client._resubscribeTopics).length, 0)
-            server2.close()
-            client.end(true, done)
+            client.end(true, (err1) => {
+              server2.close((err2) => done(err1 || err2))
+            })
           }
         })
       })
@@ -2874,9 +2877,8 @@ module.exports = function (server, config) {
           })
         })
         serverClient.on('pubcomp', function (packet) {
-          client.end(true, () => {
-            server2.close()
-            done()
+          client.end(true, (err1) => {
+            server2.close((err2) => done(err1 || err2))
           })
         })
       })
@@ -2948,8 +2950,7 @@ module.exports = function (server, config) {
 
         client.on('close', function () {
           if (reconnect) {
-            server2.close()
-            done()
+            server2.close((err) => done(err))
           } else {
             assert.strictEqual(Object.keys(client.outgoing).length, 0)
             reconnect = true
@@ -2971,8 +2972,9 @@ module.exports = function (server, config) {
         })
         serverClient.on('publish', function (packet) {
           if (reconnect) {
-            server2.close()
-            client.end(true, done)
+            client.end(true, (err1) => {
+              server2.close((err2) => done(err1 || err2))
+            })
           } else {
             client.end(true, () => {
               client.reconnect({
@@ -3017,8 +3019,9 @@ module.exports = function (server, config) {
         })
         serverClient.on('publish', function (packet) {
           if (reconnect) {
-            server2.close()
-            client.end(true, done)
+            client.end(true, (err1) => {
+              server2.close((err2) => done(err1 || err2))
+            })
           } else {
             client.end(true, function () {
               client.reconnect({
@@ -3095,10 +3098,11 @@ module.exports = function (server, config) {
         client.on('connect', function () {
           if (!reconnect) {
             client.publish('topic', 'payload', { qos: 2 }, function (err) {
-              server2.close()
               assert(reconnect)
               assert.ifError(err)
-              client.end(true, done)
+              client.end(true, (err1) => {
+                server2.close((err2) => done(err1 || err2))
+              })
             })
           }
         })
@@ -3134,8 +3138,9 @@ module.exports = function (server, config) {
                 break
               case 2:
                 assert.strictEqual(packet.payload.toString(), 'payload3')
-                server2.close()
-                client.end(true, done)
+                client.end(true, (err1) => {
+                  server2.close((err2) => done(err1 || err2))
+                })
                 break
             }
           } else {
