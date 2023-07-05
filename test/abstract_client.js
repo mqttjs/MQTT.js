@@ -238,7 +238,6 @@ module.exports = function (server, config) {
 
   describe('connecting', function () {
     it('should connect to the broker', function (done) {
-      this.timeout(10000)
       const client = connect()
       client.on('error', done)
 
@@ -540,7 +539,6 @@ module.exports = function (server, config) {
   })
 
   describe('offline messages', function () {
-    this.timeout(20000)
     it('should queue message until connected', function (done) {
       const client = connect()
 
@@ -798,7 +796,6 @@ module.exports = function (server, config) {
   })
 
   describe('publishing', function () {
-    this.timeout(10000)
     it('should publish a message (offline)', function (done) {
       const client = connect()
       const payload = 'test'
@@ -2551,7 +2548,7 @@ module.exports = function (server, config) {
     })
 
     it('should resend in-flight QoS 1 publish messages from the client', function (done) {
-      this.timeout(10000)
+      this.timeout(4000)
       const client = connect({ reconnectPeriod: 200 })
       let serverPublished = false
       let clientCalledBack = false
