@@ -255,7 +255,6 @@ module.exports = function (server, config) {
         serverClient.once('connect', function (packet) {
           assert.include(packet.clientId, 'mqttjs')
           client.end((err) => done(err))
-          serverClient.disconnect()
         })
       })
     })
@@ -267,7 +266,6 @@ module.exports = function (server, config) {
       server.once('client', function (serverClient) {
         serverClient.once('connect', function (packet) {
           assert.strictEqual(packet.clean, true)
-          serverClient.disconnect()
           done()
         })
       })
@@ -282,7 +280,6 @@ module.exports = function (server, config) {
       server.once('client', function (serverClient) {
         serverClient.once('connect', function (packet) {
           assert.include(packet.clientId, 'testclient')
-          serverClient.disconnect()
           client.end((err) => done(err))
         })
       })
@@ -298,10 +295,7 @@ module.exports = function (server, config) {
         serverClient.once('connect', function (packet) {
           assert.include(packet.clientId, 'testclient')
           assert.isFalse(packet.clean)
-          client.end(false, function (err) {
-            serverClient.disconnect()
-            done(err)
-          })
+          client.end(false, (err) => done(err))
         })
       })
     })
@@ -325,10 +319,8 @@ module.exports = function (server, config) {
       })
 
       server.once('client', function (serverClient) {
-        // TODO: serverClient=>server2
         serverClient.once('connect', function (packet) {
           assert.include(packet.clientId, 'testclient')
-          serverClient.disconnect()
           done()
         })
       })
