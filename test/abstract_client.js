@@ -14,6 +14,27 @@ const serverBuilder = require('./server_helpers_for_client_tests').serverBuilder
 const fs = require('fs')
 const levelStore = require('mqtt-level-store')
 
+/**
+  * These tests try to be consistent with names for servers (brokers) and clients,
+  * but it can be confusing. To make it easier, here is a handy translation
+  * chart:
+  *
+  * name           | meaning
+  * ---------------|--------
+  * client         | The MQTT.js client object being tested. A new instance is created for each test (by calling the `connect` function.)
+  * server         | A mock broker that you can control. The same server instance is used for all tests, so only use this if you plan to clean up when you're done.
+  * serverBuilder  | A factory that can make mock test servers (MQTT brokers). Useful if you need to do things that you can't (or don't want to) clean up after your test is done.
+  * server2        | The name used for mock brokers that are created for an individual test and then destroyed.
+  * serverClient   | An socket on the mock broker. This gets created when your client connects and gets collected when you're done with it.
+  *
+  * Also worth noting:
+  *
+  * `serverClient.disconnect()` does not disconnect that socket. Instead, it sends an MQTT disconnect packet.
+  * If you want to disconnect the socket from the broker side, you probably want to use `serverClient.destroy()`
+  * or `serverClient.stream.destroy()`.
+  *
+  */
+
 module.exports = function (server, config) {
   const version = config.protocolVersion || 4
 
