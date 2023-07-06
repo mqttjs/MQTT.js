@@ -14,6 +14,27 @@ const serverBuilder = require('./server_helpers_for_client_tests').serverBuilder
 const fs = require('fs')
 const levelStore = require('mqtt-level-store')
 
+/**
+  * These tests try to be consistent with names for servers (brokers) and clients,
+  * but it can be confusing. To make it easier, here is a handy translation
+  * chart:
+  *
+  * name           | meaning
+  * ---------------|--------
+  * client         | The MQTT.js client object being tested. A new instance is created for each test (by calling the `connect` function.)
+  * server         | A mock broker that you can control. The same server instance is used for all tests, so only use this if you plan to clean up when you're done.
+  * serverBuilder  | A factory that can make mock test servers (MQTT brokers). Useful if you need to do things that you can't (or don't want to) clean up after your test is done.
+  * server2        | The name used for mock brokers that are created for an individual test and then destroyed.
+  * serverClient   | An socket on the mock broker. This gets created when your client connects and gets collected when you're done with it.
+  *
+  * Also worth noting:
+  *
+  * `serverClient.disconnect()` does not disconnect that socket. Instead, it sends an MQTT disconnect packet.
+  * If you want to disconnect the socket from the broker side, you probably want to use `serverClient.destroy()`
+  * or `serverClient.stream.destroy()`.
+  *
+  */
+
 module.exports = function (server, config) {
   const version = config.protocolVersion || 4
 
@@ -30,8 +51,7 @@ module.exports = function (server, config) {
         client.stream.end()
       })
       client.once('close', function () {
-        client.end()
-        done()
+        client.end((err) => done(err))
       })
     })
 
@@ -39,12 +59,14 @@ module.exports = function (server, config) {
       const client = connect()
 
       client.once('close', function () {
-        client.end()
-        if (!client.connected) {
-          done()
-        } else {
-          done(new Error('Not marked as disconnected'))
-        }
+        client.end((err) => {
+          if (!client.connected) {
+            done(err)
+          } else {
+            done(new Error('Not marked as disconnected'))
+          }
+        })
+        assert.isFalse(client.connected)
       })
       client.once('connect', function () {
         client.stream.end()
@@ -56,7 +78,7 @@ module.exports = function (server, config) {
 
       client.once('close', function () {
         assert.notExists(client.pingTimer)
-        client.end(true, done)
+        client.end(true, (err) => done(err))
       })
 
       client.once('connect', function () {
@@ -174,9 +196,9 @@ module.exports = function (server, config) {
 
       client.once('connect', function () {
         assert.exists(client.pingTimer)
-        client.end(() => {
+        client.end((err) => {
           assert.notExists(client.pingTimer)
-          done()
+          done(err)
         })
       })
     })
@@ -189,9 +211,9 @@ module.exports = function (server, config) {
       }, 500)
 
       setTimeout(function () {
-        client.end(function () {
+        client.end(function (err) {
           clearTimeout(timeout)
-          done()
+          done(err)
         })
       }, 200)
     })
@@ -241,8 +263,7 @@ module.exports = function (server, config) {
       client.on('error', done)
 
       server.once('client', function () {
-        done()
-        client.end()
+        client.end((err) => done(err))
       })
     })
 
@@ -253,8 +274,7 @@ module.exports = function (server, config) {
       server.once('client', function (serverClient) {
         serverClient.once('connect', function (packet) {
           assert.include(packet.clientId, 'mqttjs')
-          client.end(done)
-          serverClient.disconnect()
+          client.end((err) => done(err))
         })
       })
     })
@@ -266,7 +286,6 @@ module.exports = function (server, config) {
       server.once('client', function (serverClient) {
         serverClient.once('connect', function (packet) {
           assert.strictEqual(packet.clean, true)
-          serverClient.disconnect()
           done()
         })
       })
@@ -281,10 +300,7 @@ module.exports = function (server, config) {
       server.once('client', function (serverClient) {
         serverClient.once('connect', function (packet) {
           assert.include(packet.clientId, 'testclient')
-          serverClient.disconnect()
-          client.end(function (err) {
-            done(err)
-          })
+          client.end((err) => done(err))
         })
       })
     })
@@ -299,10 +315,7 @@ module.exports = function (server, config) {
         serverClient.once('connect', function (packet) {
           assert.include(packet.clientId, 'testclient')
           assert.isFalse(packet.clean)
-          client.end(false, function (err) {
-            serverClient.disconnect()
-            done(err)
-          })
+          client.end(false, (err) => done(err))
         })
       })
     })
@@ -328,7 +341,6 @@ module.exports = function (server, config) {
       server.once('client', function (serverClient) {
         serverClient.once('connect', function (packet) {
           assert.include(packet.clientId, 'testclient')
-          serverClient.disconnect()
           done()
         })
       })
@@ -337,7 +349,7 @@ module.exports = function (server, config) {
     it('should emit connect', function (done) {
       const client = connect()
       client.once('connect', function () {
-        client.end(true, done)
+        client.end(true, (err) => done(err))
       })
       client.once('error', done)
     })
@@ -358,8 +370,7 @@ module.exports = function (server, config) {
         assert.strictEqual(packet.sessionPresent, true)
         client.once('connect', function (packet) {
           assert.strictEqual(packet.sessionPresent, false)
-          client.end()
-          done()
+          client.end((err) => done(err))
         })
       })
     })
@@ -367,12 +378,8 @@ module.exports = function (server, config) {
     it('should mark the client as connected', function (done) {
       const client = connect()
       client.once('connect', function () {
-        client.end()
-        if (client.connected) {
-          done()
-        } else {
-          done(new Error('Not marked as connected'))
-        }
+        assert.isTrue(client.connected)
+        client.end((err) => done(err))
       })
     })
 
@@ -384,8 +391,7 @@ module.exports = function (server, config) {
       client.once('error', function (error) {
         const value = version === 5 ? 128 : 2
         assert.strictEqual(error.code, value) // code for clientID identifer rejected
-        client.end()
-        done()
+        client.end((err) => done(err))
       })
     })
 
@@ -395,8 +401,7 @@ module.exports = function (server, config) {
 
       client.on('error', function (e) {
         assert.equal(e.code, 'ECONNREFUSED')
-        client.end()
-        done()
+        client.end((err) => done(err))
       })
     })
 
@@ -529,23 +534,26 @@ module.exports = function (server, config) {
 
     it('should return an error (via callbacks) for empty topic list', function (done) {
       const client = connect()
-      client.subscribe([], function (err) {
-        client.end()
-        if (err) {
-          return done()
-        }
-        done(new Error('Validations do NOT work'))
+      client.subscribe([], (subErr) => {
+        client.end((endErr) => {
+          if (subErr) {
+            return done(endErr)
+          } else {
+            done(new Error('Validations do NOT work'))
+          }
+        })
       })
     })
 
     it('should return an error (via callbacks) for topic system/+/#/event', function (done) {
       const client = connect()
-      client.subscribe('system/+/#/event', function (err) {
-        client.end(true, function () {
-          if (err) {
-            return done()
+      client.subscribe('system/+/#/event', function (subErr) {
+        client.end(true, (endErr) => {
+          if (subErr) {
+            return done(endErr)
+          } else {
+            done(new Error('Validations do NOT work'))
           }
-          done(new Error('Validations do NOT work'))
         })
       })
     })
@@ -621,9 +629,9 @@ module.exports = function (server, config) {
               break
             case 3:
               assert.strictEqual(packet.payload.toString(), 'payload4')
-              server2.close()
-              done()
-              break
+              client.end((err1) => {
+                server2.close((err2) => done(err1 || err2))
+              })
           }
         })
       })
@@ -682,9 +690,10 @@ module.exports = function (server, config) {
             case 2:
               assert.strictEqual(packet.payload.toString(), 'payload3')
 
-              server2.close()
-              fs.rmdirSync(storePath, { recursive: true })
-              done()
+              server2.close((err) => {
+                fs.rmSync(storePath, { recursive: true })
+                done(err)
+              })
               break
           }
         })
@@ -908,9 +917,15 @@ module.exports = function (server, config) {
         retain: true,
         qos: 1
       }
+      let received = false
 
       client.once('connect', function () {
-        client.publish(topic, payload, opts)
+        client.publish(topic, payload, opts, function (err) {
+          assert(received)
+          client.end(function () {
+            done(err)
+          })
+        })
       })
 
       server.once('client', function (serverClient) {
@@ -920,7 +935,7 @@ module.exports = function (server, config) {
           assert.strictEqual(packet.qos, opts.qos, 'incorrect qos')
           assert.strictEqual(packet.retain, opts.retain, 'incorrect ret')
           assert.strictEqual(packet.dup, false, 'incorrect dup')
-          client.end(done)
+          received = true
         })
       })
     })
@@ -947,7 +962,7 @@ module.exports = function (server, config) {
       })
     })
 
-    it('should mark a message as  duplicate when "dup" option is set', function (done) {
+    it('should mark a message as duplicate when "dup" option is set', function (done) {
       const client = connect()
       const payload = 'duplicated-test'
       const topic = 'test'
@@ -956,9 +971,15 @@ module.exports = function (server, config) {
         qos: 1,
         dup: true
       }
+      let received = false
 
       client.once('connect', function () {
-        client.publish(topic, payload, opts)
+        client.publish(topic, payload, opts, function (err) {
+          assert(received)
+          client.end(function () {
+            done(err)
+          })
+        })
       })
 
       server.once('client', function (serverClient) {
@@ -968,7 +989,7 @@ module.exports = function (server, config) {
           assert.strictEqual(packet.qos, opts.qos, 'incorrect qos')
           assert.strictEqual(packet.retain, opts.retain, 'incorrect ret')
           assert.strictEqual(packet.dup, opts.dup, 'incorrect dup')
-          client.end(done)
+          received = true
         })
       })
     })
@@ -978,8 +999,7 @@ module.exports = function (server, config) {
 
       client.once('connect', function () {
         client.publish('a', 'b', function () {
-          client.end()
-          done()
+          client.end((err) => done(err))
         })
       })
     })
@@ -990,8 +1010,7 @@ module.exports = function (server, config) {
 
       client.once('connect', function () {
         client.publish('a', 'b', opts, function () {
-          client.end()
-          done()
+          client.end((err) => done(err))
         })
       })
     })
@@ -1002,8 +1021,7 @@ module.exports = function (server, config) {
 
       client.once('connect', function () {
         client.publish('a', 'b', opts, function () {
-          client.end()
-          done()
+          client.end((err) => done(err))
         })
       })
     })
@@ -1013,8 +1031,7 @@ module.exports = function (server, config) {
 
       client.once('connect', function () {
         client.publish('中国', 'hello', function () {
-          client.end()
-          done()
+          client.end((err) => done(err))
         })
       })
     })
@@ -1024,27 +1041,36 @@ module.exports = function (server, config) {
 
       client.once('connect', function () {
         client.publish('hello', '中国', function () {
-          client.end()
-          done()
+          client.end((err) => done(err))
         })
       })
     })
 
     it('should publish 10 QoS 2 and receive them', function (done) {
       const client = connect()
-      let count = 0
+      let countSent = 0
+      let countReceived = 0
+
+      function publishNext () {
+        client.publish('test', 'test', { qos: 2 }, function (err) {
+          assert.ifError(err)
+          countSent++
+        })
+      }
 
       client.on('connect', function () {
-        client.subscribe('test')
-        client.publish('test', 'test', { qos: 2 })
+        client.subscribe('test', function (err) {
+          assert.ifError(err)
+          publishNext()
+        })
       })
 
       client.on('message', function () {
-        if (count >= 10) {
-          client.end()
-          done()
+        countReceived++
+        if (countSent >= 10 && countReceived >= 10) {
+          client.end(done)
         } else {
-          client.publish('test', 'test', { qos: 2 })
+          publishNext()
         }
       })
 
@@ -1058,10 +1084,6 @@ module.exports = function (server, config) {
           serverClient.on('publish', function (packet) {
             serverClient.publish(packet)
           })
-        })
-
-        serverClient.on('pubrel', function () {
-          count++
         })
       })
     })
@@ -1187,15 +1209,11 @@ module.exports = function (server, config) {
         payload: 'test',
         qos: 1
       }, function () {
-        client.end()
-        done()
+        client.end((err) => done(err))
       })
     })
 
     it('should handle error with async incoming store in QoS 2 `handlePublish` method', function (done) {
-      const timeout = setTimeout(() => {
-        done('test timed out')
-      }, 10000)
       class AsyncStore {
         put (packet, cb) {
           process.nextTick(function () {
@@ -1229,9 +1247,7 @@ module.exports = function (server, config) {
         payload: 'test',
         qos: 2
       }, function () {
-        client.end()
-        clearTimeout(timeout)
-        done()
+        client.end((err) => done(err))
       })
     })
 
@@ -1267,7 +1283,7 @@ module.exports = function (server, config) {
         messageId: 1,
         qos: 2
       }, function () {
-        client.end(true, done)
+        client.end(true, (err) => done(err))
       })
     })
 
@@ -1405,8 +1421,9 @@ module.exports = function (server, config) {
                 break
               case 2:
                 assert.strictEqual(packet.payload.toString(), 'payload3')
-                server2.close()
-                done()
+                client.end((err1) => {
+                  server2.close((err2) => done(err1 || err2))
+                })
                 break
             }
           }
@@ -1493,13 +1510,18 @@ module.exports = function (server, config) {
   describe('unsubscribing', function () {
     it('should send an unsubscribe packet (offline)', function (done) {
       const client = connect()
+      let received = false
 
-      client.unsubscribe('test')
+      client.unsubscribe('test', function (err) {
+        assert.ifError(err)
+        assert(received)
+        client.end(done)
+      })
 
       server.once('client', function (serverClient) {
         serverClient.once('unsubscribe', function (packet) {
           assert.include(packet.unsubscriptions, 'test')
-          client.end(done)
+          received = true
         })
       })
     })
@@ -1507,15 +1529,20 @@ module.exports = function (server, config) {
     it('should send an unsubscribe packet', function (done) {
       const client = connect()
       const topic = 'topic'
+      let received = false
 
       client.once('connect', function () {
-        client.unsubscribe(topic)
+        client.unsubscribe(topic, function (err) {
+          assert.ifError(err)
+          assert(received)
+          client.end(done)
+        })
       })
 
       server.once('client', function (serverClient) {
         serverClient.once('unsubscribe', function (packet) {
           assert.include(packet.unsubscriptions, topic)
-          client.end(done)
+          received = true
         })
       })
     })
@@ -1553,15 +1580,20 @@ module.exports = function (server, config) {
     it('should accept an array of unsubs', function (done) {
       const client = connect()
       const topics = ['topic1', 'topic2']
+      let received = false
 
       client.once('connect', function () {
-        client.unsubscribe(topics)
+        client.unsubscribe(topics, function (err) {
+          assert.ifError(err)
+          assert(received)
+          client.end(done)
+        })
       })
 
       server.once('client', function (serverClient) {
         serverClient.once('unsubscribe', function (packet) {
           assert.deepStrictEqual(packet.unsubscriptions, topics)
-          client.end(done)
+          received = true
         })
       })
     })
@@ -2799,8 +2831,9 @@ module.exports = function (server, config) {
           } else {
             assert.isTrue(reconnectEvent)
             assert.strictEqual(Object.keys(client._resubscribeTopics).length, 0)
-            server2.close()
-            client.end(true, done)
+            client.end(true, (err1) => {
+              server2.close((err2) => done(err1 || err2))
+            })
           }
         })
       })
@@ -2837,9 +2870,8 @@ module.exports = function (server, config) {
           })
         })
         serverClient.on('pubcomp', function (packet) {
-          client.end(true, () => {
-            server2.close()
-            done()
+          client.end(true, (err1) => {
+            server2.close((err2) => done(err1 || err2))
           })
         })
       })
@@ -2911,8 +2943,7 @@ module.exports = function (server, config) {
 
         client.on('close', function () {
           if (reconnect) {
-            server2.close()
-            done()
+            server2.close((err) => done(err))
           } else {
             assert.strictEqual(Object.keys(client.outgoing).length, 0)
             reconnect = true
@@ -2934,8 +2965,9 @@ module.exports = function (server, config) {
         })
         serverClient.on('publish', function (packet) {
           if (reconnect) {
-            server2.close()
-            client.end(true, done)
+            client.end(true, (err1) => {
+              server2.close((err2) => done(err1 || err2))
+            })
           } else {
             client.end(true, () => {
               client.reconnect({
@@ -2980,8 +3012,9 @@ module.exports = function (server, config) {
         })
         serverClient.on('publish', function (packet) {
           if (reconnect) {
-            server2.close()
-            client.end(true, done)
+            client.end(true, (err1) => {
+              server2.close((err2) => done(err1 || err2))
+            })
           } else {
             client.end(true, function () {
               client.reconnect({
@@ -3029,10 +3062,9 @@ module.exports = function (server, config) {
             serverClient.pubrec({ messageId: packet.messageId })
           }
         })
-        serverClient.on('pubrel', function () {
+        serverClient.on('pubrel', function (packet) {
           if (reconnect) {
-            server2.close()
-            client.end(true, done)
+            serverClient.pubcomp({ messageId: packet.messageId })
           } else {
             client.end(true, function () {
               client.reconnect({
@@ -3058,7 +3090,13 @@ module.exports = function (server, config) {
 
         client.on('connect', function () {
           if (!reconnect) {
-            client.publish('topic', 'payload', { qos: 2 })
+            client.publish('topic', 'payload', { qos: 2 }, function (err) {
+              assert(reconnect)
+              assert.ifError(err)
+              client.end(true, (err1) => {
+                server2.close((err2) => done(err1 || err2))
+              })
+            })
           }
         })
         client.on('error', function () {})
@@ -3093,8 +3131,9 @@ module.exports = function (server, config) {
                 break
               case 2:
                 assert.strictEqual(packet.payload.toString(), 'payload3')
-                server2.close()
-                client.end(true, done)
+                client.end(true, (err1) => {
+                  server2.close((err2) => done(err1 || err2))
+                })
                 break
             }
           } else {
