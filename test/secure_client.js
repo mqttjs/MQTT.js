@@ -135,10 +135,9 @@ describe('MqttSecureClient', function () {
         rejectUnauthorized: true
       })
 
-      client.once('error', function () {
-        done()
-        client.end()
-        client.on('error', function () {})
+      client.once('error', function (err) {
+        err.should.be.instanceOf(Error)
+        client.end((err) => done(err))
       })
     })
 
@@ -152,9 +151,8 @@ describe('MqttSecureClient', function () {
 
       client.on('error', function () {})
 
-      // TODO node v0.8.x emits multiple close events
       client.once('close', function () {
-        done()
+        client.end((err) => done(err))
       })
     })
 
@@ -180,7 +178,7 @@ describe('MqttSecureClient', function () {
 
       server.once('connect', function () {
         server.on('secureConnection', server.setupConnection) // reset eventHandler
-        done()
+        client.end((err) => done(err))
       })
     })
   })

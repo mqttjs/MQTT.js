@@ -59,12 +59,12 @@ describe('MqttClient', function () {
   })
 
   describe('message ids', function () {
-    it('should increment the message id', function () {
+    it('should increment the message id', function (done) {
       client = mqtt.connect(config)
       const currentId = client._nextId()
 
       assert.equal(client._nextId(), currentId + 1)
-      client.end()
+      client.end((err) => done(err))
     })
 
     it('should not throw an error if packet\'s messageId is not found when receiving a pubrel packet', function (done) {
@@ -83,9 +83,11 @@ describe('MqttClient', function () {
 
         client.on('packetsend', function (packet) {
           if (packet.cmd === 'pubcomp') {
-            client.end()
-            server2.close()
-            done()
+            client.end((err1) => {
+              server2.close((err2) => {
+                done(err1 || err2)
+              })
+            })
           }
         })
       })
@@ -108,6 +110,9 @@ describe('MqttClient', function () {
 
       client.on('message', function (t, p, packet) {
         if (++count === max) {
+          // BUGBUG: the client.end callback never gets called here
+          // client.end((err) => done(err))
+          client.end()
           done()
         }
       })
@@ -143,9 +148,9 @@ describe('MqttClient', function () {
   describe('flushing', function () {
     it('should attempt to complete pending unsub and send on ping timeout', function (done) {
       this.timeout(10000)
-      const server3 = new MqttServer(function (client) {
-        client.on('connect', function (packet) {
-          client.connack({ returnCode: 0 })
+      const server3 = new MqttServer(function (serverClient) {
+        serverClient.on('connect', function (packet) {
+          serverClient.connack({ returnCode: 0 })
         })
       }).listen(ports.PORTAND72)
 
@@ -168,10 +173,10 @@ describe('MqttClient', function () {
           unsubscribeCallbackCalled = true
         })
         setTimeout(() => {
-          client.end(() => {
+          client.end((err) => {
             assert.strictEqual(pubCallbackCalled && unsubscribeCallbackCalled, true, 'callbacks not invoked')
             server3.close()
-            done()
+            done(err)
           })
         }, 5000)
       })
@@ -200,7 +205,7 @@ describe('MqttClient', function () {
         innerServer.kill('SIGINT') // mocks server shutdown
         client.once('close', function () {
           assert.exists(client.reconnectTimer)
-          client.end(true, done)
+          client.end(true, (err) => done(err))
         })
       })
     })
@@ -261,7 +266,7 @@ describe('MqttClient', function () {
         client.on('reconnect', function () {
           reconnects++
           if (reconnects >= expectedReconnects) {
-            client.end(true, done)
+            client.end(true, (err) => done(err))
           }
         })
       })
@@ -294,6 +299,7 @@ describe('MqttClient', function () {
           client.end(true, (err) => done(err))
         } else {
           debug('calling client.end()')
+          // Do not call done. We want to trigger a reconnect here.
           client.end(true)
         }
       }, 2000)
@@ -313,26 +319,14 @@ describe('MqttClient', function () {
       })
 
       const server2 = new MqttServer(function (serverClient) {
-        serverClient.on('error', function () { })
-        debug('setting serverClient connect callback')
-        serverClient.on('connect', function (packet) {
-          if (packet.clientId === 'invalid') {
-            debug('connack with returnCode 2')
-            serverClient.connack({ returnCode: 2 })
-          } else {
-            debug('connack with returnCode 0')
-            serverClient.connack({ returnCode: 0 })
-          }
-        })
-      }).listen(ports.PORTAND46)
-
-      server2.on('client', function (serverClient) {
         debug('client received on server2.')
         debug('subscribing to topic `topic`')
         client.subscribe('topic', function () {
           debug('once subscribed to topic, end client, destroy serverClient, and close server.')
           serverClient.destroy()
-          server2.close(() => { client.end(true, done) })
+          server2.close(() => {
+            client.end(true, (err) => done(err))
+          })
         })
 
         serverClient.on('subscribe', function (packet) {
@@ -361,7 +355,7 @@ describe('MqttClient', function () {
             })
           }
         })
-      })
+      }).listen(ports.PORTAND46)
     })
 
     it('should not fill the queue of subscribes if it cannot connect', function (done) {
@@ -388,9 +382,7 @@ describe('MqttClient', function () {
 
         setTimeout(function () {
           assert.equal(client.queue.length, 1)
-          client.end(true, () => {
-            done()
-          })
+          client.end(true, (err) => done(err))
         }, 1000)
       })
     })
@@ -424,9 +416,11 @@ describe('MqttClient', function () {
 
       server2.on('client', function (serverClient) {
         client.publish('topic', 'data', { qos: 1 }, function () {
-          serverClient.destroy()
-          server2.close()
-          client.end(true, done)
+          client.end(true, (err1) => {
+            server2.close((err2) => {
+              done(err1 || err2)
+            })
+          })
         })
 
         serverClient.on('publish', function onPublish (packet) {
@@ -462,7 +456,7 @@ describe('MqttClient', function () {
   it('check emit error on checkDisconnection w/o callback', function (done) {
     this.timeout(15000)
 
-    const server118 = new MqttServer(function (client) {
+    const server2 = new MqttServer(function (client) {
       client.on('connect', function (packet) {
         client.connack({
           reasonCode: 0
@@ -486,14 +480,12 @@ describe('MqttClient', function () {
     // wait for the client to receive an error...
     client.on('error', function (error) {
       assert.equal(error.message, 'client disconnecting')
-      server118.close()
-      done()
+      server2.close((err) => done(err))
     })
     client.on('connect', function () {
       client.end(function () {
         client._checkDisconnecting()
       })
-      server118.close()
     })
   })
 })

@@ -99,7 +99,7 @@ describe('Websocket Client', function () {
       assert.strictEqual(client.protocol, 'mqtt')
     })
     mqtt.connect(makeOptions()).on('connect', function () {
-      this.end(true, done)
+      this.end(true, (err) => done(err))
     })
   })
 
@@ -125,7 +125,7 @@ describe('Websocket Client', function () {
       .on('connect', function () {
         assert.equal(this.stream.url, expected)
         assert.equal(actual, expected)
-        this.end(true, done)
+        this.end(true, (err) => done(err))
       })
   })
 
@@ -140,7 +140,7 @@ describe('Websocket Client', function () {
     })
 
     mqtt.connect(opts).on('connect', function () {
-      this.end(true, done)
+      this.end(true, (err) => done(err))
     })
   })
 
@@ -171,8 +171,11 @@ describe('Websocket Client', function () {
           assert.equal(client.stream.url, actualURL41, 'Protocol for second client should use the default protocol: wss, on port: port + 41.')
           assert(serverPort42Connected)
           c.stream.destroy()
-          client.end(true, done)
-          serverPort41.close()
+          client.end(true, (err1) => {
+            serverPort41.close((err2) => {
+              done(err1 || err2)
+            })
+          })
         })
         serverPort42.once('client', function (c) {
           serverPort42Connected = true
