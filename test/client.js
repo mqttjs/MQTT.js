@@ -148,7 +148,7 @@ describe('MqttClient', function () {
   describe('flushing', function () {
     it('should attempt to complete pending unsub and send on ping timeout', function (done) {
       this.timeout(10000)
-      const server3 = new MqttServer(function (serverClient) {
+      const server2 = new MqttServer(function (serverClient) {
         serverClient.on('connect', function (packet) {
           serverClient.connack({ returnCode: 0 })
         })
@@ -173,10 +173,11 @@ describe('MqttClient', function () {
           unsubscribeCallbackCalled = true
         })
         setTimeout(() => {
-          client.end((err) => {
+          client.end((err1) => {
             assert.strictEqual(pubCallbackCalled && unsubscribeCallbackCalled, true, 'callbacks not invoked')
-            server3.close()
-            done(err)
+            server2.close((err2) => {
+              done(err1 || err2)
+            })
           })
         }, 5000)
       })
