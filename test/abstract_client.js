@@ -643,8 +643,8 @@ module.exports = function (server, config) {
           clean: false,
           clientId: 'cid1',
           reconnectPeriod: 0,
-          incomingStore: incomingStore,
-          outgoingStore: outgoingStore,
+          incomingStore,
+          outgoingStore,
           queueQoSZero: true
         })
         client.on('packetreceive', function (packet) {
@@ -705,8 +705,8 @@ module.exports = function (server, config) {
         clean: false,
         clientId: 'cid1',
         reconnectPeriod: 0,
-        incomingStore: incomingStore,
-        outgoingStore: outgoingStore,
+        incomingStore,
+        outgoingStore,
         queueQoSZero: true
       }
 
@@ -1129,7 +1129,7 @@ module.exports = function (server, config) {
               messageId: i,
               topic: 'test',
               payload: 'test' + i,
-              qos: qos
+              qos
             })
           }
         })
@@ -1343,15 +1343,15 @@ module.exports = function (server, config) {
         client.subscribe(topic, { qos: 2 })
 
         store.put({
-          messageId: messageId,
-          topic: topic,
-          payload: payload,
-          qos: qos,
+          messageId,
+          topic,
+          payload,
+          qos,
           cmd: 'publish'
         }, function () {
           // cleans up the client
           client._sendPacket = sinon.spy()
-          client._handlePubrel({ cmd: 'pubrel', messageId: messageId }, function (err) {
+          client._handlePubrel({ cmd: 'pubrel', messageId }, function (err) {
             assert.exists(err)
             assert.strictEqual(client._sendPacket.callCount, 0)
             client.end(true, done)
@@ -1378,14 +1378,14 @@ module.exports = function (server, config) {
         client.subscribe(topic, { qos: 2 })
 
         store.put({
-          messageId: messageId,
-          topic: topic,
-          payload: payload,
-          qos: qos,
+          messageId,
+          topic,
+          payload,
+          qos,
           cmd: 'publish'
         }, function () {
           try {
-            client._handlePubrel({ cmd: 'pubrel', messageId: messageId })
+            client._handlePubrel({ cmd: 'pubrel', messageId })
             client.end(true, done)
           } catch (err) {
             client.end(true, () => { done(err) })
@@ -1437,8 +1437,8 @@ module.exports = function (server, config) {
           clean: false,
           clientId: 'cid1',
           reconnectPeriod: 0,
-          incomingStore: incomingStore,
-          outgoingStore: outgoingStore
+          incomingStore,
+          outgoingStore
         })
 
         client.on('connect', function () {
@@ -1454,8 +1454,8 @@ module.exports = function (server, config) {
           if (!reconnect) {
             client.reconnect({
               clean: false,
-              incomingStore: incomingStore,
-              outgoingStore: outgoingStore
+              incomingStore,
+              outgoingStore
             })
             reconnect = true
           }
@@ -1465,7 +1465,7 @@ module.exports = function (server, config) {
 
     function testCallbackStorePutByQoS (qos, clean, expected, done) {
       const client = connect({
-        clean: clean,
+        clean,
         clientId: 'testId'
       })
 
@@ -1476,7 +1476,7 @@ module.exports = function (server, config) {
       }
 
       client.on('connect', function () {
-        client.publish('test', 'test', { qos: qos, cbStorePut: cbStorePut }, function (err) {
+        client.publish('test', 'test', { qos, cbStorePut }, function (err) {
           if (err) done(err)
           callbacks.push('publish')
           assert.deepEqual(callbacks, expected)
@@ -1793,7 +1793,7 @@ module.exports = function (server, config) {
       server.once('client', function (serverClient) {
         serverClient.once('subscribe', function (packet) {
           const result = {
-            topic: topic,
+            topic,
             qos: 0
           }
           if (version === 5) {
@@ -1912,7 +1912,7 @@ module.exports = function (server, config) {
       server.once('client', function (serverClient) {
         serverClient.once('subscribe', function (packet) {
           const expected = [{
-            topic: topic,
+            topic,
             qos: 1
           }]
 
@@ -1940,7 +1940,7 @@ module.exports = function (server, config) {
       server.once('client', function (serverClient) {
         serverClient.once('subscribe', function (packet) {
           const result = {
-            topic: topic,
+            topic,
             qos: defaultOpts.qos
           }
           if (version === 5) {
@@ -2019,7 +2019,7 @@ module.exports = function (server, config) {
       server.once('client', function (serverClient) {
         serverClient.once('subscribe', function (packet) {
           const result = {
-            topic: topic,
+            topic,
             qos: 0
           }
           if (version === 5) {
@@ -2864,8 +2864,8 @@ module.exports = function (server, config) {
         serverClient.on('pubrec', function (packet) {
           client.end(false, function () {
             client.reconnect({
-              incomingStore: incomingStore,
-              outgoingStore: outgoingStore
+              incomingStore,
+              outgoingStore
             })
           })
         })
@@ -2883,8 +2883,8 @@ module.exports = function (server, config) {
           clean: false,
           clientId: 'cid1',
           reconnectPeriod: 0,
-          incomingStore: incomingStore,
-          outgoingStore: outgoingStore
+          incomingStore,
+          outgoingStore
         })
 
         client.on('connect', function () {
@@ -2971,8 +2971,8 @@ module.exports = function (server, config) {
           } else {
             client.end(true, () => {
               client.reconnect({
-                incomingStore: incomingStore,
-                outgoingStore: outgoingStore
+                incomingStore,
+                outgoingStore
               })
               reconnect = true
             })
@@ -2987,8 +2987,8 @@ module.exports = function (server, config) {
           clean: false,
           clientId: 'cid1',
           reconnectPeriod: 0,
-          incomingStore: incomingStore,
-          outgoingStore: outgoingStore
+          incomingStore,
+          outgoingStore
         })
 
         client.on('connect', function () {
@@ -3018,8 +3018,8 @@ module.exports = function (server, config) {
           } else {
             client.end(true, function () {
               client.reconnect({
-                incomingStore: incomingStore,
-                outgoingStore: outgoingStore
+                incomingStore,
+                outgoingStore
               })
               reconnect = true
             })
@@ -3034,8 +3034,8 @@ module.exports = function (server, config) {
           clean: false,
           clientId: 'cid1',
           reconnectPeriod: 0,
-          incomingStore: incomingStore,
-          outgoingStore: outgoingStore
+          incomingStore,
+          outgoingStore
         })
 
         client.on('connect', function () {
@@ -3068,8 +3068,8 @@ module.exports = function (server, config) {
           } else {
             client.end(true, function () {
               client.reconnect({
-                incomingStore: incomingStore,
-                outgoingStore: outgoingStore
+                incomingStore,
+                outgoingStore
               })
               reconnect = true
             })
@@ -3084,8 +3084,8 @@ module.exports = function (server, config) {
           clean: false,
           clientId: 'cid1',
           reconnectPeriod: 0,
-          incomingStore: incomingStore,
-          outgoingStore: outgoingStore
+          incomingStore,
+          outgoingStore
         })
 
         client.on('connect', function () {
@@ -3141,8 +3141,8 @@ module.exports = function (server, config) {
               client.end(true, function () {
                 reconnect = true
                 client.reconnect({
-                  incomingStore: incomingStore,
-                  outgoingStore: outgoingStore
+                  incomingStore,
+                  outgoingStore
                 })
               })
               disconnectOnce = false
@@ -3158,8 +3158,8 @@ module.exports = function (server, config) {
           clean: false,
           clientId: 'cid1',
           reconnectPeriod: 0,
-          incomingStore: incomingStore,
-          outgoingStore: outgoingStore
+          incomingStore,
+          outgoingStore
         })
 
         client.nextId = 65535

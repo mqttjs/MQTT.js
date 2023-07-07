@@ -82,7 +82,7 @@ const handleClient = function (client) {
       client.subscriptions.push(reg)
     }
 
-    client.suback({ messageId: packet.messageId, granted: granted })
+    client.suback({ messageId: packet.messageId, granted })
   })
 
   client.on('unsubscribe', function (packet) {
@@ -96,7 +96,7 @@ const handleClient = function (client) {
 
 function start (startPort, done) {
   const server = http.createServer()
-  const wss = new WebSocketServer({ server: server })
+  const wss = new WebSocketServer({ server })
 
   wss.on('connection', function (ws) {
     if (!(ws.protocol === 'mqtt' ||

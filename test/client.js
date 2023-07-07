@@ -254,8 +254,8 @@ describe('MqttClient', function () {
         client = mqtt.connect({
           port: ports.PORTAND44,
           host: 'localhost',
-          connectTimeout: connectTimeout,
-          reconnectPeriod: reconnectPeriod
+          connectTimeout,
+          reconnectPeriod
         })
 
         client.on('reconnect', function () {

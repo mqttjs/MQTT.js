@@ -126,7 +126,7 @@ function serverBuilder (protocol, handler) {
   } else if (
     protocol === 'ws') {
     const attachWebsocketServer = function (server) {
-      const webSocketServer = new WebSocket.Server({ server: server, perMessageDeflate: false })
+      const webSocketServer = new WebSocket.Server({ server, perMessageDeflate: false })
 
       webSocketServer.on('connection', function (ws) {
         const stream = WebSocket.createWebSocketStream(ws)
