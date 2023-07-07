@@ -34,7 +34,7 @@ test('MQTT.js browser test', function (t) {
 
     client.subscribe('hello', function (err) {
       t.error(err, 'no error on subscribe')
-      if(!err) {
+      if (!err) {
         client.publish('hello', 'Hello World!', function (err) {
           t.error(err, 'no error on publish')
         })
