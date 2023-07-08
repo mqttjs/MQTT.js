@@ -1,7 +1,7 @@
 'use strict'
 
 const test = require('tape')
-const mqtt = require('../../lib/connect')
+const mqtt = require('../../dist/mqtt.min')
 const _URL = require('url')
 // eslint-disable-next-line
 const parsed = _URL.parse(document.URL)
@@ -22,7 +22,7 @@ client.on('reconnect', function () {
 })
 
 test('MQTT.js browser test', function (t) {
-  t.plan(4)
+  t.plan(6)
   client.on('connect', function () {
     client.on('message', function (topic, msg) {
       t.equal(topic, 'hello', 'should match topic')
@@ -31,9 +31,21 @@ test('MQTT.js browser test', function (t) {
         t.pass('client should close')
       })
     })
-    client.subscribe('hello', function () {
-    }).publish('hello', 'Hello World!')
+
+    client.subscribe('hello', function (err) {
+      t.error(err, 'no error on subscribe')
+      if (!err) {
+        client.publish('hello', 'Hello World!', function (err) {
+          t.error(err, 'no error on publish')
+        })
+      }
+    })
   })
+
+  client.on('error', function (err) {
+    t.fail(err, 'no error')
+  })
+
   client.once('close', function () {
     t.pass('should emit close')
   })
