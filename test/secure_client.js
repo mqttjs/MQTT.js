@@ -76,14 +76,14 @@ const server = new MqttSecureServer({
 }, serverListener).listen(port)
 
 describe('MqttSecureClient', function () {
-  const config = { protocol: 'mqtts', port: port, rejectUnauthorized: false }
+  const config = { protocol: 'mqtts', port, rejectUnauthorized: false }
   abstractClientTests(server, config)
 
   describe('with secure parameters', function () {
     it('should validate successfully the CA', function (done) {
       const client = mqtt.connect({
         protocol: 'mqtts',
-        port: port,
+        port,
         ca: [fs.readFileSync(CERT)],
         rejectUnauthorized: true
       })
@@ -130,7 +130,7 @@ describe('MqttSecureClient', function () {
     it('should validate unsuccessfully the CA', function (done) {
       const client = mqtt.connect({
         protocol: 'mqtts',
-        port: port,
+        port,
         ca: [fs.readFileSync(WRONG_CERT)],
         rejectUnauthorized: true
       })
@@ -144,7 +144,7 @@ describe('MqttSecureClient', function () {
     it('should emit close on TLS error', function (done) {
       const client = mqtt.connect({
         protocol: 'mqtts',
-        port: port,
+        port,
         ca: [fs.readFileSync(WRONG_CERT)],
         rejectUnauthorized: true
       })
@@ -166,7 +166,7 @@ describe('MqttSecureClient', function () {
       const hostname = 'localhost'
       const client = mqtt.connect({
         protocol: 'mqtts',
-        port: port,
+        port,
         ca: [fs.readFileSync(CERT)],
         rejectUnauthorized: true,
         host: hostname

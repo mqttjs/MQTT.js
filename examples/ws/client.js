@@ -15,7 +15,7 @@ const host = 'ws://localhost:8080'
 
 const options = {
   keepalive: 30,
-  clientId: clientId,
+  clientId,
   protocolId: 'MQTT',
   protocolVersion: 4,
   clean: true,

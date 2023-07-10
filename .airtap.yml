@@ -1,0 +1,8 @@
+providers:
+  - airtap-playwright
+ui: mocha-bdd
+browsers:
+  - name: chromium
+    supports:
+      headless: true
+
