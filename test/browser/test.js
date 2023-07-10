@@ -10,7 +10,7 @@ const port = parsed.port || (isHttps ? 443 : 80)
 const host = parsed.hostname
 const protocol = isHttps ? 'wss' : 'ws'
 
-const client = mqtt.connect({ protocolId: 'MQIsdp', protocolVersion: 3, protocol: protocol, port: port, host: host })
+const client = mqtt.connect({ protocolId: 'MQIsdp', protocolVersion: 3, protocol, port, host })
 client.on('offline', function () {
   console.log('client offline')
 })
@@ -22,7 +22,7 @@ client.on('reconnect', function () {
 })
 
 test('MQTT.js browser test', function (t) {
-  t.plan(4)
+  t.plan(6)
   client.on('connect', function () {
     client.on('message', function (topic, msg) {
       t.equal(topic, 'hello', 'should match topic')
@@ -31,9 +31,21 @@ test('MQTT.js browser test', function (t) {
         t.pass('client should close')
       })
     })
-    client.subscribe('hello', function () {
-    }).publish('hello', 'Hello World!')
+
+    client.subscribe('hello', function (err) {
+      t.error(err, 'no error on subscribe')
+      if (!err) {
+        client.publish('hello', 'Hello World!', function (err) {
+          t.error(err, 'no error on publish')
+        })
+      }
+    })
   })
+
+  client.on('error', function (err) {
+    t.fail(err, 'no error')
+  })
+
   client.once('close', function () {
     t.pass('should emit close')
   })

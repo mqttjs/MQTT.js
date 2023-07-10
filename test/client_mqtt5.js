@@ -26,7 +26,7 @@ describe('MQTT 5.0', function () {
     }
     const client = mqtt.connect(opts)
     let publishCount = 0
-    const server103 = new MqttServer(function (serverClient) {
+    const server2 = new MqttServer(function (serverClient) {
       serverClient.on('connect', function (packet) {
         assert.strictEqual(packet.properties.topicAliasMaximum, 3)
         serverClient.connack({
@@ -88,8 +88,11 @@ describe('MQTT 5.0', function () {
           assert.strictEqual(topic, 'test2')
           assert.strictEqual(packet.topic, '')
           assert.strictEqual(packet.properties.topicAlias, 1)
-          server103.close()
-          client.end(true, done)
+          client.end(true, (err1) => {
+            server2.close((err2) => {
+              done(err1 || err2)
+            })
+          })
           break
       }
     })
@@ -107,7 +110,7 @@ describe('MQTT 5.0', function () {
     const client = mqtt.connect(opts)
 
     let publishCount = 0
-    const server103 = new MqttServer(function (serverClient) {
+    const server2 = new MqttServer(function (serverClient) {
       serverClient.on('connect', function (packet) {
         serverClient.connack({
           reasonCode: 0,
@@ -129,8 +132,11 @@ describe('MQTT 5.0', function () {
           case 2:
             assert.strictEqual(packet.topic, '')
             assert.strictEqual(packet.properties.topicAlias, 1)
-            server103.close()
-            client.end(true, done)
+            client.end(true, (err1) => {
+              server2.close((err2) => {
+                done(err1 || err2)
+              })
+            })
             break
         }
       })
@@ -158,7 +164,7 @@ describe('MQTT 5.0', function () {
     const client = mqtt.connect(opts)
 
     let publishCount = 0
-    const server103 = new MqttServer(function (serverClient) {
+    const server2 = new MqttServer(function (serverClient) {
       serverClient.on('connect', function (packet) {
         serverClient.connack({
           reasonCode: 0,
@@ -192,8 +198,11 @@ describe('MQTT 5.0', function () {
           case 5:
             assert.strictEqual(packet.topic, 'test4')
             assert.strictEqual(packet.properties.topicAlias, 2)
-            server103.close()
-            client.end(true, done)
+            client.end(true, (err1) => {
+              server2.close((err2) => {
+                done(err1 || err2)
+              })
+            })
             break
         }
       })
@@ -224,8 +233,8 @@ describe('MQTT 5.0', function () {
       port: ports.PORTAND103,
       protocolVersion: 5,
       clientId: 'cid1',
-      incomingStore: incomingStore,
-      outgoingStore: outgoingStore,
+      incomingStore,
+      outgoingStore,
       clean: false,
       reconnectPeriod: 100
     }
@@ -233,7 +242,7 @@ describe('MQTT 5.0', function () {
 
     let connectCount = 0
     let publishCount = 0
-    const server103 = new MqttServer(function (serverClient) {
+    const server2 = new MqttServer(function (serverClient) {
       serverClient.on('connect', function (packet) {
         switch (connectCount++) {
           case 0:
@@ -287,8 +296,11 @@ describe('MQTT 5.0', function () {
             }
             assert.strictEqual(alias2, undefined)
             serverClient.puback({ messageId: packet.messageId })
-            server103.close()
-            client.end(true, done)
+            client.end(true, (err1) => {
+              server2.close((err2) => {
+                done(err1 || err2)
+              })
+            })
             break
           }
         }
@@ -313,8 +325,8 @@ describe('MQTT 5.0', function () {
       port: ports.PORTAND103,
       protocolVersion: 5,
       clientId: 'cid1',
-      incomingStore: incomingStore,
-      outgoingStore: outgoingStore,
+      incomingStore,
+      outgoingStore,
       clean: false,
       reconnectPeriod: 100
     }
@@ -322,7 +334,7 @@ describe('MQTT 5.0', function () {
 
     let connectCount = 0
     let publishCount = 0
-    const server103 = new MqttServer(function (serverClient) {
+    const server2 = new MqttServer(function (serverClient) {
       serverClient.on('connect', function (packet) {
         switch (connectCount++) {
           case 0:
@@ -379,8 +391,11 @@ describe('MQTT 5.0', function () {
             }
             assert.strictEqual(alias3, undefined)
             assert.strictEqual(packet.qos, 0)
-            server103.close()
-            client.end(true, done)
+            client.end(true, (err1) => {
+              server2.close((err2) => {
+                done(err1 || err2)
+              })
+            })
             break
           }
         }
@@ -405,7 +420,7 @@ describe('MQTT 5.0', function () {
       protocolVersion: 5
     }
     const client = mqtt.connect(opts)
-    const server103 = new MqttServer(function (serverClient) {
+    const server2 = new MqttServer(function (serverClient) {
       serverClient.on('connect', function (packet) {
         serverClient.connack({
           reasonCode: 0,
@@ -425,8 +440,11 @@ describe('MQTT 5.0', function () {
         { properties: { topicAlias: 4 } },
         function (error) {
           assert.strictEqual(error.message, 'Sending Topic Alias out of range')
-          server103.close()
-          client.end(true, done)
+          client.end(true, (err1) => {
+            server2.close((err2) => {
+              done(err1 || err2)
+            })
+          })
         })
     })
   })
@@ -440,7 +458,7 @@ describe('MQTT 5.0', function () {
       protocolVersion: 5
     }
     const client = mqtt.connect(opts)
-    const server103 = new MqttServer(function (serverClient) {
+    const server2 = new MqttServer(function (serverClient) {
       serverClient.on('connect', function (packet) {
         serverClient.connack({
           reasonCode: 0,
@@ -457,8 +475,11 @@ describe('MQTT 5.0', function () {
         { properties: { topicAlias: 1 } },
         function (error) {
           assert.strictEqual(error.message, 'Sending Topic Alias out of range')
-          server103.close()
-          client.end(true, done)
+          client.end(true, (err1) => {
+            server2.close((err2) => {
+              done(err1 || err2)
+            })
+          })
         })
     })
   })
@@ -475,7 +496,7 @@ describe('MQTT 5.0', function () {
       }
     }
     const client = mqtt.connect(opts)
-    const server103 = new MqttServer(function (serverClient) {
+    const server2 = new MqttServer(function (serverClient) {
       serverClient.on('connect', function (packet) {
         serverClient.connack({
           reasonCode: 0,
@@ -494,8 +515,11 @@ describe('MQTT 5.0', function () {
 
     client.on('error', function (error) {
       assert.strictEqual(error.message, 'Received Topic Alias is out of range')
-      server103.close()
-      client.end(true, done)
+      client.end(true, (err1) => {
+        server2.close((err2) => {
+          done(err1 || err2)
+        })
+      })
     })
   })
 
@@ -511,7 +535,7 @@ describe('MQTT 5.0', function () {
       }
     }
     const client = mqtt.connect(opts)
-    const server103 = new MqttServer(function (serverClient) {
+    const server2 = new MqttServer(function (serverClient) {
       serverClient.on('connect', function (packet) {
         serverClient.connack({
           reasonCode: 0,
@@ -530,8 +554,11 @@ describe('MQTT 5.0', function () {
 
     client.on('error', function (error) {
       assert.strictEqual(error.message, 'Received Topic Alias is out of range')
-      server103.close()
-      client.end(true, done)
+      client.end(true, (err1) => {
+        server2.close((err2) => {
+          done(err1 || err2)
+        })
+      })
     })
   })
 
@@ -547,7 +574,7 @@ describe('MQTT 5.0', function () {
       }
     }
     const client = mqtt.connect(opts)
-    const server103 = new MqttServer(function (serverClient) {
+    const server2 = new MqttServer(function (serverClient) {
       serverClient.on('connect', function (packet) {
         serverClient.connack({
           reasonCode: 0,
@@ -566,8 +593,11 @@ describe('MQTT 5.0', function () {
 
     client.on('error', function (error) {
       assert.strictEqual(error.message, 'Received unregistered Topic Alias')
-      server103.close()
-      client.end(true, done)
+      client.end(true, (err1) => {
+        server2.close((err2) => {
+          done(err1 || err2)
+        })
+      })
     })
   })
 
@@ -611,7 +641,7 @@ describe('MQTT 5.0', function () {
 
   it('Change values of some properties by server response', function (done) {
     this.timeout(15000)
-    const server116 = new MqttServer(function (serverClient) {
+    const server2 = new MqttServer(function (serverClient) {
       serverClient.on('connect', function (packet) {
         serverClient.connack({
           reasonCode: 0,
@@ -636,8 +666,11 @@ describe('MQTT 5.0', function () {
     client.on('connect', function () {
       assert.strictEqual(client.options.keepalive, 16)
       assert.strictEqual(client.options.properties.maximumPacketSize, 95)
-      server116.close()
-      client.end(true, done)
+      client.end(true, (err1) => {
+        server2.close((err2) => {
+          done(err1 || err2)
+        })
+      })
     })
   })
 
@@ -645,7 +678,7 @@ describe('MQTT 5.0', function () {
     this.timeout(15000)
     let tryReconnect = true
     let reconnectEvent = false
-    const server316 = new MqttServer(function (serverClient) {
+    const server2 = new MqttServer(function (serverClient) {
       serverClient.on('connect', function (packet) {
         serverClient.connack({
           reasonCode: 0,
@@ -653,8 +686,11 @@ describe('MQTT 5.0', function () {
         })
         serverClient.on('subscribe', function () {
           if (!tryReconnect) {
-            server316.close()
-            serverClient.end(done)
+            client.end(true, (err1) => {
+              server2.close((err2) => {
+                done(err1 || err2)
+              })
+            })
           }
         })
       })
@@ -688,7 +724,7 @@ describe('MQTT 5.0', function () {
     // this.timeout(15000)
     let tryReconnect = true
     let reconnectEvent = false
-    const server326 = new MqttServer(function (serverClient) {
+    const server2 = new MqttServer(function (serverClient) {
       serverClient.on('connect', function (packet) {
         serverClient.connack({
           reasonCode: 0,
@@ -706,8 +742,11 @@ describe('MQTT 5.0', function () {
         } else {
           if (!tryReconnect) {
             assert.strictEqual(packet.properties.userProperties.test, 'test')
-            serverClient.end(done)
-            server326.close()
+            client.end(true, (err1) => {
+              server2.close((err2) => {
+                done(err1 || err2)
+              })
+            })
           }
         }
       })
@@ -778,7 +817,7 @@ describe('MQTT 5.0', function () {
       protocolVersion: 5
     }
     const subOptions = { properties: { subscriptionIdentifier: 1234 } }
-    const server119 = new MqttServer(function (serverClient) {
+    const server2 = new MqttServer(function (serverClient) {
       serverClient.on('connect', function (packet) {
         serverClient.connack({
           reasonCode: 0
@@ -786,9 +825,11 @@ describe('MQTT 5.0', function () {
       })
       serverClient.on('subscribe', function (packet) {
         assert.strictEqual(packet.properties.subscriptionIdentifier, subOptions.properties.subscriptionIdentifier)
-        server119.close()
-        serverClient.end()
-        done()
+        client.end(true, (err1) => {
+          server2.close((err2) => {
+            done(err1 || err2)
+          })
+        })
       })
     }).listen(ports.PORTAND119)
 
@@ -812,8 +853,11 @@ describe('MQTT 5.0', function () {
         assert.strictEqual(err.message, 'Publish error: Session taken over')
         assert.strictEqual(err.code, 142)
       })
-      serverThatSendsErrors.close()
-      client.end(true, done)
+      client.end(true, (err1) => {
+        serverThatSendsErrors.close((err2) => {
+          done(err1 || err2)
+        })
+      })
     })
   })
 
@@ -831,8 +875,11 @@ describe('MQTT 5.0', function () {
         assert.strictEqual(err.message, 'Publish error: Session taken over')
         assert.strictEqual(err.code, 142)
       })
-      serverThatSendsErrors.close()
-      client.end(true, done)
+      client.end(true, (err1) => {
+        serverThatSendsErrors.close((err2) => {
+          done(err1 || err2)
+        })
+      })
     })
   })
 
@@ -859,9 +906,11 @@ describe('MQTT 5.0', function () {
 
       serverClient.on('puback', function (packet) {
         assert.strictEqual(packet.reasonCode, 128)
-        serverClient.end(done)
-        serverClient.destroy()
-        serverThatSendsErrors.close()
+        client.end(true, (err1) => {
+          serverThatSendsErrors.close((err2) => {
+            done(err1 || err2)
+          })
+        })
       })
     })
 
@@ -873,16 +922,16 @@ describe('MQTT 5.0', function () {
 
   it('server side disconnect', function (done) {
     this.timeout(15000)
-    const server327 = new MqttServer(function (serverClient) {
+    const server2 = new MqttServer(function (serverClient) {
       serverClient.on('connect', function (packet) {
         serverClient.connack({
           reasonCode: 0
         })
         serverClient.disconnect({ reasonCode: 128 })
-        server327.close()
+        server2.close()
       })
     })
-    server327.listen(ports.PORTAND327)
+    server2.listen(ports.PORTAND327)
     const opts = {
       host: 'localhost',
       port: ports.PORTAND327,
@@ -892,7 +941,7 @@ describe('MQTT 5.0', function () {
     const client = mqtt.connect(opts)
     client.once('disconnect', function (disconnectPacket) {
       assert.strictEqual(disconnectPacket.reasonCode, 128)
-      client.end(true, done)
+      client.end(true, (err) => done(err))
     })
   })
 
@@ -919,9 +968,11 @@ describe('MQTT 5.0', function () {
 
       serverClient.on('pubrec', function (packet) {
         assert.strictEqual(packet.reasonCode, 128)
-        client.end(true, done)
-        serverClient.destroy()
-        serverThatSendsErrors.close()
+        client.end(true, (err1) => {
+          serverThatSendsErrors.close((err2) => {
+            done(err1 || err2)
+          })
+        })
       })
     })
 
@@ -956,8 +1007,11 @@ describe('MQTT 5.0', function () {
     const client = mqtt.connect(opts)
     client.on('error', function (error) {
       assert.strictEqual(error.message, 'a/b is not valid')
-      client.end(true, done)
-      serverThatSendsErrors.close()
+      client.end(true, (err1) => {
+        serverThatSendsErrors.close((err2) => {
+          done(err1 || err2)
+        })
+      })
     })
     client.once('connect', function () {
       client.subscribe('a/b', { qos: 1 })
@@ -989,8 +1043,11 @@ describe('MQTT 5.0', function () {
     const client = mqtt.connect(opts)
     client.on('error', function (error) {
       assert.strictEqual(error.message, 'a/b is not valid')
-      client.end(true, done)
-      serverThatSendsErrors.close()
+      client.end(true, (err1) => {
+        serverThatSendsErrors.close((err2) => {
+          done(err1 || err2)
+        })
+      })
     })
     client.once('connect', function () {
       client.subscribe('a/b', { qos: 1 })
@@ -1022,8 +1079,11 @@ describe('MQTT 5.0', function () {
     const client = mqtt.connect(opts)
     client.on('error', function (error) {
       assert.strictEqual(error.message, 'Wrong reason code for puback')
-      client.end(true, done)
-      serverThatSendsErrors.close()
+      client.end(true, (err1) => {
+        serverThatSendsErrors.close((err2) => {
+          done(err1 || err2)
+        })
+      })
     })
     client.once('connect', function () {
       client.subscribe('a/b', { qos: 1 })
@@ -1055,8 +1115,11 @@ describe('MQTT 5.0', function () {
     const client = mqtt.connect(opts)
     client.on('error', function (error) {
       assert.strictEqual(error.message, 'Wrong reason code for pubrec')
-      client.end(true, done)
-      serverThatSendsErrors.close()
+      client.end(true, (err1) => {
+        serverThatSendsErrors.close((err2) => {
+          done(err1 || err2)
+        })
+      })
     })
     client.once('connect', function () {
       client.subscribe('a/b', { qos: 1 })

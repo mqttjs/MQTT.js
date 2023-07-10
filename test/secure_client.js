@@ -76,14 +76,14 @@ const server = new MqttSecureServer({
 }, serverListener).listen(port)
 
 describe('MqttSecureClient', function () {
-  const config = { protocol: 'mqtts', port: port, rejectUnauthorized: false }
+  const config = { protocol: 'mqtts', port, rejectUnauthorized: false }
   abstractClientTests(server, config)
 
   describe('with secure parameters', function () {
     it('should validate successfully the CA', function (done) {
       const client = mqtt.connect({
         protocol: 'mqtts',
-        port: port,
+        port,
         ca: [fs.readFileSync(CERT)],
         rejectUnauthorized: true
       })
@@ -130,31 +130,29 @@ describe('MqttSecureClient', function () {
     it('should validate unsuccessfully the CA', function (done) {
       const client = mqtt.connect({
         protocol: 'mqtts',
-        port: port,
+        port,
         ca: [fs.readFileSync(WRONG_CERT)],
         rejectUnauthorized: true
       })
 
-      client.once('error', function () {
-        done()
-        client.end()
-        client.on('error', function () {})
+      client.once('error', function (err) {
+        err.should.be.instanceOf(Error)
+        client.end((err) => done(err))
       })
     })
 
     it('should emit close on TLS error', function (done) {
       const client = mqtt.connect({
         protocol: 'mqtts',
-        port: port,
+        port,
         ca: [fs.readFileSync(WRONG_CERT)],
         rejectUnauthorized: true
       })
 
       client.on('error', function () {})
 
-      // TODO node v0.8.x emits multiple close events
       client.once('close', function () {
-        done()
+        client.end((err) => done(err))
       })
     })
 
@@ -168,7 +166,7 @@ describe('MqttSecureClient', function () {
       const hostname = 'localhost'
       const client = mqtt.connect({
         protocol: 'mqtts',
-        port: port,
+        port,
         ca: [fs.readFileSync(CERT)],
         rejectUnauthorized: true,
         host: hostname
@@ -180,7 +178,7 @@ describe('MqttSecureClient', function () {
 
       server.once('connect', function () {
         server.on('secureConnection', server.setupConnection) // reset eventHandler
-        done()
+        client.end((err) => done(err))
       })
     })
   })
