@@ -21,7 +21,7 @@ const proxyOpts = url.parse(proxy)
 proxyOpts.secureEndpoint = parsed.protocol ? parsed.protocol === 'wss:' : true
 const agent = new HttpsProxyAgent(proxyOpts)
 const wsOptions = {
-  agent: agent
+  agent
   // other wsOptions
   // foo:'bar'
 }
@@ -34,7 +34,7 @@ const mqttOptions = {
   connectTimeout: 30 * 1000,
   clean: true,
   clientId: 'testClient',
-  wsOptions: wsOptions
+  wsOptions
 }
 
 const client = mqtt.connect(parsed, mqttOptions)

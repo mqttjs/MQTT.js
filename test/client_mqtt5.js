@@ -224,8 +224,8 @@ describe('MQTT 5.0', function () {
       port: ports.PORTAND103,
       protocolVersion: 5,
       clientId: 'cid1',
-      incomingStore: incomingStore,
-      outgoingStore: outgoingStore,
+      incomingStore,
+      outgoingStore,
       clean: false,
       reconnectPeriod: 100
     }
@@ -313,8 +313,8 @@ describe('MQTT 5.0', function () {
       port: ports.PORTAND103,
       protocolVersion: 5,
       clientId: 'cid1',
-      incomingStore: incomingStore,
-      outgoingStore: outgoingStore,
+      incomingStore,
+      outgoingStore,
       clean: false,
       reconnectPeriod: 100
     }

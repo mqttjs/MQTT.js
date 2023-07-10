@@ -87,7 +87,7 @@ attachWebsocketServer(httpServer)
 httpServer.on('client', attachClientEventHandlers).listen(port)
 
 describe('Websocket Client', function () {
-  const baseConfig = { protocol: 'ws', port: port }
+  const baseConfig = { protocol: 'ws', port }
 
   function makeOptions (custom) {
     // xtend returns a new object. Does not mutate arguments
