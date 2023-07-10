@@ -42,5 +42,12 @@ jobs:
       env:
         CI: true
         DEBUG: "mqttjs"
+    
+    - name: Test Browser
+      timeout-minutes: 2
+      run: |
+        npm run browser-build
+        npm run unit-test:browser
+  
 
 

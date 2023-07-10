@@ -113,6 +113,7 @@
     "@types/ws": "^8.5.5",
     "aedes": "^0.49.0",
     "airtap": "^4.0.4",
+    "airtap-playwright": "^1.0.1",
     "browserify": "^17.0.0",
     "chai": "^4.3.7",
     "chokidar": "^3.5.3",
