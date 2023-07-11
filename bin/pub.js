@@ -3,11 +3,10 @@
 'use strict'
 
 const mqtt = require('../')
-const pump = require('pump')
+const { pipeline, Writable } = require('readable-stream')
 const path = require('path')
 const fs = require('fs')
 const concat = require('concat-stream')
-const Writable = require('readable-stream').Writable
 const helpMe = require('help-me')({
   dir: path.join(__dirname, '..', 'doc')
 })
@@ -40,7 +39,7 @@ function multisend (args) {
   }
 
   client.on('connect', function () {
-    pump(process.stdin, split2(), sender, function (err) {
+    pipeline(process.stdin, split2(), sender, function (err) {
       client.end()
       if (err) {
         throw err
