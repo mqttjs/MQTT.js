@@ -37,7 +37,7 @@ const levelStore = require('mqtt-level-store')
 module.exports = function (server, config) {
   const version = config.protocolVersion || 4
 
-  function connect(opts) {
+  function connect (opts) {
     opts = { ...config, ...opts }
     return mqtt.connect(opts)
   }
@@ -825,7 +825,7 @@ module.exports = function (server, config) {
 
       server.on('client', onClient)
 
-      function onClient(serverClient) {
+      function onClient (serverClient) {
         serverClient.once('connect', function () {
           server.removeListener('client', onClient)
         })
@@ -851,7 +851,7 @@ module.exports = function (server, config) {
 
       server.on('client', onClient)
 
-      function onClient(serverClient) {
+      function onClient (serverClient) {
         serverClient.once('connect', function () {
           server.removeListener('client', onClient)
         })
@@ -1050,7 +1050,7 @@ module.exports = function (server, config) {
       let countSent = 0
       let countReceived = 0
 
-      function publishNext() {
+      function publishNext () {
         client.publish('test', 'test', { qos: 2 }, function (err) {
           assert.ifError(err)
           countSent++
@@ -1087,7 +1087,7 @@ module.exports = function (server, config) {
       })
     })
 
-    function testQosHandleMessage(qos, done) {
+    function testQosHandleMessage (qos, done) {
       const client = connect()
 
       let messageEventCount = 0
@@ -1167,34 +1167,34 @@ module.exports = function (server, config) {
 
     it('should silently ignore errors thrown by `handleMessage` and return when no callback is passed ' +
       'into `handlePublish` method', function (done) {
-        const client = connect()
+      const client = connect()
 
-        client.handleMessage = function (packet, callback) {
-          callback(new Error('Error thrown by the application'))
-        }
+      client.handleMessage = function (packet, callback) {
+        callback(new Error('Error thrown by the application'))
+      }
 
-        try {
-          client._handlePublish({
-            messageId: Math.floor(65535 * Math.random()),
-            topic: 'test',
-            payload: 'test',
-            qos: 1
-          })
-          client.end(true, done)
-        } catch (err) {
-          client.end(true, () => { done(err) })
-        }
-      })
+      try {
+        client._handlePublish({
+          messageId: Math.floor(65535 * Math.random()),
+          topic: 'test',
+          payload: 'test',
+          qos: 1
+        })
+        client.end(true, done)
+      } catch (err) {
+        client.end(true, () => { done(err) })
+      }
+    })
 
     it('should handle error with async incoming store in QoS 1 `handlePublish` method', function (done) {
       class AsyncStore {
-        put(packet, cb) {
+        put (packet, cb) {
           process.nextTick(function () {
             cb(null, 'Error')
           })
         }
 
-        close(cb) {
+        close (cb) {
           cb()
         }
       }
@@ -1214,25 +1214,25 @@ module.exports = function (server, config) {
 
     it('should handle error with async incoming store in QoS 2 `handlePublish` method', function (done) {
       class AsyncStore {
-        put(packet, cb) {
+        put (packet, cb) {
           process.nextTick(function () {
             cb(null, 'Error')
           })
         }
 
-        del(packet, cb) {
+        del (packet, cb) {
           process.nextTick(function () {
             cb(new Error('Error'))
           })
         }
 
-        get(packet, cb) {
+        get (packet, cb) {
           process.nextTick(function () {
             cb(null, { cmd: 'publish' })
           })
         }
 
-        close(cb) {
+        close (cb) {
           cb()
         }
       }
@@ -1252,25 +1252,25 @@ module.exports = function (server, config) {
 
     it('should handle error with async incoming store in QoS 2 `handlePubrel` method', function (done) {
       class AsyncStore {
-        put(packet, cb) {
+        put (packet, cb) {
           process.nextTick(function () {
             cb(null, 'Error')
           })
         }
 
-        del(packet, cb) {
+        del (packet, cb) {
           process.nextTick(function () {
             cb(new Error('Error'))
           })
         }
 
-        get(packet, cb) {
+        get (packet, cb) {
           process.nextTick(function () {
             cb(null, { cmd: 'publish' })
           })
         }
 
-        close(cb) {
+        close (cb) {
           cb()
         }
       }
@@ -1289,26 +1289,26 @@ module.exports = function (server, config) {
     it('should handle success with async incoming store in QoS 2 `handlePubrel` method', function (done) {
       let delComplete = false
       class AsyncStore {
-        put(packet, cb) {
+        put (packet, cb) {
           process.nextTick(function () {
             cb(null, 'Error')
           })
         }
 
-        del(packet, cb) {
+        del (packet, cb) {
           process.nextTick(function () {
             delComplete = true
             cb(null)
           })
         }
 
-        get(packet, cb) {
+        get (packet, cb) {
           process.nextTick(function () {
             cb(null, { cmd: 'publish' })
           })
         }
 
-        close(cb) {
+        close (cb) {
           cb()
         }
       }
@@ -1361,37 +1361,37 @@ module.exports = function (server, config) {
 
     it('should silently ignore errors thrown by `handleMessage` and return when no callback is passed ' +
       'into `handlePubrel` method', function (done) {
-        const store = new Store()
-        const client = connect({ incomingStore: store })
+      const store = new Store()
+      const client = connect({ incomingStore: store })
 
-        const messageId = Math.floor(65535 * Math.random())
-        const topic = 'test'
-        const payload = 'test'
-        const qos = 2
+      const messageId = Math.floor(65535 * Math.random())
+      const topic = 'test'
+      const payload = 'test'
+      const qos = 2
 
-        client.handleMessage = function (packet, callback) {
-          callback(new Error('Error thrown by the application'))
-        }
+      client.handleMessage = function (packet, callback) {
+        callback(new Error('Error thrown by the application'))
+      }
 
-        client.once('connect', function () {
-          client.subscribe(topic, { qos: 2 })
+      client.once('connect', function () {
+        client.subscribe(topic, { qos: 2 })
 
-          store.put({
-            messageId,
-            topic,
-            payload,
-            qos,
-            cmd: 'publish'
-          }, function () {
-            try {
-              client._handlePubrel({ cmd: 'pubrel', messageId })
-              client.end(true, done)
-            } catch (err) {
-              client.end(true, () => { done(err) })
-            }
-          })
+        store.put({
+          messageId,
+          topic,
+          payload,
+          qos,
+          cmd: 'publish'
+        }, function () {
+          try {
+            client._handlePubrel({ cmd: 'pubrel', messageId })
+            client.end(true, done)
+          } catch (err) {
+            client.end(true, () => { done(err) })
+          }
         })
       })
+    })
 
     it('should keep message order', function (done) {
       let publishCount = 0
@@ -1462,7 +1462,7 @@ module.exports = function (server, config) {
       })
     })
 
-    function testCallbackStorePutByQoS(qos, clean, expected, done) {
+    function testCallbackStorePutByQoS (qos, clean, expected, done) {
       const client = connect({
         clean,
         clientId: 'testId'
@@ -1470,7 +1470,7 @@ module.exports = function (server, config) {
 
       const callbacks = []
 
-      function cbStorePut() {
+      function cbStorePut () {
         callbacks.push('storeput')
       }
 
@@ -2352,7 +2352,7 @@ module.exports = function (server, config) {
       })
     })
 
-    function testMultiplePubrel(shouldSendPubcompFail, done) {
+    function testMultiplePubrel (shouldSendPubcompFail, done) {
       const client = connect()
       const testTopic = 'test'
       const testMessage = 'message'
@@ -2390,34 +2390,34 @@ module.exports = function (server, config) {
           }
           case 'pubrec':
           case 'pubcomp':
-            {
-              // for both pubrec and pubcomp, reply with pubrel, simulating the server not receiving the pubcomp
-              if (packet.cmd === 'pubcomp') {
-                pubcompCount++
-                if (pubcompCount === 2) {
-                  // end the test once the client has gone through two rounds of replying to pubrel messages
-                  assert.strictEqual(pubrelCount, 2)
-                  assert.strictEqual(handleMessageCount, 1)
-                  assert.strictEqual(emitMessageCount, 1)
-                  client._sendPacket = origSendPacket
-                  client.end(true, done)
-                  break
-                }
+          {
+            // for both pubrec and pubcomp, reply with pubrel, simulating the server not receiving the pubcomp
+            if (packet.cmd === 'pubcomp') {
+              pubcompCount++
+              if (pubcompCount === 2) {
+                // end the test once the client has gone through two rounds of replying to pubrel messages
+                assert.strictEqual(pubrelCount, 2)
+                assert.strictEqual(handleMessageCount, 1)
+                assert.strictEqual(emitMessageCount, 1)
+                client._sendPacket = origSendPacket
+                client.end(true, done)
+                break
               }
-
-              // simulate the pubrel message, either in response to pubrec or to mock pubcomp failing to be received
-              const pubrel = { cmd: 'pubrel', messageId: mid }
-              pubrelCount++
-              client._handlePacket(pubrel, function (err) {
-                if (shouldSendFail) {
-                  assert.exists(err)
-                  assert.instanceOf(err, Error)
-                } else {
-                  assert.notExists(err)
-                }
-              })
-              break
             }
+
+            // simulate the pubrel message, either in response to pubrec or to mock pubcomp failing to be received
+            const pubrel = { cmd: 'pubrel', messageId: mid }
+            pubrelCount++
+            client._handlePacket(pubrel, function (err) {
+              if (shouldSendFail) {
+                assert.exists(err)
+                assert.instanceOf(err, Error)
+              } else {
+                assert.notExists(err)
+              }
+            })
+            break
+          }
         }
       }
 
@@ -2593,7 +2593,7 @@ module.exports = function (server, config) {
         check()
       })
 
-      function check() {
+      function check () {
         if (serverPublished && clientCalledBack) {
           client.end(true, done)
         }
@@ -2653,7 +2653,7 @@ module.exports = function (server, config) {
         check()
       })
 
-      function check() {
+      function check () {
         if (serverPublished && clientCalledBack) {
           client.end(true, done)
         }
