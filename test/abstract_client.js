@@ -6,7 +6,6 @@
 const should = require('chai').should
 const sinon = require('sinon')
 const mqtt = require('../')
-const xtend = require('xtend')
 const Store = require('./../lib/store')
 const assert = require('chai').assert
 const ports = require('./helpers/port_list')
@@ -39,7 +38,7 @@ module.exports = function (server, config) {
   const version = config.protocolVersion || 4
 
   function connect (opts) {
-    opts = xtend(config, opts)
+    opts = { ...config, ...opts }
     return mqtt.connect(opts)
   }
 
@@ -439,7 +438,7 @@ module.exports = function (server, config) {
       // fake a port
       const client = connect({ reconnectPeriod: 20, port: 4557 })
 
-      client.on('error', function () {})
+      client.on('error', function () { })
 
       client.on('offline', function () {
         client.end(true, done)
@@ -1403,7 +1402,7 @@ module.exports = function (server, config) {
       const server2 = serverBuilder(config.protocol, function (serverClient) {
         // errors are not interesting for this test
         // but they might happen on some platforms
-        serverClient.on('error', function () {})
+        serverClient.on('error', function () { })
 
         serverClient.on('connect', function (packet) {
           const connack = version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
@@ -1727,7 +1726,7 @@ module.exports = function (server, config) {
       const client = connect({ keepalive: 1, reconnectPeriod: 100 })
 
       // Fake no pingresp being send by stubbing the _handlePingresp function
-      client._handlePingresp = function () {}
+      client._handlePingresp = function () { }
 
       client.once('connect', function () {
         client.once('connect', function () {
@@ -2634,7 +2633,7 @@ module.exports = function (server, config) {
 
       server.once('client', function (serverClient) {
         // ignore errors
-        serverClient.on('error', function () {})
+        serverClient.on('error', function () { })
         serverClient.on('publish', function () {
           setImmediate(function () {
             serverClient.stream.destroy()
@@ -2996,7 +2995,7 @@ module.exports = function (server, config) {
             client.publish('topic', 'payload', { qos: 1 })
           }
         })
-        client.on('error', function () {})
+        client.on('error', function () { })
       })
     })
 
@@ -3043,7 +3042,7 @@ module.exports = function (server, config) {
             client.publish('topic', 'payload', { qos: 2 })
           }
         })
-        client.on('error', function () {})
+        client.on('error', function () { })
       })
     })
 
@@ -3099,7 +3098,7 @@ module.exports = function (server, config) {
             })
           }
         })
-        client.on('error', function () {})
+        client.on('error', function () { })
       })
     })
 
@@ -3113,7 +3112,7 @@ module.exports = function (server, config) {
       const server2 = serverBuilder(config.protocol, function (serverClient) {
         // errors are not interesting for this test
         // but they might happen on some platforms
-        serverClient.on('error', function () {})
+        serverClient.on('error', function () { })
 
         serverClient.on('connect', function (packet) {
           const connack = version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
@@ -3171,7 +3170,7 @@ module.exports = function (server, config) {
             client.publish('topic', 'payload3', { qos: 1 })
           }
         })
-        client.on('error', function () {})
+        client.on('error', function () { })
       })
     })
 

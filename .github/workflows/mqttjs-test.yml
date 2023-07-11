@@ -44,6 +44,8 @@ jobs:
         DEBUG: "mqttjs"
     
     - name: Test Browser
+      if: matrix.node-version == '20.x'
+      # only run on latest node version, no reason to run on all
       timeout-minutes: 2
       run: |
         npm run browser-build

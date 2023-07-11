@@ -32,9 +32,9 @@ describe('MqttClient', function () {
   abstractClientTests(server, config)
 
   describe('creating', function () {
-    it('should allow instantiation of MqttClient without the \'new\' operator', function (done) {
+    it('should allow instantiation of MqttClient', function (done) {
       try {
-        client = mqtt.MqttClient(function () {
+        client = new mqtt.MqttClient(function () {
           throw Error('break')
         }, {})
         client.end()
@@ -47,7 +47,7 @@ describe('MqttClient', function () {
     it('should disable number cache if specified in options', function (done) {
       try {
         assert.isTrue(mqttPacket.writeToStream.cacheNumbers)
-        client = mqtt.MqttClient(function () {
+        client = new mqtt.MqttClient(function () {
           throw Error('break')
         }, { writeCache: false })
         client.end()
