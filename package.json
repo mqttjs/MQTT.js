@@ -127,6 +127,7 @@
     "release-it": "^15.11.0",
     "rimraf": "^5.0.1",
     "rollup": "^3.26.2",
+    "rollup-plugin-node-polyfills": "^0.2.1",
     "should": "^13.2.3",
     "sinon": "^15.2.0",
     "snazzy": "^9.0.0",

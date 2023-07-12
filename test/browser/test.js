@@ -1,7 +1,7 @@
 'use strict'
 
 const test = require('tape')
-const mqtt = require('../../dist/mqtt.min')
+const mqtt = require('../../dist/mqtt')
 const _URL = require('url')
 // eslint-disable-next-line
 const parsed = _URL.parse(document.URL)
