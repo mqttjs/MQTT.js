@@ -1076,7 +1076,7 @@ module.exports = function (server, config) {
       })
     })
 
-    it.only('should fire a callback (qos 2) on error', function (done) {
+    it('should fire a callback (qos 2) on error', function (done) {
       // 145 = Packet Identifier in use
       const pubrecReasonCode = 145
       const pubOpts = { qos: 2 }
