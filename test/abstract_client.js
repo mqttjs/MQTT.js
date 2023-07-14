@@ -1014,6 +1014,57 @@ module.exports = function (server, config) {
       })
     })
 
+    it('should fire a callback (qos 1) on error', function (done) {
+      // 145 = Packet Identifier in use
+      const pubackReasonCode = 145
+      const pubOpts = { qos: 1 }
+      let client = null
+
+      const server2 = serverBuilder(config.protocol, function (serverClient) {
+        serverClient.on('connect', function () {
+          const connack = version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
+          serverClient.connack(connack)
+        })
+        serverClient.on('publish', function (packet) {
+          if (packet.qos === 1) {
+            if (version === 5) {
+              serverClient.puback({
+                messageId: packet.messageId,
+                reasonCode: pubackReasonCode
+              })
+            } else {
+              serverClient.puback({ messageId: packet.messageId })
+            }
+          }
+        })
+      })
+
+      server2.listen(ports.PORTAND72, function () {
+        client = connect({
+          port: ports.PORTAND72,
+          host: 'localhost',
+          clean: true,
+          clientId: 'cid1',
+          reconnectPeriod: 0
+        })
+
+        client.once('connect', function () {
+          client.publish('a', 'b', pubOpts, function (err) {
+            if (version === 5) {
+              assert.strictEqual(err.code, pubackReasonCode)
+            } else {
+              assert.ifError(err)
+            }
+            setImmediate(function () {
+              client.end(() => {
+                server2.close(done())
+              })
+            })
+          })
+        })
+      })
+    })
+
     it('should fire a callback (qos 2)', function (done) {
       const client = connect()
       const opts = { qos: 2 }
@@ -1021,6 +1072,61 @@ module.exports = function (server, config) {
       client.once('connect', function () {
         client.publish('a', 'b', opts, function () {
           client.end((err) => done(err))
+        })
+      })
+    })
+
+    it('should fire a callback (qos 2) on error', function (done) {
+      // 145 = Packet Identifier in use
+      const pubrecReasonCode = 145
+      const pubOpts = { qos: 2 }
+      let client = null
+
+      const server2 = serverBuilder(config.protocol, function (serverClient) {
+        serverClient.on('connect', function () {
+          const connack = version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
+          serverClient.connack(connack)
+        })
+        serverClient.on('publish', function (packet) {
+          if (packet.qos === 2) {
+            if (version === 5) {
+              serverClient.pubrec({
+                messageId: packet.messageId,
+                reasonCode: pubrecReasonCode
+              })
+            } else {
+              serverClient.pubrec({ messageId: packet.messageId })
+            }
+          }
+        })
+        serverClient.on('pubrel', function (packet) {
+          if (!serverClient.writable) return false
+          serverClient.pubcomp(packet)
+        })
+      })
+
+      server2.listen(ports.PORTAND103, function () {
+        client = connect({
+          port: ports.PORTAND103,
+          host: 'localhost',
+          clean: true,
+          clientId: 'cid1',
+          reconnectPeriod: 0
+        })
+
+        client.once('connect', function () {
+          client.publish('a', 'b', pubOpts, function (err) {
+            if (version === 5) {
+              assert.strictEqual(err.code, pubrecReasonCode)
+            } else {
+              assert.ifError(err)
+            }
+            setImmediate(function () {
+              client.end(true, () => {
+                server2.close(done())
+              })
+            })
+          })
         })
       })
     })
