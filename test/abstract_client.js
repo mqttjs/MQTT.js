@@ -12,6 +12,9 @@ const ports = require('./helpers/port_list')
 const serverBuilder = require('./server_helpers_for_client_tests').serverBuilder
 const fs = require('fs')
 const levelStore = require('mqtt-level-store')
+const handlePubrel = require('../lib/handlers/pubrel')
+const handle = require('../lib/handlers/index')
+const handlePublish = require('../lib/handlers/publish')
 
 /**
   * These tests try to be consistent with names for servers (brokers) and clients,
@@ -1257,7 +1260,7 @@ module.exports = function (server, config) {
 
       client._sendPacket = sinon.spy()
 
-      client._handlePublish({
+      handlePublish(client, {
         messageId: Math.floor(65535 * Math.random()),
         topic: 'test',
         payload: 'test',
@@ -1280,7 +1283,7 @@ module.exports = function (server, config) {
       }
 
       try {
-        client._handlePublish({
+        handlePublish(client, {
           messageId: Math.floor(65535 * Math.random()),
           topic: 'test',
           payload: 'test',
@@ -1308,7 +1311,7 @@ module.exports = function (server, config) {
       const store = new AsyncStore()
       const client = connect({ incomingStore: store })
 
-      client._handlePublish({
+      handlePublish(client, {
         messageId: 1,
         topic: 'test',
         payload: 'test',
@@ -1346,7 +1349,7 @@ module.exports = function (server, config) {
       const store = new AsyncStore()
       const client = connect({ incomingStore: store })
 
-      client._handlePublish({
+      handlePublish(client, {
         messageId: 1,
         topic: 'test',
         payload: 'test',
@@ -1384,7 +1387,7 @@ module.exports = function (server, config) {
       const store = new AsyncStore()
       const client = connect({ incomingStore: store })
 
-      client._handlePubrel({
+      handlePubrel(client, {
         messageId: 1,
         qos: 2
       }, function () {
@@ -1422,7 +1425,7 @@ module.exports = function (server, config) {
       const store = new AsyncStore()
       const client = connect({ incomingStore: store })
 
-      client._handlePubrel({
+      handlePubrel(client, {
         messageId: 1,
         qos: 2
       }, function () {
@@ -1456,7 +1459,7 @@ module.exports = function (server, config) {
         }, function () {
           // cleans up the client
           client._sendPacket = sinon.spy()
-          client._handlePubrel({ cmd: 'pubrel', messageId }, function (err) {
+          handlePubrel(client, { cmd: 'pubrel', messageId }, function (err) {
             assert.exists(err)
             assert.strictEqual(client._sendPacket.callCount, 0)
             client.end(true, done)
@@ -1490,7 +1493,7 @@ module.exports = function (server, config) {
           cmd: 'publish'
         }, function () {
           try {
-            client._handlePubrel({ cmd: 'pubrel', messageId })
+            handlePubrel(client, { cmd: 'pubrel', messageId })
             client.end(true, done)
           } catch (err) {
             client.end(true, () => { done(err) })
@@ -2489,7 +2492,7 @@ module.exports = function (server, config) {
         switch (packet.cmd) {
           case 'subscribe': {
             const suback = { cmd: 'suback', messageId: packet.messageId, granted: [2] }
-            client._handlePacket(suback, function (err) {
+            handle(client, suback, function (err) {
               assert.isNotOk(err)
             })
             break
@@ -2514,7 +2517,7 @@ module.exports = function (server, config) {
             // simulate the pubrel message, either in response to pubrec or to mock pubcomp failing to be received
             const pubrel = { cmd: 'pubrel', messageId: mid }
             pubrelCount++
-            client._handlePacket(pubrel, function (err) {
+            handle(client, pubrel, function (err) {
               if (shouldSendFail) {
                 assert.exists(err)
                 assert.instanceOf(err, Error)
@@ -2530,7 +2533,7 @@ module.exports = function (server, config) {
       client.once('connect', function () {
         client.subscribe(testTopic, { qos: 2 })
         const publish = { cmd: 'publish', topic: testTopic, payload: testMessage, qos: 2, messageId: mid }
-        client._handlePacket(publish, function (err) {
+        handle(client, publish, function (err) {
           assert.notExists(err)
         })
       })
