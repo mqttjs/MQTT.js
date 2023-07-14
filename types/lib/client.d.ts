@@ -5,6 +5,7 @@ import {
   IClientOptions,
   IClientPublishOptions,
   IClientSubscribeOptions,
+  IClientSubscribeProperties,
   IClientReconnectOptions
 } from './client-options'
 import { Store } from './store'
@@ -164,7 +165,11 @@ export declare class MqttClient extends events.EventEmitter {
    */
   public subscribe (topic:
                      string
-                     | string[], opts: IClientSubscribeOptions, callback?: ClientSubscribeCallback): this
+                     | string[]
+                     | ISubscriptionMap,
+                    opts:
+                     IClientSubscribeOptions
+                     | IClientSubscribeProperties, callback?: ClientSubscribeCallback): this
   public subscribe (topic:
                      string
                      | string[]

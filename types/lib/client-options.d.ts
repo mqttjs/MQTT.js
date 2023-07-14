@@ -196,6 +196,15 @@ export interface IClientSubscribeOptions {
     userProperties?: UserProperties
   }
 }
+export interface IClientSubscribeProperties {
+  /*
+  *  MQTT 5.0 properies object of subscribe
+  * */
+  properties?: {
+    subscriptionIdentifier?: number,
+    userProperties?: UserProperties
+  }
+}
 export interface IClientReconnectOptions {
   /**
    * a Store for the incoming packets
