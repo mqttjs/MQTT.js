@@ -61,6 +61,8 @@ export interface IClientOptions extends ISecureClientOptions {
   outgoingStore?: Store
   queueQoSZero?: boolean
 
+  log?: (msg: string) => void
+
   autoUseTopicAlias?: boolean
   autoAssignTopicAlias?: boolean
 

@@ -423,6 +423,7 @@ The arguments are:
   - `resubscribe` : if connection is broken and reconnects,
     subscribed topics are automatically subscribed again (default `true`)
   - `messageIdProvider`: custom messageId provider. when `new UniqueMessageIdProvider()` is set, then non conflict messageId is provided.
+  - `log`: custom log function. Default uses [debug](https://www.npmjs.com/package/debug) package.
 
 In case mqtts (mqtt over tls) is required, the `options` object is
 passed through to
