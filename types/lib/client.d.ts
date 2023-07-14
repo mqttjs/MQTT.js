@@ -99,6 +99,8 @@ export declare class MqttClient extends events.EventEmitter {
   public options: IClientOptions
   public queueQoSZero: boolean
 
+  static defaultId (): string
+
   constructor (streamBuilder: (client: MqttClient) => IStream, options: IClientOptions)
 
   public on (event: 'connect', cb: OnConnectCallback): this
