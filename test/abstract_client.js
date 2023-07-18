@@ -1990,7 +1990,10 @@ module.exports = (server, config) => {
 			client.once('close', () => {
 				done(new Error('Client closed connection'))
 			})
-			setTimeout(done, 1000)
+			setTimeout(() => {
+				client.removeAllListeners('close')
+				client.end(true, done)
+			}, 1000)
 		})
 
 		it('should defer the next ping when sending a control packet', function _test(done) {

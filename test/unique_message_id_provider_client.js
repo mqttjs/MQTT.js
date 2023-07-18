@@ -12,14 +12,10 @@ describe('UniqueMessageIdProviderMqttClient', () => {
 	}
 	server.listen(ports.PORTAND400)
 
-	after((done) => {
+	after(() => {
 		// clean up and make sure the server is no longer listening...
 		if (server.listening) {
-			for (const socket of server.connectionList) {
-				socket.destroy()
-			}
-
-			server.close(done)
+			server.close()
 		}
 	})
 

@@ -20,13 +20,10 @@ describe('MqttClient', () => {
 	const config = { protocol: 'mqtt', port: ports.PORT }
 	server.listen(ports.PORT)
 
-	after((done) => {
+	after(() => {
 		// clean up and make sure the server is no longer listening...
 		if (server.listening) {
-			for (const socket of server.connectionList) {
-				socket.close()
-			}
-			server.close(done)
+			server.close()
 		}
 	})
 
