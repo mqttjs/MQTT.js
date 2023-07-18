@@ -1,11 +1,12 @@
-const mqtt = require('./')
+const mqtt = require('.')
+
 const client = mqtt.connect('mqtt://test.mosquitto.org')
 
 client.subscribe('presence')
 client.publish('presence', 'Hello mqtt')
 
-client.on('message', function (topic, message) {
-  console.log(message.toString())
+client.on('message', (topic, message) => {
+	console.log(message.toString())
 })
 
 client.end()

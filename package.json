@@ -23,7 +23,8 @@
   "main": "mqtt.js",
   "types": "types/index.d.ts",
   "scripts": {
-    "pretest": "standard | snazzy",
+    "lint": "eslint --ext .js,.json .",
+    "lint-fix": "eslint --fix --ext .js,.json .",
     "typescript-compile-test": "tsc -p test/typescript/tsconfig.json",
     "typescript-compile-execute": "node test/typescript/broker-connect-subscribe-and-publish.js",
     "browser-build": "rimraf dist/ && mkdirp dist/ && browserify mqtt.js --standalone mqtt > dist/mqtt.js && terser dist/mqtt.js --compress --mangle --output dist/mqtt.min.js",
@@ -62,7 +63,7 @@
     }
   },
   "pre-commit": [
-    "pretest"
+    "lint"
   ],
   "bin": {
     "mqtt_pub": "./bin/pub.js",
@@ -116,6 +117,11 @@
     "codecov": "^3.8.2",
     "conventional-changelog-cli": "^3.0.0",
     "end-of-stream": "^1.4.4",
+    "eslint": "^8.45.0",
+    "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-config-prettier": "^8.8.0",
+    "eslint-plugin-import": "^2.27.5",
+    "eslint-plugin-prettier": "^5.0.0",
     "global": "^4.4.0",
     "mkdirp": "^3.0.1",
     "mocha": "^10.2.0",
@@ -123,19 +129,14 @@
     "mqtt-level-store": "^3.1.0",
     "nyc": "^15.1.0",
     "pre-commit": "^1.2.2",
+    "prettier": "^3.0.0",
     "release-it": "^15.11.0",
     "rimraf": "^5.0.1",
     "should": "^13.2.3",
     "sinon": "^15.2.0",
     "snazzy": "^9.0.0",
-    "standard": "^17.1.0",
     "tape": "^5.6.4",
     "terser": "^5.18.2",
     "typescript": "^5.1.6"
-  },
-  "standard": {
-    "env": [
-      "mocha"
-    ]
   }
 }

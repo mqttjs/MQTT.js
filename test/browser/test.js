@@ -1,8 +1,6 @@
-'use strict'
-
 const test = require('tape')
-const mqtt = require('../../dist/mqtt.min')
 const _URL = require('url')
+const mqtt = require('../../dist/mqtt.min')
 // eslint-disable-next-line
 const parsed = _URL.parse(document.URL)
 const isHttps = parsed.protocol === 'https:'
@@ -10,43 +8,50 @@ const port = parsed.port || (isHttps ? 443 : 80)
 const host = parsed.hostname
 const protocol = isHttps ? 'wss' : 'ws'
 
-const client = mqtt.connect({ protocolId: 'MQIsdp', protocolVersion: 3, protocol, port, host, log: console.log.bind(console) })
-client.on('offline', function () {
-  console.log('client offline')
+const client = mqtt.connect({
+	protocolId: 'MQIsdp',
+	protocolVersion: 3,
+	protocol,
+	port,
+	host,
+	log: console.log.bind(console),
 })
-client.on('connect', function () {
-  console.log('client connect')
+client.on('offline', () => {
+	console.log('client offline')
 })
-client.on('reconnect', function () {
-  console.log('client reconnect')
+client.on('connect', () => {
+	console.log('client connect')
+})
+client.on('reconnect', () => {
+	console.log('client reconnect')
 })
 
-test('MQTT.js browser test', function (t) {
-  t.plan(6)
-  client.on('connect', function () {
-    client.on('message', function (topic, msg) {
-      t.equal(topic, 'hello', 'should match topic')
-      t.equal(msg.toString(), 'Hello World!', 'should match payload')
-      client.end(() => {
-        t.pass('client should close')
-      })
-    })
+test('MQTT.js browser test', (t) => {
+	t.plan(6)
+	client.on('connect', () => {
+		client.on('message', (topic, msg) => {
+			t.equal(topic, 'hello', 'should match topic')
+			t.equal(msg.toString(), 'Hello World!', 'should match payload')
+			client.end(() => {
+				t.pass('client should close')
+			})
+		})
 
-    client.subscribe('hello', function (err) {
-      t.error(err, 'no error on subscribe')
-      if (!err) {
-        client.publish('hello', 'Hello World!', function (err) {
-          t.error(err, 'no error on publish')
-        })
-      }
-    })
-  })
+		client.subscribe('hello', (err) => {
+			t.error(err, 'no error on subscribe')
+			if (!err) {
+				client.publish('hello', 'Hello World!', (err) => {
+					t.error(err, 'no error on publish')
+				})
+			}
+		})
+	})
 
-  client.on('error', function (err) {
-    t.fail(err, 'no error')
-  })
+	client.on('error', (err) => {
+		t.fail(err, 'no error')
+	})
 
-  client.once('close', function () {
-    t.pass('should emit close')
-  })
+	client.once('close', () => {
+		t.pass('should emit close')
+	})
 })

@@ -1,5 +1,9 @@
 {
-    "standard.enable": true,
-    "standard.autoFixOnSave": true,
-    "editor.defaultFormatter": "standard.vscode-standard"
+    "eslint.format.enable": true,
+    "eslint.lintTask.enable": true,
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.codeActionsOnSave": {
+        "source.fixAll.eslint": true,
+        "source.fixAll.markdownlint": true
+    },
 }
