@@ -38,7 +38,7 @@ jobs:
         npm run lint
 
     - name: Test NodeJS
-      run: npx mocha test/unique_message_id_provider_client.js -g "auto reconnect"
+      run: npx mocha test/unique_message_id_provider_client.js
       env:
         CI: true
         DEBUG: "mqttjs"
