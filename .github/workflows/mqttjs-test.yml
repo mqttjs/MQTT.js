@@ -38,16 +38,16 @@ jobs:
         npm run lint
 
     - name: Test NodeJS
-      run: npx mocha test/unique_message_id_provider_client.js
+      run: npm run test:node # npx mocha test/unique_message_id_provider_client.js --exit
       env:
         CI: true
-        DEBUG: "mqttjs"
+        DEBUG: "mqttjs*"
 
     - name: Test Typescript
       run: npm run test:typescript
       env:
         CI: true
-        DEBUG: "mqttjs"
+        DEBUG: "mqttjs*"
     
     - name: Test Browser
       if: matrix.node-version == '20.x'
