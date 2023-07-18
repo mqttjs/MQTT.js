@@ -307,6 +307,7 @@ Also user can manually register topic-alias pair using PUBLISH topic:'some', ta:
 
 - <a href="#connect"><code>mqtt.<b>connect()</b></code></a>
 - <a href="#client"><code>mqtt.<b>Client()</b></code></a>
+- <a href="#client-connect"><code>mqtt.Client#<b>connect()</b></code></a>
 - <a href="#publish"><code>mqtt.Client#<b>publish()</b></code></a>
 - <a href="#subscribe"><code>mqtt.Client#<b>subscribe()</b></code></a>
 - <a href="#unsubscribe"><code>mqtt.Client#<b>unsubscribe()</b></code></a>
@@ -537,6 +538,12 @@ and connections
   [mqtt-packet](https://github.com/mcollina/mqtt-packet)
 
 ---
+
+<a name="client-connect"></a>
+
+### mqtt.Client#connect()
+
+By default client connects when constructor is called. To prevent this you can set `manualConnect` option to `true` and call `client.connect()` manually.
 
 <a name="publish"></a>
 
