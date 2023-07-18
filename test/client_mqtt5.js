@@ -1060,8 +1060,6 @@ describe('MQTT 5.0', () => {
 				})
 			})
 		})
-
-		
 	})
 
 	it('puback handling custom reason code with error', function (done) {

@@ -492,16 +492,16 @@ describe('MqttClient', () => {
 	it('check emit error on checkDisconnection w/o callback', function (done) {
 		this.timeout(15000)
 
-		const server2 = new MqttServer((client) => {
-			client.on('connect', (packet) => {
-				client.connack({
+		const server2 = new MqttServer((c) => {
+			c.on('connect', (packet) => {
+				c.connack({
 					reasonCode: 0,
 				})
 			})
-			client.on('publish', (packet) => {
+			c.on('publish', (packet) => {
 				setImmediate(() => {
 					packet.reasonCode = 0
-					client.puback(packet)
+					c.puback(packet)
 				})
 			})
 		}).listen(ports.PORTAND118)

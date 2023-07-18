@@ -371,17 +371,17 @@ module.exports = function (server, config) {
 			server.once('client', (serverClient) => {
 				connack.sessionPresent = true
 				serverClient.connack(connack)
-				server.once('client', (serverClient) => {
+				server.once('client', (serverClient2) => {
 					connack.sessionPresent = false
-					serverClient.connack(connack)
+					serverClient2.connack(connack)
 				})
 			})
 
 			const client = connect()
 			client.once('connect', (packet) => {
 				assert.strictEqual(packet.sessionPresent, true)
-				client.once('connect', (packet) => {
-					assert.strictEqual(packet.sessionPresent, false)
+				client.once('connect', (packet2) => {
+					assert.strictEqual(packet2.sessionPresent, false)
 					client.end((err) => done(err))
 				})
 			})
@@ -508,9 +508,9 @@ module.exports = function (server, config) {
 				if (err) {
 					return done(err)
 				}
-				client.subscribe('event', (err, granted2) => {
-					if (err) {
-						return done(err)
+				client.subscribe('event', (err2, granted2) => {
+					if (err2) {
+						return done(err2)
 					}
 					assert.isArray(granted2)
 					assert.isEmpty(granted2)
@@ -2224,7 +2224,7 @@ module.exports = function (server, config) {
 							expectedResult.properties = undefined
 						}
 						assert.include(granted[0], expectedResult)
-						client.end((err) => done(err))
+						client.end((err2) => done(err2))
 					}
 				})
 			})

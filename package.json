@@ -23,8 +23,8 @@
   "main": "mqtt.js",
   "types": "types/index.d.ts",
   "scripts": {
-    "lint": "eslint --ext .js,.json .",
-    "lint-fix": "eslint --fix --ext .js,.json .",
+    "lint": "eslint --ext .js .",
+    "lint-fix": "eslint --fix --ext .js .",
     "typescript-compile-test": "tsc -p test/typescript/tsconfig.json",
     "typescript-compile-execute": "node test/typescript/broker-connect-subscribe-and-publish.js",
     "browser-build": "rimraf dist/ && mkdirp dist/ && browserify mqtt.js --standalone mqtt > dist/mqtt.js && terser dist/mqtt.js --compress --mangle --output dist/mqtt.min.js",

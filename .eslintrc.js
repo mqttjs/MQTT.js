@@ -30,5 +30,6 @@ module.exports = {
 		'class-methods-use-this': 'off',
 		'no-continue': 'off',
 		'prefer-destructuring': 'off',
+		'no-use-before-define': 'off',
 	},
 }
