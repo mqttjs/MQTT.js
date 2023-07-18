@@ -180,7 +180,7 @@ module.exports = (server, config) => {
 			const client = connect()
 
 			client.once('end', () => {
-				const timeout = setTimeout(done.bind(null), 200)
+				const timeout = setTimeout(() => done(), 200)
 				client.once('end', () => {
 					clearTimeout(timeout)
 					done(new Error('end was emitted twice'))
@@ -188,7 +188,9 @@ module.exports = (server, config) => {
 				client.end()
 			})
 
-			client.once('connect', client.end.bind(client))
+			client.once('connect', () => {
+				client.end()
+			})
 		})
 
 		it('should stop ping timer after end called', function _test(done) {
@@ -232,8 +234,7 @@ module.exports = (server, config) => {
 
 			// after 200ms manually invoke client.end
 			setTimeout(() => {
-				const boundEnd = client.end.bind(client)
-				boundEnd()
+				client.end.callbind(client)
 			}, 200)
 		})
 
@@ -247,7 +248,7 @@ module.exports = (server, config) => {
 				connectTimeout: 10,
 				reconnectPeriod: 20,
 			})
-			setTimeout(done.bind(null), 1000)
+			setTimeout(() => done(), 1000)
 			const endCallback = () => {
 				assert.strictEqual(
 					spy.callCount,
@@ -259,8 +260,7 @@ module.exports = (server, config) => {
 			const spy = sinon.spy(endCallback)
 			client.on('end', spy)
 			setTimeout(() => {
-				client.end.bind(client)
-				client.end()
+				client.end.call(client)
 			}, 300)
 		})
 	})
@@ -2887,8 +2887,7 @@ module.exports = (server, config) => {
 			})
 			// bind client.end so that when it is called it is automatically passed in the done callback
 			setTimeout(() => {
-				const boundEnd = client.end.bind(client, done)
-				boundEnd()
+				client.end.call(client, done)
 			}, 50)
 		})
 
