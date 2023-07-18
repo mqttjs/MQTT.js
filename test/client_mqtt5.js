@@ -4,6 +4,7 @@ const abstractClientTests = require('./abstract_client')
 const { MqttServer } = require('./server')
 const { serverBuilder } = require('./server_helpers_for_client_tests')
 const ports = require('./helpers/port_list')
+const { close } = require('inspector')
 
 describe('MQTT 5.0', () => {
 	const server = serverBuilder('mqtt').listen(ports.PORTAND115)
@@ -664,23 +665,45 @@ describe('MQTT 5.0', () => {
 	})
 
 	it('auth packet', function test(done) {
-		this.timeout(15000)
+		this.timeout(2500)
 		const opts = {
 			host: 'localhost',
 			port: ports.PORTAND115,
 			protocolVersion: 5,
 			properties: { authenticationMethod: 'json' },
 			authPacket: {},
+			manualSetupStream: true,
 		}
+		let authSent = false
+
 		const client = mqtt.connect(opts)
 		server.once('client', (c) => {
-			console.log('server received client')
+			// this test is flaky, there is a race condition
+			// that could make the test fail as the auth packet
+			// is sent by the client even before connack so it could arrive before
+			// the clientServer is listening for the auth packet. To avoid this
+			// if the event is not emitted we simply check if
+			// the auth packet is sent after 1 second.
+			let closeTimeout = setTimeout(() => {
+				assert.isTrue(authSent)
+				closeTimeout = null
+				client.end(true, done)
+			}, 1000)
+
 			c.on('auth', (packet) => {
-				console.log('serverClient received auth: packet %o', packet)
-				client.end(done)
+				if (closeTimeout) {
+					clearTimeout(closeTimeout)
+					client.end(done)
+				}
 			})
 		})
-		console.log('calling mqtt connect')
+		client.on('packetsend', (packet) => {
+			if (packet.cmd === 'auth') {
+				authSent = true
+			}
+		})
+
+		client._setupStream()
 	})
 
 	it('Maximum Packet Size', function test(done) {
