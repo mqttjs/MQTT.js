@@ -617,16 +617,16 @@ describe('MQTT 5.0', function () {
 
   it('auth packet', function (done) {
     this.timeout(15000)
-    server.once('client', function (serverClient) {
+    const opts = { host: 'localhost', port: ports.PORTAND115, protocolVersion: 5, properties: { authenticationMethod: 'json' }, authPacket: {} }
+    const client = mqtt.connect(opts)
+    server.once('client', function (c) {
       console.log('server received client')
-      serverClient.on('auth', function (packet) {
+      c.on('auth', function (packet) {
         console.log('serverClient received auth: packet %o', packet)
-        serverClient.end(done)
+        client.end(done)
       })
     })
-    const opts = { host: 'localhost', port: ports.PORTAND115, protocolVersion: 5, properties: { authenticationMethod: 'json' }, authPacket: {} }
     console.log('calling mqtt connect')
-    mqtt.connect(opts)
   })
 
   it('Maximum Packet Size', function (done) {

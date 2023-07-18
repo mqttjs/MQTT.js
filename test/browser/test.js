@@ -10,7 +10,7 @@ const port = parsed.port || (isHttps ? 443 : 80)
 const host = parsed.hostname
 const protocol = isHttps ? 'wss' : 'ws'
 
-const client = mqtt.connect({ protocolId: 'MQIsdp', protocolVersion: 3, protocol, port, host })
+const client = mqtt.connect({ protocolId: 'MQIsdp', protocolVersion: 3, protocol, port, host, log: console.log.bind(console) })
 client.on('offline', function () {
   console.log('client offline')
 })
