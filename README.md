@@ -426,6 +426,7 @@ The arguments are:
     subscribed topics are automatically subscribed again (default `true`)
   - `messageIdProvider`: custom messageId provider. when `new UniqueMessageIdProvider()` is set, then non conflict messageId is provided.
   - `log`: custom log function. Default uses [debug](https://www.npmjs.com/package/debug) package.
+  - `manualConnect`: prevents the constructor to call `connect`. In this case after the `mqtt.connect` is called you should call `client.connect` manually.
 
 In case mqtts (mqtt over tls) is required, the `options` object is
 passed through to

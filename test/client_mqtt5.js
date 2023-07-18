@@ -672,7 +672,7 @@ describe('MQTT 5.0', () => {
 			protocolVersion: 5,
 			properties: { authenticationMethod: 'json' },
 			authPacket: {},
-			manualSetupStream: true,
+			manualConnect: true,
 		}
 		let authSent = false
 
@@ -703,7 +703,7 @@ describe('MQTT 5.0', () => {
 			}
 		})
 
-		client._setupStream()
+		client.connect()
 	})
 
 	it('Maximum Packet Size', function test(done) {
