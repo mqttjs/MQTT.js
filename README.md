@@ -10,7 +10,7 @@
 MQTT.js is a client library for the [MQTT](http://mqtt.org/) protocol, written
 in JavaScript for node.js and the browser.
 
-> MQTT [5.0.0-beta.0](https://github.com/mqttjs/MQTT.js/releases/tag/v5.0.0-beta.0) is now available! Try it out and give us feedback! `npm i mqtt@5.0.0-beta.0`
+> MQTT [5.0.0 BETA](https://www.npmjs.com/package/mqtt/v/beta) is now available! Try it out and give us feedback! `npm i mqtt@beta`
 
 ## Table of Contents
 
@@ -305,24 +305,24 @@ Also user can manually register topic-alias pair using PUBLISH topic:'some', ta:
 
 ## API
 
-- <a href="#connect"><code>mqtt.<b>connect()</b></code></a>
-- <a href="#client"><code>mqtt.<b>Client()</b></code></a>
-- <a href="#client-connect"><code>mqtt.Client#<b>connect()</b></code></a>
-- <a href="#publish"><code>mqtt.Client#<b>publish()</b></code></a>
-- <a href="#subscribe"><code>mqtt.Client#<b>subscribe()</b></code></a>
-- <a href="#unsubscribe"><code>mqtt.Client#<b>unsubscribe()</b></code></a>
-- <a href="#end"><code>mqtt.Client#<b>end()</b></code></a>
-- <a href="#removeOutgoingMessage"><code>mqtt.Client#<b>removeOutgoingMessage()</b></code></a>
-- <a href="#reconnect"><code>mqtt.Client#<b>reconnect()</b></code></a>
-- <a href="#handleMessage"><code>mqtt.Client#<b>handleMessage()</b></code></a>
-- <a href="#connected"><code>mqtt.Client#<b>connected</b></code></a>
-- <a href="#reconnecting"><code>mqtt.Client#<b>reconnecting</b></code></a>
-- <a href="#getLastMessageId"><code>mqtt.Client#<b>getLastMessageId()</b></code></a>
-- <a href="#store"><code>mqtt.<b>Store()</b></code></a>
-- <a href="#put"><code>mqtt.Store#<b>put()</b></code></a>
-- <a href="#del"><code>mqtt.Store#<b>del()</b></code></a>
-- <a href="#createStream"><code>mqtt.Store#<b>createStream()</b></code></a>
-- <a href="#close"><code>mqtt.Store#<b>close()</b></code></a>
+- [`mqtt.connect()`](#connect)
+- [`mqtt.Client()`](#client)
+- [`mqtt.Client#connect()`](#client-connect)
+- [`mqtt.Client#publish()`](#publish)
+- [`mqtt.Client#subscribe()`](#subscribe)
+- [`mqtt.Client#unsubscribe()`](#unsubscribe)
+- [`mqtt.Client#end()`](#end)
+- [`mqtt.Client#removeOutgoingMessage()`](#removeOutgoingMessage)
+- [`mqtt.Client#reconnect()`](#reconnect)
+- [`mqtt.Client#handleMessage()`](#handleMessage)
+- [`mqtt.Client#connected`](#connected)
+- [`mqtt.Client#reconnecting`](#reconnecting)
+- [`mqtt.Client#getLastMessageId()`](#getLastMessageId)
+- [`mqtt.Store()`](#store)
+- [`mqtt.Store#put()`](#put)
+- [`mqtt.Store#del()`](#del)
+- [`mqtt.Store#createStream()`](#createStream)
+- [`mqtt.Store#close()`](#close)
 
 ---
 
@@ -501,7 +501,7 @@ The following TLS errors will be emitted as an `error` event:
 
 `function () {}`
 
-Emitted when <a href="#end"><code>mqtt.Client#<b>end()</b></code></a> is called.
+Emitted when [`mqtt.Client#end()`](#end) is called.
 If a callback was passed to `mqtt.Client#end()`, this event is emitted once the
 callback returns.
 
