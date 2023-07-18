@@ -130,6 +130,7 @@ function serverBuilder(protocol, handler) {
 			})
 
 			webSocketServer.on('connection', (ws) => {
+				server.connectionList.push(ws)
 				const stream = WebSocket.createWebSocketStream(ws)
 				const connection = new MQTTConnection(stream)
 				connection.protocol = ws.protocol
@@ -141,6 +142,7 @@ function serverBuilder(protocol, handler) {
 		}
 
 		const httpServer = http.createServer()
+		httpServer.connectionList = []
 		attachWebsocketServer(httpServer)
 		httpServer.on('client', handler)
 		return httpServer

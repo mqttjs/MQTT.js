@@ -23,6 +23,9 @@ describe('MqttClient', () => {
 	after((done) => {
 		// clean up and make sure the server is no longer listening...
 		if (server.listening) {
+			for (const socket of server.connectionList) {
+				socket.destroy()
+			}
 			server.close(done)
 		}
 	})
