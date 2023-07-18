@@ -12,11 +12,10 @@ class MqttServer extends net.Server {
 		super()
 		this.connectionList = []
 
-		const that = this
 		this.on('connection', (duplex) => {
 			this.connectionList.push(duplex)
 			const connection = new Connection(duplex, () => {
-				that.emit('client', connection)
+				this.emit('client', connection)
 			})
 		})
 
@@ -68,9 +67,8 @@ class MqttSecureServer extends tls.Server {
 
 		this.on('secureConnection', (socket) => {
 			this.connectionList.push(socket)
-			const that = this
 			const connection = new Connection(socket, () => {
-				that.emit('client', connection)
+				this.emit('client', connection)
 			})
 		})
 
@@ -80,9 +78,8 @@ class MqttSecureServer extends tls.Server {
 	}
 
 	setupConnection(duplex) {
-		const that = this
 		const connection = new Connection(duplex, () => {
-			that.emit('client', connection)
+			this.emit('client', connection)
 		})
 	}
 }
