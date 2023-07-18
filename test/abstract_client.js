@@ -234,7 +234,7 @@ module.exports = (server, config) => {
 
 			// after 200ms manually invoke client.end
 			setTimeout(() => {
-				client.end.callbind(client)
+				client.end.call(client)
 			}, 200)
 		})
 
