@@ -30,7 +30,7 @@ describe('MqttClient', () => {
 	abstractClientTests(server, config)
 
 	describe('creating', () => {
-		it('should allow instantiation of MqttClient', (done) => {
+		it('should allow instantiation of MqttClient', function test(done) {
 			try {
 				client = new mqtt.MqttClient(() => {
 					throw Error('break')
@@ -42,7 +42,7 @@ describe('MqttClient', () => {
 			}
 		})
 
-		it('should disable number cache if specified in options', (done) => {
+		it('should disable number cache if specified in options', function test(done) {
 			try {
 				assert.isTrue(mqttPacket.writeToStream.cacheNumbers)
 				client = new mqtt.MqttClient(
@@ -60,7 +60,7 @@ describe('MqttClient', () => {
 	})
 
 	describe('message ids', () => {
-		it('should increment the message id', (done) => {
+		it('should increment the message id', function test(done) {
 			client = mqtt.connect(config)
 			const currentId = client._nextId()
 
@@ -68,7 +68,7 @@ describe('MqttClient', () => {
 			client.end((err) => done(err))
 		})
 
-		it("should not throw an error if packet's messageId is not found when receiving a pubrel packet", (done) => {
+		it("should not throw an error if packet's messageId is not found when receiving a pubrel packet", function test(done) {
 			const server2 = new MqttServer((serverClient) => {
 				serverClient.on('connect', (packet) => {
 					serverClient.connack({ returnCode: 0 })
@@ -96,7 +96,7 @@ describe('MqttClient', () => {
 			})
 		})
 
-		it('should not go overflow if the TCP frame contains a lot of PUBLISH packets', (done) => {
+		it('should not go overflow if the TCP frame contains a lot of PUBLISH packets', function test(done) {
 			const parser = mqttPacket.parser()
 			const max = 1000
 			let count = 0
@@ -151,7 +151,7 @@ describe('MqttClient', () => {
 	})
 
 	describe('flushing', () => {
-		it('should attempt to complete pending unsub and send on ping timeout', function (done) {
+		it('should attempt to complete pending unsub and send on ping timeout', function test(done) {
 			this.timeout(10000)
 			const server2 = new MqttServer((serverClient) => {
 				serverClient.on('connect', (packet) => {
@@ -199,7 +199,7 @@ describe('MqttClient', () => {
 	})
 
 	describe('reconnecting', () => {
-		it('should attempt to reconnect once server is down', function (done) {
+		it('should attempt to reconnect once server is down', function test(done) {
 			this.timeout(30000)
 
 			const innerServer = fork(
@@ -232,7 +232,7 @@ describe('MqttClient', () => {
 			})
 		})
 
-		it('should reconnect if a connack is not received in an interval', function (done) {
+		it('should reconnect if a connack is not received in an interval', function test(done) {
 			this.timeout(2000)
 
 			const server2 = net.createServer().listen(ports.PORTAND43)
@@ -264,7 +264,7 @@ describe('MqttClient', () => {
 			})
 		})
 
-		it('should not be cleared by the connack timer', function (done) {
+		it('should not be cleared by the connack timer', function test(done) {
 			this.timeout(4000)
 
 			const server2 = net.createServer().listen(ports.PORTAND44)
@@ -296,7 +296,7 @@ describe('MqttClient', () => {
 			})
 		})
 
-		it('should not keep requeueing the first message when offline', function (done) {
+		it('should not keep requeueing the first message when offline', function test(done) {
 			this.timeout(2500)
 
 			const server2 = serverBuilder('mqtt').listen(ports.PORTAND45)
@@ -329,7 +329,7 @@ describe('MqttClient', () => {
 			}, 2000)
 		})
 
-		it('should not send the same subscribe multiple times on a flaky connection', function (done) {
+		it('should not send the same subscribe multiple times on a flaky connection', function test(done) {
 			this.timeout(3500)
 
 			const KILL_COUNT = 4
@@ -386,7 +386,7 @@ describe('MqttClient', () => {
 			}).listen(ports.PORTAND46)
 		})
 
-		it('should not fill the queue of subscribes if it cannot connect', function (done) {
+		it('should not fill the queue of subscribes if it cannot connect', function test(done) {
 			this.timeout(2500)
 			const server2 = net.createServer((stream) => {
 				const serverClient = new Connection(stream)
@@ -417,7 +417,7 @@ describe('MqttClient', () => {
 			})
 		})
 
-		it('should not send the same publish multiple times on a flaky connection', function (done) {
+		it('should not send the same publish multiple times on a flaky connection', function test(done) {
 			this.timeout(3500)
 
 			const KILL_COUNT = 4
@@ -431,7 +431,7 @@ describe('MqttClient', () => {
 			})
 
 			const server2 = net
-				.createServer(function (stream) {
+				.createServer((stream) => {
 					const serverClient = new Connection(stream)
 					serverClient.on('error', () => {})
 					serverClient.on('connect', (packet) => {
@@ -442,7 +442,7 @@ describe('MqttClient', () => {
 						}
 					})
 
-					this.emit('client', serverClient)
+					server2.emit('client', serverClient)
 				})
 				.listen(ports.PORTAND47)
 
@@ -489,7 +489,7 @@ describe('MqttClient', () => {
 		})
 	})
 
-	it('check emit error on checkDisconnection w/o callback', function (done) {
+	it('check emit error on checkDisconnection w/o callback', function test(done) {
 		this.timeout(15000)
 
 		const server2 = new MqttServer((c) => {

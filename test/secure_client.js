@@ -10,7 +10,7 @@ const WRONG_CERT = path.join(__dirname, 'helpers', 'wrong-cert.pem')
 const { MqttSecureServer } = require('./server')
 const { assert } = require('chai')
 
-const serverListener = function (client) {
+const serverListener = (client) => {
 	// this is the Server's MQTT Client
 	client.on('connect', (packet) => {
 		if (packet.clientId === 'invalid') {
@@ -80,7 +80,7 @@ describe('MqttSecureClient', () => {
 	abstractClientTests(server, config)
 
 	describe('with secure parameters', () => {
-		it('should validate successfully the CA', (done) => {
+		it('should validate successfully the CA', function test(done) {
 			const client = mqtt.connect({
 				protocol: 'mqtts',
 				port,
@@ -97,7 +97,7 @@ describe('MqttSecureClient', () => {
 			})
 		})
 
-		it('should validate successfully the CA using URI', (done) => {
+		it('should validate successfully the CA using URI', function test(done) {
 			const client = mqtt.connect(`mqtts://localhost:${port}`, {
 				ca: [fs.readFileSync(CERT)],
 				rejectUnauthorized: true,
@@ -112,7 +112,7 @@ describe('MqttSecureClient', () => {
 			})
 		})
 
-		it('should validate successfully the CA using URI with path', (done) => {
+		it('should validate successfully the CA using URI with path', function test(done) {
 			const client = mqtt.connect(`mqtts://localhost:${port}/`, {
 				ca: [fs.readFileSync(CERT)],
 				rejectUnauthorized: true,
@@ -127,7 +127,7 @@ describe('MqttSecureClient', () => {
 			})
 		})
 
-		it('should validate unsuccessfully the CA', (done) => {
+		it('should validate unsuccessfully the CA', function test(done) {
 			const client = mqtt.connect({
 				protocol: 'mqtts',
 				port,
@@ -141,7 +141,7 @@ describe('MqttSecureClient', () => {
 			})
 		})
 
-		it('should emit close on TLS error', (done) => {
+		it('should emit close on TLS error', function test(done) {
 			const client = mqtt.connect({
 				protocol: 'mqtts',
 				port,
@@ -156,7 +156,7 @@ describe('MqttSecureClient', () => {
 			})
 		})
 
-		it('should support SNI on the TLS connection', (done) => {
+		it('should support SNI on the TLS connection', function test(done) {
 			const hostname = 'localhost'
 
 			server.removeAllListeners('secureConnection') // clear eventHandler

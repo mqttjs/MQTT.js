@@ -19,7 +19,7 @@ const { MqttSecureServer } = require('./server')
  * @param {Function} handler - event handler
  */
 function serverBuilder(protocol, handler) {
-	const defaultHandler = function (serverClient) {
+	const defaultHandler = (serverClient) => {
 		serverClient.on('auth', (packet) => {
 			if (serverClient.writable) return false
 			const rc = 'reasonCode'
@@ -123,7 +123,7 @@ function serverBuilder(protocol, handler) {
 		)
 	}
 	if (protocol === 'ws') {
-		const attachWebsocketServer = function (server) {
+		const attachWebsocketServer = (server) => {
 			const webSocketServer = new WebSocket.Server({
 				server,
 				perMessageDeflate: false,

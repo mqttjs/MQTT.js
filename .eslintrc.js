@@ -13,8 +13,6 @@ module.exports = {
 	rules: {
 		'global-require': 'off',
 		'no-console': process.env.NODE_ENV === 'production' ? 'warn' : 'off',
-		'no-debugger': process.env.NODE_ENV === 'production' ? 'warn' : 'off',
-		'func-names': 'off',
 		'no-unused-vars': 'off',
 		'no-underscore-dangle': 'off',
 		'no-param-reassign': 'off',

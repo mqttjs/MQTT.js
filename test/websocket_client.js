@@ -92,16 +92,18 @@ describe('Websocket Client', () => {
 		return { ...baseConfig, ...(custom || {}) }
 	}
 
-	it('should use mqtt as the protocol by default', (done) => {
+	it('should use mqtt as the protocol by default', function test(done) {
 		httpServer.once('client', (client) => {
 			assert.strictEqual(client.protocol, 'mqtt')
 		})
-		mqtt.connect(makeOptions()).on('connect', function () {
-			this.end(true, (err) => done(err))
+		const client = mqtt.connect(makeOptions())
+
+		client.on('connect', () => {
+			client.end(true, (err) => done(err))
 		})
 	})
 
-	it('should be able to transform the url (for e.g. to sign it)', (done) => {
+	it('should be able to transform the url (for e.g. to sign it)', function test(done) {
 		const baseUrl = 'ws://localhost:9999/mqtt'
 		const sig = '?AUTH=token'
 		const expected = baseUrl + sig
@@ -119,14 +121,16 @@ describe('Websocket Client', () => {
 				return url
 			},
 		})
-		mqtt.connect(opts).on('connect', function () {
-			assert.equal(this.stream.url, expected)
+		const client = mqtt.connect(opts)
+
+		client.on('connect', () => {
+			assert.equal(client.stream.url, expected)
 			assert.equal(actual, expected)
-			this.end(true, (err) => done(err))
+			client.end(true, (err) => done(err))
 		})
 	})
 
-	it('should use mqttv3.1 as the protocol if using v3.1', (done) => {
+	it('should use mqttv3.1 as the protocol if using v3.1', function test(done) {
 		httpServer.once('client', (client) => {
 			assert.strictEqual(client.protocol, 'mqttv3.1')
 		})
@@ -136,15 +140,17 @@ describe('Websocket Client', () => {
 			protocolVersion: 3,
 		})
 
-		mqtt.connect(opts).on('connect', function () {
-			this.end(true, (err) => done(err))
+		const client = mqtt.connect(opts)
+
+		client.on('connect', () => {
+			client.end(true, (err) => done(err))
 		})
 	})
 
 	describe('reconnecting', () => {
-		it('should reconnect to multiple host-ports-protocol combinations if servers is passed', function (done) {
+		it('should reconnect to multiple host-ports-protocol combinations if servers is passed', function test(done) {
 			let serverPort42Connected = false
-			const handler = function (serverClient) {
+			const handler = (serverClient) => {
 				serverClient.on('connect', (packet) => {
 					serverClient.connack({ returnCode: 0 })
 				})

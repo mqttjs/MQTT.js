@@ -1,6 +1,6 @@
 const { Transform } = require('readable-stream')
 
-module.exports.testStream = function () {
+module.exports.testStream = () => {
 	return new Transform({
 		transform(buf, enc, cb) {
 			const that = this

@@ -19,7 +19,7 @@ function count() {
 
 setInterval(count, interval)
 
-client.on('connect', function () {
+client.on('connect', () => {
 	count()
 	this.subscribe('test')
 	this.on('message', () => {

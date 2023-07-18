@@ -13,7 +13,7 @@ class MqttServer extends net.Server {
 		this.connectionList = []
 
 		const that = this
-		this.on('connection', function (duplex) {
+		this.on('connection', (duplex) => {
 			this.connectionList.push(duplex)
 			const connection = new Connection(duplex, () => {
 				that.emit('client', connection)
@@ -36,7 +36,7 @@ class MqttServerNoWait extends net.Server {
 		super()
 		this.connectionList = []
 
-		this.on('connection', function (duplex) {
+		this.on('connection', (duplex) => {
 			this.connectionList.push(duplex)
 			const connection = new Connection(duplex)
 			// do not wait for connection to return to send it to the client.
@@ -66,7 +66,7 @@ class MqttSecureServer extends tls.Server {
 		super(opts)
 		this.connectionList = []
 
-		this.on('secureConnection', function (socket) {
+		this.on('secureConnection', (socket) => {
 			this.connectionList.push(socket)
 			const that = this
 			const connection = new Connection(socket, () => {

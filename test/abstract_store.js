@@ -11,11 +11,11 @@ module.exports = function abstractStoreTest(build) {
 		})
 	})
 
-	afterEach((done) => {
+	afterEach(function test(done) {
 		store.close(done)
 	})
 
-	it('should put and stream in-flight packets', (done) => {
+	it('should put and stream in-flight packets', function test(done) {
 		const packet = {
 			topic: 'hello',
 			payload: 'world',
@@ -31,7 +31,7 @@ module.exports = function abstractStoreTest(build) {
 		})
 	})
 
-	it('should support destroying the stream', (done) => {
+	it('should support destroying the stream', function test(done) {
 		const packet = {
 			topic: 'hello',
 			payload: 'world',
@@ -46,7 +46,7 @@ module.exports = function abstractStoreTest(build) {
 		})
 	})
 
-	it('should add and del in-flight packets', (done) => {
+	it('should add and del in-flight packets', function test(done) {
 		const packet = {
 			topic: 'hello',
 			payload: 'world',
@@ -66,7 +66,7 @@ module.exports = function abstractStoreTest(build) {
 		})
 	})
 
-	it('should replace a packet when doing put with the same messageId', (done) => {
+	it('should replace a packet when doing put with the same messageId', function test(done) {
 		const packet1 = {
 			cmd: 'publish', // added
 			topic: 'hello',
@@ -90,7 +90,7 @@ module.exports = function abstractStoreTest(build) {
 		})
 	})
 
-	it('should return the original packet on del', (done) => {
+	it('should return the original packet on del', function test(done) {
 		const packet = {
 			topic: 'hello',
 			payload: 'world',
@@ -109,7 +109,7 @@ module.exports = function abstractStoreTest(build) {
 		})
 	})
 
-	it('should get a packet with the same messageId', (done) => {
+	it('should get a packet with the same messageId', function test(done) {
 		const packet = {
 			topic: 'hello',
 			payload: 'world',

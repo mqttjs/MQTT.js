@@ -32,7 +32,7 @@ function multisend(args) {
 	const sender = new Writable({
 		objectMode: true,
 	})
-	sender._write = function (line, enc, cb) {
+	sender._write = (line, enc, cb) => {
 		client.publish(args.topic, line.trim(), args, cb)
 	}
 

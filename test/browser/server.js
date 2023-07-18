@@ -4,7 +4,7 @@ const WebSocketServer = WS.Server
 const Connection = require('mqtt-connection')
 const http = require('http')
 
-const handleClient = function (client) {
+const handleClient = (client) => {
 	const self = this
 
 	if (!self.clients) {

@@ -101,15 +101,15 @@ For the sake of simplicity, let's put the subscriber and the publisher in the sa
 const mqtt = require("mqtt");
 const client = mqtt.connect("mqtt://test.mosquitto.org");
 
-client.on("connect", function () {
-  client.subscribe("presence", function (err) {
+client.on("connect", () => {
+  client.subscribe("presence", (err) => {
     if (!err) {
       client.publish("presence", "Hello mqtt");
     }
   });
 });
 
-client.on("message", function (topic, message) {
+client.on("message", (topic, message) => {
   // message is Buffer
   console.log(message.toString());
   client.end();
@@ -368,7 +368,7 @@ The arguments are:
   the `connect` event. Typically a `net.Socket`.
 - `options` is the client connection options (see: the [connect packet](https://github.com/mcollina/mqtt-packet#connect)). Defaults:
   - `wsOptions`: is the WebSocket connection options. Default is `{}`.
-    It's specific for WebSockets. For possible options have a look at: https://github.com/websockets/ws/blob/master/doc/ws.md.
+    It's specific for WebSockets. For possible options have a look at: <https://github.com/websockets/ws/blob/master/doc/ws.md>.
   - `keepalive`: `60` seconds, set to `0` to disable
   - `reschedulePings`: reschedule ping messages after sending packets (default `true`)
   - `clientId`: `'mqttjs_' + Math.random().toString(16).substr(2, 8)`
@@ -386,9 +386,11 @@ The arguments are:
   - `outgoingStore`: a [Store](#store) for the outgoing packets
   - `queueQoSZero`: if connection is broken, queue outgoing QoS zero messages (default `true`)
   - `customHandleAcks`: MQTT 5 feature of custom handling puback and pubrec packets. Its callback:
+
     ```js
       customHandleAcks: function(topic, message, packet, done) {/*some logic wit colling done(error, reasonCode)*/}
     ```
+
   - `autoUseTopicAlias`: enabling automatic Topic Alias using functionality
   - `autoAssignTopicAlias`: enabling automatic Topic Alias assign functionality
   - `properties`: properties MQTT 5.0.
@@ -746,9 +748,9 @@ Closes the Store.
 
 ### Via CDN
 
-The MQTT.js bundle is available through http://unpkg.com, specifically
-at https://unpkg.com/mqtt/dist/mqtt.min.js.
-See http://unpkg.com for the full documentation on version ranges.
+The MQTT.js bundle is available through <http://unpkg.com>, specifically
+at <https://unpkg.com/mqtt/dist/mqtt.min.js>.
+See <http://unpkg.com> for the full documentation on version ranges.
 
 <a name="browserify"></a>
 

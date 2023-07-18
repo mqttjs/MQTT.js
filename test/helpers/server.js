@@ -2,7 +2,7 @@ const fs = require('fs')
 const { MqttServer } = require('../server')
 const { MqttSecureServer } = require('../server')
 
-module.exports.init_server = function (PORT) {
+module.exports.init_server = (PORT) => {
 	const server = new MqttServer((client) => {
 		client.on('connect', () => {
 			client.connack(0)
@@ -37,7 +37,7 @@ module.exports.init_server = function (PORT) {
 	return server
 }
 
-module.exports.init_secure_server = function (port, key, cert) {
+module.exports.init_secure_server = (port, key, cert) => {
 	const server = new MqttSecureServer(
 		{
 			key: fs.readFileSync(key),

@@ -33,21 +33,21 @@ const options = {
 console.log('connecting mqtt client')
 const client = mqtt.connect(host, options)
 
-client.on('error', function (err) {
+client.on('error', (err) => {
   console.log(err)
   client.end()
 })
 
-client.on('connect', function () {
+client.on('connect', () => {
   console.log('client connected:' + clientId)
   client.subscribe('topic', { qos: 0 })
   client.publish('topic', 'wss secure connection demo...!', { qos: 0, retain: false })
 })
 
-client.on('message', function (topic, message, packet) {
+client.on('message', (topic, message, packet) => {
   console.log('Received Message:= ' + message.toString() + '\nOn topic:= ' + topic)
 })
 
-client.on('close', function () {
+client.on('close', () => {
   console.log(clientId + ' disconnected')
 })
