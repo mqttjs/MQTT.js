@@ -31,10 +31,7 @@ function serverBuilder(protocol, handler) {
 			if (!serverClient.writable) return false
 			let rc = 'returnCode'
 			const connack = {}
-			if (
-				serverClient.options &&
-				serverClient.options.protocolVersion === 5
-			) {
+			if (serverClient.options && serverClient.options.protocolVersion === 5) {
 				rc = 'reasonCode'
 				if (packet.clientId === 'invalid') {
 					connack[rc] = 128

@@ -169,15 +169,10 @@ describe('MqttClient', () => {
 				reconnectPeriod: 0,
 			})
 			client.once('connect', () => {
-				client.publish(
-					'fakeTopic',
-					'fakeMessage',
-					{ qos: 1 },
-					(err, result) => {
-						assert.exists(err)
-						pubCallbackCalled = true
-					},
-				)
+				client.publish('fakeTopic', 'fakeMessage', { qos: 1 }, (err, result) => {
+					assert.exists(err)
+					pubCallbackCalled = true
+				})
 				client.unsubscribe('fakeTopic', (err, result) => {
 					assert.exists(err)
 					unsubscribeCallbackCalled = true
@@ -202,10 +197,9 @@ describe('MqttClient', () => {
 		it('should attempt to reconnect once server is down', function test(done) {
 			this.timeout(30000)
 
-			const innerServer = fork(
-				path.join(__dirname, 'helpers', 'server_process.js'),
-				{ execArgv: ['--inspect'] },
-			)
+			const innerServer = fork(path.join(__dirname, 'helpers', 'server_process.js'), {
+				execArgv: ['--inspect'],
+			})
 			innerServer.on('close', (code) => {
 				if (code) {
 					done(util.format('child process closed with code %d', code))
@@ -276,9 +270,7 @@ describe('MqttClient', () => {
 			server2.once('listening', () => {
 				const connectTimeout = 1000
 				const reconnectPeriod = 100
-				const expectedReconnects = Math.floor(
-					connectTimeout / reconnectPeriod,
-				)
+				const expectedReconnects = Math.floor(connectTimeout / reconnectPeriod)
 				let reconnects = 0
 				client = mqtt.connect({
 					port: ports.PORTAND44,

@@ -10,17 +10,7 @@ const minimist = require('minimist')
 
 function start(args) {
 	args = minimist(args, {
-		string: [
-			'hostname',
-			'username',
-			'password',
-			'key',
-			'cert',
-			'ca',
-			'clientId',
-			'i',
-			'id',
-		],
+		string: ['hostname', 'username', 'password', 'key', 'cert', 'ca', 'clientId', 'i', 'id'],
 		boolean: ['stdin', 'help', 'clean', 'insecure'],
 		alias: {
 			port: 'p',
@@ -79,10 +69,7 @@ function start(args) {
 
 	if (args.port) {
 		if (typeof args.port !== 'number') {
-			console.warn(
-				"# Port: number expected, '%s' was given.",
-				typeof args.port,
-			)
+			console.warn("# Port: number expected, '%s' was given.", typeof args.port)
 			return
 		}
 	}
@@ -108,12 +95,7 @@ function start(args) {
 
 			result.forEach((sub) => {
 				if (sub.qos > 2) {
-					console.error(
-						'subscription negated to',
-						sub.topic,
-						'with code',
-						sub.qos,
-					)
+					console.error('subscription negated to', sub.topic, 'with code', sub.qos)
 					process.exit(1)
 				}
 			})

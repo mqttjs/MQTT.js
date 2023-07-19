@@ -335,10 +335,7 @@ module.exports = (server, config) => {
 					done(err)
 				})
 			} catch (err) {
-				assert.strictEqual(
-					err.message,
-					'Missing clientId for unclean clients',
-				)
+				assert.strictEqual(err.message, 'Missing clientId for unclean clients')
 				done()
 			}
 		})
@@ -366,8 +363,7 @@ module.exports = (server, config) => {
 		})
 
 		it('should provide connack packet with connect event', function _test(done) {
-			const connack =
-				version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
+			const connack = version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
 			server.once('client', (serverClient) => {
 				connack.sessionPresent = true
 				serverClient.connack(connack)
@@ -425,10 +421,7 @@ module.exports = (server, config) => {
 			const client1 = connect()
 			const client2 = connect()
 
-			assert.notStrictEqual(
-				client1.options.clientId,
-				client2.options.clientId,
-			)
+			assert.notStrictEqual(client1.options.clientId, client2.options.clientId)
 			client1.end(true, () => {
 				client2.end(true, () => {
 					done()
@@ -631,8 +624,7 @@ module.exports = (server, config) => {
 			const outgoingStore = new mqtt.Store({ clean: false })
 			const server2 = serverBuilder(config.protocol, (serverClient) => {
 				serverClient.on('connect', () => {
-					const connack =
-						version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
+					const connack = version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
 					serverClient.connack(connack)
 				})
 				serverClient.on('publish', (packet) => {
@@ -641,28 +633,16 @@ module.exports = (server, config) => {
 					}
 					switch (publishCount++) {
 						case 0:
-							assert.strictEqual(
-								packet.payload.toString(),
-								'payload1',
-							)
+							assert.strictEqual(packet.payload.toString(), 'payload1')
 							break
 						case 1:
-							assert.strictEqual(
-								packet.payload.toString(),
-								'payload2',
-							)
+							assert.strictEqual(packet.payload.toString(), 'payload2')
 							break
 						case 2:
-							assert.strictEqual(
-								packet.payload.toString(),
-								'payload3',
-							)
+							assert.strictEqual(packet.payload.toString(), 'payload3')
 							break
 						case 3:
-							assert.strictEqual(
-								packet.payload.toString(),
-								'payload4',
-							)
+							assert.strictEqual(packet.payload.toString(), 'payload4')
 							client.end((err1) => {
 								server2.close((err2) => done(err1 || err2))
 							})
@@ -704,8 +684,7 @@ module.exports = (server, config) => {
 
 			const server2 = serverBuilder(config.protocol, (serverClient) => {
 				serverClient.on('connect', () => {
-					const connack =
-						version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
+					const connack = version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
 					serverClient.connack(connack)
 				})
 				serverClient.on('publish', (packet) => {
@@ -715,22 +694,13 @@ module.exports = (server, config) => {
 
 					switch (publishCount++) {
 						case 0:
-							assert.strictEqual(
-								packet.payload.toString(),
-								'payload1',
-							)
+							assert.strictEqual(packet.payload.toString(), 'payload1')
 							break
 						case 1:
-							assert.strictEqual(
-								packet.payload.toString(),
-								'payload2',
-							)
+							assert.strictEqual(packet.payload.toString(), 'payload2')
 							break
 						case 2:
-							assert.strictEqual(
-								packet.payload.toString(),
-								'payload3',
-							)
+							assert.strictEqual(packet.payload.toString(), 'payload3')
 
 							server2.close((err) => {
 								fs.rmSync(storePath, { recursive: true })
@@ -978,11 +948,7 @@ module.exports = (server, config) => {
 					assert.strictEqual(packet.topic, topic)
 					assert.strictEqual(packet.payload.toString(), payload)
 					assert.strictEqual(packet.qos, opts.qos, 'incorrect qos')
-					assert.strictEqual(
-						packet.retain,
-						opts.retain,
-						'incorrect ret',
-					)
+					assert.strictEqual(packet.retain, opts.retain, 'incorrect ret')
 					assert.strictEqual(packet.dup, false, 'incorrect dup')
 					received = true
 				})
@@ -1003,21 +969,9 @@ module.exports = (server, config) => {
 				serverClient.once('publish', (packet) => {
 					assert.strictEqual(packet.topic, topic)
 					assert.strictEqual(packet.payload.toString(), payload)
-					assert.strictEqual(
-						packet.qos,
-						defaultOpts.qos,
-						'incorrect qos',
-					)
-					assert.strictEqual(
-						packet.retain,
-						defaultOpts.retain,
-						'incorrect ret',
-					)
-					assert.strictEqual(
-						packet.dup,
-						defaultOpts.dup,
-						'incorrect dup',
-					)
+					assert.strictEqual(packet.qos, defaultOpts.qos, 'incorrect qos')
+					assert.strictEqual(packet.retain, defaultOpts.retain, 'incorrect ret')
+					assert.strictEqual(packet.dup, defaultOpts.dup, 'incorrect dup')
 					client.end(true, done)
 				})
 			})
@@ -1048,11 +1002,7 @@ module.exports = (server, config) => {
 					assert.strictEqual(packet.topic, topic)
 					assert.strictEqual(packet.payload.toString(), payload)
 					assert.strictEqual(packet.qos, opts.qos, 'incorrect qos')
-					assert.strictEqual(
-						packet.retain,
-						opts.retain,
-						'incorrect ret',
-					)
+					assert.strictEqual(packet.retain, opts.retain, 'incorrect ret')
 					assert.strictEqual(packet.dup, opts.dup, 'incorrect dup')
 					received = true
 				})
@@ -1088,8 +1038,7 @@ module.exports = (server, config) => {
 
 			const server2 = serverBuilder(config.protocol, (serverClient) => {
 				serverClient.on('connect', () => {
-					const connack =
-						version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
+					const connack = version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
 					serverClient.connack(connack)
 				})
 				serverClient.on('publish', (packet) => {
@@ -1151,8 +1100,7 @@ module.exports = (server, config) => {
 
 			const server2 = serverBuilder(config.protocol, (serverClient) => {
 				serverClient.on('connect', () => {
-					const connack =
-						version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
+					const connack = version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
 					serverClient.connack(connack)
 				})
 				serverClient.on('publish', (packet) => {
@@ -1553,18 +1501,11 @@ module.exports = (server, config) => {
 					() => {
 						// cleans up the client
 						client._sendPacket = sinon.spy()
-						handlePubrel(
-							client,
-							{ cmd: 'pubrel', messageId },
-							(err) => {
-								assert.exists(err)
-								assert.strictEqual(
-									client._sendPacket.callCount,
-									0,
-								)
-								client.end(true, done)
-							},
-						)
+						handlePubrel(client, { cmd: 'pubrel', messageId }, (err) => {
+							assert.exists(err)
+							assert.strictEqual(client._sendPacket.callCount, 0)
+							client.end(true, done)
+						})
 					},
 				)
 			})
@@ -1627,8 +1568,7 @@ module.exports = (server, config) => {
 				serverClient.on('error', () => {})
 
 				serverClient.on('connect', (packet) => {
-					const connack =
-						version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
+					const connack = version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
 					serverClient.connack(connack)
 				})
 				serverClient.on('publish', (packet) => {
@@ -1636,22 +1576,13 @@ module.exports = (server, config) => {
 					if (reconnect) {
 						switch (publishCount++) {
 							case 0:
-								assert.strictEqual(
-									packet.payload.toString(),
-									'payload1',
-								)
+								assert.strictEqual(packet.payload.toString(), 'payload1')
 								break
 							case 1:
-								assert.strictEqual(
-									packet.payload.toString(),
-									'payload2',
-								)
+								assert.strictEqual(packet.payload.toString(), 'payload2')
 								break
 							case 2:
-								assert.strictEqual(
-									packet.payload.toString(),
-									'payload3',
-								)
+								assert.strictEqual(packet.payload.toString(), 'payload3')
 								client.end((err1) => {
 									server2.close((err2) => done(err1 || err2))
 								})
@@ -1729,22 +1660,12 @@ module.exports = (server, config) => {
 			if (test.args[0] === 0) {
 				// QoS 0
 				it(`should not call cbStorePut when publishing message with QoS \`${test.args[0]}\` and clean \`${test.args[1]}\``, function _test(done) {
-					testCallbackStorePutByQoS(
-						test.args[0],
-						test.args[1],
-						test.expected,
-						done,
-					)
+					testCallbackStorePutByQoS(test.args[0], test.args[1], test.expected, done)
 				})
 			} else {
 				// QoS 1 and 2
 				it(`should call cbStorePut before publish completes when publishing message with QoS \`${test.args[0]}\` and clean \`${test.args[1]}\``, function _test(done) {
-					testCallbackStorePutByQoS(
-						test.args[0],
-						test.args[1],
-						test.expected,
-						done,
-					)
+					testCallbackStorePutByQoS(test.args[0], test.args[1], test.expected, done)
 				})
 			}
 		})
@@ -2330,10 +2251,7 @@ module.exports = (server, config) => {
 				if (packet.cmd === 'publish') {
 					assert.strictEqual(packet.qos, 1)
 					assert.strictEqual(packet.topic, testPacket.topic)
-					assert.strictEqual(
-						packet.payload.toString(),
-						testPacket.payload,
-					)
+					assert.strictEqual(packet.payload.toString(), testPacket.payload)
 					assert.strictEqual(packet.retain, true)
 					client.end(true, done)
 				}
@@ -2592,21 +2510,9 @@ module.exports = (server, config) => {
 				serverClient.once('pubcomp', () => {
 					client.removeAllListeners()
 					serverClient.removeAllListeners()
-					assert.strictEqual(
-						publishReceived,
-						1,
-						'invalid number of PUBLISH messages',
-					)
-					assert.strictEqual(
-						pubrecReceived,
-						1,
-						'invalid number of PUBREC messages',
-					)
-					assert.strictEqual(
-						pubrelReceived,
-						1,
-						'invalid nubmer of PUBREL messages',
-					)
+					assert.strictEqual(publishReceived, 1, 'invalid number of PUBLISH messages')
+					assert.strictEqual(pubrecReceived, 1, 'invalid number of PUBREC messages')
+					assert.strictEqual(pubrelReceived, 1, 'invalid nubmer of PUBREL messages')
 					client.end(true, done)
 				})
 			})
@@ -2668,14 +2574,9 @@ module.exports = (server, config) => {
 			})
 
 			client._sendPacket = (packet, sendDone) => {
-				shouldSendFail =
-					packet.cmd === 'pubcomp' && shouldSendPubcompFail
+				shouldSendFail = packet.cmd === 'pubcomp' && shouldSendPubcompFail
 				if (sendDone) {
-					sendDone(
-						shouldSendFail
-							? new Error('testing pubcomp failure')
-							: undefined,
-					)
+					sendDone(shouldSendFail ? new Error('testing pubcomp failure') : undefined)
 				}
 
 				// send the mocked response
@@ -2836,11 +2737,7 @@ module.exports = (server, config) => {
 			})
 		})
 
-		const reconnectPeriodTests = [
-			{ period: 200 },
-			{ period: 2000 },
-			{ period: 4000 },
-		]
+		const reconnectPeriodTests = [{ period: 200 }, { period: 2000 }, { period: 4000 }]
 		reconnectPeriodTests.forEach((test) => {
 			it(`should allow specification of a reconnect period (${test.period}ms)`, function _test(done) {
 				this.timeout(10000)
@@ -2859,10 +2756,8 @@ module.exports = (server, config) => {
 						client.end(() => {
 							const reconnectPeriodDuringTest = end - start
 							if (
-								reconnectPeriodDuringTest >=
-									test.period - reconnectSlushTime &&
-								reconnectPeriodDuringTest <=
-									test.period + reconnectSlushTime
+								reconnectPeriodDuringTest >= test.period - reconnectSlushTime &&
+								reconnectPeriodDuringTest <= test.period + reconnectSlushTime
 							) {
 								// give the connection a 200 ms slush window
 								done()
@@ -3006,11 +2901,7 @@ module.exports = (server, config) => {
 			client.publish('hello', 'world', { qos: 1 }, (err) => {
 				clientCalledBack = true
 				assert.exists(err, 'error should exist')
-				assert.strictEqual(
-					err.message,
-					'Message removed',
-					'error message is incorrect',
-				)
+				assert.strictEqual(err.message, 'Message removed', 'error message is incorrect')
 			})
 			assert.strictEqual(Object.keys(client.outgoing).length, 1)
 			assert.strictEqual(client.outgoingStore._inflights.size, 1)
@@ -3107,10 +2998,7 @@ module.exports = (server, config) => {
 					tryReconnect = false
 				} else {
 					assert.isTrue(reconnectEvent)
-					assert.strictEqual(
-						Object.keys(client._resubscribeTopics).length,
-						0,
-					)
+					assert.strictEqual(Object.keys(client._resubscribeTopics).length, 0)
 					client.end(true, done)
 				}
 			})
@@ -3121,8 +3009,7 @@ module.exports = (server, config) => {
 			let reconnectEvent = false
 			const server2 = serverBuilder(config.protocol, (serverClient) => {
 				serverClient.on('connect', (packet) => {
-					const connack =
-						version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
+					const connack = version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
 					serverClient.connack(connack)
 				})
 				serverClient.on('subscribe', (packet) => {
@@ -3161,10 +3048,7 @@ module.exports = (server, config) => {
 						tryReconnect = false
 					} else {
 						assert.isTrue(reconnectEvent)
-						assert.strictEqual(
-							Object.keys(client._resubscribeTopics).length,
-							0,
-						)
+						assert.strictEqual(Object.keys(client._resubscribeTopics).length, 0)
 						client.end(true, (err1) => {
 							server2.close((err2) => done(err1 || err2))
 						})
@@ -3180,8 +3064,7 @@ module.exports = (server, config) => {
 			const outgoingStore = new mqtt.Store({ clean: false })
 			const server2 = serverBuilder(config.protocol, (serverClient) => {
 				serverClient.on('connect', (packet) => {
-					const connack =
-						version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
+					const connack = version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
 					serverClient.connack(connack)
 					if (reconnect) {
 						serverClient.pubrel({ messageId: 1 })
@@ -3244,8 +3127,7 @@ module.exports = (server, config) => {
 			let client = {}
 			const server2 = serverBuilder(config.protocol, (serverClient) => {
 				serverClient.on('connect', (packet) => {
-					const connack =
-						version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
+					const connack = version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
 					serverClient.connack(connack)
 				})
 				serverClient.on('subscribe', (packet) => {
@@ -3282,10 +3164,7 @@ module.exports = (server, config) => {
 					if (reconnect) {
 						server2.close((err) => done(err))
 					} else {
-						assert.strictEqual(
-							Object.keys(client.outgoing).length,
-							0,
-						)
+						assert.strictEqual(Object.keys(client.outgoing).length, 0)
 						reconnect = true
 						client.reconnect()
 					}
@@ -3300,8 +3179,7 @@ module.exports = (server, config) => {
 			const outgoingStore = new mqtt.Store({ clean: false })
 			const server2 = serverBuilder(config.protocol, (serverClient) => {
 				serverClient.on('connect', (packet) => {
-					const connack =
-						version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
+					const connack = version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
 					serverClient.connack(connack)
 				})
 				serverClient.on('publish', (packet) => {
@@ -3348,8 +3226,7 @@ module.exports = (server, config) => {
 			const outgoingStore = new mqtt.Store({ clean: false })
 			const server2 = serverBuilder(config.protocol, (serverClient) => {
 				serverClient.on('connect', (packet) => {
-					const connack =
-						version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
+					const connack = version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
 					serverClient.connack(connack)
 				})
 				serverClient.on('publish', (packet) => {
@@ -3396,8 +3273,7 @@ module.exports = (server, config) => {
 			const outgoingStore = new mqtt.Store({ clean: false })
 			const server2 = serverBuilder(config.protocol, (serverClient) => {
 				serverClient.on('connect', (packet) => {
-					const connack =
-						version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
+					const connack = version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
 					serverClient.connack(connack)
 				})
 				serverClient.on('publish', (packet) => {
@@ -3433,18 +3309,13 @@ module.exports = (server, config) => {
 
 				client.on('connect', () => {
 					if (!reconnect) {
-						client.publish(
-							'topic',
-							'payload',
-							{ qos: 2 },
-							(err) => {
-								assert(reconnect)
-								assert.ifError(err)
-								client.end(true, (err1) => {
-									server2.close((err2) => done(err1 || err2))
-								})
-							},
-						)
+						client.publish('topic', 'payload', { qos: 2 }, (err) => {
+							assert(reconnect)
+							assert.ifError(err)
+							client.end(true, (err1) => {
+								server2.close((err2) => done(err1 || err2))
+							})
+						})
 					}
 				})
 				client.on('error', () => {})
@@ -3464,8 +3335,7 @@ module.exports = (server, config) => {
 				serverClient.on('error', () => {})
 
 				serverClient.on('connect', (packet) => {
-					const connack =
-						version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
+					const connack = version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
 					serverClient.connack(connack)
 				})
 				serverClient.on('publish', (packet) => {
@@ -3473,22 +3343,13 @@ module.exports = (server, config) => {
 					if (reconnect) {
 						switch (publishCount++) {
 							case 0:
-								assert.strictEqual(
-									packet.payload.toString(),
-									'payload1',
-								)
+								assert.strictEqual(packet.payload.toString(), 'payload1')
 								break
 							case 1:
-								assert.strictEqual(
-									packet.payload.toString(),
-									'payload2',
-								)
+								assert.strictEqual(packet.payload.toString(), 'payload2')
 								break
 							case 2:
-								assert.strictEqual(
-									packet.payload.toString(),
-									'payload3',
-								)
+								assert.strictEqual(packet.payload.toString(), 'payload3')
 								client.end(true, (err1) => {
 									server2.close((err2) => done(err1 || err2))
 								})
@@ -3595,8 +3456,7 @@ module.exports = (server, config) => {
 
 		context('with alternate server client', () => {
 			let cachedClientListeners
-			const connack =
-				version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
+			const connack = version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
 
 			beforeEach(() => {
 				cachedClientListeners = server.listeners('client')
@@ -3699,16 +3559,10 @@ module.exports = (server, config) => {
 			const client = connect()
 			client.once('connect', () => {
 				client.subscribe('test1', { qos: 2 }, () => {
-					assert.strictEqual(
-						Object.keys(client.messageIdToTopic).length,
-						0,
-					)
+					assert.strictEqual(Object.keys(client.messageIdToTopic).length, 0)
 
 					client.subscribe(['test2', 'test3'], { qos: 2 }, () => {
-						assert.strictEqual(
-							Object.keys(client.messageIdToTopic).length,
-							0,
-						)
+						assert.strictEqual(Object.keys(client.messageIdToTopic).length, 0)
 						client.end(done)
 					})
 				})

@@ -455,22 +455,14 @@ describe('MQTT 5.0', () => {
 
 		client.on('connect', () => {
 			// register topicAlias
-			client.publish(
-				'test1',
-				'Message',
-				{ properties: { topicAlias: 4 } },
-				(error) => {
-					assert.strictEqual(
-						error.message,
-						'Sending Topic Alias out of range',
-					)
-					client.end(true, (err1) => {
-						server2.close((err2) => {
-							done(err1 || err2)
-						})
+			client.publish('test1', 'Message', { properties: { topicAlias: 4 } }, (error) => {
+				assert.strictEqual(error.message, 'Sending Topic Alias out of range')
+				client.end(true, (err1) => {
+					server2.close((err2) => {
+						done(err1 || err2)
 					})
-				},
-			)
+				})
+			})
 		})
 	})
 
@@ -494,22 +486,14 @@ describe('MQTT 5.0', () => {
 
 		client.on('connect', () => {
 			// register topicAlias
-			client.publish(
-				'test1',
-				'Message',
-				{ properties: { topicAlias: 1 } },
-				(error) => {
-					assert.strictEqual(
-						error.message,
-						'Sending Topic Alias out of range',
-					)
-					client.end(true, (err1) => {
-						server2.close((err2) => {
-							done(err1 || err2)
-						})
+			client.publish('test1', 'Message', { properties: { topicAlias: 1 } }, (error) => {
+				assert.strictEqual(error.message, 'Sending Topic Alias out of range')
+				client.end(true, (err1) => {
+					server2.close((err2) => {
+						done(err1 || err2)
 					})
-				},
-			)
+				})
+			})
 		})
 	})
 
@@ -543,10 +527,7 @@ describe('MQTT 5.0', () => {
 		}).listen(ports.PORTAND103)
 
 		client.on('error', (error) => {
-			assert.strictEqual(
-				error.message,
-				'Received Topic Alias is out of range',
-			)
+			assert.strictEqual(error.message, 'Received Topic Alias is out of range')
 			client.end(true, (err1) => {
 				server2.close((err2) => {
 					done(err1 || err2)
@@ -585,10 +566,7 @@ describe('MQTT 5.0', () => {
 		}).listen(ports.PORTAND103)
 
 		client.on('error', (error) => {
-			assert.strictEqual(
-				error.message,
-				'Received Topic Alias is out of range',
-			)
+			assert.strictEqual(error.message, 'Received Topic Alias is out of range')
 			client.end(true, (err1) => {
 				server2.close((err2) => {
 					done(err1 || err2)
@@ -627,10 +605,7 @@ describe('MQTT 5.0', () => {
 		}).listen(ports.PORTAND103)
 
 		client.on('error', (error) => {
-			assert.strictEqual(
-				error.message,
-				'Received unregistered Topic Alias',
-			)
+			assert.strictEqual(error.message, 'Received unregistered Topic Alias')
 			client.end(true, (err1) => {
 				server2.close((err2) => {
 					done(err1 || err2)
@@ -651,15 +626,9 @@ describe('MQTT 5.0', () => {
 		const client = mqtt.connect(opts)
 		client.on('error', (error) => {
 			console.log('error hit')
-			assert.strictEqual(
-				error.message,
-				'Packet has no Authentication Method',
-			)
+			assert.strictEqual(error.message, 'Packet has no Authentication Method')
 			// client will not be connected, so we will call done.
-			assert.isTrue(
-				client.disconnected,
-				'validate client is disconnected',
-			)
+			assert.isTrue(client.disconnected, 'validate client is disconnected')
 			client.end(true, done)
 		})
 	})
@@ -820,10 +789,7 @@ describe('MQTT 5.0', () => {
 						granted: packet.subscriptions.map((e) => e.qos),
 					})
 				} else if (!tryReconnect) {
-					assert.strictEqual(
-						packet.properties.userProperties.test,
-						'test',
-					)
+					assert.strictEqual(packet.properties.userProperties.test, 'test')
 					client.end(true, (err1) => {
 						server2.close((err2) => {
 							done(err1 || err2)
@@ -938,10 +904,7 @@ describe('MQTT 5.0', () => {
 		const client = mqtt.connect(opts)
 		client.once('connect', () => {
 			client.publish('a/b', 'message', { qos: 1 }, (err, packet) => {
-				assert.strictEqual(
-					err.message,
-					'Publish error: Session taken over',
-				)
+				assert.strictEqual(err.message, 'Publish error: Session taken over')
 				assert.strictEqual(err.code, 142)
 			})
 			client.end(true, (err1) => {
@@ -963,10 +926,7 @@ describe('MQTT 5.0', () => {
 		const client = mqtt.connect(opts)
 		client.once('connect', () => {
 			client.publish('a/b', 'message', { qos: 2 }, (err, packet) => {
-				assert.strictEqual(
-					err.message,
-					'Publish error: Session taken over',
-				)
+				assert.strictEqual(err.message, 'Publish error: Session taken over')
 				assert.strictEqual(err.code, 142)
 			})
 			client.end(true, (err1) => {

@@ -108,10 +108,7 @@ function start(args) {
 
 	if (args.port) {
 		if (typeof args.port !== 'number') {
-			console.warn(
-				"# Port: number expected, '%s' was given.",
-				typeof args.port,
-			)
+			console.warn("# Port: number expected, '%s' was given.", typeof args.port)
 			return
 		}
 	}
