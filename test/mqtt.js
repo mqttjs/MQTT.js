@@ -130,9 +130,17 @@ describe('mqtt', () => {
 		})
 
 		const sslOpts2 = {
-			key: fs.readFileSync(path.join(__dirname, 'helpers', 'private-key.pem')),
-			cert: fs.readFileSync(path.join(__dirname, 'helpers', 'public-cert.pem')),
-			ca: [fs.readFileSync(path.join(__dirname, 'helpers', 'public-cert.pem'))],
+			key: fs.readFileSync(
+				path.join(__dirname, 'helpers', 'private-key.pem'),
+			),
+			cert: fs.readFileSync(
+				path.join(__dirname, 'helpers', 'public-cert.pem'),
+			),
+			ca: [
+				fs.readFileSync(
+					path.join(__dirname, 'helpers', 'public-cert.pem'),
+				),
+			],
 		}
 
 		it('should throw an error when it is called with cert and key set but no protocol specified', () => {

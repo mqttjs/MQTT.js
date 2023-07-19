@@ -158,8 +158,12 @@ describe('Websocket Client', () => {
 			this.timeout(15000)
 			const actualURL41 = 'wss://localhost:9917/'
 			const actualURL42 = 'ws://localhost:9918/'
-			const serverPort41 = new MqttServerNoWait(handler).listen(ports.PORTAND41)
-			const serverPort42 = new MqttServerNoWait(handler).listen(ports.PORTAND42)
+			const serverPort41 = new MqttServerNoWait(handler).listen(
+				ports.PORTAND41,
+			)
+			const serverPort42 = new MqttServerNoWait(handler).listen(
+				ports.PORTAND42,
+			)
 
 			serverPort42.on('listening', () => {
 				const client = mqtt.connect({

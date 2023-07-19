@@ -80,7 +80,9 @@ const handleClient = (client) => {
 		for (let i = 0; i < packet.subscriptions.length; i++) {
 			qos = packet.subscriptions[i].qos
 			topic = packet.subscriptions[i].topic
-			reg = new RegExp(`${topic.replace('+', '[^/]+').replace('#', '.+')}$`)
+			reg = new RegExp(
+				`${topic.replace('+', '[^/]+').replace('#', '.+')}$`,
+			)
 
 			granted.push(qos)
 			client.subscriptions.push(reg)
