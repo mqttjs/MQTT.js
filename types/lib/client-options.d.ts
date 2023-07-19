@@ -107,7 +107,12 @@ export interface IClientOptions extends ISecureClientOptions {
       responseTopic?: string,
       correlationData?: Buffer,
       userProperties?: UserProperties
-    }
+    },
+
+    authPacket?: any
+
+    /** Prevent to call `connect` in constructor */
+    manualConnect?: boolean
   }
   transformWsUrl?: (url: string, options: IClientOptions, client: MqttClient) => string,
   properties?: {

@@ -1,53 +1,54 @@
-'use strict'
-
-const MqttServer = require('../server').MqttServer
-const MqttSecureServer = require('../server').MqttSecureServer
 const fs = require('fs')
+const { MqttServer } = require('../server')
+const { MqttSecureServer } = require('../server')
 
-module.exports.init_server = function (PORT) {
-  const server = new MqttServer(function (client) {
-    client.on('connect', function () {
-      client.connack(0)
-    })
+module.exports.init_server = (PORT) => {
+	const server = new MqttServer((client) => {
+		client.on('connect', () => {
+			client.connack(0)
+		})
 
-    client.on('publish', function (packet) {
-      switch (packet.qos) {
-        case 1:
-          client.puback({ messageId: packet.messageId })
-          break
-        case 2:
-          client.pubrec({ messageId: packet.messageId })
-          break
-        default:
-          break
-      }
-    })
+		client.on('publish', (packet) => {
+			switch (packet.qos) {
+				case 1:
+					client.puback({ messageId: packet.messageId })
+					break
+				case 2:
+					client.pubrec({ messageId: packet.messageId })
+					break
+				default:
+					break
+			}
+		})
 
-    client.on('pubrel', function (packet) {
-      client.pubcomp({ messageId: packet.messageId })
-    })
+		client.on('pubrel', (packet) => {
+			client.pubcomp({ messageId: packet.messageId })
+		})
 
-    client.on('pingreq', function () {
-      client.pingresp()
-    })
+		client.on('pingreq', () => {
+			client.pingresp()
+		})
 
-    client.on('disconnect', function () {
-      client.stream.end()
-    })
-  })
-  server.listen(PORT)
-  return server
+		client.on('disconnect', () => {
+			client.stream.end()
+		})
+	})
+	server.listen(PORT)
+	return server
 }
 
-module.exports.init_secure_server = function (port, key, cert) {
-  const server = new MqttSecureServer({
-    key: fs.readFileSync(key),
-    cert: fs.readFileSync(cert)
-  }, function (client) {
-    client.on('connect', function () {
-      client.connack({ returnCode: 0 })
-    })
-  })
-  server.listen(port)
-  return server
+module.exports.init_secure_server = (port, key, cert) => {
+	const server = new MqttSecureServer(
+		{
+			key: fs.readFileSync(key),
+			cert: fs.readFileSync(cert),
+		},
+		(client) => {
+			client.on('connect', () => {
+				client.connack({ returnCode: 0 })
+			})
+		},
+	)
+	server.listen(port)
+	return server
 }

@@ -122,6 +122,11 @@ export declare class MqttClient extends events.EventEmitter {
   public once (event: string, cb: Function): this
 
   /**
+   * Setup the event handlers in the inner stream, sends `connect` and `auth` packets
+   */
+  public connect(): this
+
+  /**
    * publish - publish <message> to <topic>
    *
    * @param {String} topic - topic to publish to

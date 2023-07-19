@@ -39,10 +39,10 @@ const client = mqtt.connect(options)
 
 client.subscribe('messages')
 client.publish('messages', 'Current time is: ' + new Date())
-client.on('message', function (topic, message) {
+client.on('message', (topic, message) => {
   console.log(message)
 })
 
-client.on('connect', function () {
+client.on('connect', () => {
   console.log('Connected')
 })
