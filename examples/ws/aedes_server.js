@@ -10,19 +10,19 @@ wss.on('connection', function connection (ws) {
   aedes.handle(duplex)
 })
 
-httpServer.listen(wsPort, function () {
+httpServer.listen(wsPort, () => {
   console.log('websocket server listening on port', wsPort)
 })
 
-aedes.on('clientError', function (client, err) {
+aedes.on('clientError', (client, err) => {
   console.log('client error', client.id, err.message, err.stack)
 })
 
-aedes.on('connectionError', function (client, err) {
+aedes.on('connectionError', (client, err) => {
   console.log('client error', client, err.message, err.stack)
 })
 
-aedes.on('publish', function (packet, client) {
+aedes.on('publish', (packet, client) => {
   if (packet && packet.payload) {
     console.log('publish packet:', packet.payload.toString())
   }
@@ -31,12 +31,12 @@ aedes.on('publish', function (packet, client) {
   }
 })
 
-aedes.on('subscribe', function (subscriptions, client) {
+aedes.on('subscribe', (subscriptions, client) => {
   if (client) {
     console.log('subscribe from client', subscriptions, client.id)
   }
 })
 
-aedes.on('client', function (client) {
+aedes.on('client', (client) => {
   console.log('new client', client.id)
 })

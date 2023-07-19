@@ -61,6 +61,8 @@ export interface IClientOptions extends ISecureClientOptions {
   outgoingStore?: Store
   queueQoSZero?: boolean
 
+  log?: (...args: any[]) => void
+
   autoUseTopicAlias?: boolean
   autoAssignTopicAlias?: boolean
 
@@ -105,7 +107,12 @@ export interface IClientOptions extends ISecureClientOptions {
       responseTopic?: string,
       correlationData?: Buffer,
       userProperties?: UserProperties
-    }
+    },
+
+    authPacket?: any
+
+    /** Prevent to call `connect` in constructor */
+    manualConnect?: boolean
   }
   transformWsUrl?: (url: string, options: IClientOptions, client: MqttClient) => string,
   properties?: {
@@ -188,6 +195,15 @@ export interface IClientSubscribeOptions {
   * Retain Handling option
   * */
   rh?: number,
+  /*
+  *  MQTT 5.0 properies object of subscribe
+  * */
+  properties?: {
+    subscriptionIdentifier?: number,
+    userProperties?: UserProperties
+  }
+}
+export interface IClientSubscribeProperties {
   /*
   *  MQTT 5.0 properies object of subscribe
   * */

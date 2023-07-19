@@ -1,5 +1,70 @@
 
 
+# [5.0.0-beta.3](https://github.com/mqttjs/MQTT.js/compare/v4.3.7...v5.0.0-beta.3) (2023-07-19)
+
+
+### Bug Fixes
+
+* make tests more reliable ([#1534](https://github.com/mqttjs/MQTT.js/issues/1534)) ([1076143](https://github.com/mqttjs/MQTT.js/commit/1076143a7ed6b07b91ded9985cc9a0bbb5a84da4))
+* problem with publish callback invoked twice ([#1635](https://github.com/mqttjs/MQTT.js/issues/1635)) ([79b23a8](https://github.com/mqttjs/MQTT.js/commit/79b23a8f76abaceec67f063b6da0ee57a2c60697))
+* **types:** subscribe definition ([#1527](https://github.com/mqttjs/MQTT.js/issues/1527)) ([debb7d9](https://github.com/mqttjs/MQTT.js/commit/debb7d93c17f5b68704c160ccd88e7e1db87d92d))
+
+
+* chore!: remove unused deps, convert to ES2015 class (#1633) ([d71b000](https://github.com/mqttjs/MQTT.js/commit/d71b000773e4954c9a2ecbf4f750dac58017ef1a)), closes [#1633](https://github.com/mqttjs/MQTT.js/issues/1633)
+
+
+### BREAKING CHANGES
+
+* when creating an `MqttClient` instance `new` is now required
+
+
+
+# [5.0.0-beta.2](https://github.com/mqttjs/MQTT.js/compare/v4.3.7...v5.0.0-beta.3) (2023-07-03)
+
+
+### Bug Fixes
+
+* browser tests not working ([#1628](https://github.com/mqttjs/MQTT.js/issues/1628)) ([8775fcd](https://github.com/mqttjs/MQTT.js/commit/8775fcdad952b39fa4b79dbe912ca42033be030a))
+* setImmediate polyfill ([#1626](https://github.com/mqttjs/MQTT.js/issues/1626)) ([0ed0754](https://github.com/mqttjs/MQTT.js/commit/0ed0754b95b92df51ed49ae63058b31fdba1d415))
+
+
+### Features
+
+* option to disable `writeCache` and fix leak in subscriptions ([#1622](https://github.com/mqttjs/MQTT.js/issues/1622)) ([c8aa654](https://github.com/mqttjs/MQTT.js/commit/c8aa6540dbf68ffb0d88c287e2c862b28d3fb6e6)), closes [#1535](https://github.com/mqttjs/MQTT.js/issues/1535) [#1151](https://github.com/mqttjs/MQTT.js/issues/1151)
+
+
+
+# [5.0.0-beta.1](https://github.com/mqttjs/MQTT.js/compare/v4.3.7...v5.0.0-beta.3) (2023-06-29)
+
+
+### Bug Fixes
+
+* `_storeProcessing` staying true after outStore got emptied ([#1492](https://github.com/mqttjs/MQTT.js/issues/1492)) ([f3f7be7](https://github.com/mqttjs/MQTT.js/commit/f3f7be76199115a622fde2590d44b1bb0cf57d41))
+* consistency, used `this` instead of `that` ([#1618](https://github.com/mqttjs/MQTT.js/issues/1618)) ([800825b](https://github.com/mqttjs/MQTT.js/commit/800825bf619d83ef713a5b2fa1533bbf6ccac872))
+* prevent store message on store when it's restored ([#1255](https://github.com/mqttjs/MQTT.js/issues/1255)) ([8d68c8c](https://github.com/mqttjs/MQTT.js/commit/8d68c8c3e38aede52741a06838933011a6fccc43))
+
+
+
+# [5.0.0-beta.0](https://github.com/mqttjs/MQTT.js/compare/v4.3.7...v5.0.0-beta.3) (2023-06-27)
+
+
+### Bug Fixes
+
+* add missing export of UniqueMessageIdProvider and DefaultMessageIdProvider ([#1572](https://github.com/mqttjs/MQTT.js/issues/1572)) ([aa2e0ad](https://github.com/mqttjs/MQTT.js/commit/aa2e0ad49aadf333141f18cb85d2582abb8e19fc))
+* IS_BROWSER check is now safer and more agnostic about the bundler ([#1571](https://github.com/mqttjs/MQTT.js/issues/1571)) ([b48b4b4](https://github.com/mqttjs/MQTT.js/commit/b48b4b4e79690c96033ea2df387c11f3bc26bf6a))
+* **test:** `topicAliasMaximum` tests ([#1612](https://github.com/mqttjs/MQTT.js/issues/1612)) ([f1e5518](https://github.com/mqttjs/MQTT.js/commit/f1e5518150ea45067b87104abd9fed64ec13a48c))
+* topicAliasMaximum under must be under Connect properties ([#1519](https://github.com/mqttjs/MQTT.js/issues/1519)) ([3b2e1cb](https://github.com/mqttjs/MQTT.js/commit/3b2e1cb7c4bf33ff66bcd1cc3091790a9635f19a))
+* **types:** missing null declaration for error in subscription callback ([#1589](https://github.com/mqttjs/MQTT.js/issues/1589)) ([afc067b](https://github.com/mqttjs/MQTT.js/commit/afc067be2ca83990209b6176adec06f9a4c76a2c))
+* **types:** topic alias controls and password ([#1509](https://github.com/mqttjs/MQTT.js/issues/1509)) ([85c9341](https://github.com/mqttjs/MQTT.js/commit/85c9341bba2676cfd069ec38a1a7cfda71647b68))
+
+
+* chore!: drop support for node 12-14 (#1615) ([a2cbf61](https://github.com/mqttjs/MQTT.js/commit/a2cbf61c2a051a5ee69a50e00688e8ace79e7ef5)), closes [#1615](https://github.com/mqttjs/MQTT.js/issues/1615)
+
+
+### BREAKING CHANGES
+
+* Dropped support for NodeJS 12-14
+
 # [5.0.0-beta.2](https://github.com/mqttjs/MQTT.js/compare/v4.3.7...v5.0.0-beta.2) (2023-07-03)
 
 

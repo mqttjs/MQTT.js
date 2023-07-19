@@ -10,7 +10,7 @@
 MQTT.js is a client library for the [MQTT](http://mqtt.org/) protocol, written
 in JavaScript for node.js and the browser.
 
-> MQTT [5.0.0-beta.0](https://github.com/mqttjs/MQTT.js/releases/tag/v5.0.0-beta.0) is now available! Try it out and give us feedback! `npm i mqtt@5.0.0-beta.0`
+> MQTT [5.0.0 BETA](https://www.npmjs.com/package/mqtt/v/beta) is now available! Try it out and give us [feedback](https://github.com/mqttjs/MQTT.js/issues/1639): `npm i mqtt@beta`
 
 ## Table of Contents
 
@@ -101,15 +101,15 @@ For the sake of simplicity, let's put the subscriber and the publisher in the sa
 const mqtt = require("mqtt");
 const client = mqtt.connect("mqtt://test.mosquitto.org");
 
-client.on("connect", function () {
-  client.subscribe("presence", function (err) {
+client.on("connect", () => {
+  client.subscribe("presence", (err) => {
     if (!err) {
       client.publish("presence", "Hello mqtt");
     }
   });
 });
 
-client.on("message", function (topic, message) {
+client.on("message", (topic, message) => {
   // message is Buffer
   console.log(message.toString());
   client.end();
@@ -305,23 +305,24 @@ Also user can manually register topic-alias pair using PUBLISH topic:'some', ta:
 
 ## API
 
-- <a href="#connect"><code>mqtt.<b>connect()</b></code></a>
-- <a href="#client"><code>mqtt.<b>Client()</b></code></a>
-- <a href="#publish"><code>mqtt.Client#<b>publish()</b></code></a>
-- <a href="#subscribe"><code>mqtt.Client#<b>subscribe()</b></code></a>
-- <a href="#unsubscribe"><code>mqtt.Client#<b>unsubscribe()</b></code></a>
-- <a href="#end"><code>mqtt.Client#<b>end()</b></code></a>
-- <a href="#removeOutgoingMessage"><code>mqtt.Client#<b>removeOutgoingMessage()</b></code></a>
-- <a href="#reconnect"><code>mqtt.Client#<b>reconnect()</b></code></a>
-- <a href="#handleMessage"><code>mqtt.Client#<b>handleMessage()</b></code></a>
-- <a href="#connected"><code>mqtt.Client#<b>connected</b></code></a>
-- <a href="#reconnecting"><code>mqtt.Client#<b>reconnecting</b></code></a>
-- <a href="#getLastMessageId"><code>mqtt.Client#<b>getLastMessageId()</b></code></a>
-- <a href="#store"><code>mqtt.<b>Store()</b></code></a>
-- <a href="#put"><code>mqtt.Store#<b>put()</b></code></a>
-- <a href="#del"><code>mqtt.Store#<b>del()</b></code></a>
-- <a href="#createStream"><code>mqtt.Store#<b>createStream()</b></code></a>
-- <a href="#close"><code>mqtt.Store#<b>close()</b></code></a>
+- [`mqtt.connect()`](#connect)
+- [`mqtt.Client()`](#client)
+- [`mqtt.Client#connect()`](#client-connect)
+- [`mqtt.Client#publish()`](#publish)
+- [`mqtt.Client#subscribe()`](#subscribe)
+- [`mqtt.Client#unsubscribe()`](#unsubscribe)
+- [`mqtt.Client#end()`](#end)
+- [`mqtt.Client#removeOutgoingMessage()`](#removeOutgoingMessage)
+- [`mqtt.Client#reconnect()`](#reconnect)
+- [`mqtt.Client#handleMessage()`](#handleMessage)
+- [`mqtt.Client#connected`](#connected)
+- [`mqtt.Client#reconnecting`](#reconnecting)
+- [`mqtt.Client#getLastMessageId()`](#getLastMessageId)
+- [`mqtt.Store()`](#store)
+- [`mqtt.Store#put()`](#put)
+- [`mqtt.Store#del()`](#del)
+- [`mqtt.Store#createStream()`](#createStream)
+- [`mqtt.Store#close()`](#close)
 
 ---
 
@@ -368,7 +369,7 @@ The arguments are:
   the `connect` event. Typically a `net.Socket`.
 - `options` is the client connection options (see: the [connect packet](https://github.com/mcollina/mqtt-packet#connect)). Defaults:
   - `wsOptions`: is the WebSocket connection options. Default is `{}`.
-    It's specific for WebSockets. For possible options have a look at: https://github.com/websockets/ws/blob/master/doc/ws.md.
+    It's specific for WebSockets. For possible options have a look at: <https://github.com/websockets/ws/blob/master/doc/ws.md>.
   - `keepalive`: `60` seconds, set to `0` to disable
   - `reschedulePings`: reschedule ping messages after sending packets (default `true`)
   - `clientId`: `'mqttjs_' + Math.random().toString(16).substr(2, 8)`
@@ -386,9 +387,11 @@ The arguments are:
   - `outgoingStore`: a [Store](#store) for the outgoing packets
   - `queueQoSZero`: if connection is broken, queue outgoing QoS zero messages (default `true`)
   - `customHandleAcks`: MQTT 5 feature of custom handling puback and pubrec packets. Its callback:
+
     ```js
       customHandleAcks: function(topic, message, packet, done) {/*some logic wit colling done(error, reasonCode)*/}
     ```
+
   - `autoUseTopicAlias`: enabling automatic Topic Alias using functionality
   - `autoAssignTopicAlias`: enabling automatic Topic Alias assign functionality
   - `properties`: properties MQTT 5.0.
@@ -423,6 +426,8 @@ The arguments are:
   - `resubscribe` : if connection is broken and reconnects,
     subscribed topics are automatically subscribed again (default `true`)
   - `messageIdProvider`: custom messageId provider. when `new UniqueMessageIdProvider()` is set, then non conflict messageId is provided.
+  - `log`: custom log function. Default uses [debug](https://www.npmjs.com/package/debug) package.
+  - `manualConnect`: prevents the constructor to call `connect`. In this case after the `mqtt.connect` is called you should call `client.connect` manually.
 
 In case mqtts (mqtt over tls) is required, the `options` object is
 passed through to
@@ -496,7 +501,7 @@ The following TLS errors will be emitted as an `error` event:
 
 `function () {}`
 
-Emitted when <a href="#end"><code>mqtt.Client#<b>end()</b></code></a> is called.
+Emitted when [`mqtt.Client#end()`](#end) is called.
 If a callback was passed to `mqtt.Client#end()`, this event is emitted once the
 callback returns.
 
@@ -533,6 +538,12 @@ and connections
   [mqtt-packet](https://github.com/mcollina/mqtt-packet)
 
 ---
+
+<a name="client-connect"></a>
+
+### mqtt.Client#connect()
+
+By default client connects when constructor is called. To prevent this you can set `manualConnect` option to `true` and call `client.connect()` manually.
 
 <a name="publish"></a>
 
@@ -745,9 +756,9 @@ Closes the Store.
 
 ### Via CDN
 
-The MQTT.js bundle is available through http://unpkg.com, specifically
-at https://unpkg.com/mqtt/dist/mqtt.min.js.
-See http://unpkg.com for the full documentation on version ranges.
+The MQTT.js bundle is available through <http://unpkg.com>, specifically
+at <https://unpkg.com/mqtt/dist/mqtt.min.js>.
+See <http://unpkg.com> for the full documentation on version ranges.
 
 <a name="browserify"></a>
 

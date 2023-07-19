@@ -21,27 +21,33 @@ jobs:
       fail-fast: false
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v2
+      uses: actions/setup-node@v3
       with:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
 
     - name: Install Dependencies
       run: npm ci
+    
+    - name: Lint
+      if: matrix.node-version == '20.x'
+      # only run on latest node version, no reason to run on all
+      run: |
+        npm run lint
 
     - name: Test NodeJS
-      run: npm run test:node
+      run: npm run test:node # npx mocha test/unique_message_id_provider_client.js --exit
       env:
         CI: true
-        DEBUG: "mqttjs"
+        DEBUG: "${{ runner.debug == '1' && 'mqttjs:*' || '' }}"
 
     - name: Test Typescript
       run: npm run test:typescript
       env:
         CI: true
-        DEBUG: "mqttjs"
+        DEBUG: "${{ runner.debug == '1' && 'mqttjs:*' || '' }}"
     
     - name: Test Browser
       if: matrix.node-version == '20.x'

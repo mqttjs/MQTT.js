@@ -5,6 +5,7 @@ import {
   IClientOptions,
   IClientPublishOptions,
   IClientSubscribeOptions,
+  IClientSubscribeProperties,
   IClientReconnectOptions
 } from './client-options'
 import { Store } from './store'
@@ -98,6 +99,8 @@ export declare class MqttClient extends events.EventEmitter {
   public options: IClientOptions
   public queueQoSZero: boolean
 
+  static defaultId (): string
+
   constructor (streamBuilder: (client: MqttClient) => IStream, options: IClientOptions)
 
   public on (event: 'connect', cb: OnConnectCallback): this
@@ -117,6 +120,11 @@ export declare class MqttClient extends events.EventEmitter {
   public once (event: 'close', cb: OnCloseCallback): this
   public once (event: 'end' | 'reconnect' | 'offline' | 'outgoingEmpty', cb: () => void): this
   public once (event: string, cb: Function): this
+
+  /**
+   * Setup the event handlers in the inner stream, sends `connect` and `auth` packets
+   */
+  public connect(): this
 
   /**
    * publish - publish <message> to <topic>
@@ -164,7 +172,11 @@ export declare class MqttClient extends events.EventEmitter {
    */
   public subscribe (topic:
                      string
-                     | string[], opts: IClientSubscribeOptions, callback?: ClientSubscribeCallback): this
+                     | string[]
+                     | ISubscriptionMap,
+                    opts:
+                     IClientSubscribeOptions
+                     | IClientSubscribeProperties, callback?: ClientSubscribeCallback): this
   public subscribe (topic:
                      string
                      | string[]

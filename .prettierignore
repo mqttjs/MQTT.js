@@ -1,0 +1,6 @@
+*.md
+README.md
+/types/
+/examples/
+/doc/
+/dist/

@@ -1,10 +1,8 @@
-'use strict'
-
 const Store = require('../lib/store')
-const abstractTest = require('../test/abstract_store')
+const abstractTest = require('./abstract_store')
 
-describe('in-memory store', function () {
-  abstractTest(function (done) {
-    done(null, new Store())
-  })
+describe('in-memory store', () => {
+	abstractTest(function test(done) {
+		done(null, new Store())
+	})
 })

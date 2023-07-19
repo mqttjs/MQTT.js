@@ -39,22 +39,22 @@ const mqttOptions = {
 
 const client = mqtt.connect(parsed, mqttOptions)
 
-client.on('connect', function () {
+client.on('connect', () => {
   console.log('connected')
 })
 
-client.on('error', function (a) {
+client.on('error', (a) => {
   console.log('error!' + a)
 })
 
-client.on('offline', function (a) {
+client.on('offline', (a) => {
   console.log('lost connection!' + a)
 })
 
-client.on('close', function (a) {
+client.on('close', (a) => {
   console.log('connection closed!' + a)
 })
 
-client.on('message', function (topic, message) {
+client.on('message', (topic, message) => {
   console.log(message.toString())
 })
