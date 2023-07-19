@@ -1,36 +1,37 @@
-const url = require('url')
-const MqttClient = require('../client')
-const Store = require('../store')
-const DefaultMessageIdProvider = require('../default-message-id-provider')
-const UniqueMessageIdProvider = require('../unique-message-id-provider')
-const { IS_BROWSER } = require('../is-browser')
-const debug = require('debug')('mqttjs')
+/* eslint-disable @typescript-eslint/no-var-requires */
+import url from 'url'
+import MqttClient, { IClientOptions, MqttProtocol } from '../client'
+import IS_BROWSER from '../is-browser'
+import debug from 'debug'
+import { StreamBuilder } from '../shared'
 
-const protocols = {}
+debug('mqttjs')
+
+const protocols: Record<string, StreamBuilder> = {}
 
 if (!IS_BROWSER) {
-	protocols.mqtt = require('./tcp')
-	protocols.tcp = require('./tcp')
-	protocols.ssl = require('./tls')
-	protocols.tls = require('./tls')
-	protocols.mqtts = require('./tls')
+	protocols.mqtt = require('./tcp').default
+	protocols.tcp = require('./tcp').default
+	protocols.ssl = require('./tls').default
+	protocols.tls = require('./tls').default
+	protocols.mqtts = require('./tls').default
 } else {
-	protocols.wx = require('./wx')
-	protocols.wxs = require('./wx')
+	protocols.wx = require('./wx').default
+	protocols.wxs = require('./wx').default
 
-	protocols.ali = require('./ali')
-	protocols.alis = require('./ali')
+	protocols.ali = require('./ali').default
+	protocols.alis = require('./ali').default
 }
 
-protocols.ws = require('./ws')
-protocols.wss = require('./ws')
+protocols.ws = require('./ws').default
+protocols.wss = require('./ws').default
 
 /**
  * Parse the auth attribute and merge username and password in the options object.
  *
  * @param {Object} [opts] option object
  */
-function parseAuthOptions(opts) {
+function parseAuthOptions(opts: IClientOptions) {
 	let matches
 	if (opts.auth) {
 		matches = opts.auth.match(/^(.+):(.+)$/)
@@ -45,33 +46,33 @@ function parseAuthOptions(opts) {
 
 /**
  * connect - connect to an MQTT broker.
- *
- * @param {String} [brokerUrl] - url of the broker, optional
- * @param {Object} opts - see MqttClient#constructor
  */
-function connect(brokerUrl, opts) {
+export default function connect(
+	brokerUrl: string | IClientOptions,
+	opts?: IClientOptions,
+): MqttClient {
 	debug('connecting to an MQTT broker...')
 	if (typeof brokerUrl === 'object' && !opts) {
 		opts = brokerUrl
-		brokerUrl = null
+		brokerUrl = ''
 	}
 
 	opts = opts || {}
 
-	if (brokerUrl) {
+	if (brokerUrl && typeof brokerUrl === 'string') {
 		// eslint-disable-next-line
-    const parsed = url.parse(brokerUrl, true)
+		const parsed = url.parse(brokerUrl, true)
 		if (parsed.port != null) {
 			parsed.port = Number(parsed.port)
 		}
 
-		opts = { ...parsed, ...opts }
+		opts = { ...parsed, ...opts } as IClientOptions
 
 		if (opts.protocol === null) {
 			throw new Error('Missing protocol')
 		}
 
-		opts.protocol = opts.protocol.replace(/:$/, '')
+		opts.protocol = opts.protocol.replace(/:$/, '') as MqttProtocol
 	}
 
 	// merge in the auth options if supplied
@@ -127,7 +128,7 @@ function connect(brokerUrl, opts) {
 				return false
 			}
 			return typeof protocols[key] === 'function'
-		})[0]
+		})[0] as MqttProtocol
 	}
 
 	if (opts.clean === false && !opts.clientId) {
@@ -138,7 +139,7 @@ function connect(brokerUrl, opts) {
 		opts.defaultProtocol = opts.protocol
 	}
 
-	function wrapper(client) {
+	function wrapper(client: MqttClient) {
 		if (opts.servers) {
 			if (
 				!client._reconnectCount ||
@@ -167,9 +168,4 @@ function connect(brokerUrl, opts) {
 	return client
 }
 
-module.exports = connect
-module.exports.connect = connect
-module.exports.MqttClient = MqttClient
-module.exports.Store = Store
-module.exports.DefaultMessageIdProvider = DefaultMessageIdProvider
-module.exports.UniqueMessageIdProvider = UniqueMessageIdProvider
+export * from '../mqtt'

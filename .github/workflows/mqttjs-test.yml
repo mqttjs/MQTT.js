@@ -54,7 +54,7 @@ jobs:
       # only run on latest node version, no reason to run on all
       timeout-minutes: 2
       run: |
-        npm run browser-build
+        npm run build:browser
         npm run unit-test:browser
   
 

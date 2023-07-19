@@ -1,27 +1,28 @@
-const { Buffer } = require('buffer')
-const { Transform } = require('readable-stream')
-const duplexify = require('duplexify')
+import { Buffer } from 'buffer'
+import { Transform } from 'readable-stream'
+import duplexify from 'duplexify'
+import { StreamBuilder } from '../shared'
 
-/* global wx */
-let socketTask
+let my
 let proxy
 let stream
+let isInitialized = false
 
 function buildProxy() {
 	const _proxy = new Transform()
 	_proxy._write = (chunk, encoding, next) => {
-		socketTask.send({
+		my.sendSocketMessage({
 			data: chunk.buffer,
 			success() {
 				next()
 			},
-			fail(errMsg) {
-				next(new Error(errMsg))
+			fail() {
+				next(new Error())
 			},
 		})
 	}
 	_proxy._flush = (done) => {
-		socketTask.close({
+		my.closeSocket({
 			success() {
 				done()
 			},
@@ -45,7 +46,7 @@ function setDefaultOpts(opts) {
 }
 
 function buildUrl(opts, client) {
-	const protocol = opts.protocol === 'wxs' ? 'wss' : 'ws'
+	const protocol = opts.protocol === 'alis' ? 'wss' : 'ws'
 	let url = `${protocol}://${opts.hostname}${opts.path}`
 	if (opts.port && opts.port !== 80 && opts.port !== 443) {
 		url = `${protocol}://${opts.hostname}:${opts.port}${opts.path}`
@@ -57,31 +58,44 @@ function buildUrl(opts, client) {
 }
 
 function bindEventHandler() {
-	socketTask.onOpen(() => {
+	if (isInitialized) return
+
+	isInitialized = true
+
+	my.onSocketOpen(() => {
 		stream.setReadable(proxy)
 		stream.setWritable(proxy)
 		stream.emit('connect')
 	})
 
-	socketTask.onMessage((res) => {
-		let { data } = res
+	my.onSocketMessage((res) => {
+		if (typeof res.data === 'string') {
+			const buffer = Buffer.from(res.data, 'base64')
+			proxy.push(buffer)
+		} else {
+			const reader = new FileReader()
+			reader.addEventListener('load', () => {
+				let data = reader.result
 
-		if (data instanceof ArrayBuffer) data = Buffer.from(data)
-		else data = Buffer.from(data, 'utf8')
-		proxy.push(data)
+				if (data instanceof ArrayBuffer) data = Buffer.from(data)
+				else data = Buffer.from(data, 'utf8')
+				proxy.push(data)
+			})
+			reader.readAsArrayBuffer(res.data)
+		}
 	})
 
-	socketTask.onClose(() => {
+	my.onSocketClose(() => {
 		stream.end()
 		stream.destroy()
 	})
 
-	socketTask.onError((res) => {
-		stream.destroy(new Error(res.errMsg))
+	my.onSocketError((res) => {
+		stream.destroy(res)
 	})
 }
 
-function buildStream(client, opts) {
+const buildStream: StreamBuilder = (client, opts) => {
 	opts.hostname = opts.hostname || opts.host
 
 	if (!opts.hostname) {
@@ -96,37 +110,18 @@ function buildStream(client, opts) {
 	setDefaultOpts(opts)
 
 	const url = buildUrl(opts, client)
-	socketTask = wx.connectSocket({
+	my = opts.my
+	my.connectSocket({
 		url,
-		protocols: [websocketSubProtocol],
+		protocols: websocketSubProtocol,
 	})
 
 	proxy = buildProxy()
 	stream = duplexify.obj()
-	stream._destroy = (err, cb) => {
-		socketTask.close({
-			success() {
-				if (cb) cb(err)
-			},
-		})
-	}
-
-	const destroyRef = stream.destroy
-	stream.destroy = () => {
-		stream.destroy = destroyRef
-
-		setTimeout(() => {
-			socketTask.close({
-				fail() {
-					stream._destroy(new Error())
-				},
-			})
-		}, 0)
-	}
 
 	bindEventHandler()
 
 	return stream
 }
 
-module.exports = buildStream
+export default buildStream

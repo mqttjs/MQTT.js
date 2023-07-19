@@ -1,8 +1,11 @@
-const tls = require('tls')
-const net = require('net')
-const debug = require('debug')('mqttjs:tls')
+import tls from 'tls'
+import net from 'net'
+import debug from 'debug'
+import { StreamBuilder } from '../shared'
 
-function buildBuilder(mqttClient, opts) {
+debug('mqttjs:tls')
+
+const buildStream: StreamBuilder = (client, opts) => {
 	opts.port = opts.port || 8883
 	opts.host = opts.hostname || opts.host || 'localhost'
 
@@ -34,7 +37,7 @@ function buildBuilder(mqttClient, opts) {
 	function handleTLSerrors(err) {
 		// How can I get verify this error is a tls error?
 		if (opts.rejectUnauthorized) {
-			mqttClient.emit('error', err)
+			client.emit('error', err)
 		}
 
 		// close this connection to match the behaviour of net
@@ -49,4 +52,4 @@ function buildBuilder(mqttClient, opts) {
 	return connection
 }
 
-module.exports = buildBuilder
+export default buildStream

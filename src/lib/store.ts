@@ -1,12 +1,23 @@
 /**
  * Module dependencies
  */
-const { Readable } = require('readable-stream')
+import { Readable } from 'readable-stream'
+import { Packet } from 'mqtt-packet'
+import { DoneCallback } from './shared'
 
 const streamsOpts = { objectMode: true }
 const defaultStoreOptions = {
 	clean: true,
 }
+
+export interface IStoreOptions {
+	/**
+	 * true, clear _inflights at close
+	 */
+	clean?: boolean
+}
+
+export type PacketCallback = (error?: Error, packet?: Packet) => void
 
 /**
  * In-memory implementation of the message store
@@ -14,8 +25,12 @@ const defaultStoreOptions = {
  *
  * @param {Object} [options] - store options
  */
-class Store {
-	constructor(options) {
+export default class Store {
+	private options: IStoreOptions
+
+	private _inflights: Map<number, Packet>
+
+	constructor(options: IStoreOptions) {
 		this.options = options || {}
 
 		// Defaults
@@ -29,7 +44,7 @@ class Store {
 	 * anything that has a messageId property.
 	 *
 	 */
-	put(packet, cb) {
+	put(packet: Packet, cb: DoneCallback) {
 		this._inflights.set(packet.messageId, packet)
 
 		if (cb) {
@@ -61,7 +76,7 @@ class Store {
 			}
 		}
 
-		stream.destroy = () => {
+		stream.destroy = (err) => {
 			if (destroyed) {
 				return
 			}
@@ -71,6 +86,8 @@ class Store {
 			setTimeout(() => {
 				stream.emit('close')
 			}, 0)
+
+			return stream
 		}
 
 		return stream
@@ -79,7 +96,7 @@ class Store {
 	/**
 	 * deletes a packet from the store.
 	 */
-	del(packet, cb) {
+	del(packet: Packet, cb: PacketCallback) {
 		packet = this._inflights.get(packet.messageId)
 		if (packet) {
 			this._inflights.delete(packet.messageId)
@@ -94,7 +111,7 @@ class Store {
 	/**
 	 * get a packet from the store.
 	 */
-	get(packet, cb) {
+	get(packet: Packet, cb: PacketCallback) {
 		packet = this._inflights.get(packet.messageId)
 		if (packet) {
 			cb(null, packet)
@@ -108,7 +125,7 @@ class Store {
 	/**
 	 * Close the store
 	 */
-	close(cb) {
+	close(cb: DoneCallback) {
 		if (this.options.clean) {
 			this._inflights = null
 		}
@@ -117,5 +134,3 @@ class Store {
 		}
 	}
 }
-
-module.exports = Store

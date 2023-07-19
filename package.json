@@ -20,19 +20,21 @@
     "type": "git",
     "url": "git://github.com/mqttjs/MQTT.js.git"
   },
-  "main": "mqtt.js",
+  "main": "build/mqtt.js",
   "types": "types/index.d.ts",
   "scripts": {
     "lint": "eslint --ext .js .",
     "lint-fix": "eslint --fix --ext .js .",
+    "build:ts": "tsc -p tsconfig.build.json",
+    "build:browser": "rimraf dist/ && mkdirp dist/ && browserify build/mqtt.js --standalone mqtt > dist/mqtt.js && terser dist/mqtt.js --compress --mangle --output dist/mqtt.min.js",
+    "build": "npm run build:ts && npm run build:browser",
     "typescript-compile-test": "tsc -p test/typescript/tsconfig.json",
     "typescript-compile-execute": "node test/typescript/broker-connect-subscribe-and-publish.js",
-    "browser-build": "rimraf dist/ && mkdirp dist/ && browserify mqtt.js --standalone mqtt > dist/mqtt.js && terser dist/mqtt.js --compress --mangle --output dist/mqtt.min.js",
-    "prepare": "npm run browser-build",
+    "prepare": "npm run build",
     "unit-test:node": "node_modules/.bin/nyc --reporter=lcov --reporter=text ./node_modules/mocha/bin/_mocha --exit",
     "unit-test:browser": "airtap --server test/browser/server.js test/browser/test.js",
     "test:node": "npm run unit-test:node && codecov",
-    "test:browser": "npm run browser-build && npm run unit-test:browser",
+    "test:browser": "npm run build && npm run unit-test:browser",
     "test:typescript": "npm run typescript-compile-test && npm run typescript-compile-execute",
     "test": "npm run test:node && npm run test:typescript",
     "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s && git add CHANGELOG.md",
@@ -66,24 +68,22 @@
     "lint"
   ],
   "bin": {
-    "mqtt_pub": "./bin/pub.js",
-    "mqtt_sub": "./bin/sub.js",
-    "mqtt": "./bin/mqtt.js"
+    "mqtt_pub": "./build/bin/pub.js",
+    "mqtt_sub": "./build/bin/sub.js",
+    "mqtt": "./build/bin/mqtt.js"
   },
   "files": [
     "dist/",
     "CONTRIBUTING.md",
     "doc",
-    "lib",
-    "bin",
-    "types",
-    "mqtt.js"
+    "build",
+    "src"
   ],
   "engines": {
     "node": ">=16.0.0"
   },
   "browser": {
-    "./mqtt.js": "./lib/connect/index.js",
+    "./mqtt.js": "./build/lib/connect/index.js",
     "fs": false,
     "tls": false,
     "net": false
@@ -106,9 +106,13 @@
   },
   "devDependencies": {
     "@release-it/conventional-changelog": "^6.0.0",
-    "@types/node": "^20.4.0",
+    "@types/duplexify": "^3.6.1",
+    "@types/node": "^20.4.2",
+    "@types/readable-stream": "^2.3.15",
     "@types/tape": "^5.6.0",
     "@types/ws": "^8.5.5",
+    "@typescript-eslint/eslint-plugin": "^6.1.0",
+    "@typescript-eslint/parser": "^6.1.0",
     "airtap": "^4.0.4",
     "airtap-playwright": "^1.0.1",
     "browserify": "^17.0.0",
@@ -119,6 +123,7 @@
     "end-of-stream": "^1.4.4",
     "eslint": "^8.45.0",
     "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-config-airbnb-typescript": "^17.1.0",
     "eslint-config-prettier": "^8.8.0",
     "eslint-plugin-import": "^2.27.5",
     "eslint-plugin-prettier": "^5.0.0",
@@ -137,6 +142,7 @@
     "snazzy": "^9.0.0",
     "tape": "^5.6.4",
     "terser": "^5.18.2",
+    "ts-node": "^10.9.1",
     "typescript": "^5.1.6"
   }
 }

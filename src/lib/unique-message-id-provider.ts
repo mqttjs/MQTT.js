@@ -1,10 +1,14 @@
-const { NumberAllocator } = require('number-allocator')
+import { NumberAllocator } from 'number-allocator'
 
 /**
  * UniqueMessageAllocator constructor
  * @constructor
  */
-class UniqueMessageIdProvider {
+export default class UniqueMessageIdProvider {
+	private numberAllocator: NumberAllocator
+
+	private lastId: number
+
 	constructor() {
 		this.numberAllocator = new NumberAllocator(1, 65535)
 	}
@@ -36,7 +40,7 @@ class UniqueMessageIdProvider {
 	 * @param { unsigned int } - messageId to register,
 	 * @return boolean
 	 */
-	register(messageId) {
+	register(messageId: number) {
 		return this.numberAllocator.use(messageId)
 	}
 
@@ -45,7 +49,7 @@ class UniqueMessageIdProvider {
 	 * Deallocate messageId.
 	 * @param { unsigned int } - messageId to deallocate,
 	 */
-	deallocate(messageId) {
+	deallocate(messageId: number) {
 		this.numberAllocator.free(messageId)
 	}
 
@@ -57,5 +61,3 @@ class UniqueMessageIdProvider {
 		this.numberAllocator.clear()
 	}
 }
-
-module.exports = UniqueMessageIdProvider

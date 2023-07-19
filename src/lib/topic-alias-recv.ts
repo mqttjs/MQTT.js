@@ -3,8 +3,14 @@
  * This holds alias to topic map
  * @param {Number} [max] - topic alias maximum entries
  */
-class TopicAliasRecv {
-	constructor(max) {
+export default class TopicAliasRecv {
+	private aliasToTopic: Record<number, string>
+
+	private max: number
+
+	public length: number
+
+	constructor(max: number) {
 		this.aliasToTopic = {}
 		this.max = max
 	}
@@ -15,7 +21,7 @@ class TopicAliasRecv {
 	 * @param {Number} [alias] - topic alias
 	 * @returns {Boolean} - if success return true otherwise false
 	 */
-	put(topic, alias) {
+	put(topic: string, alias: number): boolean {
 		if (alias === 0 || alias > this.max) {
 			return false
 		}
@@ -29,7 +35,7 @@ class TopicAliasRecv {
 	 * @param {String} [topic] - topic
 	 * @returns {Number} - if mapped topic exists return topic alias, otherwise return undefined
 	 */
-	getTopicByAlias(alias) {
+	getTopicByAlias(alias: number): string {
 		return this.aliasToTopic[alias]
 	}
 
@@ -40,5 +46,3 @@ class TopicAliasRecv {
 		this.aliasToTopic = {}
 	}
 }
-
-module.exports = TopicAliasRecv

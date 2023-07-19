@@ -1,18 +1,28 @@
 /**
  * Module dependencies
  */
-const LRUCache = require('lru-cache')
-const { NumberAllocator } = require('number-allocator')
+import LRUCache from 'lru-cache'
+import { NumberAllocator } from 'number-allocator'
 
 /**
  * Topic Alias sending manager
  * This holds both topic to alias and alias to topic map
  * @param {Number} [max] - topic alias maximum entries
  */
-class TopicAliasSend {
+export default class TopicAliasSend {
+	private aliasToTopic: LRUCache<number, string>
+
+	private topicToAlias: Record<string, number>
+
+	private max: number
+
+	private numberAllocator: NumberAllocator
+
+	public length: number
+
 	constructor(max) {
 		if (max > 0) {
-			this.aliasToTopic = new LRUCache({ max })
+			this.aliasToTopic = new LRUCache<number, string>({ max })
 			this.topicToAlias = {}
 			this.numberAllocator = new NumberAllocator(1, max)
 			this.max = max
@@ -26,7 +36,7 @@ class TopicAliasSend {
 	 * @param {Number} [alias] - topic alias
 	 * @returns {Boolean} - if success return true otherwise false
 	 */
-	put(topic, alias) {
+	put(topic: string, alias: number): boolean {
 		if (alias === 0 || alias > this.max) {
 			return false
 		}
@@ -46,7 +56,7 @@ class TopicAliasSend {
 	 * @param {Number} [alias] - topic alias
 	 * @returns {String} - if mapped topic exists return topic, otherwise return undefined
 	 */
-	getTopicByAlias(alias) {
+	getTopicByAlias(alias: number): string {
 		return this.aliasToTopic.get(alias)
 	}
 
@@ -55,7 +65,7 @@ class TopicAliasSend {
 	 * @param {String} [topic] - topic
 	 * @returns {Number} - if mapped topic exists return topic alias, otherwise return undefined
 	 */
-	getAliasByTopic(topic) {
+	getAliasByTopic(topic: string): number | undefined {
 		const alias = this.topicToAlias[topic]
 		if (typeof alias !== 'undefined') {
 			this.aliasToTopic.get(alias) // LRU update
@@ -77,12 +87,10 @@ class TopicAliasSend {
 	 * Get Least Recently Used (LRU) topic alias
 	 * @returns {Number} - if vacant alias exists then return it, otherwise then return LRU alias
 	 */
-	getLruAlias() {
+	getLruAlias(): number {
 		const alias = this.numberAllocator.firstVacant()
 		if (alias) return alias
 		// get last alias (key) from LRU cache
 		return [...this.aliasToTopic.keys()][this.aliasToTopic.size - 1]
 	}
 }
-
-module.exports = TopicAliasSend

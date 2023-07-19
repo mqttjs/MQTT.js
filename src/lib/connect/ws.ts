@@ -1,9 +1,14 @@
-const { Buffer } = require('buffer')
-const WS = require('ws')
-const debug = require('debug')('mqttjs:ws')
-const duplexify = require('duplexify')
-const { Transform } = require('readable-stream')
-const { IS_BROWSER } = require('../is-browser')
+import { StreamBuilder } from '../shared'
+
+import { Buffer } from 'buffer'
+import WS from 'ws'
+import debug from 'debug'
+import duplexify from 'duplexify'
+import { Transform } from 'readable-stream'
+import IS_BROWSER from '../is-browser'
+import { IClientOptions } from '../client'
+
+debug('mqttjs:ws')
 
 const WSS_OPTIONS = [
 	'rejectUnauthorized',
@@ -115,12 +120,14 @@ function createBrowserWebSocket(client, opts) {
 	return socket
 }
 
-function streamBuilder(client, opts) {
+const streamBuilder: StreamBuilder = (client, opts) => {
 	debug('streamBuilder')
 	const options = setDefaultOpts(opts)
 	const url = buildUrl(options, client)
 	const socket = createWebSocket(client, url, options)
 	const webSocketStream = WS.createWebSocketStream(socket, options.wsOptions)
+	// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+	// @ts-ignore
 	webSocketStream.url = url
 	socket.on('close', () => {
 		webSocketStream.destroy()
@@ -128,7 +135,7 @@ function streamBuilder(client, opts) {
 	return webSocketStream
 }
 
-function browserStreamBuilder(client, opts) {
+const browserStreamBuilder: StreamBuilder = (client, opts) => {
 	debug('browserStreamBuilder')
 	let stream
 	const options = setDefaultBrowserOpts(opts)
@@ -140,7 +147,6 @@ function browserStreamBuilder(client, opts) {
 	const coerceToBuffer = !opts.objectMode
 
 	const socket = createBrowserWebSocket(client, opts)
-
 	const proxy = buildProxy(opts, socketWriteBrowser, socketEndBrowser)
 
 	if (!opts.objectMode) {
@@ -182,9 +188,9 @@ function browserStreamBuilder(client, opts) {
 
 	// methods for browserStreamBuilder
 
-	function buildProxy(pOptions, socketWrite, socketEnd) {
+	function buildProxy(pOptions: IClientOptions, socketWrite, socketEnd) {
 		const _proxy = new Transform({
-			objectModeMode: pOptions.objectMode,
+			objectMode: pOptions.objectMode,
 		})
 
 		_proxy._write = socketWrite
@@ -258,8 +264,4 @@ function browserStreamBuilder(client, opts) {
 	return stream
 }
 
-if (IS_BROWSER) {
-	module.exports = browserStreamBuilder
-} else {
-	module.exports = streamBuilder
-}
+export default IS_BROWSER ? browserStreamBuilder : streamBuilder

@@ -6,18 +6,23 @@
  *
  * See LICENSE for more information
  */
-const path = require('path')
-const commist = require('commist')()
-const helpMe = require('help-me')({
+import path from 'path'
+import commist from 'commist'
+import helpMe from 'help-me'
+import { version } from '../../package.json'
+import publish from './pub'
+import subscribe from './sub'
+
+helpMe({
 	dir: path.join(path.dirname(require.main.filename), '/../doc'),
 	ext: '.txt',
 })
 
-commist.register('publish', require('./pub'))
-commist.register('subscribe', require('./sub'))
+commist.register('publish', publish)
+commist.register('subscribe', subscribe)
 
 commist.register('version', () => {
-	console.log('MQTT.js version:', require('../package.json').version)
+	console.log('MQTT.js version:', version)
 })
 commist.register('help', helpMe.toStdout)
 

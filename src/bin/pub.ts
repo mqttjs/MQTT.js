@@ -1,17 +1,19 @@
 #!/usr/bin/env node
 
-const mqtt = require('..')
-const { pipeline, Writable } = require('readable-stream')
-const path = require('path')
-const fs = require('fs')
-const concat = require('concat-stream')
-const helpMe = require('help-me')({
+import mqtt from "../mqtt";
+import { pipeline, Writable } from "readable-stream";
+import path from "path";
+import fs from "fs";
+import concat from "concat-stream";
+import helpMe from "help-me";
+import minimist, { ParsedArgs } from "minimist";
+import split2 from "split2";
+
+helpMe({
 	dir: path.join(__dirname, '..', 'doc'),
 })
-const minimist = require('minimist')
-const split2 = require('split2')
 
-function send(args) {
+function send(args: ParsedArgs) {
 	const client = mqtt.connect(args)
 	client.on('connect', () => {
 		client.publish(args.topic, args.message, args, (err) => {
@@ -27,7 +29,7 @@ function send(args) {
 	})
 }
 
-function multisend(args) {
+function multisend(args: ParsedArgs) {
 	const client = mqtt.connect(args)
 	const sender = new Writable({
 		objectMode: true,
@@ -46,8 +48,8 @@ function multisend(args) {
 	})
 }
 
-function start(args) {
-	args = minimist(args, {
+export default function start(args: string[]) {
+	const parsedArgs = minimist(args, {
 		string: [
 			'hostname',
 			'username',
@@ -86,73 +88,71 @@ function start(args) {
 		},
 	})
 
-	if (args.help) {
+	if (parsedArgs.help) {
 		return helpMe.toStdout('publish')
 	}
 
-	if (args.key) {
-		args.key = fs.readFileSync(args.key)
+	if (parsedArgs.key) {
+		parsedArgs.key = fs.readFileSync(parsedArgs.key)
 	}
 
-	if (args.cert) {
-		args.cert = fs.readFileSync(args.cert)
+	if (parsedArgs.cert) {
+		parsedArgs.cert = fs.readFileSync(parsedArgs.cert)
 	}
 
-	if (args.ca) {
-		args.ca = fs.readFileSync(args.ca)
+	if (parsedArgs.ca) {
+		parsedArgs.ca = fs.readFileSync(parsedArgs.ca)
 	}
 
-	if (args.key && args.cert && !args.protocol) {
-		args.protocol = 'mqtts'
+	if (parsedArgs.key && parsedArgs.cert && !parsedArgs.protocol) {
+		parsedArgs.protocol = 'mqtts'
 	}
 
-	if (args.port) {
-		if (typeof args.port !== 'number') {
+	if (parsedArgs.port) {
+		if (typeof parsedArgs.port !== 'number') {
 			console.warn(
 				"# Port: number expected, '%s' was given.",
-				typeof args.port,
+				typeof parsedArgs.port,
 			)
 			return
 		}
 	}
 
-	if (args['will-topic']) {
-		args.will = {}
-		args.will.topic = args['will-topic']
-		args.will.payload = args['will-message']
-		args.will.qos = args['will-qos']
-		args.will.retain = args['will-retain']
+	if (parsedArgs['will-topic']) {
+		parsedArgs.will = {}
+		parsedArgs.will.topic = parsedArgs['will-topic']
+		parsedArgs.will.payload = parsedArgs['will-message']
+		parsedArgs.will.qos = parsedArgs['will-qos']
+		parsedArgs.will.retain = parsedArgs['will-retain']
 	}
 
-	if (args.insecure) {
-		args.rejectUnauthorized = false
+	if (parsedArgs.insecure) {
+		parsedArgs.rejectUnauthorized = false
 	}
 
-	args.topic = (args.topic || args._.shift()).toString()
-	args.message = (args.message || args._.shift()).toString()
+	parsedArgs.topic = (parsedArgs.topic || parsedArgs._.shift()).toString()
+	parsedArgs.message = (parsedArgs.message || parsedArgs._.shift()).toString()
 
-	if (!args.topic) {
+	if (!parsedArgs.topic) {
 		console.error('missing topic\n')
 		return helpMe.toStdout('publish')
 	}
 
-	if (args.stdin) {
-		if (args.multiline) {
-			multisend(args)
+	if (parsedArgs.stdin) {
+		if (parsedArgs.multiline) {
+			multisend(parsedArgs)
 		} else {
 			process.stdin.pipe(
 				concat((data) => {
-					args.message = data
-					send(args)
+					parsedArgs.message = data
+					send(parsedArgs)
 				}),
 			)
 		}
 	} else {
-		send(args)
+		send(parsedArgs)
 	}
 }
-
-module.exports = start
 
 if (require.main === module) {
 	start(process.argv.slice(2))

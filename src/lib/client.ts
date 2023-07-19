@@ -1,27 +1,42 @@
 /**
  * Module dependencies
  */
-const { EventEmitter } = require('events')
-const TopicAliasRecv = require('./topic-alias-recv')
-const mqttPacket = require('mqtt-packet')
-const DefaultMessageIdProvider = require('./default-message-id-provider')
-const { Writable } = require('readable-stream')
-const reInterval = require('reinterval')
-const clone = require('rfdc/default')
-const validations = require('./validations')
-const debug = require('debug')('mqttjs:client')
-const Store = require('./store')
-const handlePacket = require('./handlers')
+import { EventEmitter } from 'events'
+import TopicAliasRecv from './topic-alias-recv'
+import mqttPacket, {
+	IConnackPacket,
+	IDisconnectPacket,
+	IPublishPacket,
+	Packet,
+	QoS,
+	UserProperties,
+} from 'mqtt-packet'
+import DefaultMessageIdProvider, {
+	IMessageIdProvider,
+} from './default-message-id-provider'
+import { Writable } from 'readable-stream'
+import reInterval from 'reinterval'
+import clone from 'rfdc/default'
+import validations from './validations'
+import debug from 'debug'
+import Store from './store'
+import handlePacket from './handlers'
+import { ClientOptions } from 'ws'
+import { ClientRequestArgs } from 'http'
+import { IStream, StreamBuilder } from './shared'
+import TopicAliasSend from './topic-alias-send'
+
+debug('mqttjs:client')
 
 const nextTick = process
 	? process.nextTick
-	: (callback) => {
+	: (callback: () => void) => {
 			setTimeout(callback, 0)
 	  }
 
 const setImmediate =
 	global.setImmediate ||
-	((...args) => {
+	((...args: any[]) => {
 		const callback = args.shift()
 		nextTick(() => {
 			callback(...args)
@@ -48,6 +63,345 @@ const socketErrors = [
 	'ETIMEDOUT',
 ]
 
+export type MqttProtocol =
+	| 'wss'
+	| 'ws'
+	| 'mqtt'
+	| 'mqtts'
+	| 'tcp'
+	| 'ssl'
+	| 'wx'
+	| 'wxs'
+	| 'ali'
+	| 'alis'
+
+export type StorePutCallback = () => void
+
+export interface ISecureClientOptions {
+	/**
+	 * optional private keys in PEM format
+	 */
+	key?: string | string[] | Buffer | Buffer[] | any[]
+	/**
+	 * optional cert chains in PEM format
+	 */
+	cert?: string | string[] | Buffer | Buffer[]
+	/**
+	 * Optionally override the trusted CA certificates in PEM format
+	 */
+	ca?: string | string[] | Buffer | Buffer[]
+	rejectUnauthorized?: boolean
+	/**
+	 * optional alpn's
+	 */
+	ALPNProtocols?: string[] | Buffer[] | Uint8Array[] | Buffer | Uint8Array
+}
+
+export type AckHandler = (
+	topic: string,
+	message: Buffer,
+	packet: any,
+	cb: (error?: Error, code?: number) => void,
+) => void
+
+export interface IClientOptions extends ISecureClientOptions {
+	manualConnect?: any
+	authPacket?: string
+	writeCache?: boolean
+	servername?: string
+	defaultProtocol?: MqttProtocol
+	query?: Record<string, string>
+	auth?: string
+	customHandleAcks?: AckHandler
+	port?: number // port is made into a number subsequently
+	host?: string // host does NOT include port
+	hostname?: string
+	path?: string
+	protocol?: MqttProtocol
+
+	wsOptions?: ClientOptions | ClientRequestArgs
+	/**
+	 *  10 seconds, set to 0 to disable
+	 */
+	keepalive?: number
+	/**
+	 * 'mqttjs_' + Math.random().toString(16).substr(2, 8)
+	 */
+	clientId?: string
+	/**
+	 * 'MQTT'
+	 */
+	protocolId?: string
+	/**
+	 * 4
+	 */
+	protocolVersion?: number
+	/**
+	 * true, set to false to receive QoS 1 and 2 messages while offline
+	 */
+	clean?: boolean
+	/**
+	 * 1000 milliseconds, interval between two reconnections
+	 */
+	reconnectPeriod?: number
+	/**
+	 * 30 * 1000 milliseconds, time to wait before a CONNACK is received
+	 */
+	connectTimeout?: number
+	/**
+	 * the username required by your broker, if any
+	 */
+	username?: string
+	/**
+	 * the password required by your broker, if any
+	 */
+	password?: Buffer | string
+	/**
+	 * a Store for the incoming packets
+	 */
+	incomingStore?: Store
+	/**
+	 * a Store for the outgoing packets
+	 */
+	outgoingStore?: Store
+	queueQoSZero?: boolean
+
+	log?: (...args: any[]) => void
+
+	autoUseTopicAlias?: boolean
+	autoAssignTopicAlias?: boolean
+
+	reschedulePings?: boolean
+	servers?: Array<{
+		host: string
+		port: number
+		protocol?:
+			| 'wss'
+			| 'ws'
+			| 'mqtt'
+			| 'mqtts'
+			| 'tcp'
+			| 'ssl'
+			| 'wx'
+			| 'wxs'
+	}>
+	/**
+	 * true, set to false to disable re-subscribe functionality
+	 */
+	resubscribe?: boolean
+	/**
+	 * a message that will sent by the broker automatically when the client disconnect badly.
+	 */
+	will?: {
+		/**
+		 * the topic to publish
+		 */
+		topic: string
+		/**
+		 * the message to publish
+		 */
+		payload: Buffer | string
+		/**
+		 * the QoS
+		 */
+		qos: QoS
+		/**
+		 * the retain flag
+		 */
+		retain: boolean
+		/*
+		 *  properies object of will
+		 * */
+		properties?: {
+			willDelayInterval?: number
+			payloadFormatIndicator?: boolean
+			messageExpiryInterval?: number
+			contentType?: string
+			responseTopic?: string
+			correlationData?: Buffer
+			userProperties?: UserProperties
+		}
+
+		authPacket?: any
+
+		/** Prevent to call `connect` in constructor */
+		manualConnect?: boolean
+	}
+	transformWsUrl?: (
+		url: string,
+		options: IClientOptions,
+		client: MqttClient,
+	) => string
+	properties?: {
+		sessionExpiryInterval?: number
+		receiveMaximum?: number
+		maximumPacketSize?: number
+		topicAliasMaximum?: number
+		requestResponseInformation?: boolean
+		requestProblemInformation?: boolean
+		userProperties?: UserProperties
+		authenticationMethod?: string
+		authenticationData?: Buffer
+	}
+	messageIdProvider?: IMessageIdProvider
+
+	browserBufferTimeout?: number
+
+	objectMode?: boolean
+}
+
+export interface IClientPublishOptions {
+	/**
+	 * the QoS
+	 */
+	qos?: QoS
+	/**
+	 * the retain flag
+	 */
+	retain?: boolean
+	/**
+	 * whether or not mark a message as duplicate
+	 */
+	dup?: boolean
+	/*
+	 *  MQTT 5.0 properties object
+	 */
+	properties?: {
+		payloadFormatIndicator?: boolean
+		messageExpiryInterval?: number
+		topicAlias?: number
+		responseTopic?: string
+		correlationData?: Buffer
+		userProperties?: UserProperties
+		subscriptionIdentifier?: number
+		contentType?: string
+	}
+	/**
+	 * callback called when message is put into `outgoingStore`
+	 */
+	cbStorePut?: StorePutCallback
+}
+export interface IClientSubscribeOptions {
+	/**
+	 * the QoS
+	 */
+	qos: QoS
+	/*
+	 * no local flag
+	 * */
+	nl?: boolean
+	/*
+	 * Retain As Published flag
+	 * */
+	rap?: boolean
+	/*
+	 * Retain Handling option
+	 * */
+	rh?: number
+	/*
+	 *  MQTT 5.0 properies object of subscribe
+	 * */
+	properties?: {
+		subscriptionIdentifier?: number
+		userProperties?: UserProperties
+	}
+}
+export interface IClientSubscribeProperties {
+	/*
+	 *  MQTT 5.0 properies object of subscribe
+	 * */
+	properties?: {
+		subscriptionIdentifier?: number
+		userProperties?: UserProperties
+	}
+}
+export interface IClientReconnectOptions {
+	/**
+	 * a Store for the incoming packets
+	 */
+	incomingStore?: Store
+	/**
+	 * a Store for the outgoing packets
+	 */
+	outgoingStore?: Store
+}
+
+export interface ISubscriptionGrant {
+	/**
+	 *  is a subscribed to topic
+	 */
+	topic: string
+	/**
+	 *  is the granted qos level on it, may return 128 on error
+	 */
+	qos: QoS | number
+	/*
+	 * no local flag
+	 * */
+	nl?: boolean
+	/*
+	 * Retain As Published flag
+	 * */
+	rap?: boolean
+	/*
+	 * Retain Handling option
+	 * */
+	rh?: number
+}
+export interface ISubscriptionRequest {
+	/**
+	 *  is a subscribed to topic
+	 */
+	topic: string
+	/**
+	 *  is the granted qos level on it
+	 */
+	qos: QoS
+	/*
+	 * no local flag
+	 * */
+	nl?: boolean
+	/*
+	 * Retain As Published flag
+	 * */
+	rap?: boolean
+	/*
+	 * Retain Handling option
+	 * */
+	rh?: number
+}
+
+export interface ISubscriptioOptions extends IClientSubscribeProperties {
+	qos: QoS
+	nl?: boolean
+	rap?: boolean
+	rh?: number
+}
+
+export interface ISubscriptionMap {
+	/**
+	 * object which has topic names as object keys and as value the options, like {'test1': {qos: 0}, 'test2': {qos: 2}}.
+	 */
+	[topic: string]: ISubscriptioOptions
+}
+
+export type OnConnectCallback = (packet: IConnackPacket) => void
+export type OnDisconnectCallback = (packet: IDisconnectPacket) => void
+export type ClientSubscribeCallback = (
+	err: Error | null,
+	granted: ISubscriptionGrant[],
+) => void
+export type OnMessageCallback = (
+	topic: string,
+	payload: Buffer,
+	packet: IPublishPacket,
+) => void
+export type OnPacketCallback = (packet: Packet) => void
+export type OnCloseCallback = () => void
+export type OnErrorCallback = (error: Error) => void
+export type PacketCallback = (error?: Error, packet?: Packet) => any
+export type CloseCallback = (error?: Error) => void
+
 /**
  * MqttClient constructor
  *
@@ -55,20 +409,85 @@ const socketErrors = [
  * @param {Object} [options] - connection options
  * (see Connection#connect)
  */
-class MqttClient extends EventEmitter {
+export default class MqttClient extends EventEmitter {
+	public connected: boolean
+
+	public disconnecting: boolean
+
+	public disconnected: boolean
+
+	public reconnecting: boolean
+
+	public incomingStore: Store
+
+	public outgoingStore: Store
+
+	public options: IClientOptions
+
+	public queueQoSZero: boolean
+
+	public _reconnectCount: number
+
+	private noop: (error?: any) => void
+
+	public log: (...args) => void
+
+	private streamBuilder: StreamBuilder
+
+	private messageIdProvider: IMessageIdProvider
+
+	private _resubscribeTopics: ISubscriptionMap
+
+	private messageIdToTopic: Record<number, string[]>
+
+	private pingTimer: any
+
+	private queue: { packet: Packet; cb: PacketCallback }[]
+
+	private connackTimer: NodeJS.Timeout
+
+	private reconnectTimer: NodeJS.Timeout
+
+	private _storeProcessing: boolean
+
+	private _packetIdsDuringStoreProcessing: Record<number, Packet>
+
+	private _storeProcessingQueue: {
+		invoke: () => void
+		cbStorePut: () => void
+		callback: () => void
+	}[]
+
+	private outgoing: Record<
+		number,
+		{ volatile: boolean; cb: (err: _Error, packet: Packet) => void }
+	>
+
+	private _firstConnection: boolean
+
+	private topicAliasRecv: TopicAliasRecv
+
+	private stream: IStream
+
+	private topicAliasSend: TopicAliasSend
+
+	private _deferredReconnect: () => void
+
+	private pingResp: boolean
+
+	private connackPacket: Packet
+
 	static defaultId() {
 		return `mqttjs_${Math.random().toString(16).substr(2, 8)}`
 	}
 
-	constructor(streamBuilder, options) {
+	constructor(streamBuilder: StreamBuilder, options: IClientOptions) {
 		super()
-
-		let k
 
 		this.options = options || {}
 
 		// Defaults
-		for (k in defaultConnectOptions) {
+		for (const k in defaultConnectOptions) {
 			if (typeof this.options[k] === 'undefined') {
 				this.options[k] = defaultConnectOptions[k]
 			} else {
@@ -687,7 +1106,7 @@ class MqttClient extends EventEmitter {
 				const topics = []
 				subs.forEach((sub) => {
 					if (this.options.reconnectPeriod > 0) {
-						const topic = { qos: sub.qos }
+						const topic: ISubscriptioOptions = { qos: sub.qos }
 						if (version === 5) {
 							topic.nl = sub.nl || false
 							topic.rap = sub.rap || false
@@ -1507,7 +1926,7 @@ class MqttClient extends EventEmitter {
 	 *
 	 * @api private
 	 */
-	_onConnect(packet) {
+	_onConnect(packet: Packet) {
 		if (this.disconnected) {
 			this.emit('connect', packet)
 			return
@@ -1582,9 +2001,8 @@ class MqttClient extends EventEmitter {
 							storeDeliver()
 						},
 					}
-					this._packetIdsDuringStoreProcessing[
-						packet2.messageId
-					] = true
+					this._packetIdsDuringStoreProcessing[packet2.messageId] =
+						true
 					if (this.messageIdProvider.register(packet2.messageId)) {
 						this._sendPacket(packet2, undefined, undefined, true)
 					} else {
@@ -1664,5 +2082,3 @@ class MqttClient extends EventEmitter {
 		})
 	}
 }
-
-module.exports = MqttClient

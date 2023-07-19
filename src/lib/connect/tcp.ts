@@ -1,11 +1,14 @@
-const net = require('net')
-const debug = require('debug')('mqttjs:tcp')
+import { StreamBuilder } from '../shared'
 
+import net from 'net'
+import debug from 'debug'
+
+debug('mqttjs:tcp')
 /*
   variables port and host can be removed since
   you have all required information in opts object
 */
-function streamBuilder(client, opts) {
+const buildStream: StreamBuilder = (client, opts) => {
 	opts.port = opts.port || 1883
 	opts.hostname = opts.hostname || opts.host || 'localhost'
 
@@ -16,4 +19,4 @@ function streamBuilder(client, opts) {
 	return net.createConnection(port, host)
 }
 
-module.exports = streamBuilder
+export default buildStream
