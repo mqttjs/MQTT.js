@@ -460,7 +460,7 @@ export default class MqttClient extends EventEmitter {
 
 	private outgoing: Record<
 		number,
-		{ volatile: boolean; cb: (err: _Error, packet: Packet) => void }
+		{ volatile: boolean; cb: (err: Error, packet: Packet) => void }
 	>
 
 	private _firstConnection: boolean
@@ -899,7 +899,12 @@ export default class MqttClient extends EventEmitter {
 	 *     client.publish('topic', 'message', {qos: 1, retain: true, dup: true});
 	 * @example client.publish('topic', 'message', console.log);
 	 */
-	publish(topic, message, opts, callback) {
+	publish(
+		topic: string,
+		message,
+		opts: object,
+		callback: Function,
+	): MqttClient {
 		this.log('publish :: message `%s` to topic `%s`', message, topic)
 		const { options } = this
 
@@ -990,7 +995,7 @@ export default class MqttClient extends EventEmitter {
 	 * @example client.subscribe({'topic': {qos: 0}, 'topic2': {qos: 1}}, console.log);
 	 * @example client.subscribe('topic', console.log);
 	 */
-	subscribe(...args) {
+	subscribe(...args): MqttClient {
 		const subs = []
 		let obj = args.shift()
 		const { resubscribe } = obj
@@ -1164,7 +1169,7 @@ export default class MqttClient extends EventEmitter {
 	 * @example client.unsubscribe('topic');
 	 * @example client.unsubscribe('topic', console.log);
 	 */
-	unsubscribe(...args) {
+	unsubscribe(...args): MqttClient {
 		let topic = args.shift()
 		let callback = args.pop() || this.noop
 		let opts = args.pop()
@@ -1250,7 +1255,11 @@ export default class MqttClient extends EventEmitter {
 	 *
 	 * @api public
 	 */
-	end(force, opts, cb) {
+	end(
+		force: boolean,
+		opts: Partial<IDisconnectPacket>,
+		cb: OnErrorCallback,
+	): void {
 		this.log('end :: (%s)', this.options.clientId)
 
 		if (force == null || typeof force !== 'boolean') {
@@ -1354,7 +1363,7 @@ export default class MqttClient extends EventEmitter {
 	 *
 	 * @example client.removeOutgoingMessage(client.getLastAllocated());
 	 */
-	removeOutgoingMessage(messageId) {
+	removeOutgoingMessage(messageId: number): MqttClient {
 		if (this.outgoing[messageId]) {
 			const { cb } = this.outgoing[messageId]
 			this._removeOutgoingAndStoreMessage(messageId, () => {
@@ -1375,7 +1384,7 @@ export default class MqttClient extends EventEmitter {
 	 *
 	 * @api public
 	 */
-	reconnect(opts) {
+	reconnect(opts: object): MqttClient {
 		this.log('client reconnect')
 		const f = () => {
 			if (opts) {
@@ -1675,7 +1684,12 @@ export default class MqttClient extends EventEmitter {
 	 * @param {Boolean} noStore - send without put to the store
 	 * @api private
 	 */
-	_sendPacket(packet, cb, cbStorePut, noStore) {
+	_sendPacket(
+		packet: Packet,
+		cb?: Function,
+		cbStorePut?: Function,
+		noStore?: boolean,
+	) {
 		this.log('_sendPacket :: (%s) ::  start', this.options.clientId)
 		cbStorePut = cbStorePut || this.noop
 		cb = cb || this.noop
@@ -1747,7 +1761,7 @@ export default class MqttClient extends EventEmitter {
 	 * @param {Function} cbStorePut - called when message is put into outgoingStore
 	 * @api private
 	 */
-	_storePacket(packet, cb, cbStorePut) {
+	_storePacket(packet: object, cb: Function, cbStorePut: Function) {
 		this.log('_storePacket :: packet: %o', packet)
 		this.log('_storePacket :: cb? %s', !!cb)
 		cbStorePut = cbStorePut || this.noop
@@ -2072,7 +2086,7 @@ export default class MqttClient extends EventEmitter {
 	 * @param {Function} cb - called when the message removed
 	 * @api private
 	 */
-	_removeOutgoingAndStoreMessage(messageId, cb) {
+	_removeOutgoingAndStoreMessage(messageId: number, cb: Function) {
 		const self = this
 		delete this.outgoing[messageId]
 		self.outgoingStore.del({ messageId }, (err, packet) => {

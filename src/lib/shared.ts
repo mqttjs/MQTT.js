@@ -1,3 +1,7 @@
+import EventEmitter from 'events'
+import type { IClientOptions } from './client'
+import type MqttClient from './client'
+
 export type DoneCallback = (error?: Error) => void
 
 export interface IStream extends EventEmitter {
@@ -10,3 +14,5 @@ export type StreamBuilder = (
 	client: MqttClient,
 	opts: IClientOptions,
 ) => IStream
+
+export type Callback = () => void
