@@ -460,7 +460,7 @@ export default class MqttClient extends EventEmitter {
 
 	private outgoing: Record<
 		number,
-		{ volatile: boolean; cb: (err: Error, packet: Packet) => void }
+		{ volatile: boolean; cb: (err: Error, packet?: Packet) => void }
 	>
 
 	private _firstConnection: boolean
@@ -1256,9 +1256,9 @@ export default class MqttClient extends EventEmitter {
 	 * @api public
 	 */
 	end(
-		force: boolean,
-		opts: Partial<IDisconnectPacket>,
-		cb: OnErrorCallback,
+		force?: boolean,
+		opts?: Partial<IDisconnectPacket>,
+		cb?: OnErrorCallback,
 	): void {
 		this.log('end :: (%s)', this.options.clientId)
 
@@ -1384,7 +1384,9 @@ export default class MqttClient extends EventEmitter {
 	 *
 	 * @api public
 	 */
-	reconnect(opts: object): MqttClient {
+	reconnect(
+		opts: Pick<IClientOptions, 'incomingStore' | 'outgoingStore'>,
+	): MqttClient {
 		this.log('client reconnect')
 		const f = () => {
 			if (opts) {

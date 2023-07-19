@@ -12,7 +12,7 @@ export interface IStream extends EventEmitter {
 
 export type StreamBuilder = (
 	client: MqttClient,
-	opts: IClientOptions,
+	opts?: IClientOptions,
 ) => IStream
 
 export type Callback = () => void
