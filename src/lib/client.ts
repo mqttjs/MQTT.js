@@ -1064,14 +1064,13 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			| ClientSubscribeCallback,
 		callback?: ClientSubscribeCallback,
 	): MqttClient {
-		const subs: ISubscriptionRequest[] = []
-		callback = callback || this.noop
 		const version = this.options.protocolVersion
 
-		if (typeof callback !== 'function') {
-			opts = callback
-			callback = this.noop
+		if (typeof opts === 'function') {
+			callback = opts
 		}
+
+		callback = callback || this.noop
 
 		// force re-subscribe on reconnect. This is only true
 		// when provided `topicObject` is `this._resubscribeTopics`
@@ -1079,7 +1078,8 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		let topicsList = []
 
 		if (typeof topicObject === 'string') {
-			topicsList = [topicObject]
+			topicObject = [topicObject]
+			topicsList = topicObject
 		} else if (Array.isArray(topicObject)) {
 			topicsList = topicObject
 		} else if (typeof topicObject === 'object') {
@@ -1112,6 +1112,8 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		opts = { ...defaultOpts, ...opts } as IClientSubscribeOptions
 
 		const properties = opts.properties
+
+		const subs: ISubscriptionRequest[] = []
 
 		const parseSub = (
 			topic: string,
