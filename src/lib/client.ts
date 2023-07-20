@@ -1157,8 +1157,12 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		} else {
 			// object topic --> subOptions (no properties)
 			Object.keys(topicObject).forEach((topic) => {
-				this.log('subscribe: object topic %s, %o', topic, topic[topic])
-				parseSub(topic, topic[topic])
+				this.log(
+					'subscribe: object topic %s, %o',
+					topic,
+					topicObject[topic],
+				)
+				parseSub(topic, topicObject[topic])
 			})
 		}
 
