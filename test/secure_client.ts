@@ -4,6 +4,7 @@ import * as mqtt from '../src/mqtt'
 import abstractClientTests from './abstract_client'
 import { MqttSecureServer, MqttServerListener } from './server'
 import { assert } from 'chai'
+import 'should'
 
 const port = 9899
 const KEY = path.join(__dirname, 'helpers', 'tls-key.pem')
