@@ -101,7 +101,7 @@ const handlePublish: PacketHandler = (client, packet: IPublishPacket, done) => {
 				message as Buffer,
 				packet,
 				(error, code) => {
-					if (!(error instanceof Error)) {
+					if (typeof error === 'number') {
 						code = error
 						error = null
 					}
@@ -138,7 +138,7 @@ const handlePublish: PacketHandler = (client, packet: IPublishPacket, done) => {
 				message as Buffer,
 				packet,
 				(error, code) => {
-					if (!(error instanceof Error)) {
+					if (typeof error === 'number') {
 						code = error
 						error = null
 					}
