@@ -1,10 +1,10 @@
 import { StreamBuilder } from '../shared'
 
 import net from 'net'
-import debug from 'debug'
+import _debug from 'debug'
 import { Duplex } from 'readable-stream'
 
-debug('mqttjs:tcp')
+const debug = _debug('mqttjs:tcp')
 /*
   variables port and host can be removed since
   you have all required information in opts object

@@ -36,7 +36,7 @@ const handlePublish: PacketHandler = (client, packet: IPublishPacket, done) => {
 	const { messageId } = packet
 	const { options } = client
 	if (client.options.protocolVersion === 5) {
-		let alias
+		let alias: number
 		if (packet.properties) {
 			alias = packet.properties.topicAlias
 		}

@@ -10,12 +10,12 @@ import Connection from 'mqtt-connection'
 import util from 'util'
 import ports from './helpers/port_list'
 import serverBuilder from './server_helpers_for_client_tests'
-import debug from 'debug'
+import _debug from 'debug'
 import { MqttServer } from './server'
 import abstractClientTests from './abstract_client'
 import { IClientOptions } from 'src/lib/client'
 
-debug('mqttjs:client-test')
+const debug = _debug('mqttjs:client-test')
 
 describe('MqttClient', () => {
 	let client

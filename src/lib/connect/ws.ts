@@ -2,13 +2,13 @@ import { StreamBuilder } from '../shared'
 
 import { Buffer } from 'buffer'
 import WS, { ClientOptions } from 'ws'
-import debug from 'debug'
+import _debug from 'debug'
 import duplexify from 'duplexify'
 import { Duplex, DuplexOptions, Transform } from 'readable-stream'
 import IS_BROWSER from '../is-browser'
 import MqttClient, { IClientOptions } from '../client'
 
-debug('mqttjs:ws')
+const debug = _debug('mqttjs:ws')
 
 const WSS_OPTIONS = [
 	'rejectUnauthorized',

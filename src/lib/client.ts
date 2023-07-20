@@ -25,7 +25,7 @@ import { DuplexOptions, Writable } from 'readable-stream'
 import reInterval from 'reinterval'
 import clone from 'rfdc/default'
 import * as validations from './validations'
-import debug from 'debug'
+import _debug from 'debug'
 import Store from './store'
 import handlePacket from './handlers'
 import { ClientOptions } from 'ws'
@@ -39,8 +39,6 @@ import {
 } from './shared'
 import TopicAliasSend from './topic-alias-send'
 import { TypedEventEmitter } from './TypedEmitter'
-
-debug('mqttjs:client')
 
 const nextTick = process
 	? process.nextTick
@@ -549,7 +547,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			}
 		}
 
-		this.log = this.options.log || debug
+		this.log = this.options.log || _debug('mqttjs:client')
 		this.noop = this._noop.bind(this)
 
 		this.log('MqttClient :: options.protocol', options.protocol)

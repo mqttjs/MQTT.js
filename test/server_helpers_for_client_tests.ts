@@ -1,5 +1,5 @@
 import { MqttServer, MqttSecureServer, MqttServerListener } from './server'
-import debug from 'debug'
+import _debug from 'debug'
 
 import path from 'path'
 import fs from 'fs'
@@ -12,7 +12,7 @@ import { Server } from 'net'
 const KEY = path.join(__dirname, 'helpers', 'tls-key.pem')
 const CERT = path.join(__dirname, 'helpers', 'tls-cert.pem')
 
-debug('mqttjs:server_helpers_for_client_tests')
+const debug = _debug('mqttjs:server_helpers_for_client_tests')
 
 /**
  * This will build the client for the server to use during testing, and set up the

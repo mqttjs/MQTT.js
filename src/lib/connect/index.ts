@@ -5,10 +5,10 @@ import IS_BROWSER from '../is-browser'
 import Store from '../store'
 import DefaultMessageIdProvider from '../default-message-id-provider'
 import UniqueMessageIdProvider from '../unique-message-id-provider'
-import debug from 'debug'
+import _debug from 'debug'
 import { StreamBuilder } from '../shared'
 
-debug('mqttjs')
+const debug = _debug('mqttjs')
 
 const protocols: Record<string, StreamBuilder> = {}
 

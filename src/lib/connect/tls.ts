@@ -1,10 +1,10 @@
 import tls from 'tls'
 import net from 'net'
-import debug from 'debug'
+import _debug from 'debug'
 import { StreamBuilder } from '../shared'
 import { Duplex } from 'readable-stream'
 
-debug('mqttjs:tls')
+const debug = _debug('mqttjs:tls')
 
 const buildStream: StreamBuilder = (client, opts) => {
 	opts.port = opts.port || 8883
