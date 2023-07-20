@@ -111,13 +111,16 @@ const handlePublish: PacketHandler = (client, packet: IPublishPacket, done) => {
 					)
 				}
 				if (code) {
-					client._sendPacket(
+					client['_sendPacket'](
 						{ cmd: 'pubrec', messageId, reasonCode: code },
 						done,
 					)
 				} else {
 					client.incomingStore.put(packet, () => {
-						client._sendPacket({ cmd: 'pubrec', messageId }, done)
+						client['_sendPacket'](
+							{ cmd: 'pubrec', messageId },
+							done,
+						)
 					})
 				}
 			})
@@ -146,7 +149,7 @@ const handlePublish: PacketHandler = (client, packet: IPublishPacket, done) => {
 					if (err) {
 						return done && done(err)
 					}
-					client._sendPacket(
+					client['_sendPacket'](
 						{ cmd: 'puback', messageId, reasonCode: code },
 						done,
 					)

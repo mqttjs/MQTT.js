@@ -1,27 +1,34 @@
 #!/usr/bin/env node
 
-import mqtt from "../mqtt";
-import { pipeline, Writable } from "readable-stream";
-import path from "path";
-import fs from "fs";
-import concat from "concat-stream";
-import helpMe from "help-me";
-import minimist, { ParsedArgs } from "minimist";
-import split2 from "split2";
+import { Writable } from 'readable-stream'
+import path from 'path'
+import fs from 'fs'
+import concat from 'concat-stream'
+import helpMe from 'help-me'
+import minimist, { ParsedArgs } from 'minimist'
+import split2 from 'split2'
+import { connect } from '../mqtt'
+import { IClientOptions, IClientPublishOptions } from 'src/lib/client'
+import { pipeline } from 'stream'
 
 helpMe({
 	dir: path.join(__dirname, '..', 'doc'),
 })
 
 function send(args: ParsedArgs) {
-	const client = mqtt.connect(args)
+	const client = connect(args as IClientOptions)
 	client.on('connect', () => {
-		client.publish(args.topic, args.message, args, (err) => {
-			if (err) {
-				console.warn(err)
-			}
-			client.end()
-		})
+		client.publish(
+			args.topic,
+			args.message,
+			args as IClientPublishOptions,
+			(err) => {
+				if (err) {
+					console.warn(err)
+				}
+				client.end()
+			},
+		)
 	})
 	client.on('error', (err) => {
 		console.warn(err)
@@ -30,12 +37,17 @@ function send(args: ParsedArgs) {
 }
 
 function multisend(args: ParsedArgs) {
-	const client = mqtt.connect(args)
+	const client = connect(args as IClientOptions)
 	const sender = new Writable({
 		objectMode: true,
 	})
 	sender._write = (line, enc, cb) => {
-		client.publish(args.topic, line.trim(), args, cb)
+		client.publish(
+			args.topic,
+			line.trim(),
+			args as IClientPublishOptions,
+			cb,
+		)
 	}
 
 	client.on('connect', () => {

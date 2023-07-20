@@ -84,11 +84,11 @@ const handleAck: PacketHandler = (client, packet) => {
 			if (pubackRC && pubackRC > 0 && pubackRC !== 16) {
 				err = new Error(`Publish error: ${ReasonCodes[pubackRC]}`)
 				err.code = pubackRC
-				client._removeOutgoingAndStoreMessage(messageId, () => {
+				client['_removeOutgoingAndStoreMessage'](messageId, () => {
 					cb(err, packet)
 				})
 			} else {
-				client._removeOutgoingAndStoreMessage(messageId, cb)
+				client['_removeOutgoingAndStoreMessage'](messageId, cb)
 			}
 
 			break
@@ -104,11 +104,11 @@ const handleAck: PacketHandler = (client, packet) => {
 			if (pubrecRC && pubrecRC > 0 && pubrecRC !== 16) {
 				err = new Error(`Publish error: ${ReasonCodes[pubrecRC]}`)
 				err.code = pubrecRC
-				client._removeOutgoingAndStoreMessage(messageId, () => {
+				client['_removeOutgoingAndStoreMessage'](messageId, () => {
 					cb(err, packet)
 				})
 			} else {
-				client._sendPacket(response)
+				client['_sendPacket'](response)
 			}
 			break
 		}
@@ -128,14 +128,14 @@ const handleAck: PacketHandler = (client, packet) => {
 				}
 			}
 			delete client.messageIdToTopic[messageId]
-			client._invokeStoreProcessingQueue()
+			client['_invokeStoreProcessingQueue']()
 			cb(null, packet)
 			break
 		}
 		case 'unsuback': {
 			delete client.outgoing[messageId]
 			client.messageIdProvider.deallocate(messageId)
-			client._invokeStoreProcessingQueue()
+			client['_invokeStoreProcessingQueue']()
 			cb(null)
 			break
 		}

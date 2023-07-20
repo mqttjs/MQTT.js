@@ -508,7 +508,7 @@ export default class MqttClient extends EventEmitter {
 
 	private connackPacket: IConnackPacket
 
-	static defaultId() {
+	public static defaultId() {
 		return `mqttjs_${Math.random().toString(16).substr(2, 8)}`
 	}
 
@@ -700,7 +700,7 @@ export default class MqttClient extends EventEmitter {
 	/**
 	 * Setup the event handlers in the inner stream, sends `connect` and `auth` packets
 	 */
-	connect() {
+	public connect() {
 		const writable = new Writable()
 		const parser = mqttPacket.parser(this.options)
 		let completeParse = null
@@ -772,7 +772,7 @@ export default class MqttClient extends EventEmitter {
 		// Echo stream close
 		this.stream.on('close', () => {
 			this.log('(%s)stream :: on close', this.options.clientId)
-			this._flushVolatile(this.outgoing)
+			this._flushVolatile()
 			this.log('stream: emit close to MqttClient')
 			this.emit('close')
 		})
@@ -838,39 +838,40 @@ export default class MqttClient extends EventEmitter {
 		return this
 	}
 
-	_flushVolatile(queue) {
-		if (queue) {
+	private _flushVolatile() {
+		if (this.outgoing) {
 			this.log(
 				'_flushVolatile :: deleting volatile messages from the queue and setting their callbacks as error function',
 			)
-			Object.keys(queue).forEach((messageId) => {
+			Object.keys(this.outgoing).forEach((messageId) => {
 				if (
-					queue[messageId].volatile &&
-					typeof queue[messageId].cb === 'function'
+					this.outgoing[messageId].volatile &&
+					typeof this.outgoing[messageId].cb === 'function'
 				) {
-					queue[messageId].cb(new Error('Connection closed'))
-					delete queue[messageId]
+					this.outgoing[messageId].cb(new Error('Connection closed'))
+					delete this.outgoing[messageId]
 				}
 			})
 		}
 	}
 
-	_flush(queue) {
-		if (queue) {
-			this.log('_flush: queue exists? %b', !!queue)
-			Object.keys(queue).forEach((messageId) => {
-				if (typeof queue[messageId].cb === 'function') {
-					queue[messageId].cb(new Error('Connection closed'))
+	private _flush() {
+		if (this.outgoing) {
+			this.log('_flush: queue exists? %b', !!this.outgoing)
+			Object.keys(this.outgoing).forEach((messageId) => {
+				if (typeof this.outgoing[messageId].cb === 'function') {
+					this.outgoing[messageId].cb(new Error('Connection closed'))
 					// This is suspicious.  Why do we only delete this if we have a callback?
 					// If this is by-design, then adding no as callback would cause this to get deleted unintentionally.
-					delete queue[messageId]
+					delete this.outgoing[messageId]
 				}
 			})
 		}
 	}
 
-	_removeTopicAliasAndRecoverTopicName(packet) {
-		let alias
+	private _removeTopicAliasAndRecoverTopicName(packet: IPublishPacket) {
+		let alias: number | undefined
+
 		if (packet.properties) {
 			alias = packet.properties.topicAlias
 		}
@@ -899,7 +900,7 @@ export default class MqttClient extends EventEmitter {
 		}
 	}
 
-	_checkDisconnecting(callback) {
+	private _checkDisconnecting(callback: GenericCallback<any>) {
 		if (this.disconnecting) {
 			if (callback && callback !== this.noop) {
 				callback(new Error('client disconnecting'))
@@ -930,7 +931,7 @@ export default class MqttClient extends EventEmitter {
 	 *     client.publish('topic', 'message', {qos: 1, retain: true, dup: true});
 	 * @example client.publish('topic', 'message', console.log);
 	 */
-	publish(
+	public publish(
 		topic: string,
 		message: string | Buffer,
 		opts: IClientPublishOptions,
@@ -1220,7 +1221,7 @@ export default class MqttClient extends EventEmitter {
 	 * @example client.unsubscribe('topic');
 	 * @example client.unsubscribe('topic', console.log);
 	 */
-	unsubscribe(
+	public unsubscribe(
 		topic: string | string[],
 		opts?: IClientSubscribeOptions,
 		callback?: PacketCallback,
@@ -1308,7 +1309,7 @@ export default class MqttClient extends EventEmitter {
 	 *
 	 * @api public
 	 */
-	end(
+	public end(
 		force?: boolean | Partial<IDisconnectPacket> | DoneCallback,
 		opts?: Partial<IDisconnectPacket> | DoneCallback,
 		cb?: DoneCallback,
@@ -1416,7 +1417,7 @@ export default class MqttClient extends EventEmitter {
 	 *
 	 * @example client.removeOutgoingMessage(client.getLastAllocated());
 	 */
-	removeOutgoingMessage(messageId: number): MqttClient {
+	public removeOutgoingMessage(messageId: number): MqttClient {
 		if (this.outgoing[messageId]) {
 			const { cb } = this.outgoing[messageId]
 			this._removeOutgoingAndStoreMessage(messageId, () => {
@@ -1437,7 +1438,7 @@ export default class MqttClient extends EventEmitter {
 	 *
 	 * @api public
 	 */
-	reconnect(
+	public reconnect(
 		opts: Pick<IClientOptions, 'incomingStore' | 'outgoingStore'>,
 	): MqttClient {
 		this.log('client reconnect')
@@ -1469,7 +1470,7 @@ export default class MqttClient extends EventEmitter {
 	 * _reconnect - implement reconnection
 	 * @api privateish
 	 */
-	_reconnect() {
+	private _reconnect() {
 		this.log('_reconnect: emitting reconnect to client')
 		this.emit('reconnect')
 		if (this.connected) {
@@ -1486,7 +1487,7 @@ export default class MqttClient extends EventEmitter {
 	/**
 	 * _setupReconnect - setup reconnect timer
 	 */
-	_setupReconnect() {
+	private _setupReconnect() {
 		if (
 			!this.disconnecting &&
 			!this.reconnectTimer &&
@@ -1514,7 +1515,7 @@ export default class MqttClient extends EventEmitter {
 	/**
 	 * _clearReconnect - clear the reconnect timer
 	 */
-	_clearReconnect() {
+	private _clearReconnect() {
 		this.log('_clearReconnect : clearing reconnect timer')
 		if (this.reconnectTimer) {
 			clearInterval(this.reconnectTimer)
@@ -1526,7 +1527,7 @@ export default class MqttClient extends EventEmitter {
 	 * _cleanUp - clean up on connection end
 	 * @api private
 	 */
-	_cleanUp(forced: boolean, done?: DoneCallback, opts = {}) {
+	private _cleanUp(forced: boolean, done?: DoneCallback, opts = {}) {
 		if (done) {
 			this.log('_cleanUp :: done callback provided for on stream close')
 			this.stream.on('close', done)
@@ -1535,7 +1536,7 @@ export default class MqttClient extends EventEmitter {
 		this.log('_cleanUp :: forced? %s', forced)
 		if (forced) {
 			if (this.options.reconnectPeriod === 0 && this.options.clean) {
-				this._flush(this.outgoing)
+				this._flush()
 			}
 			this.log(
 				'_cleanUp :: (%s) :: destroying stream',
@@ -1590,19 +1591,25 @@ export default class MqttClient extends EventEmitter {
 		}
 	}
 
-	_storeAndSend(packet: Packet, cb: DoneCallback, cbStorePut: DoneCallback) {
+	private _storeAndSend(
+		packet: Packet,
+		cb: DoneCallback,
+		cbStorePut: DoneCallback,
+	) {
 		this.log(
 			'storeAndSend :: store packet with cmd %s to outgoingStore',
 			packet.cmd,
 		)
 		let storePacket = packet
-		let err
+		let err: Error | undefined
 		if (storePacket.cmd === 'publish') {
 			// The original packet is for sending.
 			// The cloned storePacket is for storing to resend on reconnect.
 			// Topic Alias must not be used after disconnected.
 			storePacket = clone(packet)
-			err = this._removeTopicAliasAndRecoverTopicName(storePacket)
+			err = this._removeTopicAliasAndRecoverTopicName(
+				storePacket as IPublishPacket,
+			)
 			if (err) {
 				return cb && cb(err)
 			}
@@ -1616,7 +1623,7 @@ export default class MqttClient extends EventEmitter {
 		})
 	}
 
-	_applyTopicAlias(packet: Packet) {
+	private _applyTopicAlias(packet: Packet) {
 		if (this.options.protocolVersion === 5) {
 			if (packet.cmd === 'publish') {
 				let alias: number
@@ -1699,12 +1706,12 @@ export default class MqttClient extends EventEmitter {
 		}
 	}
 
-	_noop(err?: Error) {
+	private _noop(err?: Error) {
 		this.log('noop ::', err)
 	}
 
 	/** Writes the packet to stream and emits events */
-	_writePacket(packet: Packet, cb?: DoneCallback) {
+	private _writePacket(packet: Packet, cb?: DoneCallback) {
 		this.log('_writePacket :: packet: %O', packet)
 		this.log('_writePacket :: emitting `packetsend`')
 
@@ -1739,7 +1746,7 @@ export default class MqttClient extends EventEmitter {
 	 * @param {Boolean} noStore - send without put to the store
 	 * @api private
 	 */
-	_sendPacket(
+	private _sendPacket(
 		packet: Packet,
 		cb?: DoneCallback,
 		cbStorePut?: DoneCallback,
@@ -1816,7 +1823,11 @@ export default class MqttClient extends EventEmitter {
 	 * @param {Function} cbStorePut - called when message is put into outgoingStore
 	 * @api private
 	 */
-	_storePacket(packet: Packet, cb: DoneCallback, cbStorePut: DoneCallback) {
+	private _storePacket(
+		packet: Packet,
+		cb: DoneCallback,
+		cbStorePut: DoneCallback,
+	) {
 		this.log('_storePacket :: packet: %o', packet)
 		this.log('_storePacket :: cb? %s', !!cb)
 		cbStorePut = cbStorePut || this.noop
@@ -1827,7 +1838,9 @@ export default class MqttClient extends EventEmitter {
 			// The cloned storePacket is for storing to resend on reconnect.
 			// Topic Alias must not be used after disconnected.
 			storePacket = clone(packet)
-			const err = this._removeTopicAliasAndRecoverTopicName(storePacket)
+			const err = this._removeTopicAliasAndRecoverTopicName(
+				storePacket as IPublishPacket,
+			)
 			if (err) {
 				return cb && cb(err)
 			}
@@ -1857,7 +1870,7 @@ export default class MqttClient extends EventEmitter {
 	 *
 	 * @api private
 	 */
-	_setupPingTimer() {
+	private _setupPingTimer() {
 		this.log(
 			'_setupPingTimer :: keepalive %d (seconds)',
 			this.options.keepalive,
@@ -1876,7 +1889,7 @@ export default class MqttClient extends EventEmitter {
 	 *
 	 * @api private
 	 */
-	_shiftPingInterval() {
+	private _shiftPingInterval() {
 		if (
 			this.pingTimer &&
 			this.options.keepalive &&
@@ -1891,7 +1904,7 @@ export default class MqttClient extends EventEmitter {
 	 *
 	 * @api private
 	 */
-	_checkPing() {
+	private _checkPing() {
 		this.log('_checkPing :: checking ping...')
 		if (this.pingResp) {
 			this.log(
@@ -1911,7 +1924,7 @@ export default class MqttClient extends EventEmitter {
 	 * @return the auth packet to be returned to the broker
 	 * @api public
 	 */
-	handleAuth(packet: IAuthPacket, callback: PacketCallback) {
+	public handleAuth(packet: IAuthPacket, callback: PacketCallback) {
 		callback()
 	}
 
@@ -1923,7 +1936,7 @@ export default class MqttClient extends EventEmitter {
 	 * @param Function callback call when finished
 	 * @api public
 	 */
-	handleMessage(packet: IPublishPacket, callback: DoneCallback) {
+	public handleMessage(packet: IPublishPacket, callback: DoneCallback) {
 		callback()
 	}
 
@@ -1931,7 +1944,7 @@ export default class MqttClient extends EventEmitter {
 	 * _nextId
 	 * @return unsigned int
 	 */
-	_nextId() {
+	private _nextId() {
 		return this.messageIdProvider.allocate()
 	}
 
@@ -1939,7 +1952,7 @@ export default class MqttClient extends EventEmitter {
 	 * getLastMessageId
 	 * @return unsigned int
 	 */
-	getLastMessageId() {
+	public getLastMessageId() {
 		return this.messageIdProvider.getLastAllocated()
 	}
 
@@ -1947,7 +1960,7 @@ export default class MqttClient extends EventEmitter {
 	 * _resubscribe
 	 * @api private
 	 */
-	_resubscribe() {
+	private _resubscribe() {
 		this.log('_resubscribe')
 		const _resubscribeTopicsKeys = Object.keys(this._resubscribeTopics)
 		if (
@@ -1994,7 +2007,7 @@ export default class MqttClient extends EventEmitter {
 	 *
 	 * @api private
 	 */
-	_onConnect(packet: IConnackPacket) {
+	private _onConnect(packet: IConnackPacket) {
 		if (this.disconnected) {
 			this.emit('connect', packet)
 			return
@@ -2107,7 +2120,7 @@ export default class MqttClient extends EventEmitter {
 		startStreamProcess()
 	}
 
-	_invokeStoreProcessingQueue() {
+	private _invokeStoreProcessingQueue() {
 		// If _storeProcessing is true, the message is resending.
 		// During resend, processing is skipped to prevent new messages from interrupting. #1635
 		if (!this._storeProcessing && this._storeProcessingQueue.length > 0) {
@@ -2120,13 +2133,13 @@ export default class MqttClient extends EventEmitter {
 		return false
 	}
 
-	_invokeAllStoreProcessingQueue() {
+	private _invokeAllStoreProcessingQueue() {
 		while (this._invokeStoreProcessingQueue()) {
 			/* empty */
 		}
 	}
 
-	_flushStoreProcessingQueue() {
+	private _flushStoreProcessingQueue() {
 		for (const f of this._storeProcessingQueue) {
 			if (f.cbStorePut) f.cbStorePut(new Error('Connection closed'))
 			if (f.callback) f.callback(new Error('Connection closed'))
@@ -2140,7 +2153,10 @@ export default class MqttClient extends EventEmitter {
 	 * @param {Function} cb - called when the message removed
 	 * @api private
 	 */
-	_removeOutgoingAndStoreMessage(messageId: number, cb: PacketCallback) {
+	private _removeOutgoingAndStoreMessage(
+		messageId: number,
+		cb: PacketCallback,
+	) {
 		delete this.outgoing[messageId]
 		this.outgoingStore.del({ messageId }, (err, packet) => {
 			cb(err, packet)

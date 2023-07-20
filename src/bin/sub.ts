@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 
-import mqtt from '../mqtt'
 import path from 'path'
 import fs from 'fs'
 import minimist from 'minimist'
 import helpMe from 'help-me'
+import { connect } from '../mqtt'
+import { IClientOptions } from 'src/lib/client'
 
 helpMe({
 	dir: path.join(__dirname, '..', 'doc'),
@@ -99,7 +100,7 @@ export default function start(args: string[]) {
 
 	parsedArgs.keepAlive = parsedArgs['keep-alive']
 
-	const client = mqtt.connect(parsedArgs)
+	const client = connect(parsedArgs as IClientOptions)
 
 	client.on('connect', () => {
 		client.subscribe(

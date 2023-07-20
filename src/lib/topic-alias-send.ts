@@ -20,7 +20,7 @@ export default class TopicAliasSend {
 
 	public length: number
 
-	constructor(max) {
+	constructor(max: number) {
 		if (max > 0) {
 			this.aliasToTopic = new LRUCache<number, string>({ max })
 			this.topicToAlias = {}

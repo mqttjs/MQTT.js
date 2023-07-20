@@ -16,10 +16,10 @@ const handlePubrel: PacketHandler = (client, packet: IPubrelPacket, done) => {
 					return callback(err2)
 				}
 				client.incomingStore.del(pub, client.noop)
-				client._sendPacket(comp, callback)
+				client['_sendPacket'](comp, callback)
 			})
 		} else {
-			client._sendPacket(comp, callback)
+			client['_sendPacket'](comp, callback)
 		}
 	})
 }

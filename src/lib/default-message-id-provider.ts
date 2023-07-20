@@ -80,7 +80,7 @@ export default class DefaultMessageIdProvider implements IMessageIdProvider {
 	 * @param { unsigned int } - messageId to register,
 	 * @return boolean
 	 */
-	register(messageId) {
+	register(messageId: number) {
 		return true
 	}
 
@@ -89,7 +89,7 @@ export default class DefaultMessageIdProvider implements IMessageIdProvider {
 	 * Deallocate messageId.
 	 * @param { unsigned int } - messageId to deallocate,
 	 */
-	deallocate(messageId) {}
+	deallocate(messageId: number) {}
 
 	/**
 	 * clear

@@ -29,7 +29,7 @@ const handleConnack: PacketHandler = (client, packet: IConnackPacket) => {
 		}
 		if (packet.properties.serverKeepAlive && options.keepalive) {
 			options.keepalive = packet.properties.serverKeepAlive
-			client._shiftPingInterval()
+			client['_shiftPingInterval']()
 		}
 		if (packet.properties.maximumPacketSize) {
 			if (!options.properties) {
@@ -42,7 +42,7 @@ const handleConnack: PacketHandler = (client, packet: IConnackPacket) => {
 
 	if (rc === 0) {
 		client.reconnecting = false
-		client._onConnect(packet)
+		client['_onConnect'](packet)
 	} else if (rc > 0) {
 		const err = new ErrorWithReasonCode(
 			`Connection refused: ${ReasonCodes[rc]}`,

@@ -7,14 +7,9 @@
 
 import MqttClient from './lib/client'
 import DefaultMessageIdProvider from './lib/default-message-id-provider'
-import connect from './lib/connect'
 import UniqueMessageIdProvider from './lib/unique-message-id-provider'
+import Store from './lib/store'
 
 export const Client = MqttClient
-export {
-	MqttClient,
-	DefaultMessageIdProvider,
-	UniqueMessageIdProvider,
-	connect,
-}
-export { Store } from './lib/store'
+export { MqttClient, Store, DefaultMessageIdProvider, UniqueMessageIdProvider }
+export { connect } from './lib/connect'
