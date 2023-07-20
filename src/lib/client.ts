@@ -1266,10 +1266,11 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			topic = [topic]
 		}
 
-		if (typeof callback !== 'function') {
-			opts = callback
-			callback = this.noop
+		if (typeof opts === 'function') {
+			callback = opts
 		}
+
+		callback = callback || this.noop
 
 		const invalidTopic = validations.validateTopics(topic)
 		if (invalidTopic !== null) {
