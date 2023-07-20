@@ -1,7 +1,8 @@
-require('should')
+import { IPublishPacket, IPubrelPacket } from 'mqtt-packet'
+import Store from '../src/lib/store'
 
-module.exports = function abstractStoreTest(build) {
-	let store
+export default function abstractStoreTest(build) {
+	let store: Store
 
 	// eslint-disable-next-line
   beforeEach(function (done) {
@@ -16,11 +17,14 @@ module.exports = function abstractStoreTest(build) {
 	})
 
 	it('should put and stream in-flight packets', function test(done) {
-		const packet = {
+		const packet: IPublishPacket = {
 			topic: 'hello',
 			payload: 'world',
 			qos: 1,
 			messageId: 42,
+			cmd: 'publish',
+			dup: false,
+			retain: false,
 		}
 
 		store.put(packet, () => {
@@ -32,11 +36,14 @@ module.exports = function abstractStoreTest(build) {
 	})
 
 	it('should support destroying the stream', function test(done) {
-		const packet = {
+		const packet: IPublishPacket = {
 			topic: 'hello',
 			payload: 'world',
 			qos: 1,
 			messageId: 42,
+			cmd: 'publish',
+			dup: false,
+			retain: false,
 		}
 
 		store.put(packet, () => {
@@ -47,11 +54,14 @@ module.exports = function abstractStoreTest(build) {
 	})
 
 	it('should add and del in-flight packets', function test(done) {
-		const packet = {
+		const packet: IPublishPacket = {
 			topic: 'hello',
 			payload: 'world',
 			qos: 1,
 			messageId: 42,
+			cmd: 'publish',
+			dup: false,
+			retain: false,
 		}
 
 		store.put(packet, () => {
@@ -67,16 +77,18 @@ module.exports = function abstractStoreTest(build) {
 	})
 
 	it('should replace a packet when doing put with the same messageId', function test(done) {
-		const packet1 = {
+		const packet1: IPublishPacket = {
 			cmd: 'publish', // added
 			topic: 'hello',
 			payload: 'world',
 			qos: 2,
 			messageId: 42,
+			dup: false,
+			retain: false,
 		}
-		const packet2 = {
+		const packet2: IPubrelPacket = {
 			cmd: 'pubrel', // added
-			qos: 2,
+			// qos: 2,
 			messageId: 42,
 		}
 
@@ -91,11 +103,14 @@ module.exports = function abstractStoreTest(build) {
 	})
 
 	it('should return the original packet on del', function test(done) {
-		const packet = {
+		const packet: IPublishPacket = {
 			topic: 'hello',
 			payload: 'world',
 			qos: 1,
 			messageId: 42,
+			cmd: 'publish',
+			dup: false,
+			retain: false,
 		}
 
 		store.put(packet, () => {
@@ -110,11 +125,14 @@ module.exports = function abstractStoreTest(build) {
 	})
 
 	it('should get a packet with the same messageId', function test(done) {
-		const packet = {
+		const packet: IPublishPacket = {
 			topic: 'hello',
 			payload: 'world',
 			qos: 1,
 			messageId: 42,
+			cmd: 'publish',
+			dup: false,
+			retain: false,
 		}
 
 		store.put(packet, () => {

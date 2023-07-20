@@ -111,10 +111,10 @@ export default class Store {
 	/**
 	 * get a packet from the store.
 	 */
-	get(packet: Packet, cb: PacketCallback) {
-		packet = this._inflights.get(packet.messageId)
-		if (packet) {
-			cb(null, packet)
+	get(packet: Pick<Packet, 'messageId'>, cb: PacketCallback) {
+		const storedPacket = this._inflights.get(packet.messageId)
+		if (storedPacket) {
+			cb(null, storedPacket)
 		} else if (cb) {
 			cb(new Error('missing packet'))
 		}

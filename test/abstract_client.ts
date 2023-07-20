@@ -1147,7 +1147,7 @@ export default function abstractTest(server, config) {
 						}
 						setImmediate(() => {
 							client.end(() => {
-								server2.close(done())
+								server2.close(done)
 							})
 						})
 					})
@@ -1214,7 +1214,7 @@ export default function abstractTest(server, config) {
 						}
 						setImmediate(() => {
 							client.end(true, () => {
-								server2.close(done())
+								server2.close(done)
 							})
 						})
 					})
