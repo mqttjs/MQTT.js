@@ -20,13 +20,13 @@
     "type": "git",
     "url": "git://github.com/mqttjs/MQTT.js.git"
   },
-  "main": "build/mqtt.js",
+  "main": "build/src/mqtt.js",
   "types": "types/index.d.ts",
   "scripts": {
     "lint": "eslint --ext .js .",
     "lint-fix": "eslint --fix --ext .js .",
     "build:ts": "tsc -p tsconfig.build.json",
-    "build:browser": "rimraf dist/ && mkdirp dist/ && browserify build/mqtt.js --standalone mqtt > dist/mqtt.js && terser dist/mqtt.js --compress --mangle --output dist/mqtt.min.js",
+    "build:browser": "rimraf dist/ && mkdirp dist/ && browserify build/src/mqtt.js --standalone mqtt > dist/mqtt.js && terser dist/mqtt.js --compress --mangle --output dist/mqtt.min.js",
     "build": "npm run build:ts && npm run build:browser",
     "typescript-compile-test": "tsc -p test/typescript/tsconfig.json",
     "typescript-compile-execute": "node test/typescript/broker-connect-subscribe-and-publish.js",
@@ -83,7 +83,7 @@
     "node": ">=16.0.0"
   },
   "browser": {
-    "./mqtt.js": "./build/lib/connect/index.js",
+    "./mqtt.js": "./build/src/lib/connect/index.js",
     "fs": false,
     "tls": false,
     "net": false
