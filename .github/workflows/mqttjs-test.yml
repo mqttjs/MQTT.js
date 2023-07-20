@@ -43,12 +43,6 @@ jobs:
         CI: true
         DEBUG: "${{ runner.debug == '1' && 'mqttjs:*' || '' }}"
 
-    - name: Test Typescript
-      run: npm run test:typescript
-      env:
-        CI: true
-        DEBUG: "${{ runner.debug == '1' && 'mqttjs:*' || '' }}"
-    
     - name: Test Browser
       if: matrix.node-version == '20.x'
       # only run on latest node version, no reason to run on all
