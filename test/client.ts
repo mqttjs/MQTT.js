@@ -1,23 +1,26 @@
-const mqtt = require('..')
-const { assert } = require('chai')
-const { fork } = require('child_process')
-const path = require('path')
-const net = require('net')
-const eos = require('end-of-stream')
-const mqttPacket = require('mqtt-packet')
-const { Duplex } = require('readable-stream')
-const Connection = require('mqtt-connection')
-const util = require('util')
-const ports = require('./helpers/port_list')
-const { serverBuilder } = require('./server_helpers_for_client_tests')
-const debug = require('debug')('TEST:client')
-const { MqttServer } = require('./server')
-const abstractClientTests = require('./abstract_client')
+import * as mqtt from '../src/mqtt'
+import { assert } from 'chai'
+import { fork } from 'child_process'
+import path from 'path'
+import net from 'net'
+import eos from 'end-of-stream'
+import mqttPacket from 'mqtt-packet'
+import { Duplex } from 'readable-stream'
+import Connection from 'mqtt-connection'
+import util from 'util'
+import ports from './helpers/port_list'
+import serverBuilder from './server_helpers_for_client_tests'
+import debug from 'debug'
+import { MqttServer } from './server'
+import abstractClientTests from './abstract_client'
+import { IClientOptions } from 'src/lib/client'
+
+debug('mqttjs:client-test')
 
 describe('MqttClient', () => {
 	let client
 	const server = serverBuilder('mqtt')
-	const config = { protocol: 'mqtt', port: ports.PORT }
+	const config: IClientOptions = { protocol: 'mqtt', port: ports.PORT }
 	server.listen(ports.PORT)
 
 	after(() => {
@@ -134,7 +137,7 @@ describe('MqttClient', () => {
 						packets.push(
 							mqttPacket.generate({
 								cmd: 'publish',
-								topic: Buffer.from('hello'),
+								topic: 'hello',
 								payload: Buffer.from('world'),
 								retain: false,
 								dup: false,
@@ -376,7 +379,7 @@ describe('MqttClient', () => {
 							)
 							client.end(true)
 							serverClient.end()
-							server2.destroy()
+							server2.close()
 						}
 
 						serverClient.suback({
@@ -481,7 +484,7 @@ describe('MqttClient', () => {
 							)
 							client.end(true)
 							serverClient.destroy()
-							server2.destroy()
+							server2.close()
 						}
 
 						serverClient.puback(packet)

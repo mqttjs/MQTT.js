@@ -1,6 +1,7 @@
-const fs = require('fs')
-const path = require('path')
-const mqtt = require('..')
+import fs from 'fs'
+import path from 'path'
+import * as mqtt from '../src/mqtt'
+import { IClientOptions } from 'src/lib/client'
 
 describe('mqtt', () => {
 	describe('#connect', () => {
@@ -79,10 +80,10 @@ describe('mqtt', () => {
 			c.end((err) => done(err))
 		})
 
-		const sslOpts = {
-			keyPath: path.join(__dirname, 'helpers', 'private-key.pem'),
-			certPath: path.join(__dirname, 'helpers', 'public-cert.pem'),
-			caPaths: [path.join(__dirname, 'helpers', 'public-cert.pem')],
+		const sslOpts: IClientOptions = {
+			key: path.join(__dirname, 'helpers', 'private-key.pem'),
+			cert: path.join(__dirname, 'helpers', 'public-cert.pem'),
+			ca: [path.join(__dirname, 'helpers', 'public-cert.pem')],
 		}
 
 		it('should return an MqttClient when connect is called with mqtts:/ url', function test(done) {
@@ -129,7 +130,7 @@ describe('mqtt', () => {
 			c.end((err) => done(err))
 		})
 
-		const sslOpts2 = {
+		const sslOpts2: IClientOptions = {
 			key: fs.readFileSync(
 				path.join(__dirname, 'helpers', 'private-key.pem'),
 			),
@@ -152,7 +153,7 @@ describe('mqtt', () => {
 
 		it('should throw an error when it is called with cert and key set and protocol other than allowed: mqtt,mqtts,ws,wss,wxs', () => {
 			;(() => {
-				sslOpts2.protocol = 'UNKNOWNPROTOCOL'
+				;(sslOpts2 as any).protocol = 'UNKNOWNPROTOCOL'
 				mqtt.connect(sslOpts2)
 			}).should.throw()
 		})

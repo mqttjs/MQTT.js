@@ -1,16 +1,16 @@
-const path = require('path')
-const fs = require('fs')
-const mqtt = require('..')
-const abstractClientTests = require('./abstract_client')
+import path from 'path'
+import fs from 'fs'
+import * as mqtt from '../src/mqtt'
+import abstractClientTests from './abstract_client'
+import { MqttSecureServer, MqttServerListener } from './server'
+import { assert } from 'chai'
 
 const port = 9899
 const KEY = path.join(__dirname, 'helpers', 'tls-key.pem')
 const CERT = path.join(__dirname, 'helpers', 'tls-cert.pem')
 const WRONG_CERT = path.join(__dirname, 'helpers', 'wrong-cert.pem')
-const { MqttSecureServer } = require('./server')
-const { assert } = require('chai')
 
-const serverListener = (client) => {
+const serverListener: MqttServerListener = (client) => {
 	// this is the Server's MQTT Client
 	client.on('connect', (packet) => {
 		if (packet.clientId === 'invalid') {
@@ -162,7 +162,7 @@ describe('MqttSecureClient', () => {
 			server.removeAllListeners('secureConnection') // clear eventHandler
 			server.once('secureConnection', (tlsSocket) => {
 				// one time eventHandler
-				assert.equal(tlsSocket.servername, hostname) // validate SNI set
+				assert.equal((tlsSocket as any).servername, hostname) // validate SNI set
 				server.setupConnection(tlsSocket)
 			})
 

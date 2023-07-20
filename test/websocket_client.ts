@@ -1,11 +1,12 @@
-const http = require('http')
-const WebSocket = require('ws')
-const MQTTConnection = require('mqtt-connection')
-const assert = require('assert')
-const abstractClientTests = require('./abstract_client')
-const ports = require('./helpers/port_list')
-const { MqttServerNoWait } = require('./server')
-const mqtt = require('..')
+import http from 'http'
+import WebSocket from 'ws'
+import MQTTConnection from 'mqtt-connection'
+import assert from 'assert'
+import abstractClientTests from './abstract_client'
+import ports from './helpers/port_list'
+import { MqttServerNoWait } from './server'
+import * as mqtt from '../src/mqtt'
+import { IClientOptions } from 'src/lib/client'
 
 const port = 9999
 const httpServer = http.createServer()
@@ -86,9 +87,9 @@ attachWebsocketServer(httpServer)
 httpServer.on('client', attachClientEventHandlers).listen(port)
 
 describe('Websocket Client', () => {
-	const baseConfig = { protocol: 'ws', port }
+	const baseConfig: IClientOptions = { protocol: 'ws', port }
 
-	function makeOptions(custom) {
+	function makeOptions(custom?: IClientOptions): IClientOptions {
 		return { ...baseConfig, ...(custom || {}) }
 	}
 
@@ -107,7 +108,7 @@ describe('Websocket Client', () => {
 		const baseUrl = 'ws://localhost:9999/mqtt'
 		const sig = '?AUTH=token'
 		const expected = baseUrl + sig
-		let actual
+		let actual: string
 		const opts = makeOptions({
 			path: '/mqtt',
 			transformWsUrl(url, opt, client) {
@@ -124,7 +125,8 @@ describe('Websocket Client', () => {
 		const client = mqtt.connect(opts)
 
 		client.on('connect', () => {
-			assert.equal(client.stream.url, expected)
+			// `url` is set in `connect/ws.ts` `streamBuilder`
+			assert.equal((client.stream as any).url, expected)
 			assert.equal(actual, expected)
 			client.end(true, (err) => done(err))
 		})
@@ -180,7 +182,7 @@ describe('Websocket Client', () => {
 				})
 				serverPort41.once('client', (c) => {
 					assert.equal(
-						client.stream.url,
+						(client.stream as any).url,
 						actualURL41,
 						'Protocol for second client should use the default protocol: wss, on port: port + 41.',
 					)
@@ -195,7 +197,7 @@ describe('Websocket Client', () => {
 				serverPort42.once('client', (c) => {
 					serverPort42Connected = true
 					assert.equal(
-						client.stream.url,
+						(client.stream as any).url,
 						actualURL42,
 						'Protocol for connection should use ws, on port: port + 42.',
 					)

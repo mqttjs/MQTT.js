@@ -3,6 +3,8 @@ import tls, { TlsOptions } from 'tls'
 import Connection from 'mqtt-connection'
 import { Duplex } from 'stream'
 
+export type MqttServerListener = (client: Connection) => void
+
 /**
  * MqttServer
  *
@@ -11,7 +13,7 @@ import { Duplex } from 'stream'
 export class MqttServer extends net.Server {
 	connectionList: Duplex[]
 
-	constructor(listener) {
+	constructor(listener: MqttServerListener) {
 		super()
 		this.connectionList = []
 
@@ -36,7 +38,7 @@ export class MqttServer extends net.Server {
 export class MqttServerNoWait extends net.Server {
 	connectionList: Duplex[]
 
-	constructor(listener) {
+	constructor(listener: MqttServerListener) {
 		super()
 		this.connectionList = []
 
@@ -62,7 +64,7 @@ export class MqttServerNoWait extends net.Server {
 export class MqttSecureServer extends tls.Server {
 	connectionList: Duplex[]
 
-	constructor(opts: TlsOptions, listener) {
+	constructor(opts: TlsOptions, listener: MqttServerListener) {
 		if (typeof opts === 'function') {
 			listener = opts
 			opts = {}

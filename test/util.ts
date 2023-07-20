@@ -1,6 +1,6 @@
-const { Transform } = require('readable-stream')
+import { Transform } from 'readable-stream'
 
-module.exports.testStream = () => {
+const testStream = () => {
 	return new Transform({
 		transform(buf, enc, cb) {
 			setImmediate(() => {
@@ -10,3 +10,5 @@ module.exports.testStream = () => {
 		},
 	})
 }
+
+export default testStream

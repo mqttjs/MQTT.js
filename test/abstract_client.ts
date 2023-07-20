@@ -1,14 +1,14 @@
 /**
  * Testing dependencies
  */
-import { should, assert } from 'chai'
+import { assert } from 'chai'
 import sinon from 'sinon'
 import fs from 'fs'
 import levelStore from 'mqtt-level-store'
 import * as mqtt from '../src/mqtt'
 import Store from '../src/lib/store'
 import ports from './helpers/port_list'
-import { serverBuilder } from './server_helpers_for_client_tests'
+import serverBuilder from './server_helpers_for_client_tests'
 import handlePubrel from '../src/lib/handlers/pubrel'
 import handle from '../src/lib/handlers/index'
 import handlePublish from '../src/lib/handlers/publish'

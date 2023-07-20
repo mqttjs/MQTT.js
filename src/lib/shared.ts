@@ -1,9 +1,7 @@
-import EventEmitter from 'events'
 import type { IClientOptions } from './client'
 import type MqttClient from './client'
 import { Packet } from 'mqtt-packet'
 import { Duplex, Writable } from 'readable-stream'
-import { Socket } from 'net'
 
 export type DoneCallback = (error?: Error) => void
 

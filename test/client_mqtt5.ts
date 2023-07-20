@@ -1,10 +1,10 @@
-const { assert } = require('chai')
-const mqtt = require('..')
-const abstractClientTests = require('./abstract_client')
-const { MqttServer } = require('./server')
-const { serverBuilder } = require('./server_helpers_for_client_tests')
-const ports = require('./helpers/port_list')
-const { close } = require('inspector')
+import { assert } from 'chai'
+import * as mqtt from '../src/mqtt'
+import abstractClientTests from './abstract_client'
+import { MqttServer } from './server'
+import serverBuilder from './server_helpers_for_client_tests'
+import ports from './helpers/port_list'
+import { ErrorWithReasonCode } from 'src/lib/shared'
 
 describe('MQTT 5.0', () => {
 	const server = serverBuilder('mqtt').listen(ports.PORTAND115)
@@ -937,13 +937,18 @@ describe('MQTT 5.0', () => {
 		}
 		const client = mqtt.connect(opts)
 		client.once('connect', () => {
-			client.publish('a/b', 'message', { qos: 1 }, (err, packet) => {
-				assert.strictEqual(
-					err.message,
-					'Publish error: Session taken over',
-				)
-				assert.strictEqual(err.code, 142)
-			})
+			client.publish(
+				'a/b',
+				'message',
+				{ qos: 1 },
+				(err: ErrorWithReasonCode) => {
+					assert.strictEqual(
+						err.message,
+						'Publish error: Session taken over',
+					)
+					assert.strictEqual(err.code, 142)
+				},
+			)
 			client.end(true, (err1) => {
 				serverThatSendsErrors.close((err2) => {
 					done(err1 || err2)
@@ -962,13 +967,18 @@ describe('MQTT 5.0', () => {
 		}
 		const client = mqtt.connect(opts)
 		client.once('connect', () => {
-			client.publish('a/b', 'message', { qos: 2 }, (err, packet) => {
-				assert.strictEqual(
-					err.message,
-					'Publish error: Session taken over',
-				)
-				assert.strictEqual(err.code, 142)
-			})
+			client.publish(
+				'a/b',
+				'message',
+				{ qos: 2 },
+				(err: ErrorWithReasonCode) => {
+					assert.strictEqual(
+						err.message,
+						'Publish error: Session taken over',
+					)
+					assert.strictEqual(err.code, 142)
+				},
+			)
 			client.end(true, (err1) => {
 				serverThatSendsErrors.close((err2) => {
 					done(err1 || err2)

@@ -1,16 +1,18 @@
-const { MqttServer } = require('./server')
-const debug = require('debug')('TEST:server_helpers')
+import { MqttServer, MqttSecureServer, MqttServerListener } from './server'
+import debug from 'debug'
 
-const path = require('path')
-const fs = require('fs')
+import path from 'path'
+import fs from 'fs'
+
+import http from 'http'
+import WebSocket from 'ws'
+import MQTTConnection from 'mqtt-connection'
+import { Server } from 'net'
 
 const KEY = path.join(__dirname, 'helpers', 'tls-key.pem')
 const CERT = path.join(__dirname, 'helpers', 'tls-cert.pem')
 
-const http = require('http')
-const WebSocket = require('ws')
-const MQTTConnection = require('mqtt-connection')
-const { MqttSecureServer } = require('./server')
+debug('mqttjs:server_helpers_for_client_tests')
 
 /**
  * This will build the client for the server to use during testing, and set up the
@@ -18,8 +20,11 @@ const { MqttSecureServer } = require('./server')
  * @param {String} protocol - 'mqtt', 'mqtts' or 'ws'
  * @param {Function} handler - event handler
  */
-function serverBuilder(protocol, handler) {
-	const defaultHandler = (serverClient) => {
+export default function serverBuilder(
+	protocol: string,
+	handler?: MqttServerListener,
+): Server {
+	const defaultHandler: MqttServerListener = (serverClient) => {
 		serverClient.on('auth', (packet) => {
 			if (serverClient.writable) return false
 			const rc = 'reasonCode'
@@ -130,7 +135,7 @@ function serverBuilder(protocol, handler) {
 			})
 
 			webSocketServer.on('connection', (ws) => {
-				server.connectionList.push(ws)
+				// server.connectionList.push(ws)
 				const stream = WebSocket.createWebSocketStream(ws)
 				const connection = new MQTTConnection(stream)
 				connection.protocol = ws.protocol
@@ -142,11 +147,9 @@ function serverBuilder(protocol, handler) {
 		}
 
 		const httpServer = http.createServer()
-		httpServer.connectionList = []
+		// httpServer.connectionList = []
 		attachWebsocketServer(httpServer)
 		httpServer.on('client', handler)
 		return httpServer
 	}
 }
-
-exports.serverBuilder = serverBuilder

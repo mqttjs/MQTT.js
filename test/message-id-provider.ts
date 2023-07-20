@@ -1,12 +1,12 @@
-const { assert } = require('chai')
-const DefaultMessageIdProvider = require('../lib/default-message-id-provider')
-const UniqueMessageIdProvider = require('../lib/unique-message-id-provider')
+import { assert } from 'chai'
+import DefaultMessageIdProvider from '../src/lib/default-message-id-provider'
+import UniqueMessageIdProvider from '../src/lib/unique-message-id-provider'
 
 describe('message id provider', () => {
 	describe('default', () => {
 		it('should return 1 once the internal counter reached limit', () => {
 			const provider = new DefaultMessageIdProvider()
-			provider.nextId = 65535
+			provider['nextId'] = 65535
 
 			assert.equal(provider.allocate(), 65535)
 			assert.equal(provider.allocate(), 1)
@@ -14,7 +14,7 @@ describe('message id provider', () => {
 
 		it('should return 65535 for last message id once the internal counter reached limit', () => {
 			const provider = new DefaultMessageIdProvider()
-			provider.nextId = 65535
+			provider['nextId'] = 65535
 
 			assert.equal(provider.allocate(), 65535)
 			assert.equal(provider.getLastAllocated(), 65535)

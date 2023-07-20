@@ -120,7 +120,7 @@ export type AckHandler = (
 
 export interface IClientOptions extends ISecureClientOptions {
 	/** Encoding to use. Example 'binary' */
-	encoding?: string
+	encoding?: BufferEncoding
 	/** Set browser buffer size. Default to 512KB */
 	browserBufferSize?: number
 	/** used in ws protocol to set `objectMode` */
