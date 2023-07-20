@@ -12,8 +12,24 @@ import { serverBuilder } from './server_helpers_for_client_tests'
 import handlePubrel from '../src/lib/handlers/pubrel'
 import handle from '../src/lib/handlers/index'
 import handlePublish from '../src/lib/handlers/publish'
-import { IClientOptions } from '../src/lib/client'
-import { IConnackPacket } from 'mqtt-packet'
+import {
+	IClientOptions,
+	IClientPublishOptions,
+	IClientSubscribeOptions,
+	ISubscriptioOptions,
+	ISubscriptionMap,
+	ISubscriptionRequest,
+} from '../src/lib/client'
+import {
+	IConnackPacket,
+	IPublishPacket,
+	IPubrelPacket,
+	ISubackPacket,
+	QoS,
+} from 'mqtt-packet'
+import { DoneCallback, ErrorWithReasonCode } from 'src/lib/shared'
+import { ClientOptions } from 'ws'
+import { fail } from 'assert'
 
 /**
  * These tests try to be consistent with names for servers (brokers) and clients,
@@ -39,7 +55,10 @@ import { IConnackPacket } from 'mqtt-packet'
 export default function abstractTest(server, config) {
 	const version = config.protocolVersion || 4
 
-	function connect(opts?: IClientOptions) {
+	function connect(opts?: IClientOptions | string) {
+		if (typeof opts === 'string') {
+			opts = { host: opts }
+		}
 		opts = { ...config, ...opts }
 		return mqtt.connect(opts)
 	}
@@ -403,7 +422,7 @@ export default function abstractTest(server, config) {
 			client.once('connect', () => {
 				done(new Error('Should not emit connect'))
 			})
-			client.once('error', (error) => {
+			client.once('error', (error: ErrorWithReasonCode) => {
 				const value = version === 5 ? 128 : 2
 				assert.strictEqual(error.code, value) // code for clientID identifer rejected
 				client.end((err) => done(err))
@@ -414,7 +433,7 @@ export default function abstractTest(server, config) {
 			// fake a port
 			const client = connect({ port: 4557 })
 
-			client.on('error', (e) => {
+			client.on('error', (e: any) => {
 				assert.equal(e.code, 'ECONNREFUSED')
 				client.end((err) => done(err))
 			})
@@ -851,6 +870,7 @@ export default function abstractTest(server, config) {
 			const store = new Store()
 			store.put = (packet, cb) => {
 				process.nextTick(cb, new Error('oops there is an error'))
+				return store
 			}
 			const client = connect({
 				incomingStore: store,
@@ -961,7 +981,7 @@ export default function abstractTest(server, config) {
 			const client = connect()
 			const payload = 'test'
 			const topic = 'test'
-			const opts = {
+			const opts: IClientPublishOptions = {
 				retain: true,
 				qos: 1,
 			}
@@ -1030,7 +1050,7 @@ export default function abstractTest(server, config) {
 			const client = connect()
 			const payload = 'duplicated-test'
 			const topic = 'test'
-			const opts = {
+			const opts: IClientPublishOptions = {
 				retain: true,
 				qos: 1,
 				dup: true,
@@ -1074,7 +1094,7 @@ export default function abstractTest(server, config) {
 
 		it('should fire a callback (qos 1)', function _test(done) {
 			const client = connect()
-			const opts = { qos: 1 }
+			const opts: IClientPublishOptions = { qos: 1 }
 
 			client.once('connect', () => {
 				client.publish('a', 'b', opts, () => {
@@ -1137,7 +1157,7 @@ export default function abstractTest(server, config) {
 
 		it('should fire a callback (qos 2)', function _test(done) {
 			const client = connect()
-			const opts = { qos: 2 }
+			const opts: IClientPublishOptions = { qos: 2 }
 
 			client.once('connect', () => {
 				client.publish('a', 'b', opts, () => {
@@ -1313,9 +1333,9 @@ export default function abstractTest(server, config) {
 		}
 
 		const qosTests = [0, 1, 2]
-		qosTests.forEach((QoS) => {
-			it(`should publish 10 QoS ${QoS}and receive them only when \`handleMessage\` finishes`, function _test(done) {
-				testQosHandleMessage(QoS, done)
+		qosTests.forEach((qos) => {
+			it(`should publish 10 QoS ${qos}and receive them only when \`handleMessage\` finishes`, function _test(done) {
+				testQosHandleMessage(qos, done)
 			})
 		})
 
@@ -1326,22 +1346,27 @@ export default function abstractTest(server, config) {
 				callback(new Error('Error thrown by the application'))
 			}
 
-			client._sendPacket = sinon.spy()
+			const sendSpy = sinon.spy()
+
+			client['_sendPacket'] = sendSpy
 
 			handlePublish(
 				client,
 				{
+					cmd: 'publish',
 					messageId: Math.floor(65535 * Math.random()),
 					topic: 'test',
 					payload: 'test',
 					qos: 1,
+					dup: false,
+					retain: false,
 				},
 				(err) => {
 					assert.exists(err)
 				},
 			)
 
-			assert.strictEqual(client._sendPacket.callCount, 0)
+			assert.strictEqual(sendSpy.callCount, 0)
 			client.end()
 			client.on('connect', () => {
 				done()
@@ -1360,10 +1385,13 @@ export default function abstractTest(server, config) {
 
 				try {
 					handlePublish(client, {
+						cmd: 'publish',
 						messageId: Math.floor(65535 * Math.random()),
 						topic: 'test',
 						payload: 'test',
 						qos: 1,
+						dup: false,
+						retain: false,
 					})
 					client.end(true, done)
 				} catch (err) {
@@ -1375,11 +1403,13 @@ export default function abstractTest(server, config) {
 		)
 
 		it('should handle error with async incoming store in QoS 1 `handlePublish` method', function _test(done) {
-			class AsyncStore {
+			class AsyncStore extends Store {
 				put(packet, cb) {
 					process.nextTick(() => {
 						cb(null, 'Error')
 					})
+
+					return this
 				}
 
 				close(cb) {
@@ -1393,10 +1423,13 @@ export default function abstractTest(server, config) {
 			handlePublish(
 				client,
 				{
+					cmd: 'publish',
 					messageId: 1,
 					topic: 'test',
 					payload: 'test',
 					qos: 1,
+					dup: false,
+					retain: false,
 				},
 				() => {
 					client.end((err) => done(err))
@@ -1405,23 +1438,28 @@ export default function abstractTest(server, config) {
 		})
 
 		it('should handle error with async incoming store in QoS 2 `handlePublish` method', function _test(done) {
-			class AsyncStore {
+			class AsyncStore extends Store {
 				put(packet, cb) {
 					process.nextTick(() => {
 						cb(null, 'Error')
 					})
+
+					return this
 				}
 
 				del(packet, cb) {
 					process.nextTick(() => {
 						cb(new Error('Error'))
 					})
+
+					return this
 				}
 
 				get(packet, cb) {
 					process.nextTick(() => {
 						cb(null, { cmd: 'publish' })
 					})
+					return this
 				}
 
 				close(cb) {
@@ -1435,6 +1473,9 @@ export default function abstractTest(server, config) {
 			handlePublish(
 				client,
 				{
+					cmd: 'publish',
+					dup: false,
+					retain: false,
 					messageId: 1,
 					topic: 'test',
 					payload: 'test',
@@ -1447,23 +1488,29 @@ export default function abstractTest(server, config) {
 		})
 
 		it('should handle error with async incoming store in QoS 2 `handlePubrel` method', function _test(done) {
-			class AsyncStore {
+			class AsyncStore extends Store {
 				put(packet, cb) {
 					process.nextTick(() => {
 						cb(null, 'Error')
 					})
+
+					return this
 				}
 
 				del(packet, cb) {
 					process.nextTick(() => {
 						cb(new Error('Error'))
 					})
+
+					return this
 				}
 
 				get(packet, cb) {
 					process.nextTick(() => {
 						cb(null, { cmd: 'publish' })
 					})
+
+					return this
 				}
 
 				close(cb) {
@@ -1477,8 +1524,9 @@ export default function abstractTest(server, config) {
 			handlePubrel(
 				client,
 				{
+					cmd: 'pubrel',
 					messageId: 1,
-					qos: 2,
+					// qos: 2,
 				},
 				() => {
 					client.end(true, (err) => done(err))
@@ -1488,11 +1536,13 @@ export default function abstractTest(server, config) {
 
 		it('should handle success with async incoming store in QoS 2 `handlePubrel` method', function _test(done) {
 			let delComplete = false
-			class AsyncStore {
+			class AsyncStore extends Store {
 				put(packet, cb) {
 					process.nextTick(() => {
 						cb(null, 'Error')
 					})
+
+					return this
 				}
 
 				del(packet, cb) {
@@ -1500,12 +1550,15 @@ export default function abstractTest(server, config) {
 						delComplete = true
 						cb(null)
 					})
+
+					return this
 				}
 
 				get(packet, cb) {
 					process.nextTick(() => {
 						cb(null, { cmd: 'publish' })
 					})
+					return this
 				}
 
 				close(cb) {
@@ -1519,8 +1572,9 @@ export default function abstractTest(server, config) {
 			handlePubrel(
 				client,
 				{
+					cmd: 'pubrel',
 					messageId: 1,
-					qos: 2,
+					// qos: 2,
 				},
 				() => {
 					assert.isTrue(delComplete)
@@ -1552,19 +1606,19 @@ export default function abstractTest(server, config) {
 						payload,
 						qos,
 						cmd: 'publish',
+						dup: false,
+						retain: false,
 					},
 					() => {
+						const spy = sinon.spy()
 						// cleans up the client
-						client._sendPacket = sinon.spy()
+						client['_sendPacket'] = spy
 						handlePubrel(
 							client,
 							{ cmd: 'pubrel', messageId },
 							(err) => {
 								assert.exists(err)
-								assert.strictEqual(
-									client._sendPacket.callCount,
-									0,
-								)
+								assert.strictEqual(spy.callCount, 0)
 								client.end(true, done)
 							},
 						)
@@ -1599,6 +1653,8 @@ export default function abstractTest(server, config) {
 							payload,
 							qos,
 							cmd: 'publish',
+							dup: false,
+							retain: false,
 						},
 						() => {
 							try {
@@ -1621,9 +1677,9 @@ export default function abstractTest(server, config) {
 		it('should keep message order', function _test(done) {
 			let publishCount = 0
 			let reconnect = false
-			let client = {}
-			const incomingStore = new mqtt.Store({ clean: false })
-			const outgoingStore = new mqtt.Store({ clean: false })
+			let client: mqtt.MqttClient
+			const incomingStore = new Store({ clean: false })
+			const outgoingStore = new Store({ clean: false })
 			const server2 = serverBuilder(config.protocol, (serverClient) => {
 				// errors are not interesting for this test
 				// but they might happen on some platforms
@@ -1687,7 +1743,7 @@ export default function abstractTest(server, config) {
 				client.on('close', () => {
 					if (!reconnect) {
 						client.reconnect({
-							clean: false,
+							// clean: false, TODO: should we handle this?
 							incomingStore,
 							outgoingStore,
 						})
@@ -1697,7 +1753,12 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		function testCallbackStorePutByQoS(qos, clean, expected, done) {
+		function testCallbackStorePutByQoS(
+			qos: number,
+			clean: boolean,
+			expected: string[],
+			done: DoneCallback,
+		) {
 			const client = connect({
 				clean,
 				clientId: 'testId',
@@ -1710,12 +1771,17 @@ export default function abstractTest(server, config) {
 			}
 
 			client.on('connect', () => {
-				client.publish('test', 'test', { qos, cbStorePut }, (err) => {
-					if (err) done(err)
-					callbacks.push('publish')
-					assert.deepEqual(callbacks, expected)
-					client.end(true, done)
-				})
+				client.publish(
+					'test',
+					'test',
+					{ qos: qos as QoS, cbStorePut },
+					(err) => {
+						if (err) done(err)
+						callbacks.push('publish')
+						assert.deepEqual(callbacks, expected)
+						client.end(true, done)
+					},
+				)
 			})
 		}
 
@@ -1733,8 +1799,8 @@ export default function abstractTest(server, config) {
 				// QoS 0
 				it(`should not call cbStorePut when publishing message with QoS \`${test.args[0]}\` and clean \`${test.args[1]}\``, function _test(done) {
 					testCallbackStorePutByQoS(
-						test.args[0],
-						test.args[1],
+						test.args[0] as number,
+						test.args[1] as boolean,
 						test.expected,
 						done,
 					)
@@ -1743,8 +1809,8 @@ export default function abstractTest(server, config) {
 				// QoS 1 and 2
 				it(`should call cbStorePut before publish completes when publishing message with QoS \`${test.args[0]}\` and clean \`${test.args[1]}\``, function _test(done) {
 					testCallbackStorePutByQoS(
-						test.args[0],
-						test.args[1],
+						test.args[0] as number,
+						test.args[1] as boolean,
 						test.expected,
 						done,
 					)
@@ -1885,7 +1951,7 @@ export default function abstractTest(server, config) {
 		let clock
 
 		// eslint-disable-next-line
-    beforeEach(() => {
+		beforeEach(() => {
 			clock = sinon.useFakeTimers()
 		})
 
@@ -1897,17 +1963,18 @@ export default function abstractTest(server, config) {
 			const interval = 3
 			const client = connect({ keepalive: interval })
 
-			client._checkPing = sinon.spy()
+			const spy = sinon.spy()
+			client['_checkPing'] = spy
 
 			client.once('connect', () => {
 				clock.tick(interval * 1000)
-				assert.strictEqual(client._checkPing.callCount, 1)
+				assert.strictEqual(spy.callCount, 1)
 
 				clock.tick(interval * 1000)
-				assert.strictEqual(client._checkPing.callCount, 2)
+				assert.strictEqual(spy.callCount, 2)
 
 				clock.tick(interval * 1000)
-				assert.strictEqual(client._checkPing.callCount, 3)
+				assert.strictEqual(spy.callCount, 3)
 
 				client.end(true, done)
 			})
@@ -1917,7 +1984,8 @@ export default function abstractTest(server, config) {
 			const intervalMs = 3000
 			const client = connect({ keepalive: intervalMs / 1000 })
 
-			client._checkPing = sinon.spy()
+			const spy = sinon.spy()
+			client['_checkPing'] = spy
 
 			client.once('connect', () => {
 				client.publish('foo', 'bar')
@@ -1925,7 +1993,7 @@ export default function abstractTest(server, config) {
 				client.publish('foo', 'bar')
 				clock.tick(2)
 
-				assert.strictEqual(client._checkPing.callCount, 0)
+				assert.strictEqual(spy.callCount, 0)
 				client.end(true, done)
 			})
 		})
@@ -1937,7 +2005,8 @@ export default function abstractTest(server, config) {
 				reschedulePings: false,
 			})
 
-			client._checkPing = sinon.spy()
+			const spy = sinon.spy()
+			client['_checkPing'] = spy
 
 			client.once('connect', () => {
 				client.publish('foo', 'bar')
@@ -1945,7 +2014,7 @@ export default function abstractTest(server, config) {
 				client.publish('foo', 'bar')
 				clock.tick(2)
 
-				assert.strictEqual(client._checkPing.callCount, 1)
+				assert.strictEqual(spy.callCount, 1)
 				client.end(true, done)
 			})
 		})
@@ -2003,19 +2072,20 @@ export default function abstractTest(server, config) {
 			const client = connect({ keepalive: 1 })
 
 			client.once('connect', () => {
-				client._checkPing = sinon.spy()
+				const spy = sinon.spy()
+				client['_checkPing'] = spy
 
 				client.publish('foo', 'bar')
 				setTimeout(() => {
-					assert.strictEqual(client._checkPing.callCount, 0)
+					assert.strictEqual(spy.callCount, 0)
 					client.publish('foo', 'bar')
 
 					setTimeout(() => {
-						assert.strictEqual(client._checkPing.callCount, 0)
+						assert.strictEqual(spy.callCount, 0)
 						client.publish('foo', 'bar')
 
 						setTimeout(() => {
-							assert.strictEqual(client._checkPing.callCount, 0)
+							assert.strictEqual(spy.callCount, 0)
 							done()
 						}, 75)
 					}, 75)
@@ -2047,7 +2117,7 @@ export default function abstractTest(server, config) {
 
 			server.once('client', (serverClient) => {
 				serverClient.once('subscribe', (packet) => {
-					const result = {
+					const result: ISubscriptionRequest = {
 						topic,
 						qos: 0,
 					}
@@ -2104,7 +2174,10 @@ export default function abstractTest(server, config) {
 				serverClient.once('subscribe', (packet) => {
 					// i.e. [{topic: 'a', qos: 0}, {topic: 'b', qos: 0}]
 					const expected = subs.map((i) => {
-						const result = { topic: i, qos: 0 }
+						const result: ISubscriptionRequest = {
+							topic: i,
+							qos: 0,
+						}
 						if (version === 5) {
 							result.nl = false
 							result.rap = false
@@ -2121,7 +2194,7 @@ export default function abstractTest(server, config) {
 
 		it('should accept a hash of subscriptions', function _test(done) {
 			const client = connect()
-			const topics = {
+			const topics: ISubscriptionMap = {
 				test1: { qos: 0 },
 				test2: { qos: 1 },
 			}
@@ -2136,7 +2209,7 @@ export default function abstractTest(server, config) {
 
 					for (const k in topics) {
 						if (Object.prototype.hasOwnProperty.call(topics, k)) {
-							const result = {
+							const result: ISubscriptionRequest = {
 								topic: k,
 								qos: topics[k].qos,
 							}
@@ -2158,7 +2231,7 @@ export default function abstractTest(server, config) {
 		it('should accept an options parameter', function _test(done) {
 			const client = connect()
 			const topic = 'test'
-			const opts = { qos: 1 }
+			const opts: ISubscriptioOptions = { qos: 1 }
 
 			client.once('connect', () => {
 				client.subscribe(topic, opts)
@@ -2166,7 +2239,7 @@ export default function abstractTest(server, config) {
 
 			server.once('client', (serverClient) => {
 				serverClient.once('subscribe', (packet) => {
-					const expected = [
+					const expected: ISubscriptionRequest[] = [
 						{
 							topic,
 							qos: 1,
@@ -2196,9 +2269,9 @@ export default function abstractTest(server, config) {
 
 			server.once('client', (serverClient) => {
 				serverClient.once('subscribe', (packet) => {
-					const result = {
+					const result: ISubscriptionRequest = {
 						topic,
-						qos: defaultOpts.qos,
+						qos: defaultOpts.qos as QoS,
 					}
 					if (version === 5) {
 						result.nl = false
@@ -2222,7 +2295,10 @@ export default function abstractTest(server, config) {
 						done(err)
 					} else {
 						assert.exists(granted, 'granted not given')
-						const expectedResult = { topic: 'test', qos: 2 }
+						const expectedResult: ISubscriptionRequest = {
+							topic: 'test',
+							qos: 2,
+						}
 						if (version === 5) {
 							expectedResult.nl = false
 							expectedResult.rap = false
@@ -2275,7 +2351,7 @@ export default function abstractTest(server, config) {
 
 			server.once('client', (serverClient) => {
 				serverClient.once('subscribe', (packet) => {
-					const result = {
+					const result: ISubscriptionRequest = {
 						topic,
 						qos: 0,
 					}
@@ -2564,7 +2640,7 @@ export default function abstractTest(server, config) {
 						pubrelReceived += 1
 						break
 					default:
-						should.fail()
+						fail()
 				}
 			})
 
@@ -2627,7 +2703,10 @@ export default function abstractTest(server, config) {
 
 			client.on('packetreceive', (packet) => {
 				if (packet.cmd === 'pubrel') {
-					assert.strictEqual(client.incomingStore._inflights.size, 1)
+					assert.strictEqual(
+						client.incomingStore['_inflights'].size,
+						1,
+					)
 				}
 			})
 
@@ -2642,7 +2721,10 @@ export default function abstractTest(server, config) {
 				})
 
 				serverClient.once('pubcomp', () => {
-					assert.strictEqual(client.incomingStore._inflights.size, 0)
+					assert.strictEqual(
+						client.incomingStore['_inflights'].size,
+						0,
+					)
 					client.removeAllListeners()
 					client.end(true, done)
 				})
@@ -2658,7 +2740,7 @@ export default function abstractTest(server, config) {
 			let pubrelCount = 0
 			let handleMessageCount = 0
 			let emitMessageCount = 0
-			const origSendPacket = client._sendPacket
+			const origSendPacket = client['_sendPacket']
 			let shouldSendFail
 
 			client.handleMessage = (packet, callback) => {
@@ -2670,7 +2752,7 @@ export default function abstractTest(server, config) {
 				emitMessageCount++
 			})
 
-			client._sendPacket = (packet, sendDone) => {
+			client['_sendPacket'] = (packet, sendDone) => {
 				shouldSendFail =
 					packet.cmd === 'pubcomp' && shouldSendPubcompFail
 				if (sendDone) {
@@ -2684,7 +2766,7 @@ export default function abstractTest(server, config) {
 				// send the mocked response
 				switch (packet.cmd) {
 					case 'subscribe': {
-						const suback = {
+						const suback: ISubackPacket = {
 							cmd: 'suback',
 							messageId: packet.messageId,
 							granted: [2],
@@ -2704,14 +2786,17 @@ export default function abstractTest(server, config) {
 								assert.strictEqual(pubrelCount, 2)
 								assert.strictEqual(handleMessageCount, 1)
 								assert.strictEqual(emitMessageCount, 1)
-								client._sendPacket = origSendPacket
+								client['_sendPacket'] = origSendPacket
 								client.end(true, done)
 								break
 							}
 						}
 
 						// simulate the pubrel message, either in response to pubrec or to mock pubcomp failing to be received
-						const pubrel = { cmd: 'pubrel', messageId: mid }
+						const pubrel: IPubrelPacket = {
+							cmd: 'pubrel',
+							messageId: mid,
+						}
 						pubrelCount++
 						handle(client, pubrel, (err) => {
 							if (shouldSendFail) {
@@ -2728,12 +2813,14 @@ export default function abstractTest(server, config) {
 
 			client.once('connect', () => {
 				client.subscribe(testTopic, { qos: 2 })
-				const publish = {
+				const publish: IPublishPacket = {
 					cmd: 'publish',
 					topic: testTopic,
 					payload: testMessage,
 					qos: 2,
 					messageId: mid,
+					dup: false,
+					retain: false,
 				}
 				handle(client, publish, (err) => {
 					assert.notExists(err)
@@ -2829,12 +2916,12 @@ export default function abstractTest(server, config) {
 			const client = connect()
 
 			client.once('connect', () => {
-				assert.notExists(client.reconnectTimer)
+				assert.notExists(client['reconnectTimer'])
 				client.stream.end()
 			})
 
 			client.once('close', () => {
-				assert.exists(client.reconnectTimer)
+				assert.exists(client['reconnectTimer'])
 				client.end(true, done)
 			})
 		})
@@ -3000,7 +3087,7 @@ export default function abstractTest(server, config) {
 
 				server.once('client', (serverClientNew) => {
 					serverClientNew.on('publish', () => {
-						should.fail()
+						fail()
 						done()
 					})
 				})
@@ -3016,10 +3103,10 @@ export default function abstractTest(server, config) {
 				)
 			})
 			assert.strictEqual(Object.keys(client.outgoing).length, 1)
-			assert.strictEqual(client.outgoingStore._inflights.size, 1)
+			assert.strictEqual(client['outgoingStore']['_inflights'].size, 1)
 			client.removeOutgoingMessage(client.getLastMessageId())
 			assert.strictEqual(Object.keys(client.outgoing).length, 0)
-			assert.strictEqual(client.outgoingStore._inflights.size, 0)
+			assert.strictEqual(client['outgoingStore']['_inflights'].size, 0)
 			assert.isTrue(clientCalledBack)
 			client.end(true, (err) => {
 				done(err)
@@ -3039,7 +3126,7 @@ export default function abstractTest(server, config) {
 
 				server.once('client', (serverClientNew) => {
 					serverClientNew.on('publish', () => {
-						should.fail()
+						fail()
 						done()
 					})
 				})
@@ -3050,10 +3137,10 @@ export default function abstractTest(server, config) {
 				assert.strictEqual(err.message, 'Message removed')
 			})
 			assert.strictEqual(Object.keys(client.outgoing).length, 1)
-			assert.strictEqual(client.outgoingStore._inflights.size, 1)
+			assert.strictEqual(client['outgoingStore']['_inflights'].size, 1)
 			client.removeOutgoingMessage(client.getLastMessageId())
 			assert.strictEqual(Object.keys(client.outgoing).length, 0)
-			assert.strictEqual(client.outgoingStore._inflights.size, 0)
+			assert.strictEqual(client['outgoingStore']['_inflights'].size, 0)
 			assert.isTrue(clientCalledBack)
 			client.end(true, done)
 		})
@@ -3102,7 +3189,7 @@ export default function abstractTest(server, config) {
 
 						server.once('client', (serverClient) => {
 							serverClient.on('subscribe', () => {
-								should.fail()
+								fail()
 							})
 						})
 					})
@@ -3111,7 +3198,7 @@ export default function abstractTest(server, config) {
 				} else {
 					assert.isTrue(reconnectEvent)
 					assert.strictEqual(
-						Object.keys(client._resubscribeTopics).length,
+						Object.keys(client['_resubscribeTopics']).length,
 						0,
 					)
 					client.end(true, done)
@@ -3157,7 +3244,7 @@ export default function abstractTest(server, config) {
 
 							server.once('client', (serverClient) => {
 								serverClient.on('subscribe', () => {
-									should.fail()
+									fail()
 								})
 							})
 						})
@@ -3165,7 +3252,7 @@ export default function abstractTest(server, config) {
 					} else {
 						assert.isTrue(reconnectEvent)
 						assert.strictEqual(
-							Object.keys(client._resubscribeTopics).length,
+							Object.keys(client['_resubscribeTopics']).length,
 							0,
 						)
 						client.end(true, (err1) => {
@@ -3178,7 +3265,7 @@ export default function abstractTest(server, config) {
 
 		it('should preserved incomingStore after disconnecting if clean is false', function _test(done) {
 			let reconnect = false
-			let client = {}
+			let client: mqtt.MqttClient
 			const incomingStore = new mqtt.Store({ clean: false })
 			const outgoingStore = new mqtt.Store({ clean: false })
 			const server2 = serverBuilder(config.protocol, (serverClient) => {
@@ -3244,7 +3331,7 @@ export default function abstractTest(server, config) {
 
 		it('should clear outgoing if close from server', function _test(done) {
 			let reconnect = false
-			let client = {}
+			let client: mqtt.MqttClient
 			const server2 = serverBuilder(config.protocol, (serverClient) => {
 				serverClient.on('connect', (packet) => {
 					const connack =
@@ -3298,7 +3385,7 @@ export default function abstractTest(server, config) {
 
 		it('should resend in-flight QoS 1 publish messages from the client if clean is false', function _test(done) {
 			let reconnect = false
-			let client = {}
+			let client: mqtt.MqttClient
 			const incomingStore = new mqtt.Store({ clean: false })
 			const outgoingStore = new mqtt.Store({ clean: false })
 			const server2 = serverBuilder(config.protocol, (serverClient) => {
@@ -3346,7 +3433,7 @@ export default function abstractTest(server, config) {
 
 		it('should resend in-flight QoS 2 publish messages from the client if clean is false', function _test(done) {
 			let reconnect = false
-			let client = {}
+			let client: mqtt.MqttClient
 			const incomingStore = new mqtt.Store({ clean: false })
 			const outgoingStore = new mqtt.Store({ clean: false })
 			const server2 = serverBuilder(config.protocol, (serverClient) => {
@@ -3394,7 +3481,7 @@ export default function abstractTest(server, config) {
 
 		it('should resend in-flight QoS 2 pubrel messages from the client if clean is false', function _test(done) {
 			let reconnect = false
-			let client = {}
+			let client: mqtt.MqttClient
 			const incomingStore = new mqtt.Store({ clean: false })
 			const outgoingStore = new mqtt.Store({ clean: false })
 			const server2 = serverBuilder(config.protocol, (serverClient) => {
@@ -3458,7 +3545,7 @@ export default function abstractTest(server, config) {
 			let publishCount = 0
 			let reconnect = false
 			let disconnectOnce = true
-			let client = {}
+			let client: mqtt.MqttClient
 			const incomingStore = new mqtt.Store({ clean: false })
 			const outgoingStore = new mqtt.Store({ clean: false })
 			const server2 = serverBuilder(config.protocol, (serverClient) => {
@@ -3521,7 +3608,7 @@ export default function abstractTest(server, config) {
 					outgoingStore,
 				})
 
-				client.nextId = 65535
+				client['nextId'] = 65535
 
 				client.on('connect', () => {
 					if (!reconnect) {

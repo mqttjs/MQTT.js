@@ -119,6 +119,8 @@ export type AckHandler = (
 ) => void
 
 export interface IClientOptions extends ISecureClientOptions {
+	/** Encoding to use. Example 'binary' */
+	encoding?: string
 	/** Set browser buffer size. Default to 512KB */
 	browserBufferSize?: number
 	/** used in ws protocol to set `objectMode` */
@@ -384,7 +386,7 @@ export interface ISubscriptionGrant {
 	 * */
 	rh?: number
 }
-export interface ISubscriptionRequest {
+export interface ISubscriptionRequest extends IClientSubscribeProperties {
 	/**
 	 *  is a subscribed to topic
 	 */
@@ -1062,7 +1064,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			| ClientSubscribeCallback,
 		callback?: ClientSubscribeCallback,
 	): MqttClient {
-		const subs = []
+		const subs: ISubscriptionRequest[] = []
 		callback = callback || this.noop
 		const version = this.options.protocolVersion
 
@@ -1211,7 +1213,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 					if (!err) {
 						const { granted } = packet2
 						for (let i = 0; i < granted.length; i += 1) {
-							subs[i].qos = granted[i]
+							subs[i].qos = granted[i] as QoS
 						}
 					}
 
@@ -1251,7 +1253,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	 */
 	public unsubscribe(
 		topic: string | string[],
-		opts?: IClientSubscribeOptions,
+		opts?: IClientSubscribeOptions | PacketCallback,
 		callback?: PacketCallback,
 	): MqttClient {
 		if (typeof topic === 'string') {
@@ -1467,7 +1469,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	 * @api public
 	 */
 	public reconnect(
-		opts: Pick<IClientOptions, 'incomingStore' | 'outgoingStore'>,
+		opts?: Pick<IClientOptions, 'incomingStore' | 'outgoingStore'>,
 	): MqttClient {
 		this.log('client reconnect')
 		const f = () => {
