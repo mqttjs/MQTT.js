@@ -13,3 +13,4 @@ import Store from './lib/store'
 export const Client = MqttClient
 export { MqttClient, Store, DefaultMessageIdProvider, UniqueMessageIdProvider }
 export { connect } from './lib/connect'
+export * from './lib/client'
