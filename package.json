@@ -42,11 +42,8 @@
   "types": "build/src/mqtt.d.ts",
   "typesVersions": {
     "*": {
-      "build/mqtt.d.ts": [
-        "build/src/mqtt.d.ts"
-      ],
       "*": [
-        "build/src/*"
+        "./build/src/mqtt.d.ts"
       ]
     }
   },
