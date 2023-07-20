@@ -23,8 +23,8 @@
   "main": "build/src/mqtt.js",
   "types": "types/index.d.ts",
   "scripts": {
-    "lint": "eslint --ext .js .",
-    "lint-fix": "eslint --fix --ext .js .",
+    "lint": "eslint --ext .ts .",
+    "lint-fix": "eslint --fix --ext .ts .",
     "build:ts": "tsc -p tsconfig.build.json",
     "build:browser": "rimraf dist/ && mkdirp dist/ && browserify build/src/mqtt.js --standalone mqtt > dist/mqtt.js && terser dist/mqtt.js --compress --mangle --output dist/mqtt.min.js",
     "build": "npm run build:ts && npm run build:browser",
