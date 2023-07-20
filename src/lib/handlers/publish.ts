@@ -1,3 +1,6 @@
+import { IPublishPacket } from 'mqtt-packet'
+import { PacketHandler } from '../shared'
+
 const validReasonCodes = [0, 16, 128, 131, 135, 144, 145, 151, 153]
 
 /*
@@ -24,7 +27,7 @@ const validReasonCodes = [0, 16, 128, 131, 135, 144, 145, 151, 153]
 
   for now i just suppressed the warnings
   */
-function handlePublish(client, packet, done) {
+const handlePublish: PacketHandler = (client, packet: IPublishPacket, done) => {
 	client.log('handlePublish: packet %o', packet)
 	done = typeof done !== 'undefined' ? done : client.noop
 	let topic = packet.topic.toString()
@@ -41,7 +44,7 @@ function handlePublish(client, packet, done) {
 			if (topic.length === 0) {
 				if (alias > 0 && alias <= 0xffff) {
 					const gotTopic =
-						client.topicAliasRecv.getTopicByAlias(alias)
+						client['topicAliasRecv'].getTopicByAlias(alias)
 					if (gotTopic) {
 						topic = gotTopic
 						client.log(
@@ -71,7 +74,7 @@ function handlePublish(client, packet, done) {
 					)
 					return
 				}
-			} else if (client.topicAliasRecv.put(topic, alias)) {
+			} else if (client['topicAliasRecv'].put(topic, alias)) {
 				client.log(
 					'handlePublish :: registered topic: %s - alias: %d',
 					topic,
@@ -164,4 +167,4 @@ function handlePublish(client, packet, done) {
 	}
 }
 
-module.exports = handlePublish
+export default handlePublish

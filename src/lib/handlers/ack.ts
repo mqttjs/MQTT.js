@@ -1,6 +1,8 @@
 // Other Socket Errors: EADDRINUSE, ECONNRESET, ENOTFOUND, ETIMEDOUT.
 
-const errors = {
+import { PacketHandler } from '../shared'
+
+export const ReasonCodes = {
 	0: '',
 	1: 'Unacceptable protocol version',
 	2: 'Identifier rejected',
@@ -46,7 +48,7 @@ const errors = {
 	162: 'Wildcard Subscriptions not supported',
 }
 
-function handleAck(client, packet) {
+const handleAck: PacketHandler = (client, packet) => {
 	/* eslint no-fallthrough: "off" */
 	const { messageId } = packet
 	const type = packet.cmd
@@ -80,7 +82,7 @@ function handleAck(client, packet) {
 			const pubackRC = packet.reasonCode
 			// Callback - we're done
 			if (pubackRC && pubackRC > 0 && pubackRC !== 16) {
-				err = new Error(`Publish error: ${errors[pubackRC]}`)
+				err = new Error(`Publish error: ${ReasonCodes[pubackRC]}`)
 				err.code = pubackRC
 				client._removeOutgoingAndStoreMessage(messageId, () => {
 					cb(err, packet)
@@ -100,7 +102,7 @@ function handleAck(client, packet) {
 			const pubrecRC = packet.reasonCode
 
 			if (pubrecRC && pubrecRC > 0 && pubrecRC !== 16) {
-				err = new Error(`Publish error: ${errors[pubrecRC]}`)
+				err = new Error(`Publish error: ${ReasonCodes[pubrecRC]}`)
 				err.code = pubrecRC
 				client._removeOutgoingAndStoreMessage(messageId, () => {
 					cb(err, packet)
@@ -113,17 +115,14 @@ function handleAck(client, packet) {
 		case 'suback': {
 			delete client.outgoing[messageId]
 			client.messageIdProvider.deallocate(messageId)
-			for (
-				let grantedI = 0;
-				grantedI < packet.granted.length;
-				grantedI++
-			) {
-				if ((packet.granted[grantedI] & 0x80) !== 0) {
+			const granted = packet.granted as number[]
+			for (let grantedI = 0; grantedI < granted.length; grantedI++) {
+				if ((granted[grantedI] & 0x80) !== 0) {
 					// suback with Failure status
 					const topics = client.messageIdToTopic[messageId]
 					if (topics) {
 						topics.forEach((topic) => {
-							delete client._resubscribeTopics[topic]
+							delete client['_resubscribeTopics'][topic]
 						})
 					}
 				}
@@ -149,5 +148,4 @@ function handleAck(client, packet) {
 	}
 }
 
-module.exports = handleAck
-module.exports.errors = errors
+export default handleAck

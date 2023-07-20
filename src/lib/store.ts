@@ -30,7 +30,7 @@ export default class Store {
 
 	private _inflights: Map<number, Packet>
 
-	constructor(options: IStoreOptions) {
+	constructor(options?: IStoreOptions) {
 		this.options = options || {}
 
 		// Defaults
@@ -96,11 +96,11 @@ export default class Store {
 	/**
 	 * deletes a packet from the store.
 	 */
-	del(packet: Packet, cb: PacketCallback) {
-		packet = this._inflights.get(packet.messageId)
-		if (packet) {
+	del(packet: Pick<Packet, 'messageId'>, cb: PacketCallback) {
+		const toDelete = this._inflights.get(packet.messageId)
+		if (toDelete) {
 			this._inflights.delete(packet.messageId)
-			cb(null, packet)
+			cb(null, toDelete)
 		} else if (cb) {
 			cb(new Error('missing packet'))
 		}

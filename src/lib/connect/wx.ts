@@ -1,7 +1,7 @@
 import { StreamBuilder } from '../shared'
 
 import { Buffer } from 'buffer'
-import { Transform } from 'readable-stream'
+import { Duplex, Transform } from 'readable-stream'
 import duplexify, { Duplexify } from 'duplexify'
 import MqttClient, { IClientOptions } from '../client'
 
@@ -99,6 +99,7 @@ const buildStream: StreamBuilder = (client, opts) => {
 	setDefaultOpts(opts)
 
 	const url = buildUrl(opts, client)
+	// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 	// @ts-ignore
 	socketTask = wx.connectSocket({
 		url,
@@ -116,6 +117,7 @@ const buildStream: StreamBuilder = (client, opts) => {
 	}
 
 	const destroyRef = stream.destroy
+	// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 	// @ts-ignore
 	stream.destroy = () => {
 		stream.destroy = destroyRef
@@ -123,6 +125,7 @@ const buildStream: StreamBuilder = (client, opts) => {
 		setTimeout(() => {
 			socketTask.close({
 				fail() {
+					// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 					// @ts-ignore
 					stream._destroy(new Error())
 				},
@@ -132,7 +135,7 @@ const buildStream: StreamBuilder = (client, opts) => {
 
 	bindEventHandler()
 
-	return stream
+	return stream as unknown as Duplex
 }
 
 export default buildStream

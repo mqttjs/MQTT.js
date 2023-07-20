@@ -2,6 +2,9 @@
 import url from 'url'
 import MqttClient, { IClientOptions, MqttProtocol } from '../client'
 import IS_BROWSER from '../is-browser'
+import Store from '../store'
+import DefaultMessageIdProvider from '../default-message-id-provider'
+import UniqueMessageIdProvider from '../unique-message-id-provider'
 import debug from 'debug'
 import { StreamBuilder } from '../shared'
 
@@ -32,7 +35,7 @@ protocols.wss = require('./ws').default
  * @param {Object} [opts] option object
  */
 function parseAuthOptions(opts: IClientOptions) {
-	let matches
+	let matches: RegExpMatchArray | null
 	if (opts.auth) {
 		matches = opts.auth.match(/^(.+):(.+)$/)
 		if (matches) {
@@ -63,6 +66,8 @@ export default function connect(
 		// eslint-disable-next-line
 		const parsed = url.parse(brokerUrl, true)
 		if (parsed.port != null) {
+			// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+			// @ts-ignore
 			parsed.port = Number(parsed.port)
 		}
 
@@ -168,4 +173,10 @@ export default function connect(
 	return client
 }
 
-export * from '../mqtt'
+export {
+	Store,
+	MqttClient,
+	connect,
+	DefaultMessageIdProvider,
+	UniqueMessageIdProvider,
+}

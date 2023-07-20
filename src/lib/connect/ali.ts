@@ -1,11 +1,12 @@
 import { Buffer } from 'buffer'
-import { Transform } from 'readable-stream'
-import duplexify from 'duplexify'
+import { Duplex, Transform } from 'readable-stream'
+import duplexify, { Duplexify } from 'duplexify'
 import { StreamBuilder } from '../shared'
+import MqttClient, { IClientOptions } from '../client'
 
-let my
-let proxy
-let stream
+let my: any
+let proxy: Transform
+let stream: Duplexify
 let isInitialized = false
 
 function buildProxy() {
@@ -32,7 +33,7 @@ function buildProxy() {
 	return _proxy
 }
 
-function setDefaultOpts(opts) {
+function setDefaultOpts(opts: IClientOptions) {
 	if (!opts.hostname) {
 		opts.hostname = 'localhost'
 	}
@@ -45,7 +46,7 @@ function setDefaultOpts(opts) {
 	}
 }
 
-function buildUrl(opts, client) {
+function buildUrl(opts: IClientOptions, client: MqttClient) {
 	const protocol = opts.protocol === 'alis' ? 'wss' : 'ws'
 	let url = `${protocol}://${opts.hostname}${opts.path}`
 	if (opts.port && opts.port !== 80 && opts.port !== 443) {
@@ -121,7 +122,7 @@ const buildStream: StreamBuilder = (client, opts) => {
 
 	bindEventHandler()
 
-	return stream
+	return stream as unknown as Duplex
 }
 
 export default buildStream

@@ -1,11 +1,14 @@
-function handlePubrel(client, packet, done) {
+import { IPubcompPacket, IPublishPacket, IPubrelPacket } from 'mqtt-packet'
+import { PacketHandler } from '../shared'
+
+const handlePubrel: PacketHandler = (client, packet: IPubrelPacket, done) => {
 	client.log('handling pubrel packet')
 	const callback = typeof done !== 'undefined' ? done : client.noop
 	const { messageId } = packet
 
-	const comp = { cmd: 'pubcomp', messageId }
+	const comp: IPubcompPacket = { cmd: 'pubcomp', messageId }
 
-	client.incomingStore.get(packet, (err, pub) => {
+	client.incomingStore.get(packet, (err, pub: IPublishPacket) => {
 		if (!err) {
 			client.emit('message', pub.topic, pub.payload, pub)
 			client.handleMessage(pub, (err2) => {
@@ -21,4 +24,4 @@ function handlePubrel(client, packet, done) {
 	})
 }
 
-module.exports = handlePubrel
+export default handlePubrel

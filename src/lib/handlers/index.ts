@@ -1,10 +1,11 @@
-const handlePublish = require('./publish')
-const handleAuth = require('./auth')
-const handleConnack = require('./connack')
-const handleAck = require('./ack')
-const handlePubrel = require('./pubrel')
+import handlePublish from './publish'
+import handleAuth from './auth'
+import handleConnack from './connack'
+import handleAck from './ack'
+import handlePubrel from './pubrel'
+import { PacketHandler } from '../shared'
 
-function handle(client, packet, done) {
+const handle: PacketHandler = (client, packet, done) => {
 	const { options } = client
 
 	if (
@@ -63,4 +64,4 @@ function handle(client, packet, done) {
 	}
 }
 
-module.exports = handle
+export default handle

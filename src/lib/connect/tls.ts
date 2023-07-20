@@ -2,6 +2,7 @@ import tls from 'tls'
 import net from 'net'
 import debug from 'debug'
 import { StreamBuilder } from '../shared'
+import { Duplex } from 'readable-stream'
 
 debug('mqttjs:tls')
 
@@ -34,7 +35,7 @@ const buildStream: StreamBuilder = (client, opts) => {
 		}
 	})
 
-	function handleTLSerrors(err) {
+	function handleTLSerrors(err: Error) {
 		// How can I get verify this error is a tls error?
 		if (opts.rejectUnauthorized) {
 			client.emit('error', err)
@@ -49,7 +50,7 @@ const buildStream: StreamBuilder = (client, opts) => {
 	}
 
 	connection.on('error', handleTLSerrors)
-	return connection
+	return connection as unknown as Duplex
 }
 
 export default buildStream

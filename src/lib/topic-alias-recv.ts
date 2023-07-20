@@ -6,7 +6,7 @@
 export default class TopicAliasRecv {
 	private aliasToTopic: Record<number, string>
 
-	private max: number
+	public max: number
 
 	public length: number
 

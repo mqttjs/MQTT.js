@@ -1,12 +1,12 @@
 import { StreamBuilder } from '../shared'
 
 import { Buffer } from 'buffer'
-import WS from 'ws'
+import WS, { ClientOptions } from 'ws'
 import debug from 'debug'
 import duplexify from 'duplexify'
-import { Transform } from 'readable-stream'
+import { Duplex, DuplexOptions, Transform } from 'readable-stream'
 import IS_BROWSER from '../is-browser'
-import { IClientOptions } from '../client'
+import MqttClient, { IClientOptions } from '../client'
 
 debug('mqttjs:ws')
 
@@ -19,7 +19,7 @@ const WSS_OPTIONS = [
 	'passphrase',
 ]
 
-function buildUrl(opts, client) {
+function buildUrl(opts: IClientOptions, client: MqttClient) {
 	let url = `${opts.protocol}://${opts.hostname}:${opts.port}${opts.path}`
 	if (typeof opts.transformWsUrl === 'function') {
 		url = opts.transformWsUrl(url, opts, client)
@@ -27,7 +27,7 @@ function buildUrl(opts, client) {
 	return url
 }
 
-function setDefaultOpts(opts) {
+function setDefaultOpts(opts: IClientOptions) {
 	const options = opts
 	if (!opts.hostname) {
 		options.hostname = 'localhost'
@@ -61,7 +61,7 @@ function setDefaultOpts(opts) {
 	return options
 }
 
-function setDefaultBrowserOpts(opts) {
+function setDefaultBrowserOpts(opts: IClientOptions) {
 	const options = setDefaultOpts(opts)
 
 	if (!options.hostname) {
@@ -79,7 +79,7 @@ function setDefaultBrowserOpts(opts) {
 		options.hostname = parsed.hostname
 
 		if (!options.port) {
-			options.port = parsed.port
+			options.port = Number(parsed.port)
 		}
 	}
 
@@ -93,7 +93,11 @@ function setDefaultBrowserOpts(opts) {
 	return options
 }
 
-function createWebSocket(client, url, opts) {
+function createWebSocket(
+	client: MqttClient,
+	url: string,
+	opts: IClientOptions,
+) {
 	debug('createWebSocket')
 	debug(`protocol: ${opts.protocolId} ${opts.protocolVersion}`)
 	const websocketSubProtocol =
@@ -104,11 +108,15 @@ function createWebSocket(client, url, opts) {
 	debug(
 		`creating new Websocket for url: ${url} and protocol: ${websocketSubProtocol}`,
 	)
-	const socket = new WS(url, [websocketSubProtocol], opts.wsOptions)
+	const socket = new WS(
+		url,
+		[websocketSubProtocol],
+		opts.wsOptions as ClientOptions,
+	)
 	return socket
 }
 
-function createBrowserWebSocket(client, opts) {
+function createBrowserWebSocket(client: MqttClient, opts: IClientOptions) {
 	const websocketSubProtocol =
 		opts.protocolId === 'MQIsdp' && opts.protocolVersion === 3
 			? 'mqttv3.1'
@@ -125,14 +133,17 @@ const streamBuilder: StreamBuilder = (client, opts) => {
 	const options = setDefaultOpts(opts)
 	const url = buildUrl(options, client)
 	const socket = createWebSocket(client, url, options)
-	const webSocketStream = WS.createWebSocketStream(socket, options.wsOptions)
+	const webSocketStream = WS.createWebSocketStream(
+		socket,
+		options.wsOptions as DuplexOptions,
+	)
 	// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 	// @ts-ignore
 	webSocketStream.url = url
 	socket.on('close', () => {
 		webSocketStream.destroy()
 	})
-	return webSocketStream
+	return webSocketStream as Duplex
 }
 
 const browserStreamBuilder: StreamBuilder = (client, opts) => {
@@ -210,11 +221,11 @@ const browserStreamBuilder: StreamBuilder = (client, opts) => {
 		stream.destroy()
 	}
 
-	function onerror(err) {
+	function onerror(err: Event) {
 		stream.destroy(err)
 	}
 
-	function onmessage(event) {
+	function onmessage(event: MessageEvent) {
 		let { data } = event
 		if (data instanceof ArrayBuffer) data = Buffer.from(data)
 		else data = Buffer.from(data, 'utf8')
@@ -222,7 +233,7 @@ const browserStreamBuilder: StreamBuilder = (client, opts) => {
 	}
 
 	// this is to be enabled only if objectMode is false
-	function writev(chunks, cb) {
+	function writev(chunks: any, cb: (err?: Error) => void) {
 		const buffers = new Array(chunks.length)
 		for (let i = 0; i < chunks.length; i++) {
 			if (typeof chunks[i].chunk === 'string') {
@@ -235,7 +246,11 @@ const browserStreamBuilder: StreamBuilder = (client, opts) => {
 		this._write(Buffer.concat(buffers), 'binary', cb)
 	}
 
-	function socketWriteBrowser(chunk, enc, next) {
+	function socketWriteBrowser(
+		chunk: any,
+		enc: string,
+		next: (err?: Error) => void,
+	) {
 		if (socket.bufferedAmount > bufferSize) {
 			// throttle data until buffered amount is reduced.
 			setTimeout(socketWriteBrowser, bufferTimeout, chunk, enc, next)

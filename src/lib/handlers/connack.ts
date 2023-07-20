@@ -1,14 +1,16 @@
-const { errors } = require('./ack')
-const TopicAliasSend = require('../topic-alias-send')
+import { ReasonCodes } from './ack'
+import TopicAliasSend from '../topic-alias-send'
+import { ErrorWithReasonCode, PacketHandler } from '../shared'
+import { IConnackPacket } from 'mqtt-packet'
 
-function handleConnack(client, packet) {
+const handleConnack: PacketHandler = (client, packet: IConnackPacket) => {
 	client.log('_handleConnack')
 	const { options } = client
 	const version = options.protocolVersion
 	const rc = version === 5 ? packet.reasonCode : packet.returnCode
 
-	clearTimeout(client.connackTimer)
-	delete client.topicAliasSend
+	clearTimeout(client['connackTimer'])
+	delete client['topicAliasSend']
 
 	if (packet.properties) {
 		if (packet.properties.topicAliasMaximum) {
@@ -20,7 +22,7 @@ function handleConnack(client, packet) {
 				return
 			}
 			if (packet.properties.topicAliasMaximum > 0) {
-				client.topicAliasSend = new TopicAliasSend(
+				client['topicAliasSend'] = new TopicAliasSend(
 					packet.properties.topicAliasMaximum,
 				)
 			}
@@ -42,10 +44,12 @@ function handleConnack(client, packet) {
 		client.reconnecting = false
 		client._onConnect(packet)
 	} else if (rc > 0) {
-		const err = new Error(`Connection refused: ${errors[rc]}`)
-		err.code = rc
+		const err = new ErrorWithReasonCode(
+			`Connection refused: ${ReasonCodes[rc]}`,
+			rc,
+		)
 		client.emit('error', err)
 	}
 }
 
-module.exports = handleConnack
+export default handleConnack
