@@ -94,14 +94,18 @@ export interface ISecureClientOptions {
 	 * optional private keys in PEM format
 	 */
 	key?: string | string[] | Buffer | Buffer[] | any[]
+	keyPath?: string
 	/**
 	 * optional cert chains in PEM format
 	 */
 	cert?: string | string[] | Buffer | Buffer[]
+	certPath?: string
 	/**
 	 * Optionally override the trusted CA certificates in PEM format
 	 */
 	ca?: string | string[] | Buffer | Buffer[]
+	caPaths?: string | string[]
+
 	rejectUnauthorized?: boolean
 	/**
 	 * optional alpn's

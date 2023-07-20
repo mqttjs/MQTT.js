@@ -81,9 +81,9 @@ describe('mqtt', () => {
 		})
 
 		const sslOpts: IClientOptions = {
-			key: path.join(__dirname, 'helpers', 'private-key.pem'),
-			cert: path.join(__dirname, 'helpers', 'public-cert.pem'),
-			ca: [path.join(__dirname, 'helpers', 'public-cert.pem')],
+			keyPath: path.join(__dirname, 'helpers', 'private-key.pem'),
+			certPath: path.join(__dirname, 'helpers', 'public-cert.pem'),
+			caPaths: [path.join(__dirname, 'helpers', 'public-cert.pem')],
 		}
 
 		it('should return an MqttClient when connect is called with mqtts:/ url', function test(done) {
