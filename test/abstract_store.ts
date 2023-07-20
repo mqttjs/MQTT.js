@@ -1,5 +1,6 @@
 import { IPublishPacket, IPubrelPacket } from 'mqtt-packet'
 import Store from '../src/lib/store'
+import 'should'
 
 export default function abstractStoreTest(build) {
 	let store: Store
