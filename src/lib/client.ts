@@ -30,8 +30,15 @@ import Store from './store'
 import handlePacket from './handlers'
 import { ClientOptions } from 'ws'
 import { ClientRequestArgs } from 'http'
-import { DoneCallback, GenericCallback, IStream, StreamBuilder } from './shared'
+import {
+	DoneCallback,
+	GenericCallback,
+	IStream,
+	StreamBuilder,
+	VoidCallback,
+} from './shared'
 import TopicAliasSend from './topic-alias-send'
+import { TypedEventEmitter } from './TypedEmitter'
 
 debug('mqttjs:client')
 
@@ -106,7 +113,7 @@ export interface ISecureClientOptions {
 
 export type AckHandler = (
 	topic: string,
-	message: Buffer | string,
+	message: Buffer,
 	packet: any,
 	cb: (error?: Error, code?: number) => void,
 ) => void
@@ -433,6 +440,20 @@ export type OnErrorCallback = (error: Error) => void
 export type PacketCallback = (error?: Error, packet?: Packet) => any
 export type CloseCallback = (error?: Error) => void
 
+export interface MqttClientEventCallbacks {
+	connect: OnConnectCallback
+	message: OnMessageCallback
+	packetsend: OnPacketCallback
+	packetreceive: OnPacketCallback
+	disconnect: OnDisconnectCallback
+	error: OnErrorCallback
+	close: OnCloseCallback
+	end: VoidCallback
+	reconnect: VoidCallback
+	offline: VoidCallback
+	outgoingEmpty: VoidCallback
+}
+
 /**
  * MqttClient constructor
  *
@@ -440,7 +461,7 @@ export type CloseCallback = (error?: Error) => void
  * @param {Object} [options] - connection options
  * (see Connection#connect)
  */
-export default class MqttClient extends EventEmitter {
+export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbacks> {
 	public connected: boolean
 
 	public disconnecting: boolean
@@ -474,13 +495,15 @@ export default class MqttClient extends EventEmitter {
 
 	public noop: (error?: any) => void
 
+	public pingTimer: any
+
+	public stream: IStream
+
+	public queue: { packet: Packet; cb: PacketCallback }[]
+
 	private streamBuilder: StreamBuilder
 
 	private _resubscribeTopics: ISubscriptionMap
-
-	private pingTimer: any
-
-	private queue: { packet: Packet; cb: PacketCallback }[]
 
 	private connackTimer: NodeJS.Timeout
 
@@ -499,8 +522,6 @@ export default class MqttClient extends EventEmitter {
 	private _firstConnection: boolean
 
 	private topicAliasRecv: TopicAliasRecv
-
-	private stream: IStream
 
 	private topicAliasSend: TopicAliasSend
 
@@ -934,8 +955,8 @@ export default class MqttClient extends EventEmitter {
 	public publish(
 		topic: string,
 		message: string | Buffer,
-		opts: IClientPublishOptions,
-		callback: DoneCallback,
+		opts?: IClientPublishOptions | DoneCallback,
+		callback?: DoneCallback,
 	): MqttClient {
 		this.log('publish :: message `%s` to topic `%s`', message, topic)
 		const { options } = this
@@ -943,7 +964,7 @@ export default class MqttClient extends EventEmitter {
 		// .publish(topic, payload, cb);
 		if (typeof opts === 'function') {
 			callback = opts as DoneCallback
-			opts = null
+			opts = {} as IClientPublishOptions
 		}
 
 		// default opts
@@ -954,13 +975,15 @@ export default class MqttClient extends EventEmitter {
 		}
 		opts = { ...defaultOpts, ...opts }
 
+		const { qos, retain, dup, properties, cbStorePut } = opts
+
 		if (this._checkDisconnecting(callback)) {
 			return this
 		}
 
 		const publishProc = () => {
 			let messageId = 0
-			if (opts.qos === 1 || opts.qos === 2) {
+			if (qos === 1 || qos === 2) {
 				messageId = this._nextId()
 				if (messageId === null) {
 					this.log('No messageId left')
@@ -971,18 +994,18 @@ export default class MqttClient extends EventEmitter {
 				cmd: 'publish',
 				topic,
 				payload: message,
-				qos: opts.qos,
-				retain: opts.retain,
+				qos,
+				retain,
 				messageId,
-				dup: opts.dup,
+				dup,
 			}
 
 			if (options.protocolVersion === 5) {
-				packet.properties = opts.properties
+				packet.properties = properties
 			}
 
-			this.log('publish :: qos', opts.qos)
-			switch (opts.qos) {
+			this.log('publish :: qos', qos)
+			switch (qos) {
 				case 1:
 				case 2:
 					// Add to callbacks
@@ -991,11 +1014,11 @@ export default class MqttClient extends EventEmitter {
 						cb: callback || this.noop,
 					}
 					this.log('MqttClient:publish: packet cmd: %s', packet.cmd)
-					this._sendPacket(packet, undefined, opts.cbStorePut)
+					this._sendPacket(packet, undefined, cbStorePut)
 					break
 				default:
 					this.log('MqttClient:publish: packet cmd: %s', packet.cmd)
-					this._sendPacket(packet, callback, opts.cbStorePut)
+					this._sendPacket(packet, callback, cbStorePut)
 					break
 			}
 			return true
@@ -1033,7 +1056,10 @@ export default class MqttClient extends EventEmitter {
 	 */
 	public subscribe(
 		topicObject: string | string[] | ISubscriptionMap,
-		opts?: IClientSubscribeOptions | IClientSubscribeProperties,
+		opts?:
+			| IClientSubscribeOptions
+			| IClientSubscribeProperties
+			| ClientSubscribeCallback,
 		callback?: ClientSubscribeCallback,
 	): MqttClient {
 		const subs = []
@@ -1081,7 +1107,9 @@ export default class MqttClient extends EventEmitter {
 			defaultOpts.rap = false
 			defaultOpts.rh = 0
 		}
-		opts = { ...defaultOpts, ...opts }
+		opts = { ...defaultOpts, ...opts } as IClientSubscribeOptions
+
+		const properties = opts.properties
 
 		const parseSub = (
 			topic: string,
@@ -1107,7 +1135,7 @@ export default class MqttClient extends EventEmitter {
 					currentOpts.rap = subOptions.rap
 					currentOpts.rh = subOptions.rh
 					// use opts.properties
-					currentOpts.properties = opts.properties
+					currentOpts.properties = properties
 				}
 				this.log(
 					'subscribe: pushing topic `%s` and qos `%s` to subs list',
@@ -1153,8 +1181,8 @@ export default class MqttClient extends EventEmitter {
 				messageId,
 			}
 
-			if (opts.properties) {
-				packet.properties = opts.properties
+			if (properties) {
+				packet.properties = properties
 			}
 
 			// subscriptions to resubscribe to in case of disconnect

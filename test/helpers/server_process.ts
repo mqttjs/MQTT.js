@@ -1,4 +1,4 @@
-const { MqttServer } = require('../server')
+import { MqttServer } from '../server'
 
 new MqttServer((client) => {
 	client.on('connect', () => {

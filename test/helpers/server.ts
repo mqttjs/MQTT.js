@@ -1,8 +1,7 @@
-const fs = require('fs')
-const { MqttServer } = require('../server')
-const { MqttSecureServer } = require('../server')
+import fs from 'fs'
+import { MqttServer, MqttSecureServer } from '../server'
 
-module.exports.init_server = (PORT) => {
+export function init_server(PORT: number) {
 	const server = new MqttServer((client) => {
 		client.on('connect', () => {
 			client.connack(0)
@@ -37,7 +36,7 @@ module.exports.init_server = (PORT) => {
 	return server
 }
 
-module.exports.init_secure_server = (port, key, cert) => {
+export function init_secure_server(port: number, key: string, cert: string) {
 	const server = new MqttSecureServer(
 		{
 			key: fs.readFileSync(key),

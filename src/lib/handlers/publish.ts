@@ -96,70 +96,80 @@ const handlePublish: PacketHandler = (client, packet: IPublishPacket, done) => {
 	client.log('handlePublish: qos %d', qos)
 	switch (qos) {
 		case 2: {
-			options.customHandleAcks(topic, message, packet, (error, code) => {
-				if (!(error instanceof Error)) {
-					code = error
-					error = null
-				}
-				if (error) {
-					return client.emit('error', error)
-				}
-				if (validReasonCodes.indexOf(code) === -1) {
-					return client.emit(
-						'error',
-						new Error('Wrong reason code for pubrec'),
-					)
-				}
-				if (code) {
-					client['_sendPacket'](
-						{ cmd: 'pubrec', messageId, reasonCode: code },
-						done,
-					)
-				} else {
-					client.incomingStore.put(packet, () => {
+			options.customHandleAcks(
+				topic,
+				message as Buffer,
+				packet,
+				(error, code) => {
+					if (!(error instanceof Error)) {
+						code = error
+						error = null
+					}
+					if (error) {
+						return client.emit('error', error)
+					}
+					if (validReasonCodes.indexOf(code) === -1) {
+						return client.emit(
+							'error',
+							new Error('Wrong reason code for pubrec'),
+						)
+					}
+					if (code) {
 						client['_sendPacket'](
-							{ cmd: 'pubrec', messageId },
+							{ cmd: 'pubrec', messageId, reasonCode: code },
 							done,
 						)
-					})
-				}
-			})
+					} else {
+						client.incomingStore.put(packet, () => {
+							client['_sendPacket'](
+								{ cmd: 'pubrec', messageId },
+								done,
+							)
+						})
+					}
+				},
+			)
 			break
 		}
 		case 1: {
 			// emit the message event
-			options.customHandleAcks(topic, message, packet, (error, code) => {
-				if (!(error instanceof Error)) {
-					code = error
-					error = null
-				}
-				if (error) {
-					return client.emit('error', error)
-				}
-				if (validReasonCodes.indexOf(code) === -1) {
-					return client.emit(
-						'error',
-						new Error('Wrong reason code for puback'),
-					)
-				}
-				if (!code) {
-					client.emit('message', topic, message, packet)
-				}
-				client.handleMessage(packet, (err) => {
-					if (err) {
-						return done && done(err)
+			options.customHandleAcks(
+				topic,
+				message as Buffer,
+				packet,
+				(error, code) => {
+					if (!(error instanceof Error)) {
+						code = error
+						error = null
 					}
-					client['_sendPacket'](
-						{ cmd: 'puback', messageId, reasonCode: code },
-						done,
-					)
-				})
-			})
+					if (error) {
+						return client.emit('error', error)
+					}
+					if (validReasonCodes.indexOf(code) === -1) {
+						return client.emit(
+							'error',
+							new Error('Wrong reason code for puback'),
+						)
+					}
+					if (!code) {
+						client.emit('message', topic, message as Buffer, packet)
+					}
+					client.handleMessage(packet, (err) => {
+						if (err) {
+							return done && done(err)
+						}
+						client['_sendPacket'](
+							{ cmd: 'puback', messageId, reasonCode: code },
+							done,
+						)
+					})
+				},
+			)
 			break
 		}
 		case 0:
 			// emit the message event
-			client.emit('message', topic, message, packet)
+			client.emit('message', topic, message as Buffer, packet)
 			client.handleMessage(packet, done)
 			break
 		default:

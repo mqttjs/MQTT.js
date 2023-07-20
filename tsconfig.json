@@ -24,7 +24,8 @@
 			"node_modules/@types"
 		],
 		"types": [
-			"node"
+			"node",
+			"mocha"
 		],
 	},
 	"include": [
@@ -32,6 +33,7 @@
 		"test",
 	],
 	"exclude": [
-		"dist"
+		"dist",
+		"test/browser"
 	]
 }

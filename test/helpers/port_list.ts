@@ -23,7 +23,7 @@ const PORTAND326 = PORT + 326
 const PORTAND327 = PORT + 327
 const PORTAND400 = PORT + 400
 
-module.exports = {
+export default {
 	PORT,
 	PORTAND40,
 	PORTAND41,

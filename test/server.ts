@@ -1,13 +1,16 @@
-const net = require('net')
-const tls = require('tls')
-const Connection = require('mqtt-connection')
+import net from 'net'
+import tls, { TlsOptions } from 'tls'
+import Connection from 'mqtt-connection'
+import { Duplex } from 'stream'
 
 /**
  * MqttServer
  *
  * @param {Function} listener - fired on client connection
  */
-class MqttServer extends net.Server {
+export class MqttServer extends net.Server {
+	connectionList: Duplex[]
+
 	constructor(listener) {
 		super()
 		this.connectionList = []
@@ -30,7 +33,9 @@ class MqttServer extends net.Server {
  *
  * @param {Function} listener - fired on client connection
  */
-class MqttServerNoWait extends net.Server {
+export class MqttServerNoWait extends net.Server {
+	connectionList: Duplex[]
+
 	constructor(listener) {
 		super()
 		this.connectionList = []
@@ -54,8 +59,10 @@ class MqttServerNoWait extends net.Server {
  * @param {Object} opts - server options
  * @param {Function} listener
  */
-class MqttSecureServer extends tls.Server {
-	constructor(opts, listener) {
+export class MqttSecureServer extends tls.Server {
+	connectionList: Duplex[]
+
+	constructor(opts: TlsOptions, listener) {
 		if (typeof opts === 'function') {
 			listener = opts
 			opts = {}
@@ -77,13 +84,9 @@ class MqttSecureServer extends tls.Server {
 		}
 	}
 
-	setupConnection(duplex) {
+	setupConnection(duplex: Duplex) {
 		const connection = new Connection(duplex, () => {
 			this.emit('client', connection)
 		})
 	}
 }
-
-exports.MqttServer = MqttServer
-exports.MqttServerNoWait = MqttServerNoWait
-exports.MqttSecureServer = MqttSecureServer

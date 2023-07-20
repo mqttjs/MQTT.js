@@ -1,18 +1,19 @@
 /**
  * Testing dependencies
  */
-const { should } = require('chai')
-const sinon = require('sinon')
-const { assert } = require('chai')
-const fs = require('fs')
-const levelStore = require('mqtt-level-store')
-const mqtt = require('..')
-const Store = require('../lib/store')
-const ports = require('./helpers/port_list')
-const { serverBuilder } = require('./server_helpers_for_client_tests')
-const handlePubrel = require('../lib/handlers/pubrel')
-const handle = require('../lib/handlers/index')
-const handlePublish = require('../lib/handlers/publish')
+import { should, assert } from 'chai'
+import sinon from 'sinon'
+import fs from 'fs'
+import levelStore from 'mqtt-level-store'
+import * as mqtt from '../src/mqtt'
+import Store from '../src/lib/store'
+import ports from './helpers/port_list'
+import { serverBuilder } from './server_helpers_for_client_tests'
+import handlePubrel from '../src/lib/handlers/pubrel'
+import handle from '../src/lib/handlers/index'
+import handlePublish from '../src/lib/handlers/publish'
+import { IClientOptions } from '../src/lib/client'
+import { IConnackPacket } from 'mqtt-packet'
 
 /**
  * These tests try to be consistent with names for servers (brokers) and clients,
@@ -35,10 +36,10 @@ const handlePublish = require('../lib/handlers/publish')
  *
  */
 
-module.exports = (server, config) => {
+export default function abstractTest(server, config) {
 	const version = config.protocolVersion || 4
 
-	function connect(opts) {
+	function connect(opts?: IClientOptions) {
 		opts = { ...config, ...opts }
 		return mqtt.connect(opts)
 	}
@@ -367,7 +368,9 @@ module.exports = (server, config) => {
 
 		it('should provide connack packet with connect event', function _test(done) {
 			const connack =
-				version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
+				version === 5
+					? { reasonCode: 0, sessionPresent: undefined }
+					: { returnCode: 0, sessionPresent: undefined }
 			server.once('client', (serverClient) => {
 				connack.sessionPresent = true
 				serverClient.connack(connack)
@@ -482,7 +485,7 @@ module.exports = (server, config) => {
 				(err) => {
 					client.end(() => {
 						if (err) {
-							return done(new Error(err))
+							return done(err)
 						}
 						done()
 					})
