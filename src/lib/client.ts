@@ -956,6 +956,18 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	 *     client.publish('topic', 'message', {qos: 1, retain: true, dup: true});
 	 * @example client.publish('topic', 'message', console.log);
 	 */
+	public publish(topic: string, message: string | Buffer): MqttClient
+	public publish(
+		topic: string,
+		message: string | Buffer,
+		callback?: DoneCallback,
+	): MqttClient
+	public publish(
+		topic: string,
+		message: string | Buffer,
+		opts?: IClientPublishOptions,
+		callback?: DoneCallback,
+	): MqttClient
 	public publish(
 		topic: string,
 		message: string | Buffer,
@@ -1058,6 +1070,22 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	 * @example client.subscribe({'topic': {qos: 0}, 'topic2': {qos: 1}}, console.log);
 	 * @example client.subscribe('topic', console.log);
 	 */
+	public subscribe(
+		topicObject: string | string[] | ISubscriptionMap,
+	): MqttClient
+	public subscribe(
+		topicObject: string | string[] | ISubscriptionMap,
+		callback?: ClientSubscribeCallback,
+	): MqttClient
+	public subscribe(
+		topicObject: string | string[] | ISubscriptionMap,
+		opts?: IClientSubscribeOptions | IClientSubscribeProperties,
+	): MqttClient
+	public subscribe(
+		topicObject: string | string[] | ISubscriptionMap,
+		opts?: IClientSubscribeOptions | IClientSubscribeProperties,
+		callback?: ClientSubscribeCallback,
+	): MqttClient
 	public subscribe(
 		topicObject: string | string[] | ISubscriptionMap,
 		opts?:
@@ -1259,6 +1287,20 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	 * @example client.unsubscribe('topic');
 	 * @example client.unsubscribe('topic', console.log);
 	 */
+	public unsubscribe(topic: string | string[]): MqttClient
+	public unsubscribe(
+		topic: string | string[],
+		opts?: IClientSubscribeOptions,
+	): MqttClient
+	public unsubscribe(
+		topic: string | string[],
+		callback?: PacketCallback,
+	): MqttClient
+	public unsubscribe(
+		topic: string | string[],
+		opts?: IClientSubscribeOptions,
+		callback?: PacketCallback,
+	): MqttClient
 	public unsubscribe(
 		topic: string | string[],
 		opts?: IClientSubscribeOptions | PacketCallback,
@@ -1348,6 +1390,15 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	 *
 	 * @api public
 	 */
+	public end(cb?: DoneCallback): MqttClient
+	public end(force?: boolean): MqttClient
+	public end(opts?: Partial<IDisconnectPacket>, cb?: DoneCallback): MqttClient
+	public end(force?: boolean, cb?: DoneCallback): MqttClient
+	public end(
+		force?: boolean,
+		opts?: Partial<IDisconnectPacket>,
+		cb?: DoneCallback,
+	): MqttClient
 	public end(
 		force?: boolean | Partial<IDisconnectPacket> | DoneCallback,
 		opts?: Partial<IDisconnectPacket> | DoneCallback,

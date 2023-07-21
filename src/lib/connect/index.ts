@@ -50,7 +50,10 @@ function parseAuthOptions(opts: IClientOptions) {
 /**
  * connect - connect to an MQTT broker.
  */
-export default function connect(
+function connect(brokerUrl: string): MqttClient
+function connect(opts: IClientOptions): MqttClient
+function connect(brokerUrl: string, opts?: IClientOptions): MqttClient
+function connect(
 	brokerUrl: string | IClientOptions,
 	opts?: IClientOptions,
 ): MqttClient {
@@ -170,8 +173,11 @@ export default function connect(
 	client.on('error', () => {
 		/* Automatically set up client error handling */
 	})
+
 	return client
 }
+
+export default connect
 
 export {
 	Store,

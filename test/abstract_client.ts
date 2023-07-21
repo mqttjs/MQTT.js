@@ -59,7 +59,7 @@ export default function abstractTest(server, config) {
 		if (typeof opts === 'string') {
 			opts = { host: opts }
 		}
-		opts = { ...config, ...opts }
+		opts = { ...config, ...opts } as IClientOptions
 		return mqtt.connect(opts)
 	}
 
