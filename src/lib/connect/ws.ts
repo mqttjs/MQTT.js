@@ -188,13 +188,13 @@ const browserStreamBuilder: StreamBuilder = (client, opts) => {
 	stream.socket = socket
 
 	if (eventListenerSupport) {
-		socket.addEventListener('close', onclose)
-		socket.addEventListener('error', onerror)
-		socket.addEventListener('message', onmessage)
+		socket.addEventListener('close', onClose)
+		socket.addEventListener('error', onError)
+		socket.addEventListener('message', onMessage)
 	} else {
-		socket.onclose = onclose
-		socket.onerror = onerror
-		socket.onmessage = onmessage
+		socket.onclose = onClose
+		socket.onerror = onError
+		socket.onmessage = onMessage
 	}
 
 	// methods for browserStreamBuilder
@@ -216,16 +216,16 @@ const browserStreamBuilder: StreamBuilder = (client, opts) => {
 		stream.emit('connect')
 	}
 
-	function onclose() {
+	function onClose() {
 		stream.end()
 		stream.destroy()
 	}
 
-	function onerror(err: Event) {
+	function onError(err: Event) {
 		stream.destroy(err)
 	}
 
-	function onmessage(event: MessageEvent) {
+	function onMessage(event: MessageEvent) {
 		let { data } = event
 		if (data instanceof ArrayBuffer) data = Buffer.from(data)
 		else data = Buffer.from(data, 'utf8')
