@@ -31,7 +31,8 @@
     "CONTRIBUTING.md",
     "LICENSE.md",
     "doc/",
-    "build/"
+    "build/",
+    "src/"
   ],
   "exports": {
     ".": "./build/src/mqtt.js",
