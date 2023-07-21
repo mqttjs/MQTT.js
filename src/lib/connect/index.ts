@@ -178,11 +178,3 @@ function connect(
 }
 
 export default connect
-
-export {
-	Store,
-	MqttClient,
-	connect,
-	DefaultMessageIdProvider,
-	UniqueMessageIdProvider,
-}

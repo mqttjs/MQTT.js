@@ -94,7 +94,7 @@
     "node": ">=16.0.0"
   },
   "browser": {
-    "./mqtt.js": "./build/src/lib/connect/index.js",
+    "./mqtt.js": "./build/src/mqtt.js",
     "fs": false,
     "tls": false,
     "net": false
