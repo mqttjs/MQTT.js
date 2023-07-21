@@ -44,7 +44,11 @@ There is work being done on the next generation of MQTT.js (vNext). We invite th
 
 ## Important notes for existing users
 
-**v5.0.0** (**BETA** 06/2023) removes support for all end of life node versions (v12 and v14), and now supports node v18 and v20.
+**v5.0.0** (**BETA** 06/2023)
+
+- Removes support for all end of life node versions (v12 and v14), and now supports node v18 and v20.
+- Completely rewritten in Typescript 🚀.
+- When creating `MqttClient` instance `new` is now required
 
 **v4.0.0** (Released 04/2020) removes support for all end of life node versions, and now supports node v12 and v14. It also adds improvements to
 debug logging, along with some feature additions.
@@ -389,7 +393,7 @@ The arguments are:
   - `customHandleAcks`: MQTT 5 feature of custom handling puback and pubrec packets. Its callback:
 
     ```js
-      customHandleAcks: function(topic, message, packet, done) {/*some logic wit colling done(error, reasonCode)*/}
+      customHandleAcks: function(topic, message, packet, done) {/*some logic with calling done(error, reasonCode)*/}
     ```
 
   - `autoUseTopicAlias`: enabling automatic Topic Alias using functionality
