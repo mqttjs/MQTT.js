@@ -15,20 +15,12 @@ import handlePublish from '../src/lib/handlers/publish'
 import {
 	IClientOptions,
 	IClientPublishOptions,
-	IClientSubscribeOptions,
 	ISubscriptioOptions,
 	ISubscriptionMap,
 	ISubscriptionRequest,
 } from '../src/lib/client'
-import {
-	IConnackPacket,
-	IPublishPacket,
-	IPubrelPacket,
-	ISubackPacket,
-	QoS,
-} from 'mqtt-packet'
+import { IPublishPacket, IPubrelPacket, ISubackPacket, QoS } from 'mqtt-packet'
 import { DoneCallback, ErrorWithReasonCode } from 'src/lib/shared'
-import { ClientOptions } from 'ws'
 import { fail } from 'assert'
 
 /**

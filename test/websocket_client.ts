@@ -6,7 +6,7 @@ import abstractClientTests from './abstract_client'
 import ports from './helpers/port_list'
 import { MqttServerNoWait } from './server'
 import * as mqtt from '../src/mqtt'
-import { IClientOptions } from 'src/lib/client'
+import { IClientOptions } from '../src/lib/client'
 
 const port = 9999
 const httpServer = http.createServer()

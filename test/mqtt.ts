@@ -1,7 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import * as mqtt from '../src/mqtt'
-import { IClientOptions } from 'src/lib/client'
+import { IClientOptions } from '../src/lib/client'
 
 describe('mqtt', () => {
 	describe('#connect', () => {

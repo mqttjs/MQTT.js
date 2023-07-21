@@ -1,13 +1,11 @@
 /**
  * Module dependencies
  */
-import { EventEmitter } from 'events'
 import TopicAliasRecv from './topic-alias-recv'
 import mqttPacket, {
 	IAuthPacket,
 	IConnackPacket,
 	IDisconnectPacket,
-	IPacket,
 	IPublishPacket,
 	ISubscribePacket,
 	ISubscription,
@@ -32,6 +30,7 @@ import { ClientOptions } from 'ws'
 import { ClientRequestArgs } from 'http'
 import {
 	DoneCallback,
+	ErrorWithReasonCode,
 	GenericCallback,
 	IStream,
 	StreamBuilder,
@@ -440,7 +439,7 @@ export type OnMessageCallback = (
 ) => void
 export type OnPacketCallback = (packet: Packet) => void
 export type OnCloseCallback = () => void
-export type OnErrorCallback = (error: Error) => void
+export type OnErrorCallback = (error: Error | ErrorWithReasonCode) => void
 export type PacketCallback = (error?: Error, packet?: Packet) => any
 export type CloseCallback = (error?: Error) => void
 

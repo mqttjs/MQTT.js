@@ -4,7 +4,7 @@ import abstractClientTests from './abstract_client'
 import { MqttServer } from './server'
 import serverBuilder from './server_helpers_for_client_tests'
 import ports from './helpers/port_list'
-import { ErrorWithReasonCode } from 'src/lib/shared'
+import { ErrorWithReasonCode } from '../src/lib/shared'
 
 describe('MQTT 5.0', () => {
 	const server = serverBuilder('mqtt').listen(ports.PORTAND115)
