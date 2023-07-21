@@ -5,10 +5,8 @@ const Connection = require('mqtt-connection')
 const http = require('http')
 
 const handleClient = (client) => {
-	const self = this
-
-	if (!self.clients) {
-		self.clients = {}
+	if (!this.clients) {
+		this.clients = {}
 	}
 
 	client.on('connect', (packet) => {
@@ -17,7 +15,7 @@ const handleClient = (client) => {
 		} else {
 			client.connack({ returnCode: 0 })
 		}
-		self.clients[packet.clientId] = client
+		this.clients[packet.clientId] = client
 		client.subscriptions = []
 	})
 
@@ -37,8 +35,8 @@ const handleClient = (client) => {
 				break
 		}
 
-		for (k in self.clients) {
-			c = self.clients[k]
+		for (k in this.clients) {
+			c = this.clients[k]
 			publish = false
 
 			for (let i = 0; i < c.subscriptions.length; i++) {
@@ -53,7 +51,7 @@ const handleClient = (client) => {
 				try {
 					c.publish({ topic: packet.topic, payload: packet.payload })
 				} catch (error) {
-					delete self.clients[k]
+					delete this.clients[k]
 				}
 			}
 		}

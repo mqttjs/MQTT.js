@@ -2,4 +2,6 @@
 /examples/
 /doc/
 /dist/
-/test/typescript/
+/build/
+
+*.js
