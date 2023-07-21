@@ -465,6 +465,9 @@ export interface MqttClientEventCallbacks {
  * (see Connection#connect)
  */
 export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbacks> {
+	/** Public fields */
+
+	/** It's true when client is connected to broker */
 	public connected: boolean
 
 	public disconnecting: boolean
@@ -483,7 +486,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 	public _reconnectCount: number
 
-	public log: (...args) => void
+	public log: (...args: any[]) => void
 
 	public messageIdProvider: IMessageIdProvider
 
@@ -504,6 +507,9 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 	public queue: { packet: Packet; cb: PacketCallback }[]
 
+	/* Private fields */
+
+	/** Function used to build the stream */
 	private streamBuilder: StreamBuilder
 
 	private _resubscribeTopics: ISubscriptionMap
@@ -514,6 +520,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 	private _storeProcessing: boolean
 
+	/** keep a reference of packets that have been successfully processed from outgoing store  */
 	private _packetIdsDuringStoreProcessing: Record<number, boolean>
 
 	private _storeProcessingQueue: {
@@ -722,6 +729,43 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	}
 
 	/**
+	 * @param packet the packet received by the broker
+	 * @return the auth packet to be returned to the broker
+	 * @api public
+	 */
+	public handleAuth(packet: IAuthPacket, callback: PacketCallback) {
+		callback()
+	}
+
+	/**
+	 * Handle messages with backpressure support, one at a time.
+	 * Override at will.
+	 *
+	 * @param Packet packet the packet
+	 * @param Function callback call when finished
+	 * @api public
+	 */
+	public handleMessage(packet: IPublishPacket, callback: DoneCallback) {
+		callback()
+	}
+
+	/**
+	 * _nextId
+	 * @return unsigned int
+	 */
+	private _nextId() {
+		return this.messageIdProvider.allocate()
+	}
+
+	/**
+	 * getLastMessageId
+	 * @return unsigned int
+	 */
+	public getLastMessageId() {
+		return this.messageIdProvider.getLastAllocated()
+	}
+
+	/**
 	 * Setup the event handlers in the inner stream, sends `connect` and `auth` packets
 	 */
 	public connect() {
@@ -860,79 +904,6 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		}, this.options.connectTimeout)
 
 		return this
-	}
-
-	private _flushVolatile() {
-		if (this.outgoing) {
-			this.log(
-				'_flushVolatile :: deleting volatile messages from the queue and setting their callbacks as error function',
-			)
-			Object.keys(this.outgoing).forEach((messageId) => {
-				if (
-					this.outgoing[messageId].volatile &&
-					typeof this.outgoing[messageId].cb === 'function'
-				) {
-					this.outgoing[messageId].cb(new Error('Connection closed'))
-					delete this.outgoing[messageId]
-				}
-			})
-		}
-	}
-
-	private _flush() {
-		if (this.outgoing) {
-			this.log('_flush: queue exists? %b', !!this.outgoing)
-			Object.keys(this.outgoing).forEach((messageId) => {
-				if (typeof this.outgoing[messageId].cb === 'function') {
-					this.outgoing[messageId].cb(new Error('Connection closed'))
-					// This is suspicious.  Why do we only delete this if we have a callback?
-					// If this is by-design, then adding no as callback would cause this to get deleted unintentionally.
-					delete this.outgoing[messageId]
-				}
-			})
-		}
-	}
-
-	private _removeTopicAliasAndRecoverTopicName(packet: IPublishPacket) {
-		let alias: number | undefined
-
-		if (packet.properties) {
-			alias = packet.properties.topicAlias
-		}
-
-		let topic = packet.topic.toString()
-
-		this.log(
-			'_removeTopicAliasAndRecoverTopicName :: alias %d, topic %o',
-			alias,
-			topic,
-		)
-
-		if (topic.length === 0) {
-			// restore topic from alias
-			if (typeof alias === 'undefined') {
-				return new Error('Unregistered Topic Alias')
-			}
-			topic = this.topicAliasSend.getTopicByAlias(alias)
-			if (typeof topic === 'undefined') {
-				return new Error('Unregistered Topic Alias')
-			}
-			packet.topic = topic
-		}
-		if (alias) {
-			delete packet.properties.topicAlias
-		}
-	}
-
-	private _checkDisconnecting(callback: GenericCallback<any>) {
-		if (this.disconnecting) {
-			if (callback && callback !== this.noop) {
-				callback(new Error('client disconnecting'))
-			} else {
-				this.emit('error', new Error('client disconnecting'))
-			}
-		}
-		return this.disconnecting
 	}
 
 	/**
@@ -1556,8 +1527,93 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	}
 
 	/**
+	 * PRIVATE METHODS
+	 * =====================
+	 * */
+
+	/**
+	 * Flush all outgoing messages marked as `volatile` in `outgoing` queue. Volatile messages
+	 * typically are subscription and unsubscription requests.
+	 */
+	private _flushVolatile() {
+		if (this.outgoing) {
+			this.log(
+				'_flushVolatile :: deleting volatile messages from the queue and setting their callbacks as error function',
+			)
+			Object.keys(this.outgoing).forEach((messageId) => {
+				if (
+					this.outgoing[messageId].volatile &&
+					typeof this.outgoing[messageId].cb === 'function'
+				) {
+					this.outgoing[messageId].cb(new Error('Connection closed'))
+					delete this.outgoing[messageId]
+				}
+			})
+		}
+	}
+
+	/**
+	 * Flush all outgoing messages
+	 */
+	private _flush() {
+		if (this.outgoing) {
+			this.log('_flush: queue exists? %b', !!this.outgoing)
+			Object.keys(this.outgoing).forEach((messageId) => {
+				if (typeof this.outgoing[messageId].cb === 'function') {
+					this.outgoing[messageId].cb(new Error('Connection closed'))
+					// This is suspicious.  Why do we only delete this if we have a callback?
+					// If this is by-design, then adding no as callback would cause this to get deleted unintentionally.
+					delete this.outgoing[messageId]
+				}
+			})
+		}
+	}
+
+	private _removeTopicAliasAndRecoverTopicName(packet: IPublishPacket) {
+		let alias: number | undefined
+
+		if (packet.properties) {
+			alias = packet.properties.topicAlias
+		}
+
+		let topic = packet.topic.toString()
+
+		this.log(
+			'_removeTopicAliasAndRecoverTopicName :: alias %d, topic %o',
+			alias,
+			topic,
+		)
+
+		if (topic.length === 0) {
+			// restore topic from alias
+			if (typeof alias === 'undefined') {
+				return new Error('Unregistered Topic Alias')
+			}
+			topic = this.topicAliasSend.getTopicByAlias(alias)
+			if (typeof topic === 'undefined') {
+				return new Error('Unregistered Topic Alias')
+			}
+			packet.topic = topic
+		}
+		if (alias) {
+			delete packet.properties.topicAlias
+		}
+	}
+
+	private _checkDisconnecting(callback: GenericCallback<any>) {
+		if (this.disconnecting) {
+			if (callback && callback !== this.noop) {
+				callback(new Error('client disconnecting'))
+			} else {
+				this.emit('error', new Error('client disconnecting'))
+			}
+		}
+		return this.disconnecting
+	}
+
+	/**
 	 * _reconnect - implement reconnection
-	 * @api privateish
+	 * @api private
 	 */
 	private _reconnect() {
 		this.log('_reconnect: emitting reconnect to client')
@@ -2009,43 +2065,6 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	}
 
 	/**
-	 * @param packet the packet received by the broker
-	 * @return the auth packet to be returned to the broker
-	 * @api public
-	 */
-	public handleAuth(packet: IAuthPacket, callback: PacketCallback) {
-		callback()
-	}
-
-	/**
-	 * Handle messages with backpressure support, one at a time.
-	 * Override at will.
-	 *
-	 * @param Packet packet the packet
-	 * @param Function callback call when finished
-	 * @api public
-	 */
-	public handleMessage(packet: IPublishPacket, callback: DoneCallback) {
-		callback()
-	}
-
-	/**
-	 * _nextId
-	 * @return unsigned int
-	 */
-	private _nextId() {
-		return this.messageIdProvider.allocate()
-	}
-
-	/**
-	 * getLastMessageId
-	 * @return unsigned int
-	 */
-	public getLastMessageId() {
-		return this.messageIdProvider.getLastAllocated()
-	}
-
-	/**
 	 * _resubscribe
 	 * @api private
 	 */
@@ -2108,9 +2127,11 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 		this.connected = true
 
+		/** check if there are packets in outgoing store and stream them */
 		const startStreamProcess = () => {
 			let outStore = this.outgoingStore.createStream()
 
+			/** destroy the outgoing store stream */
 			const remove = () => {
 				outStore.destroy()
 				outStore = null
@@ -2118,6 +2139,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 				clearStoreProcessing()
 			}
 
+			/** stop store processing and clear packets id processed */
 			const clearStoreProcessing = () => {
 				this._storeProcessing = false
 				this._packetIdsDuringStoreProcessing = {}
@@ -2131,6 +2153,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 				this.emit('error', err)
 			})
 
+			/** Read next packet in outgoing store and send it */
 			const storeDeliver = () => {
 				// edge case, we wrapped this twice
 				if (!outStore) {
