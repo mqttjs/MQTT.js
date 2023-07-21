@@ -19,13 +19,43 @@ export interface IStoreOptions {
 
 export type PacketCallback = (error?: Error, packet?: Packet) => void
 
+export interface IStore {
+	/**
+	 * Adds a packet to the store, a packet is
+	 * anything that has a messageId property.
+	 *
+	 */
+	put(packet: Packet, cb: DoneCallback): IStore
+
+	/**
+	 * Creates a stream with all the packets in the store
+	 *
+	 */
+	createStream(): Readable
+
+	/**
+	 * deletes a packet from the store.
+	 */
+	del(packet: Pick<Packet, 'messageId'>, cb: PacketCallback): IStore
+
+	/**
+	 * get a packet from the store.
+	 */
+	get(packet: Pick<Packet, 'messageId'>, cb: PacketCallback): IStore
+
+	/**
+	 * Close the store
+	 */
+	close(cb: DoneCallback): void
+}
+
 /**
  * In-memory implementation of the message store
  * This can actually be saved into files.
  *
  * @param {Object} [options] - store options
  */
-export default class Store {
+export default class Store implements IStore {
 	private options: IStoreOptions
 
 	private _inflights: Map<number, Packet>
