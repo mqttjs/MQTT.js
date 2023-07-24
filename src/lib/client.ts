@@ -167,11 +167,11 @@ export interface IClientOptions extends ISecureClientOptions {
 	/**
 	 * 'MQTT'
 	 */
-	protocolId?: string
+	protocolId?: 'MQTT' | 'MQIsdp'
 	/**
 	 * 4
 	 */
-	protocolVersion?: number
+	protocolVersion?: 4 | 5 | 3
 	/**
 	 * true, set to false to receive QoS 1 and 2 messages while offline
 	 */
@@ -243,11 +243,11 @@ export interface IClientOptions extends ISecureClientOptions {
 		/**
 		 * the QoS
 		 */
-		qos: QoS
+		qos?: QoS
 		/**
 		 * the retain flag
 		 */
-		retain: boolean
+		retain?: boolean
 		/*
 		 *  properies object of will
 		 * */
@@ -849,8 +849,26 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 		// Send a connect packet
 		this.log('connect: sending packet `connect`')
-		const connectPacket: IConnectPacket = Object.create(this.options)
-		connectPacket.cmd = 'connect'
+
+		const connectPacket: IConnectPacket = {
+			cmd: 'connect',
+			protocolId: this.options.protocolId,
+			protocolVersion: this.options.protocolVersion,
+			clean: this.options.clean,
+			clientId: this.options.clientId,
+			keepalive: this.options.keepalive,
+			username: this.options.username,
+			password: this.options.password as Buffer,
+			properties: this.options.properties,
+		}
+
+		if (this.options.will) {
+			connectPacket.will = {
+				...this.options.will,
+				payload: this.options.will?.payload as Buffer,
+			}
+		}
+
 		if (this.topicAliasRecv) {
 			if (!connectPacket.properties) {
 				connectPacket.properties = {}
