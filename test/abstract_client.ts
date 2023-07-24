@@ -15,7 +15,7 @@ import handlePublish from '../src/lib/handlers/publish'
 import {
 	IClientOptions,
 	IClientPublishOptions,
-	ISubscriptioOptions,
+	IClientSubscribeOptions,
 	ISubscriptionMap,
 	ISubscriptionRequest,
 } from '../src/lib/client'
@@ -2223,7 +2223,7 @@ export default function abstractTest(server, config) {
 		it('should accept an options parameter', function _test(done) {
 			const client = connect()
 			const topic = 'test'
-			const opts: ISubscriptioOptions = { qos: 1 }
+			const opts: IClientSubscribeOptions = { qos: 1 }
 
 			client.once('connect', () => {
 				client.subscribe(topic, opts)
