@@ -116,7 +116,7 @@ export type AckHandler = (
 	topic: string,
 	message: Buffer,
 	packet: any,
-	cb: (error?: Error, code?: number) => void,
+	cb: (error: Error | number, code?: number) => void,
 ) => void
 
 export interface IClientOptions extends ISecureClientOptions {
@@ -129,7 +129,7 @@ export interface IClientOptions extends ISecureClientOptions {
 	/** Used on ali protocol */
 	my?: any
 	/** Manually call `connect` after creating client instance */
-	manualConnect?: any
+	manualConnect?: boolean
 	/** Custom auth packet properties */
 	authPacket?: Partial<IAuthPacket>
 	/** Disable/Enable writeToStream.cacheNumbers */
@@ -271,6 +271,8 @@ export interface IClientOptions extends ISecureClientOptions {
 		options: IClientOptions,
 		client: MqttClient,
 	) => string
+
+	/** see `connect` packet: https://github.com/mqttjs/mqtt-packet/blob/master/types/index.d.ts#L65 */
 	properties?: {
 		sessionExpiryInterval?: number
 		receiveMaximum?: number
