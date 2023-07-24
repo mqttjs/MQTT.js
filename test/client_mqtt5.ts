@@ -20,7 +20,7 @@ describe('MQTT 5.0', () => {
 	it('topic should be complemented on receive', function test(done) {
 		this.timeout(15000)
 
-		const opts = {
+		const opts: mqtt.IClientOptions = {
 			host: 'localhost',
 			port: ports.PORTAND103,
 			protocolVersion: 5,
@@ -105,7 +105,7 @@ describe('MQTT 5.0', () => {
 	it('registered topic alias should automatically used if autoUseTopicAlias is true', function test(done) {
 		this.timeout(15000)
 
-		const opts = {
+		const opts: mqtt.IClientOptions = {
 			host: 'localhost',
 			port: ports.PORTAND103,
 			protocolVersion: 5,
@@ -161,7 +161,7 @@ describe('MQTT 5.0', () => {
 	it('topicAlias is automatically used if autoAssignTopicAlias is true', function test(done) {
 		this.timeout(15000)
 
-		const opts = {
+		const opts: mqtt.IClientOptions = {
 			host: 'localhost',
 			port: ports.PORTAND103,
 			protocolVersion: 5,
@@ -234,7 +234,7 @@ describe('MQTT 5.0', () => {
 
 		const incomingStore = new mqtt.Store({ clean: false })
 		const outgoingStore = new mqtt.Store({ clean: false })
-		const opts = {
+		const opts: mqtt.IClientOptions = {
 			host: 'localhost',
 			port: ports.PORTAND103,
 			protocolVersion: 5,
@@ -332,7 +332,7 @@ describe('MQTT 5.0', () => {
 
 		const incomingStore = new mqtt.Store({ clean: false })
 		const outgoingStore = new mqtt.Store({ clean: false })
-		const opts = {
+		const opts: mqtt.IClientOptions = {
 			host: 'localhost',
 			port: ports.PORTAND103,
 			protocolVersion: 5,
@@ -435,7 +435,7 @@ describe('MQTT 5.0', () => {
 	it('should error cb call if PUBLISH out of range topicAlias', function test(done) {
 		this.timeout(15000)
 
-		const opts = {
+		const opts: mqtt.IClientOptions = {
 			host: 'localhost',
 			port: ports.PORTAND103,
 			protocolVersion: 5,
@@ -477,7 +477,7 @@ describe('MQTT 5.0', () => {
 	it('should error cb call if PUBLISH out of range topicAlias on topicAlias disabled by broker', function test(done) {
 		this.timeout(15000)
 
-		const opts = {
+		const opts: mqtt.IClientOptions = {
 			host: 'localhost',
 			port: ports.PORTAND103,
 			protocolVersion: 5,
@@ -516,7 +516,7 @@ describe('MQTT 5.0', () => {
 	it('should throw an error if broker PUBLISH out of range topicAlias', function test(done) {
 		this.timeout(15000)
 
-		const opts = {
+		const opts: mqtt.IClientOptions = {
 			host: 'localhost',
 			port: ports.PORTAND103,
 			protocolVersion: 5,
@@ -558,7 +558,7 @@ describe('MQTT 5.0', () => {
 	it('should throw an error if broker PUBLISH topicAlias:0', function test(done) {
 		this.timeout(15000)
 
-		const opts = {
+		const opts: mqtt.IClientOptions = {
 			host: 'localhost',
 			port: ports.PORTAND103,
 			protocolVersion: 5,
@@ -600,7 +600,7 @@ describe('MQTT 5.0', () => {
 	it('should throw an error if broker PUBLISH unregistered topicAlias', function test(done) {
 		this.timeout(15000)
 
-		const opts = {
+		const opts: mqtt.IClientOptions = {
 			host: 'localhost',
 			port: ports.PORTAND103,
 			protocolVersion: 5,
@@ -641,7 +641,7 @@ describe('MQTT 5.0', () => {
 
 	it('should throw an error if there is Auth Data with no Auth Method', function test(done) {
 		this.timeout(5000)
-		const opts = {
+		const opts: mqtt.IClientOptions = {
 			host: 'localhost',
 			port: ports.PORTAND115,
 			protocolVersion: 5,
@@ -666,7 +666,7 @@ describe('MQTT 5.0', () => {
 
 	it('auth packet', function test(done) {
 		this.timeout(2500)
-		const opts = {
+		const opts: mqtt.IClientOptions = {
 			host: 'localhost',
 			port: ports.PORTAND115,
 			protocolVersion: 5,
@@ -708,7 +708,7 @@ describe('MQTT 5.0', () => {
 
 	it('Maximum Packet Size', function test(done) {
 		this.timeout(15000)
-		const opts = {
+		const opts: mqtt.IClientOptions = {
 			host: 'localhost',
 			port: ports.PORTAND115,
 			protocolVersion: 5,
@@ -734,13 +734,13 @@ describe('MQTT 5.0', () => {
 				})
 			})
 		}).listen(ports.PORTAND116)
-		const opts = {
+		const opts: mqtt.IClientOptions = {
 			host: 'localhost',
 			port: ports.PORTAND116,
 			protocolVersion: 5,
 			properties: {
 				topicAliasMaximum: 10,
-				serverKeepAlive: 11,
+				// serverKeepAlive: 11,
 				maximumPacketSize: 100,
 			},
 		}
@@ -777,7 +777,7 @@ describe('MQTT 5.0', () => {
 				})
 			})
 		}).listen(ports.PORTAND316)
-		const opts = {
+		const opts: mqtt.IClientOptions = {
 			host: 'localhost',
 			port: ports.PORTAND316,
 			protocolVersion: 5,
@@ -833,7 +833,7 @@ describe('MQTT 5.0', () => {
 			})
 		}).listen(ports.PORTAND326)
 
-		const opts = {
+		const opts: mqtt.IClientOptions = {
 			host: 'localhost',
 			port: ports.PORTAND326,
 			protocolVersion: 5,
@@ -896,7 +896,7 @@ describe('MQTT 5.0', () => {
 
 	it('Subscribe properties', function test(done) {
 		this.timeout(15000)
-		const opts = {
+		const opts: mqtt.IClientOptions = {
 			host: 'localhost',
 			port: ports.PORTAND119,
 			protocolVersion: 5,
@@ -930,7 +930,7 @@ describe('MQTT 5.0', () => {
 	it('puback handling errors check', function test(done) {
 		this.timeout(15000)
 		serverThatSendsErrors.listen(ports.PORTAND117)
-		const opts = {
+		const opts: mqtt.IClientOptions = {
 			host: 'localhost',
 			port: ports.PORTAND117,
 			protocolVersion: 5,
@@ -960,7 +960,7 @@ describe('MQTT 5.0', () => {
 	it('pubrec handling errors check', function test(done) {
 		this.timeout(15000)
 		serverThatSendsErrors.listen(ports.PORTAND118)
-		const opts = {
+		const opts: mqtt.IClientOptions = {
 			host: 'localhost',
 			port: ports.PORTAND118,
 			protocolVersion: 5,
@@ -990,7 +990,7 @@ describe('MQTT 5.0', () => {
 	it('puback handling custom reason code', function test(done) {
 		// this.timeout(15000)
 		serverThatSendsErrors.listen(ports.PORTAND117)
-		const opts = {
+		const opts: mqtt.IClientOptions = {
 			host: 'localhost',
 			port: ports.PORTAND117,
 			protocolVersion: 5,
@@ -1041,7 +1041,7 @@ describe('MQTT 5.0', () => {
 			})
 		})
 		server2.listen(ports.PORTAND327)
-		const opts = {
+		const opts: mqtt.IClientOptions = {
 			host: 'localhost',
 			port: ports.PORTAND327,
 			protocolVersion: 5,
@@ -1057,7 +1057,7 @@ describe('MQTT 5.0', () => {
 	it('pubrec handling custom reason code', function test(done) {
 		this.timeout(15000)
 		serverThatSendsErrors.listen(ports.PORTAND117)
-		const opts = {
+		const opts: mqtt.IClientOptions = {
 			host: 'localhost',
 			port: ports.PORTAND117,
 			protocolVersion: 5,
@@ -1098,7 +1098,7 @@ describe('MQTT 5.0', () => {
 	it('puback handling custom reason code with error', function test(done) {
 		this.timeout(15000)
 		serverThatSendsErrors.listen(ports.PORTAND117)
-		const opts = {
+		const opts: mqtt.IClientOptions = {
 			host: 'localhost',
 			port: ports.PORTAND117,
 			protocolVersion: 5,
@@ -1139,7 +1139,7 @@ describe('MQTT 5.0', () => {
 	it('pubrec handling custom reason code with error', function test(done) {
 		this.timeout(15000)
 		serverThatSendsErrors.listen(ports.PORTAND117)
-		const opts = {
+		const opts: mqtt.IClientOptions = {
 			host: 'localhost',
 			port: ports.PORTAND117,
 			protocolVersion: 5,
@@ -1180,7 +1180,7 @@ describe('MQTT 5.0', () => {
 	it('puback handling custom invalid reason code', function test(done) {
 		this.timeout(15000)
 		serverThatSendsErrors.listen(ports.PORTAND117)
-		const opts = {
+		const opts: mqtt.IClientOptions = {
 			host: 'localhost',
 			port: ports.PORTAND117,
 			protocolVersion: 5,
@@ -1221,7 +1221,7 @@ describe('MQTT 5.0', () => {
 	it('pubrec handling custom invalid reason code', function test(done) {
 		this.timeout(15000)
 		serverThatSendsErrors.listen(ports.PORTAND117)
-		const opts = {
+		const opts: mqtt.IClientOptions = {
 			host: 'localhost',
 			port: ports.PORTAND117,
 			protocolVersion: 5,

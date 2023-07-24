@@ -1,10 +1,11 @@
 import { NumberAllocator } from 'number-allocator'
+import { IMessageIdProvider } from './default-message-id-provider'
 
 /**
  * UniqueMessageAllocator constructor
  * @constructor
  */
-export default class UniqueMessageIdProvider {
+export default class UniqueMessageIdProvider implements IMessageIdProvider {
 	private numberAllocator: NumberAllocator
 
 	private lastId: number
@@ -41,7 +42,7 @@ export default class UniqueMessageIdProvider {
 	 * @return boolean
 	 */
 	register(messageId: number) {
-		return this.numberAllocator.use(messageId)
+		return this.numberAllocator.use(messageId) as boolean
 	}
 
 	/**

@@ -511,7 +511,7 @@ describe('MqttClient', () => {
 			})
 		}).listen(ports.PORTAND118)
 
-		const opts = {
+		const opts: IClientOptions = {
 			host: 'localhost',
 			port: ports.PORTAND118,
 			protocolVersion: 5,
