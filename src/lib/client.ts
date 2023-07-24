@@ -29,6 +29,7 @@ import handlePacket from './handlers'
 import { ClientOptions } from 'ws'
 import { ClientRequestArgs } from 'http'
 import {
+	Deferred,
 	DoneCallback,
 	ErrorWithReasonCode,
 	GenericCallback,
@@ -932,6 +933,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		message: string | Buffer,
 		callback?: DoneCallback,
 	): MqttClient
+	public publish(topic: string, message: string | Buffer): Promise<void>
 	public publish(
 		topic: string,
 		message: string | Buffer,
@@ -941,9 +943,14 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	public publish(
 		topic: string,
 		message: string | Buffer,
+		opts?: IClientPublishOptions,
+	): Promise<void>
+	public publish(
+		topic: string,
+		message: string | Buffer,
 		opts?: IClientPublishOptions | DoneCallback,
 		callback?: DoneCallback,
-	): MqttClient {
+	): MqttClient | Promise<void> {
 		this.log('publish :: message `%s` to topic `%s`', message, topic)
 		const { options } = this
 
@@ -963,8 +970,17 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 		const { qos, retain, dup, properties, cbStorePut } = opts
 
+		// eslint-disable-next-line @typescript-eslint/no-this-alias
+		let toReturn: MqttClient | Promise<void> = this
+
+		if (typeof callback === 'function') {
+			const deferred = new Deferred<void>()
+			toReturn = deferred.promise
+			callback = deferred.callback
+		}
+
 		if (this._checkDisconnecting(callback)) {
-			return this
+			return toReturn
 		}
 
 		const publishProc = () => {
@@ -1021,7 +1037,8 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 				callback,
 			})
 		}
-		return this
+
+		return toReturn
 	}
 
 	/**
