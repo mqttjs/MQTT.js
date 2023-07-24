@@ -295,7 +295,25 @@ export interface IClientPublishOptions {
 	 */
 	cbStorePut?: StorePutCallback
 }
-export interface IClientSubscribeOptions {
+
+export interface IClientReconnectOptions {
+	/**
+	 * a Store for the incoming packets
+	 */
+	incomingStore?: Store
+	/**
+	 * a Store for the outgoing packets
+	 */
+	outgoingStore?: Store
+}
+export interface IClientSubscribeProperties {
+	/*
+	 *  MQTT 5.0 properies object of subscribe
+	 * */
+	properties?: ISubscribePacket['properties']
+}
+
+export interface IClientSubscribeOptions extends IClientSubscribeProperties {
 	/**
 	 * the QoS
 	 */
@@ -312,26 +330,6 @@ export interface IClientSubscribeOptions {
 	 * Retain Handling option
 	 * */
 	rh?: number
-	/*
-	 *  MQTT 5.0 properies object of subscribe
-	 * */
-	properties?: ISubscribePacket['properties']
-}
-export interface IClientSubscribeProperties {
-	/*
-	 *  MQTT 5.0 properies object of subscribe
-	 * */
-	properties?: ISubscribePacket['properties']
-}
-export interface IClientReconnectOptions {
-	/**
-	 * a Store for the incoming packets
-	 */
-	incomingStore?: Store
-	/**
-	 * a Store for the outgoing packets
-	 */
-	outgoingStore?: Store
 }
 
 export interface ISubscriptionGrant {
@@ -342,7 +340,7 @@ export interface ISubscriptionGrant {
 	/**
 	 *  is the granted qos level on it, may return 128 on error
 	 */
-	qos: QoS | number
+	qos: QoS | 128
 	/*
 	 * no local flag
 	 * */
@@ -379,18 +377,14 @@ export interface ISubscriptionRequest extends IClientSubscribeProperties {
 	rh?: number
 }
 
-export interface ISubscriptioOptions extends IClientSubscribeProperties {
-	qos: QoS
-	nl?: boolean
-	rap?: boolean
-	rh?: number
-}
+export interface ISubscriptionOptions
+	extends Omit<ISubscriptionRequest, 'topic'> {}
 
 export type ISubscriptionMap = {
 	/**
 	 * object which has topic names as object keys and as value the options, like {'test1': {qos: 0}, 'test2': {qos: 2}}.
 	 */
-	[topic: string]: ISubscriptioOptions
+	[topic: string]: ISubscriptionOptions
 } & {
 	resubscribe?: boolean
 }
@@ -1186,7 +1180,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 				const topics = []
 				subs.forEach((sub) => {
 					if (this.options.reconnectPeriod > 0) {
-						const topic: ISubscriptioOptions = { qos: sub.qos }
+						const topic: ISubscriptionOptions = { qos: sub.qos }
 						if (version === 5) {
 							topic.nl = sub.nl || false
 							topic.rap = sub.rap || false
