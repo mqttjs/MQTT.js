@@ -106,7 +106,7 @@ const handlePublish: PacketHandler = (client, packet: IPublishPacket, done) => {
 						error = null
 					}
 					if (error) {
-						return client.emit('error', error)
+						return client.emit('error', error as Error)
 					}
 					if (validReasonCodes.indexOf(code) === -1) {
 						return client.emit(
@@ -143,7 +143,7 @@ const handlePublish: PacketHandler = (client, packet: IPublishPacket, done) => {
 						error = null
 					}
 					if (error) {
-						return client.emit('error', error)
+						return client.emit('error', error as Error)
 					}
 					if (validReasonCodes.indexOf(code) === -1) {
 						return client.emit(
