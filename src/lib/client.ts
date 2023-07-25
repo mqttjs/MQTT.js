@@ -950,8 +950,9 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		// .publish(topic, payload, cb);
 		if (typeof opts === 'function') {
 			callback = opts as DoneCallback
-			opts = {} as IClientPublishOptions
 		}
+
+		opts = opts || {}
 
 		// default opts
 		const defaultOpts: IClientPublishOptions = {
