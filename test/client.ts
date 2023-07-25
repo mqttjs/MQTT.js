@@ -563,7 +563,7 @@ describe('MqttClient', () => {
 
 			try {
 				await mqtt.connectAsync({
-					port: 1,
+					port: 1000,
 					host: 'localhost',
 				})
 			} catch (err) {
