@@ -1442,25 +1442,21 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		this.log('end :: (%s)', this.options.clientId)
 
 		if (force == null || typeof force !== 'boolean') {
-			cb = (opts || this.noop) as DoneCallback
+			cb = (cb || opts || this.noop) as DoneCallback
 			opts = force as Partial<IDisconnectPacket>
 			force = false
-			if (typeof opts !== 'object') {
-				cb = opts
-				opts = null
-				if (typeof cb !== 'function') {
-					cb = this.noop
-				}
-			}
 		}
 
 		if (typeof opts !== 'object') {
-			cb = opts
+			cb = cb || opts
 			opts = null
 		}
 
 		this.log('end :: cb? %s', !!cb)
-		cb = cb || this.noop
+
+		if (!cb || typeof cb !== 'function') {
+			cb = this.noop
+		}
 
 		const closeStores = () => {
 			this.log('end :: closeStores: closing incoming and outgoing stores')
