@@ -547,7 +547,10 @@ describe('MqttClient', () => {
 
 			client = await mqtt.connectAsync(config)
 
-			await client.subscribeAsync('hello')
+			const sub = await client.subscribeAsync('hello')
+
+			assert.equal(sub[0].topic, 'hello')
+			assert.equal(sub[0].qos, 0)
 
 			await client.publishAsync('hello', 'world')
 		})
