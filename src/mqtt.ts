@@ -9,11 +9,12 @@ import MqttClient from './lib/client'
 import DefaultMessageIdProvider from './lib/default-message-id-provider'
 import UniqueMessageIdProvider from './lib/unique-message-id-provider'
 import Store, { IStore } from './lib/store'
-import connect from './lib/connect'
+import connect, { connectAsync } from './lib/connect'
 
 export const Client = MqttClient
 export {
 	connect,
+	connectAsync,
 	MqttClient,
 	Store,
 	DefaultMessageIdProvider,
@@ -21,3 +22,4 @@ export {
 	IStore,
 }
 export * from './lib/client'
+export { ReasonCodes } from './lib/handlers/ack'

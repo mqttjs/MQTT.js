@@ -29,7 +29,6 @@ import handlePacket from './handlers'
 import { ClientOptions } from 'ws'
 import { ClientRequestArgs } from 'http'
 import {
-	Deferred,
 	DoneCallback,
 	ErrorWithReasonCode,
 	GenericCallback,
@@ -933,7 +932,6 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		message: string | Buffer,
 		callback?: DoneCallback,
 	): MqttClient
-	public publish(topic: string, message: string | Buffer): Promise<void>
 	public publish(
 		topic: string,
 		message: string | Buffer,
@@ -943,14 +941,9 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	public publish(
 		topic: string,
 		message: string | Buffer,
-		opts?: IClientPublishOptions,
-	): Promise<void>
-	public publish(
-		topic: string,
-		message: string | Buffer,
 		opts?: IClientPublishOptions | DoneCallback,
 		callback?: DoneCallback,
-	): MqttClient | Promise<void> {
+	): MqttClient {
 		this.log('publish :: message `%s` to topic `%s`', message, topic)
 		const { options } = this
 
@@ -970,17 +963,8 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 		const { qos, retain, dup, properties, cbStorePut } = opts
 
-		// eslint-disable-next-line @typescript-eslint/no-this-alias
-		let toReturn: MqttClient | Promise<void> = this
-
-		if (typeof callback === 'function') {
-			const deferred = new Deferred<void>()
-			toReturn = deferred.promise
-			callback = deferred.callback
-		}
-
 		if (this._checkDisconnecting(callback)) {
-			return toReturn
+			return this
 		}
 
 		const publishProc = () => {
@@ -1038,7 +1022,29 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			})
 		}
 
-		return toReturn
+		return this
+	}
+
+	public publishAsync(topic: string, message: string | Buffer): Promise<void>
+	public publishAsync(
+		topic: string,
+		message: string | Buffer,
+		opts?: IClientPublishOptions,
+	): Promise<void>
+	public publishAsync(
+		topic: string,
+		message: string | Buffer,
+		opts?: IClientPublishOptions,
+	): Promise<void> {
+		return new Promise((resolve, reject) => {
+			this.publish(topic, message, opts, (err) => {
+				if (err) {
+					reject(err)
+				} else {
+					resolve()
+				}
+			})
+		})
 	}
 
 	/**
@@ -1262,6 +1268,28 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		return this
 	}
 
+	public subscribeAsync(
+		topicObject: string | string[] | ISubscriptionMap,
+	): Promise<ISubscriptionGrant[]>
+	public subscribeAsync(
+		topicObject: string | string[] | ISubscriptionMap,
+		opts?: IClientSubscribeOptions | IClientSubscribeProperties,
+	): Promise<ISubscriptionGrant[]>
+	public subscribeAsync(
+		topicObject: string | string[] | ISubscriptionMap,
+		opts?: IClientSubscribeOptions | IClientSubscribeProperties,
+	): Promise<ISubscriptionGrant[]> {
+		return new Promise((resolve, reject) => {
+			this.subscribe(topicObject, opts, (err, granted) => {
+				if (err) {
+					reject(err)
+				} else {
+					resolve(granted)
+				}
+			})
+		})
+	}
+
 	/**
 	 * unsubscribe - unsubscribe from topic(s)
 	 *
@@ -1365,6 +1393,26 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		}
 
 		return this
+	}
+
+	public unsubscribeAsync(topic: string | string[]): Promise<void>
+	public unsubscribeAsync(
+		topic: string | string[],
+		opts?: IClientSubscribeOptions,
+	): Promise<void>
+	public unsubscribeAsync(
+		topic: string | string[],
+		opts?: IClientSubscribeOptions,
+	): Promise<void> {
+		return new Promise((resolve, reject) => {
+			this.unsubscribe(topic, opts, (err) => {
+				if (err) {
+					reject(err)
+				} else {
+					resolve()
+				}
+			})
+		})
 	}
 
 	/**
@@ -1482,6 +1530,28 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		}
 
 		return this
+	}
+
+	public endAsync(): Promise<void>
+	public endAsync(force?: boolean): Promise<void>
+	public endAsync(opts?: Partial<IDisconnectPacket>): Promise<void>
+	public endAsync(
+		force?: boolean,
+		opts?: Partial<IDisconnectPacket>,
+	): Promise<void>
+	public endAsync(
+		force?: boolean | Partial<IDisconnectPacket>,
+		opts?: Partial<IDisconnectPacket>,
+	): Promise<void> {
+		return new Promise((resolve, reject) => {
+			this.end(force as boolean, opts, (err) => {
+				if (err) {
+					reject(err)
+				} else {
+					resolve()
+				}
+			})
+		})
 	}
 
 	/**

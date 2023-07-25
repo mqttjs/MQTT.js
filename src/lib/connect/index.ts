@@ -1,6 +1,10 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 import url from 'url'
-import MqttClient, { IClientOptions, MqttProtocol } from '../client'
+import MqttClient, {
+	IClientOptions,
+	MqttClientEventCallbacks,
+	MqttProtocol,
+} from '../client'
 import IS_BROWSER from '../is-browser'
 import Store from '../store'
 import DefaultMessageIdProvider from '../default-message-id-provider'
@@ -177,4 +181,64 @@ function connect(
 	return client
 }
 
+function connectAsync(brokerUrl: string): Promise<MqttClient>
+function connectAsync(opts: IClientOptions): Promise<MqttClient>
+function connectAsync(
+	brokerUrl: string,
+	opts?: IClientOptions,
+): Promise<MqttClient>
+function connectAsync(
+	brokerUrl: string | IClientOptions,
+	opts?: IClientOptions,
+	allowRetries = true,
+): Promise<MqttClient> {
+	return new Promise((resolve, reject) => {
+		const client = connect(brokerUrl as string, opts)
+
+		const promiseResolutionListeners: Partial<MqttClientEventCallbacks> = {
+			connect: (connack) => {
+				removePromiseResolutionListeners()
+				resolve(client) // Resolve on connect
+			},
+			end: () => {
+				removePromiseResolutionListeners()
+				resolve(client) // Resolve on end
+			},
+			error: (err) => {
+				removePromiseResolutionListeners()
+				client.end()
+				reject(err) // Reject on error
+			},
+		}
+
+		// If retries are not allowed, reject on close
+		if (allowRetries === false) {
+			promiseResolutionListeners.close = () => {
+				promiseResolutionListeners.error(
+					new Error("Couldn't connect to server"),
+				)
+			}
+		}
+
+		// Remove listeners added to client by this promise
+		function removePromiseResolutionListeners() {
+			Object.keys(promiseResolutionListeners).forEach((eventName) => {
+				client.off(
+					eventName as keyof MqttClientEventCallbacks,
+					promiseResolutionListeners[eventName],
+				)
+			})
+		}
+
+		// Add listeners to client
+		Object.keys(promiseResolutionListeners).forEach((eventName) => {
+			client.on(
+				eventName as keyof MqttClientEventCallbacks,
+				promiseResolutionListeners[eventName],
+			)
+		})
+	})
+}
+
 export default connect
+export { connectAsync }
