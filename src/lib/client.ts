@@ -897,8 +897,10 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		// .publish(topic, payload, cb);
 		if (typeof opts === 'function') {
 			callback = opts as DoneCallback
-			opts = {} as IClientPublishOptions
+			opts = null
 		}
+
+		opts = opts || {}
 
 		// default opts
 		const defaultOpts: IClientPublishOptions = {
@@ -968,7 +970,30 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 				callback,
 			})
 		}
+
 		return this
+	}
+
+	public publishAsync(topic: string, message: string | Buffer): Promise<void>
+	public publishAsync(
+		topic: string,
+		message: string | Buffer,
+		opts?: IClientPublishOptions,
+	): Promise<void>
+	public publishAsync(
+		topic: string,
+		message: string | Buffer,
+		opts?: IClientPublishOptions,
+	): Promise<void> {
+		return new Promise((resolve, reject) => {
+			this.publish(topic, message, opts, (err) => {
+				if (err) {
+					reject(err)
+				} else {
+					resolve()
+				}
+			})
+		})
 	}
 
 	/**
@@ -1192,6 +1217,28 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		return this
 	}
 
+	public subscribeAsync(
+		topicObject: string | string[] | ISubscriptionMap,
+	): Promise<ISubscriptionGrant[]>
+	public subscribeAsync(
+		topicObject: string | string[] | ISubscriptionMap,
+		opts?: IClientSubscribeOptions | IClientSubscribeProperties,
+	): Promise<ISubscriptionGrant[]>
+	public subscribeAsync(
+		topicObject: string | string[] | ISubscriptionMap,
+		opts?: IClientSubscribeOptions | IClientSubscribeProperties,
+	): Promise<ISubscriptionGrant[]> {
+		return new Promise((resolve, reject) => {
+			this.subscribe(topicObject, opts, (err, granted) => {
+				if (err) {
+					reject(err)
+				} else {
+					resolve(granted)
+				}
+			})
+		})
+	}
+
 	/**
 	 * unsubscribe - unsubscribe from topic(s)
 	 *
@@ -1297,6 +1344,26 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		return this
 	}
 
+	public unsubscribeAsync(topic: string | string[]): Promise<void>
+	public unsubscribeAsync(
+		topic: string | string[],
+		opts?: IClientSubscribeOptions,
+	): Promise<void>
+	public unsubscribeAsync(
+		topic: string | string[],
+		opts?: IClientSubscribeOptions,
+	): Promise<void> {
+		return new Promise((resolve, reject) => {
+			this.unsubscribe(topic, opts, (err) => {
+				if (err) {
+					reject(err)
+				} else {
+					resolve()
+				}
+			})
+		})
+	}
+
 	/**
 	 * end - close connection
 	 *
@@ -1324,25 +1391,21 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		this.log('end :: (%s)', this.options.clientId)
 
 		if (force == null || typeof force !== 'boolean') {
-			cb = (opts || this.noop) as DoneCallback
+			cb = cb || (opts as DoneCallback)
 			opts = force as Partial<IDisconnectPacket>
 			force = false
-			if (typeof opts !== 'object') {
-				cb = opts
-				opts = null
-				if (typeof cb !== 'function') {
-					cb = this.noop
-				}
-			}
 		}
 
 		if (typeof opts !== 'object') {
-			cb = opts
+			cb = cb || opts
 			opts = null
 		}
 
 		this.log('end :: cb? %s', !!cb)
-		cb = cb || this.noop
+
+		if (!cb || typeof cb !== 'function') {
+			cb = this.noop
+		}
 
 		const closeStores = () => {
 			this.log('end :: closeStores: closing incoming and outgoing stores')
@@ -1412,6 +1475,28 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		}
 
 		return this
+	}
+
+	public endAsync(): Promise<void>
+	public endAsync(force?: boolean): Promise<void>
+	public endAsync(opts?: Partial<IDisconnectPacket>): Promise<void>
+	public endAsync(
+		force?: boolean,
+		opts?: Partial<IDisconnectPacket>,
+	): Promise<void>
+	public endAsync(
+		force?: boolean | Partial<IDisconnectPacket>,
+		opts?: Partial<IDisconnectPacket>,
+	): Promise<void> {
+		return new Promise((resolve, reject) => {
+			this.end(force as boolean, opts, (err) => {
+				if (err) {
+					reject(err)
+				} else {
+					resolve()
+				}
+			})
+		})
 	}
 
 	/**
@@ -1547,7 +1632,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		}
 	}
 
-	private _checkDisconnecting(callback: GenericCallback<any>) {
+	private _checkDisconnecting(callback?: GenericCallback<any>) {
 		if (this.disconnecting) {
 			if (callback && callback !== this.noop) {
 				callback(new Error('client disconnecting'))

@@ -26,7 +26,6 @@ const buildStream: StreamBuilder = (client, opts) => {
 	)
 
 	const connection = tls.connect(opts)
-	/* eslint no-use-before-define: [2, "nofunc"] */
 	connection.on('secureConnect', () => {
 		if (opts.rejectUnauthorized && !connection.authorized) {
 			connection.emit('error', new Error('TLS not authorized'))

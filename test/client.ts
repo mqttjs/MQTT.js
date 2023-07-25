@@ -18,7 +18,7 @@ import { IClientOptions } from 'src/lib/client'
 const debug = _debug('mqttjs:client-test')
 
 describe('MqttClient', () => {
-	let client
+	let client: mqtt.MqttClient
 	const server = serverBuilder('mqtt')
 	const config: IClientOptions = { protocol: 'mqtt', port: ports.PORT }
 	server.listen(ports.PORT)
@@ -65,9 +65,9 @@ describe('MqttClient', () => {
 	describe('message ids', () => {
 		it('should increment the message id', function test(done) {
 			client = mqtt.connect(config)
-			const currentId = client._nextId()
+			const currentId = client['_nextId']()
 
-			assert.equal(client._nextId(), currentId + 1)
+			assert.equal(client['_nextId'](), currentId + 1)
 			client.end((err) => done(err))
 		})
 
@@ -176,7 +176,7 @@ describe('MqttClient', () => {
 					'fakeTopic',
 					'fakeMessage',
 					{ qos: 1 },
-					(err, result) => {
+					(err) => {
 						assert.exists(err)
 						pubCallbackCalled = true
 					},
@@ -231,7 +231,7 @@ describe('MqttClient', () => {
 			client.once('connect', () => {
 				innerServer.kill('SIGINT') // mocks server shutdown
 				client.once('close', () => {
-					assert.exists(client.reconnectTimer)
+					assert.exists(client['reconnectTimer'])
 					client.end(true, (err) => done(err))
 				})
 			})
@@ -525,8 +525,69 @@ describe('MqttClient', () => {
 		})
 		client.on('connect', () => {
 			client.end(() => {
-				client._checkDisconnecting()
+				client['_checkDisconnecting']()
 			})
+		})
+	})
+
+	describe('async methods', () => {
+		it('connect-subscribe-unsubscribe-end', function test() {
+			this.timeout(5000)
+
+			// eslint-disable-next-line no-async-promise-executor
+			return new Promise<void>(async (resolve, reject) => {
+				server.once('client', (serverClient) => {
+					serverClient.on('publish', async (packet) => {
+						assert.equal(packet.topic, 'hello')
+						assert.equal(packet.payload.toString(), 'world')
+						await client.unsubscribeAsync('hello')
+						await client.endAsync()
+						resolve()
+					})
+				})
+
+				client = await mqtt.connectAsync(config)
+
+				const sub = await client.subscribeAsync('hello')
+
+				assert.equal(sub[0].topic, 'hello')
+				assert.equal(sub[0].qos, 0)
+
+				await client.publishAsync('hello', 'world')
+			})
+		})
+
+		it('connect should throw error', async function test() {
+			this.timeout(5000)
+			let error = false
+
+			try {
+				await mqtt.connectAsync({
+					port: 1000,
+					host: '127.0.0.1',
+				})
+			} catch (err) {
+				error = true
+				assert.isTrue(err.message.includes('ECONNREFUSED'))
+			}
+
+			assert.isTrue(error)
+		})
+
+		it('publish should throw error', async function test() {
+			this.timeout(5000)
+			let error = false
+
+			try {
+				client = await mqtt.connectAsync(config)
+				client.disconnecting = true
+				await client.publishAsync('#/#', 'world')
+			} catch (err) {
+				error = true
+				assert.equal(err.message, 'client disconnecting')
+			}
+
+			assert.isTrue(error)
 		})
 	})
 })
