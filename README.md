@@ -638,7 +638,9 @@ Unsubscribe from a topic or topics
     - `userProperties`: The User Property is allowed to appear multiple times to represent multiple name, value pairs `object`
 - `callback` - `function (err)`, fired on unsuback. An error occurs if client is disconnecting.
 
-#### mqtt.Client#unsubscribeAsync(topic/topic array, [options])
+<a name="unsubscribe-async"></a>
+
+### mqtt.Client#unsubscribeAsync(topic/topic array, [options])
 
 Async [`unsubscribe`](#unsubscribe). Returns a `Promise<void>`.
 
