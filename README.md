@@ -310,12 +310,17 @@ Also user can manually register topic-alias pair using PUBLISH topic:'some', ta:
 ## API
 
 - [`mqtt.connect()`](#connect)
+- [`mqtt.connectAsync()`](#connect-async)
 - [`mqtt.Client()`](#client)
 - [`mqtt.Client#connect()`](#client-connect)
 - [`mqtt.Client#publish()`](#publish)
+- [`mqtt.Client#publishAsync()`](#publish-async)
 - [`mqtt.Client#subscribe()`](#subscribe)
+- [`mqtt.Client#subscribeAsync()`](#subscribe-async)
 - [`mqtt.Client#unsubscribe()`](#unsubscribe)
+- [`mqtt.Client#unsubscribeAsync()`](#unsubscribe-async)
 - [`mqtt.Client#end()`](#end)
+- [`mqtt.Client#endAsync()`](#end-async)
 - [`mqtt.Client#removeOutgoingMessage()`](#removeOutgoingMessage)
 - [`mqtt.Client#reconnect()`](#reconnect)
 - [`mqtt.Client#handleMessage()`](#handleMessage)
@@ -349,6 +354,12 @@ at every connect.
 
 For all MQTT-related options, see the [Client](#client)
 constructor.
+
+<a name="connect-async"></a>
+
+### connectAsync([url], options)
+
+Async [`connect`](#connect). Returns a `Promise` that resolves to a `mqtt.Client` instance.
 
 ---
 
@@ -574,6 +585,12 @@ Publish a message to a topic
 - `callback` - `function (err)`, fired when the QoS handling completes,
   or at the next tick if QoS 0. An error occurs if client is disconnecting.
 
+<a name="publish-async"></a>
+
+### mqtt.Client#publishAsync(topic, message, [options])
+
+Async [`publish`](#publish). Returns a `Promise<void>`.
+
 ---
 
 <a name="subscribe"></a>
@@ -601,6 +618,12 @@ Subscribe to a topic or topics
     - `topic` is a subscribed to topic
     - `qos` is the granted QoS level on it
 
+<a name="subscribe-async"></a>
+
+### mqtt.Client#subscribeAsync(topic/topic array/topic object, [options])
+
+Async [`subscribe`](#subscribe). Returns a `Promise<granted[]>`.
+
 ---
 
 <a name="unsubscribe"></a>
@@ -614,6 +637,10 @@ Unsubscribe from a topic or topics
   - `properties`: `object`
     - `userProperties`: The User Property is allowed to appear multiple times to represent multiple name, value pairs `object`
 - `callback` - `function (err)`, fired on unsuback. An error occurs if client is disconnecting.
+
+#### mqtt.Client#unsubscribeAsync(topic/topic array, [options])
+
+Async [`unsubscribe`](#unsubscribe). Returns a `Promise<void>`.
 
 ---
 
@@ -635,6 +662,12 @@ Close the client, accepts the following options:
     - `serverReference`: String which can be used by the Client to identify another Server to use `string`
 - `callback`: will be called when the client is closed. This parameter is
   optional.
+
+<a name="end-async"></a>
+
+### mqtt.Client#endAsync([force], [options])
+
+Async [`end`](#end). Returns a `Promise<void>`.
 
 ---
 
