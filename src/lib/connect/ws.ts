@@ -4,7 +4,7 @@ import { Buffer } from 'buffer'
 import WS, { ClientOptions } from 'ws'
 import _debug from 'debug'
 import duplexify from 'duplexify'
-import { Duplex, DuplexOptions, Transform } from 'readable-stream'
+import { DuplexOptions, Transform } from 'readable-stream'
 import IS_BROWSER from '../is-browser'
 import MqttClient, { IClientOptions } from '../client'
 

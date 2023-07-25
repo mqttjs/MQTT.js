@@ -1,7 +1,7 @@
 import { StreamBuilder } from '../shared'
 
 import { Buffer } from 'buffer'
-import { Duplex, Transform } from 'readable-stream'
+import { Transform } from 'readable-stream'
 import duplexify, { Duplexify } from 'duplexify'
 import MqttClient, { IClientOptions } from '../client'
 

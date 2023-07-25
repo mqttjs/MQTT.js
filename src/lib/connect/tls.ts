@@ -2,7 +2,6 @@ import tls from 'tls'
 import net from 'net'
 import _debug from 'debug'
 import { StreamBuilder } from '../shared'
-import { Duplex } from 'readable-stream'
 
 const debug = _debug('mqttjs:tls')
 
