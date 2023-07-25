@@ -531,11 +531,11 @@ describe('MqttClient', () => {
 	})
 
 	describe('async methods', () => {
-		it('connect-subscribe-unsubscribe-end', async function test() {
+		it('connect-subscribe-unsubscribe-end', function test() {
 			this.timeout(5000)
 
 			// eslint-disable-next-line no-async-promise-executor
-			return new Promise(async (resolve, reject) => {
+			return new Promise<void>(async (resolve, reject) => {
 				server.once('client', (serverClient) => {
 					serverClient.on('publish', async (packet) => {
 						assert.equal(packet.topic, 'hello')
@@ -555,6 +555,39 @@ describe('MqttClient', () => {
 
 				await client.publishAsync('hello', 'world')
 			})
+		})
+
+		it('connect should throw error', async function test() {
+			this.timeout(5000)
+			let error = false
+
+			try {
+				await mqtt.connectAsync({
+					port: 1,
+					host: 'localhost',
+				})
+			} catch (err) {
+				error = true
+				assert.isTrue(err.message.includes('ECONNREFUSED'))
+			}
+
+			assert.isTrue(error)
+		})
+
+		it('publish should throw error', async function test() {
+			this.timeout(5000)
+			let error = false
+
+			try {
+				client = await mqtt.connectAsync(config)
+				client.disconnecting = true
+				await client.publishAsync('#/#', 'world')
+			} catch (err) {
+				error = true
+				assert.equal(err.message, 'client disconnecting')
+			}
+
+			assert.isTrue(error)
 		})
 	})
 })
