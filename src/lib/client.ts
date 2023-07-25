@@ -1390,7 +1390,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		this.log('end :: (%s)', this.options.clientId)
 
 		if (force == null || typeof force !== 'boolean') {
-			cb = (cb || opts || this.noop) as DoneCallback
+			cb = cb || (opts as DoneCallback)
 			opts = force as Partial<IDisconnectPacket>
 			force = false
 		}
@@ -1631,7 +1631,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		}
 	}
 
-	private _checkDisconnecting(callback: GenericCallback<any>) {
+	private _checkDisconnecting(callback?: GenericCallback<any>) {
 		if (this.disconnecting) {
 			if (callback && callback !== this.noop) {
 				callback(new Error('client disconnecting'))

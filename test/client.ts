@@ -525,7 +525,7 @@ describe('MqttClient', () => {
 		})
 		client.on('connect', () => {
 			client.end(() => {
-				client['_checkDisconnecting'](() => {})
+				client['_checkDisconnecting']()
 			})
 		})
 	})
