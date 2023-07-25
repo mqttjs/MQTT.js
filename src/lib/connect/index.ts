@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
+import _debug from 'debug'
 import url from 'url'
 import MqttClient, {
 	IClientOptions,
@@ -6,10 +7,6 @@ import MqttClient, {
 	MqttProtocol,
 } from '../client'
 import IS_BROWSER from '../is-browser'
-import Store from '../store'
-import DefaultMessageIdProvider from '../default-message-id-provider'
-import UniqueMessageIdProvider from '../unique-message-id-provider'
-import _debug from 'debug'
 import { StreamBuilder } from '../shared'
 
 const debug = _debug('mqttjs')

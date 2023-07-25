@@ -1,7 +1,7 @@
-import type { IClientOptions } from './client'
+import type { Packet } from 'mqtt-packet'
+import type internal from 'stream'
 import type MqttClient from './client'
-import { Packet } from 'mqtt-packet'
-import { Duplex, Writable } from 'readable-stream'
+import type { IClientOptions } from './client'
 
 export type DoneCallback = (error?: Error) => void
 
@@ -9,7 +9,7 @@ export type GenericCallback<T> = (error?: Error, result?: T) => void
 
 export type VoidCallback = () => void
 
-export type IStream = Duplex | Writable
+export type IStream = internal.Duplex
 
 export type StreamBuilder = (
 	client: MqttClient,

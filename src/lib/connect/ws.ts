@@ -137,13 +137,12 @@ const streamBuilder: StreamBuilder = (client, opts) => {
 		socket,
 		options.wsOptions as DuplexOptions,
 	)
-	// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-	// @ts-ignore
-	webSocketStream.url = url
+
+	webSocketStream['url'] = url
 	socket.on('close', () => {
 		webSocketStream.destroy()
 	})
-	return webSocketStream as Duplex
+	return webSocketStream
 }
 
 const browserStreamBuilder: StreamBuilder = (client, opts) => {

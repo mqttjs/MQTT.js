@@ -17,7 +17,7 @@ const buildStream: StreamBuilder = (client, opts) => {
 	const host = opts.hostname
 
 	debug('port %d and host %s', port, host)
-	return net.createConnection(port, host) as unknown as Duplex
+	return net.createConnection(port, host)
 }
 
 export default buildStream

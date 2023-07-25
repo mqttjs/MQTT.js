@@ -22,4 +22,5 @@ export {
 	IStore,
 }
 export * from './lib/client'
+export * from './lib/shared'
 export { ReasonCodes } from './lib/handlers/ack'

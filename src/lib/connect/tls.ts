@@ -49,7 +49,7 @@ const buildStream: StreamBuilder = (client, opts) => {
 	}
 
 	connection.on('error', handleTLSerrors)
-	return connection as unknown as Duplex
+	return connection
 }
 
 export default buildStream

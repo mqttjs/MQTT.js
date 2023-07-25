@@ -122,7 +122,7 @@ const buildStream: StreamBuilder = (client, opts) => {
 
 	bindEventHandler()
 
-	return stream as unknown as Duplex
+	return stream
 }
 
 export default buildStream
