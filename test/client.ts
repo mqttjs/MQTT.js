@@ -530,29 +530,31 @@ describe('MqttClient', () => {
 		})
 	})
 
-	it('async connect-subscribe-unsubscribe-end', async function test() {
-		this.timeout(5000)
+	describe('async methods', () => {
+		it('connect-subscribe-unsubscribe-end', async function test() {
+			this.timeout(5000)
 
-		// eslint-disable-next-line no-async-promise-executor
-		return new Promise(async (resolve, reject) => {
-			server.once('client', (serverClient) => {
-				serverClient.on('publish', async (packet) => {
-					assert.equal(packet.topic, 'hello')
-					assert.equal(packet.payload.toString(), 'world')
-					await client.unsubscribeAsync('hello')
-					await client.endAsync()
-					resolve()
+			// eslint-disable-next-line no-async-promise-executor
+			return new Promise(async (resolve, reject) => {
+				server.once('client', (serverClient) => {
+					serverClient.on('publish', async (packet) => {
+						assert.equal(packet.topic, 'hello')
+						assert.equal(packet.payload.toString(), 'world')
+						await client.unsubscribeAsync('hello')
+						await client.endAsync()
+						resolve()
+					})
 				})
+
+				client = await mqtt.connectAsync(config)
+
+				const sub = await client.subscribeAsync('hello')
+
+				assert.equal(sub[0].topic, 'hello')
+				assert.equal(sub[0].qos, 0)
+
+				await client.publishAsync('hello', 'world')
 			})
-
-			client = await mqtt.connectAsync(config)
-
-			const sub = await client.subscribeAsync('hello')
-
-			assert.equal(sub[0].topic, 'hello')
-			assert.equal(sub[0].qos, 0)
-
-			await client.publishAsync('hello', 'world')
 		})
 	})
 })
