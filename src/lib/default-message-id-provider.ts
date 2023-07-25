@@ -14,8 +14,8 @@ export interface IMessageIdProvider {
 	/**
 	 * Register the messageId. The messageId become occupied status.
 	 * If the messageId has already been occupied, then return false.
-	 * @param {Number} num - The messageId to request use.
-	 * @return {Boolean} - If `num` was not occupied, then return true, otherwise return false.
+	 * @param {number} num - The messageId to request use.
+	 * @return {boolean} - If `num` was not occupied, then return true, otherwise return false.
 	 */
 	register(num: number): boolean
 
