@@ -10,11 +10,8 @@
 MQTT.js is a client library for the [MQTT](http://mqtt.org/) protocol, written
 in JavaScript for node.js and the browser.
 
-> MQTT [5.0.0 BETA](https://www.npmjs.com/package/mqtt/v/beta) is now available! Try it out and give us [feedback](https://github.com/mqttjs/MQTT.js/issues/1639): `npm i mqtt@beta`
-
 ## Table of Contents
 
-- [**MQTT.js vNext**](#vnext)
 - [Upgrade notes](#notes)
 - [Installation](#install)
 - [Example](#example)
@@ -34,17 +31,11 @@ MQTT.js is an OPEN Open Source Project, see the [Contributing](#contributing) se
 [![JavaScript Style
 Guide](https://cdn.rawgit.com/feross/standard/master/badge.svg)](https://github.com/feross/standard)
 
-<a name="vnext"></a>
-
-## Next major version of MQTT.js
-
-There is work being done on the next generation of MQTT.js (vNext). We invite the community to provide their contributions [this repository](https://github.com/mqttjs/mqttjs-v5)
-
 <a name="notes"></a>
 
 ## Important notes for existing users
 
-**v5.0.0** (**BETA** 06/2023)
+**v5.0.0** (07/2023)
 
 - Removes support for all end of life node versions (v12 and v14), and now supports node v18 and v20.
 - Completely rewritten in Typescript 🚀.
@@ -122,7 +113,7 @@ client.on("message", (topic, message) => {
 
 output:
 
-```
+```sh
 Hello mqtt
 ```
 
@@ -134,8 +125,6 @@ You can also use a test instance: test.mosquitto.org.
 
 If you do not want to install a separate broker, you can try using the
 [Aedes](https://github.com/moscajs/aedes).
-
-to use MQTT.js in the browser see the [browserify](#browserify) section
 
 <a name="import_styles"></a>
 
@@ -164,12 +153,6 @@ import { connect } from "mqtt"; // import connect from mqtt
 let client = connect("mqtt://test.mosquitto.org"); // create a client
 ```
 
-<a name="promises"></a>
-
-## Promise support
-
-If you want to use the new [async-await](https://blog.risingstack.com/async-await-node-js-7-nightly/) functionality in JavaScript, or just prefer using Promises instead of callbacks, [async-mqtt](https://github.com/mqttjs/async-mqtt) is a wrapper over MQTT.js which uses promises instead of callbacks when possible.
-
 <a name="cli"></a>
 
 ## Command Line Tools
@@ -184,13 +167,13 @@ npm install mqtt -g
 
 Then, on one terminal
 
-```
+```sh
 mqtt sub -t 'hello' -h 'test.mosquitto.org' -v
 ```
 
 On another
 
-```
+```sh
 mqtt pub -t 'hello' -h 'test.mosquitto.org' -m 'from MQTT.js'
 ```
 
@@ -205,7 +188,6 @@ MQTT.js uses the [debug](https://www.npmjs.com/package/debug#cmd) package for de
 ```ps
 # (example using PowerShell, the VS Code default)
 $env:DEBUG='mqttjs*'
-
 ```
 
 <a name="reconnecting"></a>
@@ -232,7 +214,7 @@ either of the connection url or the client options at the time of a reconnect.
 
 Example (update clientId & username on each reconnect):
 
-```
+```js
     const transformWsUrl = (url, options, client) => {
       client.options.username = `token=${this.get_current_auth_token()}`;
       client.options.clientId = `${this.get_updated_clientId()}`;
@@ -275,7 +257,7 @@ If the client sets the option `autoUseTopicAlias:true` then MQTT.js uses existin
 
 example scenario:
 
-```
+```bash
 1. PUBLISH topic:'t1', ta:1                   (register)
 2. PUBLISH topic:'t1'       -> topic:'', ta:1 (auto use existing map entry)
 3. PUBLISH topic:'t2', ta:1                   (register overwrite)
@@ -294,7 +276,7 @@ If no topic alias exists, then assign a new vacant topic alias automatically. If
 
 example scenario:
 
-```
+```bash
 The broker returns CONNACK (TopicAliasMaximum:3)
 1. PUBLISH topic:'t1' -> 't1', ta:1 (auto assign t1:1 and register)
 2. PUBLISH topic:'t1' -> ''  , ta:1 (auto use existing map entry)
@@ -791,6 +773,12 @@ Closes the Store.
 
 ## Browser
 
+MQTT.js is bundled using [browserify](http://browserify.org/). You can find the browser build in the `dist` folder.
+
+```js
+import mqtt from 'mqtt/dist/mqtt.min'
+```
+
 <a name="cdn"></a>
 
 ### Via CDN
@@ -799,104 +787,78 @@ The MQTT.js bundle is available through <http://unpkg.com>, specifically
 at <https://unpkg.com/mqtt/dist/mqtt.min.js>.
 See <http://unpkg.com> for the full documentation on version ranges.
 
-<a name="browserify"></a>
-
-### Browserify
-
-In order to use MQTT.js as a browserify module you can either require it in your browserify bundles or build it as a stand alone module. The exported module is AMD/CommonJs compatible and it will add an object in the global space.
-
-```bash
-mkdir tmpdir
-cd tmpdir
-npm install mqtt
-npm install browserify
-npm install tinyify
-cd node_modules/mqtt/
-npm install .
-npx browserify mqtt.js -s mqtt >browserMqtt.js // use script tag
-# show size for compressed browser transfer
-gzip <browserMqtt.js | wc -c
-```
-
 **Be sure to only use this bundle with `ws` or `wss` URLs in the browser. Others URL types will likey fail**
 
 <a name="webpack"></a>
 
 ### Webpack
 
-Just like browserify, export MQTT.js as library. The exported module would be `const mqtt = xxx` and it will add an object in the global space. You could also export module in other [formats (AMD/CommonJS/others)](http://webpack.github.io/docs/configuration.html#output-librarytarget) by setting **output.libraryTarget** in webpack configuration.
+If you are using webpack simply import MQTT.js as you would any other module.
 
-```javascript
-npm install -g webpack // install webpack
+```js
+import mqtt from 'mqtt'
 
-cd node_modules/mqtt
-npm install . // install dev dependencies
-webpack mqtt.js ./browserMqtt.js --output-library mqtt
+const client = mqtt.connect('ws://test.mosquitto.org:8080')
 ```
 
-you can then use mqtt.js in the browser with the same api than node's one.
+If you get errors when building your app with webpack v5, it's because starting from v5, webpack doesn't polyfill Node.js core modules anymore. You can fix this by adding the following to your webpack config:
 
-```html
-<html>
-  <head>
-    <title>test Ws mqtt.js</title>
-  </head>
-  <body>
-    <script src="./browserMqtt.js"></script>
-    <script>
-      const client = mqtt.connect(); // you add a ws:// url here
-      client.subscribe("mqtt/demo");
+```js
+const NodePolyfillPlugin = require("node-polyfill-webpack-plugin")
 
-      client.on("message", function (topic, payload) {
-        alert([topic, payload].join(": "));
-        client.end();
-      });
-
-      client.publish("mqtt/demo", "hello world!");
-    </script>
-  </body>
-</html>
-```
-
-### React
-
-```
-npm install -g webpack                    // Install webpack globally
-npm install mqtt                          // Install MQTT library
-cd node_modules/mqtt
-npm install .                             // Install dev deps at current dir
-webpack mqtt.js --output-library mqtt     // Build
-
-// now you can import the library with ES6 import, commonJS not tested
-```
-
-```javascript
-import React from 'react';
-import mqtt from 'mqtt';
-
-export default () => {
-  const [connectionStatus, setConnectionStatus] = React.useState(false);
-  const [messages, setMessages] = React.useState([]);
-
-  useEffect(() => {
-    const client = mqtt.connect(SOME_URL);
-    client.on('connect', () => setConnectionStatus(true));
-    client.on('message', (topic, payload, packet) => {
-      setMessages(messages.concat(payload.toString()));
-    });
-  }, []);
-
-  return (
-    <>
-     {messages.map((message) => (
-        <h2>{message}</h2>
-     )
-    </>
-  )
+module.exports = {
+    // Other rules...
+    plugins: [
+        new NodePolyfillPlugin()
+    ]
 }
 ```
 
-Your broker should accept websocket connection (see [MQTT over Websockets](https://github.com/moscajs/aedes/blob/master/docs/Examples.md#mqtt-server-over-websocket-using-server-factory) to setup [Aedes](https://github.com/moscajs/aedes)).
+Otherwise just add the missing polyfills manually:
+
+```js
+
+module.exports = {
+  // Other rules...
+  resolve: {
+    fallback: {
+      "buffer": require.resolve("buffer/"),
+      "stream": require.resolve("stream-browserify"),
+      "process": require.resolve("process/browser"),
+      "path": require.resolve("path-browserify"),
+      "fs": false
+    }
+  }
+}
+```
+
+<a name="vite"></a>
+
+### Vite
+
+If you are using vite simply import MQTT.js as you would any other module. If you get errors like `process is not defined` you can fix it by adding the following to your vite config:
+
+```js
+export default defineConfig({
+  // Other rules...
+  define: {
+    "process.env": {},
+  },
+});
+```
+
+Or just add the missing polyfills manually:
+
+```js
+export default defineConfig({
+  // Other rules...
+  resolve: {
+    alias: {
+      process: "process/browser",
+    },
+  },
+});
+```
 
 <a name="qos"></a>
 
@@ -914,25 +876,13 @@ About data consumption, obviously, QoS 2 > QoS 1 > QoS 0, if that's a concern to
 
 ## Usage with TypeScript
 
-This repo bundles TypeScript definition files for use in TypeScript projects and to support tools that can read `.d.ts` files.
+Starting from v5 this project is written in TypeScript and the type definitions are included in the package.
 
-### Pre-requisites
+Example:
 
-Before you can begin using these TypeScript definitions with your project, you need to make sure your project meets these requirements:
-
-- TypeScript >= 2.1
-- Set tsconfig.json: `{"compilerOptions" : {"moduleResolution" : "node"}, ...}`
-- Includes the TypeScript definitions for Node and [ws](https://www.npmjs.com/package/ws). These types are used as
-  parameters to some of the MQTT client's APIs and if you don't install them they get treated as `any`, which means you lose type
-  safety.
-  Use npm to install them by typing the following into a terminal window:
-  `npm install --save-dev @types/node @types/ws`
-
-### TypeScript example
-
-```
-import * as mqtt from "mqtt"
-let client : mqtt.MqttClient = mqtt.connect('mqtt://test.mosquitto.org')
+```ts
+import { connect } from "mqtt"
+const client = connect('mqtt://test.mosquitto.org')
 ```
 
 <a name="weapp-alipay"></a>
