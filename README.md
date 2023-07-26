@@ -113,7 +113,7 @@ client.on("message", (topic, message) => {
 
 output:
 
-```
+```sh
 Hello mqtt
 ```
 
@@ -153,12 +153,6 @@ import { connect } from "mqtt"; // import connect from mqtt
 let client = connect("mqtt://test.mosquitto.org"); // create a client
 ```
 
-<a name="promises"></a>
-
-## Promise support
-
-If you want to use the new [async-await](https://blog.risingstack.com/async-await-node-js-7-nightly/) functionality in JavaScript, or just prefer using Promises instead of callbacks, [async-mqtt](https://github.com/mqttjs/async-mqtt) is a wrapper over MQTT.js which uses promises instead of callbacks when possible.
-
 <a name="cli"></a>
 
 ## Command Line Tools
@@ -173,13 +167,13 @@ npm install mqtt -g
 
 Then, on one terminal
 
-```
+```sh
 mqtt sub -t 'hello' -h 'test.mosquitto.org' -v
 ```
 
 On another
 
-```
+```sh
 mqtt pub -t 'hello' -h 'test.mosquitto.org' -m 'from MQTT.js'
 ```
 
@@ -194,7 +188,6 @@ MQTT.js uses the [debug](https://www.npmjs.com/package/debug#cmd) package for de
 ```ps
 # (example using PowerShell, the VS Code default)
 $env:DEBUG='mqttjs*'
-
 ```
 
 <a name="reconnecting"></a>
@@ -221,7 +214,7 @@ either of the connection url or the client options at the time of a reconnect.
 
 Example (update clientId & username on each reconnect):
 
-```
+```js
     const transformWsUrl = (url, options, client) => {
       client.options.username = `token=${this.get_current_auth_token()}`;
       client.options.clientId = `${this.get_updated_clientId()}`;
@@ -264,7 +257,7 @@ If the client sets the option `autoUseTopicAlias:true` then MQTT.js uses existin
 
 example scenario:
 
-```
+```bash
 1. PUBLISH topic:'t1', ta:1                   (register)
 2. PUBLISH topic:'t1'       -> topic:'', ta:1 (auto use existing map entry)
 3. PUBLISH topic:'t2', ta:1                   (register overwrite)
@@ -283,7 +276,7 @@ If no topic alias exists, then assign a new vacant topic alias automatically. If
 
 example scenario:
 
-```
+```bash
 The broker returns CONNACK (TopicAliasMaximum:3)
 1. PUBLISH topic:'t1' -> 't1', ta:1 (auto assign t1:1 and register)
 2. PUBLISH topic:'t1' -> ''  , ta:1 (auto use existing map entry)
