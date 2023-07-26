@@ -2106,7 +2106,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		if (
 			!this._firstConnection &&
 			(this.options.clean ||
-				(this.options.protocolVersion === 5 &&
+				(this.options.protocolVersion >= 4 &&
 					!this.connackPacket.sessionPresent)) &&
 			_resubscribeTopicsKeys.length > 0
 		) {
