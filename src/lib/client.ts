@@ -2105,6 +2105,9 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		const _resubscribeTopicsKeys = Object.keys(this._resubscribeTopics)
 		if (
 			!this._firstConnection &&
+			// Only resubscribe in case of clean connection or if the server does not have a stored session.
+			// The Session Present flag is available since v3.1.1
+			// https://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Toc385349254
 			(this.options.clean ||
 				(this.options.protocolVersion >= 4 &&
 					!this.connackPacket.sessionPresent)) &&
