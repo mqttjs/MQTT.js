@@ -3165,6 +3165,39 @@ export default function abstractTest(server, config) {
 			})
 		})
 
+		it('should resubscribe when clean=false and sessionPresent=false', function _test(done) {
+			const client = connect({
+				clientId: 'test',
+				reconnectPeriod: 100,
+				clean: false,
+				protocolVersion: 4,
+			})
+			let tryReconnect = true
+			let reconnectEvent = false
+
+			client.on('reconnect', () => {
+				reconnectEvent = true
+			})
+
+			client.on('connect', () => {
+				if (tryReconnect) {
+					client.subscribe('hello', () => {
+						client.stream.end()
+
+						server.once('client', (serverClient) => {
+							serverClient.on('subscribe', () => {
+								client.end(done)
+							})
+						})
+					})
+
+					tryReconnect = false
+				} else {
+					assert.isTrue(reconnectEvent)
+				}
+			})
+		})
+
 		it('should not resubscribe when reconnecting if resubscribe is disabled', function _test(done) {
 			const client = connect({ reconnectPeriod: 100, resubscribe: false })
 			let tryReconnect = true

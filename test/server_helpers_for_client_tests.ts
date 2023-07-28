@@ -36,6 +36,9 @@ export default function serverBuilder(
 			if (!serverClient.writable) return false
 			let rc = 'returnCode'
 			const connack = {}
+			if (serverClient.options.protocolVersion >= 4) {
+				connack['sessionPresent'] = false
+			}
 			if (
 				serverClient.options &&
 				serverClient.options.protocolVersion === 5
