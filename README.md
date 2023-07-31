@@ -836,28 +836,36 @@ module.exports = {
 
 ### Vite
 
-If you are using vite simply import MQTT.js as you would any other module. If you get errors like `process is not defined` you can fix it by adding the following to your vite config:
+If you are using vite simply import MQTT.js as you would any other module. In order to use MQTT.js with vite, you need to add the following to your vite config:
 
 ```js
+// other imports
+import { NodeGlobalsPolyfillPlugin } from '@esbuild-plugins/node-globals-polyfill'
+
+
 export default defineConfig({
   // Other rules...
-  define: {
-    "process.env": {},
-  },
+  optimizeDeps: {
+        esbuildOptions: {
+            // Node.js global to browser globalThis
+            define: {
+                global: 'globalThis'
+            },
+            // Enable esbuild polyfill plugins
+            plugins: [
+                NodeGlobalsPolyfillPlugin({
+                    buffer: true
+                })
+            ]
+        }
+    }
 });
 ```
 
-Or just add the missing polyfills manually:
+This requires the `@esbuild-plugins/node-globals-polyfill` package to be installed:
 
-```js
-export default defineConfig({
-  // Other rules...
-  resolve: {
-    alias: {
-      process: "process/browser",
-    },
-  },
-});
+```bash
+npm install --save-dev @esbuild-plugins/node-globals-polyfill
 ```
 
 <a name="qos"></a>
