@@ -1,5 +1,13 @@
 
 
+## [5.0.1](https://github.com/mqttjs/MQTT.js/compare/v5.0.0...v5.0.1) (2023-07-31)
+
+
+### Bug Fixes
+
+* resubscribe when no session present ([#895](https://github.com/mqttjs/MQTT.js/issues/895)) ([#1650](https://github.com/mqttjs/MQTT.js/issues/1650)) ([37acda6](https://github.com/mqttjs/MQTT.js/commit/37acda655e202025373311624e19589ae7ef5970))
+* **types:** wrong `incomingStore` and `outgoingStore` ([8133eba](https://github.com/mqttjs/MQTT.js/commit/8133eba152e81ed77e6aa18eb2cc351c3c901aa8))
+
 # [5.0.0](https://github.com/mqttjs/MQTT.js/compare/v4.3.7...v5.0.0) (2023-07-25)
 
 
