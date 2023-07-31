@@ -23,7 +23,7 @@ import reInterval from 'reinterval'
 import clone from 'rfdc/default'
 import * as validations from './validations'
 import _debug from 'debug'
-import Store from './store'
+import Store, { IStore } from './store'
 import handlePacket from './handlers'
 import { ClientOptions } from 'ws'
 import { ClientRequestArgs } from 'http'
@@ -171,11 +171,11 @@ export interface IClientOptions extends ISecureClientOptions {
 	/**
 	 * a Store for the incoming packets
 	 */
-	incomingStore?: Store
+	incomingStore?: IStore
 	/**
 	 * a Store for the outgoing packets
 	 */
-	outgoingStore?: Store
+	outgoingStore?: IStore
 
 	/** Enable/Disable queue for QoS 0 packets */
 	queueQoSZero?: boolean
@@ -405,9 +405,9 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 	public reconnecting: boolean
 
-	public incomingStore: Store
+	public incomingStore: IStore
 
-	public outgoingStore: Store
+	public outgoingStore: IStore
 
 	public options: IClientOptions
 
