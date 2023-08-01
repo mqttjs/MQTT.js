@@ -858,19 +858,28 @@ export default defineConfig({
             },
             // Enable esbuild polyfill plugins
             plugins: [
-                NodeGlobalsPolyfillPlugin({
-                    buffer: true
-                })
-            ]
+              NodeGlobalsPolyfillPlugin({
+                buffer: true,
+                process: true,
+              }),
+              NodeModulesPolyfillPlugin(),
+            ],
         }
-    }
+    },
+    build: {
+      rollupOptions: {
+        // Enable rollup polyfills plugin
+        // used during production bundling
+        plugins: [nodePolyfills()],
+      },
+  },
 });
 ```
 
-This requires the `@esbuild-plugins/node-globals-polyfill` package to be installed:
+This requires you to install some plugins:
 
 ```bash
-npm install --save-dev @esbuild-plugins/node-globals-polyfill
+npm install -D @esbuild-plugins/node-globals-polyfill @esbuild-plugins/node-modules-polyfill rollup-plugin-polyfill-node
 ```
 
 <a name="qos"></a>
