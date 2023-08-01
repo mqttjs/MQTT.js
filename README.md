@@ -845,6 +845,11 @@ import { NodeGlobalsPolyfillPlugin } from '@esbuild-plugins/node-globals-polyfil
 
 export default defineConfig({
   // Other rules...
+  resolve: {
+    alias: {
+      util: "util/",
+    }
+  },
   optimizeDeps: {
         esbuildOptions: {
             // Node.js global to browser globalThis
