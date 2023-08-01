@@ -5,7 +5,7 @@
 [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://github.com/mqttjs/MQTT.js/graphs/commit-activity)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/mqttjs/MQTT.js/pulls)
 
-![NPM Version](https://img.shields.io/npm/v/mqtt?logo=npm) ![NPM Downloads](https://img.shields.io/npm/dm/mqtt.svg)
+[![node](https://img.shields.io/node/v/mqtt.svg) ![npm](https://img.shields.io/npm/v/mqtt.svg?logo=npm) ![NPM Downloads](https://img.shields.io/npm/dm/mqtt.svg)](https://www.npmjs.com/package/mqtt)
 
 MQTT.js is a client library for the [MQTT](http://mqtt.org/) protocol, written
 in JavaScript for node.js and the browser.
