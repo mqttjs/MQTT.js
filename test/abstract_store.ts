@@ -1,12 +1,14 @@
 import { IPublishPacket, IPubrelPacket } from 'mqtt-packet'
-import Store from '../src/lib/store'
+import { IStore } from '../src/lib/store'
 import 'should'
 
-export default function abstractStoreTest(build) {
-	let store: Store
+export default function abstractStoreTest(
+	build: (cb: (err?: Error, store?: IStore) => void) => void,
+) {
+	let store: IStore
 
 	// eslint-disable-next-line
-  beforeEach(function (done) {
+	beforeEach(function (done) {
 		build((err, _store) => {
 			store = _store
 			done(err)
