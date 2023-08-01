@@ -1,0 +1,34 @@
+{
+	"compilerOptions": {
+		"module": "commonjs",
+		"declaration": true,
+		"removeComments": true,
+		"emitDecoratorMetadata": true,
+		"experimentalDecorators": true,
+		"allowSyntheticDefaultImports": true,
+		"target": "es2017",
+		"sourceMap": true,
+		"outDir": "./build",
+		"baseUrl": "./",
+		"incremental": true,
+		"skipLibCheck": true,
+		"preserveSymlinks": true,
+		"esModuleInterop": true,
+		"resolveJsonModule": true,
+		"typeRoots": [
+			"node_modules/@types"
+		],
+		"types": [
+			"node",
+			"mocha"
+		],
+	},
+	"include": [
+		"src",
+		"test",
+	],
+	"exclude": [
+		"dist",
+		"test/browser"
+	]
+}
