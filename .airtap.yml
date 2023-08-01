@@ -1,6 +1,11 @@
 providers:
   - airtap-playwright
 ui: mocha-bdd
+browserify:
+  - transform: babelify
+    global: true
+    presets: ['@babel/preset-env']
+    plugins: ['@babel/plugin-syntax-import-assertions']
 browsers:
   - name: chromium
     supports:
