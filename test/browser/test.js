@@ -1,6 +1,6 @@
 const test = require('tape')
 const _URL = require('url')
-const mqtt = require('../../dist/mqtt.min')
+const mqtt = require('../../') // package.json will provide 'dist/mqtt.min.js'
 // eslint-disable-next-line
 const parsed = _URL.parse(document.URL)
 const isHttps = parsed.protocol === 'https:'
