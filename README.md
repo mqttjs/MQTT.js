@@ -841,7 +841,6 @@ If you are using vite simply import MQTT.js as you would any other module. In or
 ```js
 // other imports
 import { NodeGlobalsPolyfillPlugin } from '@esbuild-plugins/node-globals-polyfill'
-import { NodeModulesPolyfillPlugin } from "@esbuild-plugins/node-modules-polyfill";
 import nodePolyfills from "rollup-plugin-polyfill-node";
 
 
@@ -864,7 +863,6 @@ export default defineConfig({
                 buffer: true,
                 process: true,
               }),
-              NodeModulesPolyfillPlugin(),
             ],
         }
     },
@@ -881,7 +879,7 @@ export default defineConfig({
 This requires you to install some plugins:
 
 ```bash
-npm install -D @esbuild-plugins/node-globals-polyfill @esbuild-plugins/node-modules-polyfill rollup-plugin-polyfill-node
+npm install -D @esbuild-plugins/node-globals-polyfill rollup-plugin-polyfill-node
 ```
 
 <a name="qos"></a>
