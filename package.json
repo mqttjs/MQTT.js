@@ -50,7 +50,7 @@
       "default": "./build/src/*.js",
       "types": "./build/src/*.d.ts"
     },
-    "./package.json": "./package.json",
+    "./package.json": "./package.json"
   },
   "types": "build/src/mqtt.d.ts",
   "typesVersions": {
