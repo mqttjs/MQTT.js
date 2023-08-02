@@ -19,6 +19,7 @@ module.exports = {
   target: 'web',
   resolve: {
     fallback: {
+      fs: false,
       tls: false,
       net: false,
       util: false,
