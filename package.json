@@ -43,12 +43,14 @@
   "exports": {
     ".": {
       "browser": "./dist/mqtt.min.js",
-      "import": "./build/src/mqtt.js",
-      "require": "./build/src/mqtt.js"
+      "default": "./build/src/mqtt.js",
+      "types": "./build/src/mqtt.d.ts"
+    },
+    "./*": {
+      "default": "./build/src/*.js",
+      "types": "./build/src/*.d.ts"
     },
     "./package.json": "./package.json",
-    "./*.map": "./build/*.js.map",
-    "./*": "./build/*.js"
   },
   "types": "build/src/mqtt.d.ts",
   "typesVersions": {
