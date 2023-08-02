@@ -776,7 +776,7 @@ Closes the Store.
 MQTT.js is bundled using [browserify](http://browserify.org/). You can find the browser build in the `dist` folder.
 
 ```js
-import mqtt from 'mqtt/dist/mqtt.min'
+import * as mqtt from 'mqtt/dist/mqtt.min'
 ```
 
 <a name="cdn"></a>
@@ -796,7 +796,7 @@ See <http://unpkg.com> for the full documentation on version ranges.
 If you are using webpack simply import MQTT.js as you would any other module.
 
 ```js
-import mqtt from 'mqtt'
+import * as mqtt from 'mqtt'
 
 const client = mqtt.connect('ws://test.mosquitto.org:8080')
 ```
