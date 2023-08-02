@@ -21,7 +21,12 @@
     "url": "git://github.com/mqttjs/MQTT.js.git"
   },
   "main": "./build/src/mqtt.js",
-  "browser": "./dist/mqtt.min.js",
+  "browser": {
+    "mqtt": "./dist/mqtt.min.js",
+    "net": false,
+    "tls": false,
+    "fs": false
+  },
   "bin": {
     "mqtt_pub": "./build/bin/pub.js",
     "mqtt_sub": "./build/bin/sub.js",
@@ -36,7 +41,11 @@
     "src/"
   ],
   "exports": {
-    ".": "./build/src/mqtt.js",
+    ".": {
+      "browser": "./dist/mqtt.min.js",
+      "import": "./build/src/mqtt.js",
+      "require": "./build/src/mqtt.js"
+    },
     "./package.json": "./package.json",
     "./*.map": "./build/*.js.map",
     "./*": "./build/*.js"
