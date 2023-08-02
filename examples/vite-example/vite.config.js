@@ -3,7 +3,6 @@ import { fileURLToPath, URL } from 'node:url'
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { NodeGlobalsPolyfillPlugin } from '@esbuild-plugins/node-globals-polyfill'
-import { NodeModulesPolyfillPlugin } from "@esbuild-plugins/node-modules-polyfill";
 import nodePolyfills from "rollup-plugin-polyfill-node";
 
 // https://vitejs.dev/config/
@@ -15,8 +14,11 @@ export default defineConfig({
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
       util: "util/",
-    }
+    },
   },
+  // define: {
+  //   'process.env': {},
+  // },
   optimizeDeps: {
     esbuildOptions: {
       // Node.js global to browser globalThis
@@ -29,7 +31,6 @@ export default defineConfig({
           buffer: true,
           process: true,
         }),
-        NodeModulesPolyfillPlugin(),
       ],
     }
   },
