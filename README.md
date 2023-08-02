@@ -879,7 +879,7 @@ export default defineConfig({
 This requires you to install some plugins:
 
 ```bash
-npm install -D @esbuild-plugins/node-globals-polyfill @esbuild-plugins/node-modules-polyfill rollup-plugin-polyfill-node
+npm install -D @esbuild-plugins/node-globals-polyfill rollup-plugin-polyfill-node
 ```
 
 <a name="qos"></a>
