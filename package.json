@@ -30,7 +30,7 @@
     "dist/",
     "CONTRIBUTING.md",
     "LICENSE.md",
-    "doc/",
+    "help/",
     "build/",
     "src/"
   ],
