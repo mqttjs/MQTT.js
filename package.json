@@ -20,7 +20,7 @@
     "type": "git",
     "url": "git://github.com/mqttjs/MQTT.js.git"
   },
-  "main": "./build/src/mqtt.js",
+  "main": "./build/mqtt.js",
   "bin": {
     "mqtt_pub": "./build/bin/pub.js",
     "mqtt_sub": "./build/bin/sub.js",
@@ -30,21 +30,21 @@
     "dist/",
     "CONTRIBUTING.md",
     "LICENSE.md",
-    "doc/",
+    "help/",
     "build/",
     "src/"
   ],
   "exports": {
-    ".": "./build/src/mqtt.js",
+    ".": "./build/mqtt.js",
     "./package.json": "./package.json",
     "./*.map": "./build/*.js.map",
     "./*": "./build/*.js"
   },
-  "types": "build/src/mqtt.d.ts",
+  "types": "build/mqtt.d.ts",
   "typesVersions": {
     "*": {
       "*": [
-        "./build/src/mqtt.d.ts"
+        "./build/mqtt.d.ts"
       ]
     }
   },
@@ -52,7 +52,7 @@
     "lint": "eslint --ext .ts .",
     "lint-fix": "eslint --fix --ext .ts .",
     "build:ts": "rimraf build/ && tsc -p tsconfig.build.json",
-    "build:browser": "rimraf dist/ && mkdirp dist/ && browserify build/src/mqtt.js --standalone mqtt > dist/mqtt.js && terser dist/mqtt.js --compress --mangle --output dist/mqtt.min.js",
+    "build:browser": "rimraf dist/ && mkdirp dist/ && browserify build/mqtt.js --standalone mqtt > dist/mqtt.js && terser dist/mqtt.js --compress --mangle --output dist/mqtt.min.js",
     "build": "npm run build:ts && npm run build:browser",
     "prepare": "npm run build",
     "unit-test:node": "node_modules/.bin/nyc --reporter=lcov --reporter=text ./node_modules/mocha/bin/_mocha -r ts-node/register test/*.ts --exit",
@@ -94,7 +94,7 @@
     "node": ">=16.0.0"
   },
   "browser": {
-    "./mqtt.js": "./build/src/mqtt.js",
+    "./mqtt.js": "./build/mqtt.js",
     "fs": false,
     "tls": false,
     "net": false
