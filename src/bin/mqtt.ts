@@ -9,12 +9,14 @@
 import path from 'path'
 import Commist from 'commist'
 import help from 'help-me'
-import { version } from '../../package.json'
 import publish from './pub'
 import subscribe from './sub'
 
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const version = require('../../package.json').version
+
 const helpMe = help({
-	dir: path.join(__dirname, '../../../', 'help'),
+	dir: path.join(__dirname, '../../', 'help'),
 	ext: '.txt',
 })
 
