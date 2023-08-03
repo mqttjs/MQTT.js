@@ -22,9 +22,9 @@
   },
   "main": "./build/src/mqtt.js",
   "bin": {
-    "mqtt_pub": "./build/bin/pub.js",
-    "mqtt_sub": "./build/bin/sub.js",
-    "mqtt": "./build/bin/mqtt.js"
+    "mqtt_pub": "./build/src/bin/pub.js",
+    "mqtt_sub": "./build/src/bin/sub.js",
+    "mqtt": "./build/src/bin/mqtt.js"
   },
   "files": [
     "dist/",
