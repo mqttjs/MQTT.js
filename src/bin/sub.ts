@@ -3,12 +3,12 @@
 import path from 'path'
 import fs from 'fs'
 import minimist from 'minimist'
-import helpMe from 'help-me'
+import help from 'help-me'
 import { connect } from '../mqtt'
 import { IClientOptions } from 'src/lib/client'
 
-helpMe({
-	dir: path.join(__dirname, '..', 'doc'),
+const helpMe = help({
+	dir: path.join(__dirname, 'help'),
 })
 
 export default function start(args: string[]) {

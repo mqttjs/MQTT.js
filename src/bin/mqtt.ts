@@ -7,19 +7,24 @@
  * See LICENSE for more information
  */
 import path from 'path'
-import commist from 'commist'
-import helpMe from 'help-me'
+import Commist from 'commist'
+import help from 'help-me'
 import { version } from '../../package.json'
 import publish from './pub'
 import subscribe from './sub'
 
-helpMe({
-	dir: path.join(path.dirname(require.main.filename), '/../doc'),
+const helpMe = help({
+	dir: path.join(__dirname, 'help'),
 	ext: '.txt',
 })
 
+const commist = Commist()
+
 commist.register('publish', publish)
+commist.register('pub', publish)
+
 commist.register('subscribe', subscribe)
+commist.register('sub', subscribe)
 
 commist.register('version', () => {
 	console.log('MQTT.js version:', version)
