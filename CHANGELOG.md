@@ -1,5 +1,14 @@
 
 
+## [5.0.2](https://github.com/mqttjs/MQTT.js/compare/v5.0.1...v5.0.2) (2023-08-03)
+
+
+### Bug Fixes
+
+* **cli:** cli commands not working ([#1660](https://github.com/mqttjs/MQTT.js/issues/1660)) ([1bea132](https://github.com/mqttjs/MQTT.js/commit/1bea132e97eeeb7187525dcf7417761388919075))
+* import mqtt correctly in test ([8f15557](https://github.com/mqttjs/MQTT.js/commit/8f15557d0c4e455f91c96df5793d32451f1601d3))
+* **tests:** abstract store test types ([0ddd097](https://github.com/mqttjs/MQTT.js/commit/0ddd0976bb8dd7dc1d434e8bb954d440ba653fb2))
+
 ## [5.0.1](https://github.com/mqttjs/MQTT.js/compare/v5.0.0...v5.0.1) (2023-07-31)
 
 
