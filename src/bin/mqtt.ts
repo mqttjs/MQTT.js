@@ -14,7 +14,7 @@ import publish from './pub'
 import subscribe from './sub'
 
 const helpMe = help({
-	dir: path.join(__dirname, 'help'),
+	dir: path.join(__dirname, '../../../', 'help'),
 	ext: '.txt',
 })
 

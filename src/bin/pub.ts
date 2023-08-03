@@ -13,7 +13,7 @@ import { IClientOptions, IClientPublishOptions } from 'src/lib/client'
 import { pipeline } from 'stream'
 
 const helpMe = help({
-	dir: path.join(__dirname, 'help'),
+	dir: path.join(__dirname, '../../../', 'help'),
 })
 
 function send(args: ParsedArgs) {

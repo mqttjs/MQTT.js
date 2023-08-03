@@ -8,7 +8,7 @@ import { connect } from '../mqtt'
 import { IClientOptions } from 'src/lib/client'
 
 const helpMe = help({
-	dir: path.join(__dirname, 'help'),
+	dir: path.join(__dirname, '../../../', 'help'),
 })
 
 export default function start(args: string[]) {
