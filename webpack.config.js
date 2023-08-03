@@ -1,7 +1,7 @@
 const path = require('path');
 
 module.exports = {
-  entry: './build/src/mqtt.js',
+  entry: './build/mqtt.js',
   mode: 'production',
   output: {
     filename: 'mqtt.js',

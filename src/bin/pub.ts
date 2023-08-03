@@ -4,15 +4,16 @@ import { Writable } from 'readable-stream'
 import path from 'path'
 import fs from 'fs'
 import concat from 'concat-stream'
-import helpMe from 'help-me'
+import help from 'help-me'
+
 import minimist, { ParsedArgs } from 'minimist'
 import split2 from 'split2'
 import { connect } from '../mqtt'
 import { IClientOptions, IClientPublishOptions } from 'src/lib/client'
 import { pipeline } from 'stream'
 
-helpMe({
-	dir: path.join(__dirname, '..', 'doc'),
+const helpMe = help({
+	dir: path.join(__dirname, '../../', 'help'),
 })
 
 function send(args: ParsedArgs) {
@@ -142,8 +143,10 @@ export default function start(args: string[]) {
 		parsedArgs.rejectUnauthorized = false
 	}
 
-	parsedArgs.topic = (parsedArgs.topic || parsedArgs._.shift()).toString()
-	parsedArgs.message = (parsedArgs.message || parsedArgs._.shift()).toString()
+	parsedArgs.topic = (parsedArgs.topic || parsedArgs._.shift())?.toString()
+	parsedArgs.message = (
+		parsedArgs.message || parsedArgs._.shift()
+	)?.toString()
 
 	if (!parsedArgs.topic) {
 		console.error('missing topic\n')

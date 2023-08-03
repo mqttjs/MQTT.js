@@ -20,13 +20,13 @@
     "type": "git",
     "url": "git://github.com/mqttjs/MQTT.js.git"
   },
-  "main": "./build/src/mqtt.js",
   "browser": {
     "mqtt": "./dist/mqtt.min.js",
     "net": false,
     "tls": false,
     "fs": false
   },
+  "main": "./build/mqtt.js",
   "bin": {
     "mqtt_pub": "./build/bin/pub.js",
     "mqtt_sub": "./build/bin/sub.js",
@@ -36,7 +36,7 @@
     "dist/",
     "CONTRIBUTING.md",
     "LICENSE.md",
-    "doc/",
+    "help/",
     "build/",
     "src/"
   ],
@@ -52,11 +52,11 @@
     },
     "./package.json": "./package.json"
   },
-  "types": "build/src/mqtt.d.ts",
+  "types": "build/mqtt.d.ts",
   "typesVersions": {
     "*": {
       "*": [
-        "./build/src/mqtt.d.ts"
+        "./build/mqtt.d.ts"
       ]
     }
   },
