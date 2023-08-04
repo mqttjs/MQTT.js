@@ -20,12 +20,6 @@
     "type": "git",
     "url": "git://github.com/mqttjs/MQTT.js.git"
   },
-  "browser": {
-    "mqtt": "./build/mqtt.umd.js",
-    "net": false,
-    "tls": false,
-    "fs": false
-  },
   "main": "./build/mqtt.js",
   "bin": {
     "mqtt_pub": "./build/bin/pub.js",
@@ -41,16 +35,10 @@
     "src/"
   ],
   "exports": {
-    ".": {
-      "browser": "./build/mqtt.umd.js",
-      "default": "./build/mqtt.js",
-      "types": "./build/mqtt.d.ts"
-    },
-    "./*": {
-      "default": "./build/*.js",
-      "types": "./build/*.d.ts"
-    },
-    "./package.json": "./package.json"
+    ".": "./build/mqtt.js",
+    "./package.json": "./package.json",
+    "./*.map": "./build/*.js.map",
+    "./*": "./build/*.js"
   },
   "types": "build/mqtt.d.ts",
   "typesVersions": {
@@ -64,7 +52,7 @@
     "lint": "eslint --ext .ts .",
     "lint-fix": "eslint --fix --ext .ts .",
     "build:ts": "rimraf build/ && tsc -p tsconfig.build.json",
-    "build:browser": "rimraf dist/ && vite build",
+    "build:browser": "rimraf dist/ && mkdirp dist/ && browserify build/mqtt.js --standalone mqtt > dist/mqtt.js && terser dist/mqtt.js --compress --mangle --output dist/mqtt.min.js",
     "build": "npm run build:ts && npm run build:browser",
     "prepare": "npm run build",
     "unit-test:node": "node_modules/.bin/nyc --reporter=lcov --reporter=text ./node_modules/mocha/bin/_mocha -r ts-node/register test/*.ts --exit",
@@ -105,6 +93,12 @@
   "engines": {
     "node": ">=16.0.0"
   },
+  "browser": {
+    "./mqtt.js": "./build/mqtt.js",
+    "fs": false,
+    "tls": false,
+    "net": false
+  },
   "dependencies": {
     "commist": "^3.2.0",
     "concat-stream": "^2.0.0",
@@ -135,6 +129,7 @@
     "@typescript-eslint/parser": "^6.2.1",
     "airtap": "^4.0.4",
     "airtap-playwright": "^1.0.1",
+    "browserify": "^17.0.0",
     "chai": "^4.3.7",
     "chokidar": "^3.5.3",
     "codecov": "^3.8.2",
@@ -162,7 +157,6 @@
     "tape": "^5.6.6",
     "terser": "^5.19.2",
     "ts-node": "^10.9.1",
-    "typescript": "^5.1.6",
-    "vite": "^4.4.8"
+    "typescript": "^5.1.6"
   }
 }

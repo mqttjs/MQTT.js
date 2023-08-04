@@ -773,10 +773,10 @@ Closes the Store.
 
 ## Browser
 
-MQTT.js is bundled using [ViteJS](https://vitejs.dev/). The bundle is available in the `build` folder.
+MQTT.js is bundled using [browserify](http://browserify.org/). You can find the browser build in the `dist` folder.
 
 ```js
-import * as mqtt from 'mqtt'
+import * as mqtt from 'mqtt/dist/mqtt.min'
 ```
 
 <a name="cdn"></a>
@@ -784,7 +784,7 @@ import * as mqtt from 'mqtt'
 ### Via CDN
 
 The MQTT.js bundle is available through <http://unpkg.com>, specifically
-at <https://unpkg.com/mqtt/build/mqtt.umd.js>.
+at <https://unpkg.com/mqtt/dist/mqtt.min.js>.
 See <http://unpkg.com> for the full documentation on version ranges.
 
 **Be sure to only use this bundle with `ws` or `wss` URLs in the browser. Others URL types will likey fail**
