@@ -773,7 +773,7 @@ Closes the Store.
 
 ## Browser
 
-MQTT.js is bundled using [browserify](http://browserify.org/). You can find the browser build in the `build` folder.
+MQTT.js is bundled using [ViteJS](https://vitejs.dev/). The bundle is available in the `build` folder.
 
 ```js
 import * as mqtt from 'mqtt'
