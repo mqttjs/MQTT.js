@@ -43,12 +43,12 @@
   "exports": {
     ".": {
       "browser": "./build/mqtt.umd.js",
-      "default": "./build/src/mqtt.js",
-      "types": "./build/src/mqtt.d.ts"
+      "default": "./build/mqtt.js",
+      "types": "./build/mqtt.d.ts"
     },
     "./*": {
-      "default": "./build/src/*.js",
-      "types": "./build/src/*.d.ts"
+      "default": "./build/*.js",
+      "types": "./build/*.d.ts"
     },
     "./package.json": "./package.json"
   },
