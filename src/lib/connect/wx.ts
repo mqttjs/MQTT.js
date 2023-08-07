@@ -75,6 +75,7 @@ function bindEventHandler() {
 	})
 
 	socketTask.onClose(() => {
+    stream.emit('close')
 		stream.end()
 		stream.destroy()
 	})
