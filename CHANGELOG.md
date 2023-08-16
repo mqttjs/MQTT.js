@@ -1,5 +1,13 @@
 
 
+## [5.0.3](https://github.com/mqttjs/MQTT.js/compare/v5.0.2...v5.0.3) (2023-08-16)
+
+
+### Bug Fixes
+
+* browser detection ([183b35a](https://github.com/mqttjs/MQTT.js/commit/183b35aa3ed98fbbcbea6805994ef7c3cc8ee616)), closes [#1671](https://github.com/mqttjs/MQTT.js/issues/1671)
+* close and end callbacks not executed in the WeChat mini program ([#1664](https://github.com/mqttjs/MQTT.js/issues/1664)) ([15ff607](https://github.com/mqttjs/MQTT.js/commit/15ff607f4c938d0e7a23c99413db7496cae12e48))
+
 ## [5.0.2](https://github.com/mqttjs/MQTT.js/compare/v5.0.1...v5.0.2) (2023-08-03)
 
 
