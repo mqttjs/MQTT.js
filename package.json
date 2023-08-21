@@ -38,6 +38,7 @@
     ".": "./build/mqtt.js",
     "./package.json": "./package.json",
     "./*.map": "./build/*.js.map",
+    "./dist/*": "./dist/*.js",
     "./*": "./build/*.js"
   },
   "types": "build/mqtt.d.ts",
