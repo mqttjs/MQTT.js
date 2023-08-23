@@ -557,6 +557,8 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		this.connected = false
 		// Are we disconnecting?
 		this.disconnecting = false
+		// Are we reconnecting?
+		this.reconnecting = false
 		// Packet queue
 		this.queue = []
 		// connack timer
