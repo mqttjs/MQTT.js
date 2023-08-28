@@ -39,7 +39,7 @@ Guide](https://cdn.rawgit.com/feross/standard/master/badge.svg)](https://github.
 
 - Removes support for all end of life node versions (v12 and v14), and now supports node v18 and v20.
 - Completely rewritten in Typescript 🚀.
-- When creating `MqttClient` instance `new` is now required
+- When creating `MqttClient` instance `new` is now required.
 
 **v4.0.0** (Released 04/2020) removes support for all end of life node versions, and now supports node v12 and v14. It also adds improvements to
 debug logging, along with some feature additions.
