@@ -351,7 +351,8 @@ Async [`connect`](#connect). Returns a `Promise` that resolves to a `mqtt.Client
 
 The `Client` class wraps a client connection to an
 MQTT broker over an arbitrary transport method (TCP, TLS,
-WebSocket, ecc).
+WebSocket, ecc). 
+`Client` is an [EventEmitter](https://nodejs.dev/en/learn/the-nodejs-event-emitter/) that has it's own [events](#events)
 
 `Client` automatically handles the following:
 
@@ -445,6 +446,8 @@ If you are connecting to a broker that supports only MQTT 3.1 (not
 
 This is confirmed on RabbitMQ 3.2.4, and on Mosquitto < 1.3. Mosquitto
 version 1.3 and 1.4 works fine without those.
+
+<a name="events"></a>
 
 #### Event `'connect'`
 
