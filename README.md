@@ -351,7 +351,7 @@ Async [`connect`](#connect). Returns a `Promise` that resolves to a `mqtt.Client
 
 The `Client` class wraps a client connection to an
 MQTT broker over an arbitrary transport method (TCP, TLS,
-WebSocket, ecc). 
+WebSocket, ecc).
 `Client` is an [EventEmitter](https://nodejs.dev/en/learn/the-nodejs-event-emitter/) that has it's own [events](#events)
 
 `Client` automatically handles the following:
@@ -427,12 +427,9 @@ The arguments are:
   - `log`: custom log function. Default uses [debug](https://www.npmjs.com/package/debug) package.
   - `manualConnect`: prevents the constructor to call `connect`. In this case after the `mqtt.connect` is called you should call `client.connect` manually.
 
-In case mqtts (mqtt over tls) is required, the `options` object is
-passed through to
-[`tls.connect()`](http://nodejs.org/api/tls.html#tls_tls_connect_options_callback).
-If you are using a **self-signed certificate**, pass the `rejectUnauthorized: false` option.
-Beware that you are exposing yourself to man in the middle attacks, so it is a configuration
-that is not recommended for production environments.
+In case mqtts (mqtt over tls) is required, the `options` object is passed through to [`tls.connect()`](http://nodejs.org/api/tls.html#tls_tls_connect_options_callback). If using a **self-signed certificate**, set `rejectUnauthorized: false`. However, be cautious as this exposes you to potential man in the middle attacks and isn't recommended for production.
+
+For those supporting multiple TLS protocols on a single port, like MQTTS and MQTT over WSS, utilize the `ALPNProtocols` option. This lets you define the Application Layer Protocol Negotiation (ALPN) protocol. You can set `ALPNProtocols` as a string array, Buffer, or Uint8Array based on your setup.
 
 If you are connecting to a broker that supports only MQTT 3.1 (not
 3.1.1 compliant), you should pass these additional options:
