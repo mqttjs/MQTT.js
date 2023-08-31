@@ -1,5 +1,14 @@
 
 
+## [5.0.4](https://github.com/mqttjs/MQTT.js/compare/v5.0.3...v5.0.4) (2023-08-31)
+
+
+### Bug Fixes
+
+* export js file in dist folder ([#1596](https://github.com/mqttjs/MQTT.js/issues/1596)) ([#1677](https://github.com/mqttjs/MQTT.js/issues/1677)) ([cbe0dc6](https://github.com/mqttjs/MQTT.js/commit/cbe0dc6be52bb3a5a9fa1f5b390973bf57f9da47))
+* move exported types out of dev dependencies ([#1676](https://github.com/mqttjs/MQTT.js/issues/1676)) ([844e4ff](https://github.com/mqttjs/MQTT.js/commit/844e4ff6a75911e0d5f5fad75341ffc04eed1b15))
+* set default value false for reconnecting in constructor ([#1674](https://github.com/mqttjs/MQTT.js/issues/1674)) ([#1678](https://github.com/mqttjs/MQTT.js/issues/1678)) ([312b57b](https://github.com/mqttjs/MQTT.js/commit/312b57ba982209d874d65a0857a019991a2f9b0d))
+
 ## [5.0.3](https://github.com/mqttjs/MQTT.js/compare/v5.0.2...v5.0.3) (2023-08-16)
 
 
