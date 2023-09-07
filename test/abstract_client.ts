@@ -371,7 +371,8 @@ export default function abstractTest(server, config) {
 
 		it('should emit connect', function _test(done) {
 			const client = connect()
-			client.once('connect', () => {
+			client.once('connect', (packet: mqtt.IConnackPacket) => {
+				assert.equal(packet.cmd, "connack")
 				client.end(true, (err) => done(err))
 			})
 			client.once('error', done)
@@ -2372,7 +2373,7 @@ export default function abstractTest(server, config) {
 
 			//
 			client.subscribe(testPacket.topic)
-			client.once('message', (topic, message, packet) => {
+			client.once('message', (topic, message, packet: mqtt.IPublishPacket) => {
 				assert.strictEqual(topic, testPacket.topic)
 				assert.strictEqual(message.toString(), testPacket.payload)
 				assert.strictEqual(packet.cmd, 'publish')
@@ -2397,7 +2398,7 @@ export default function abstractTest(server, config) {
 			}
 
 			client.subscribe(testPacket.topic)
-			client.on('packetreceive', (packet) => {
+			client.on('packetreceive', (packet: mqtt.Packet) => {
 				if (packet.cmd === 'publish') {
 					assert.strictEqual(packet.qos, 1)
 					assert.strictEqual(packet.topic, testPacket.topic)

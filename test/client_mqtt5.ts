@@ -1048,7 +1048,7 @@ describe('MQTT 5.0', () => {
 		}
 
 		const client = mqtt.connect(opts)
-		client.once('disconnect', (disconnectPacket) => {
+		client.once('disconnect', (disconnectPacket: mqtt.IDisconnectPacket) => {
 			assert.strictEqual(disconnectPacket.reasonCode, 128)
 			client.end(true, (err) => done(err))
 		})
