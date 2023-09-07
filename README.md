@@ -341,7 +341,15 @@ constructor.
 
 ### connectAsync([url], options)
 
-Async [`connect`](#connect). Returns a `Promise` that resolves to a `mqtt.Client` instance.
+Asynchronous wrapper around the [`connect`](#connect) function.
+
+Returns a `Promise` that resolves to a `mqtt.Client` instance when the client
+fires a `'connect'` or `'end'` event, or rejects with an error if the `'error'`
+is fired.
+
+Note that the `manualConnect` option will cause the promise returned by this
+function to never resolve or reject as the underlying client never fires any
+events.
 
 ---
 
