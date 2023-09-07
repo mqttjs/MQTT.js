@@ -355,6 +355,7 @@ export type ISubscriptionMap = {
 	resubscribe?: boolean
 }
 
+export { IConnackPacket, IDisconnectPacket, IPublishPacket, Packet }
 export type OnConnectCallback = (packet: IConnackPacket) => void
 export type OnDisconnectCallback = (packet: IDisconnectPacket) => void
 export type ClientSubscribeCallback = (
