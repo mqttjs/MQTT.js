@@ -1079,7 +1079,9 @@ export default function abstractTest(server, config) {
 			const client = connect()
 
 			client.once('connect', () => {
-				client.publish('a', 'b', () => {
+				// callback args can be typed
+				client.publish('a', 'b', (_, packet?: mqtt.Packet) => {
+					assert.isUndefined(packet)
 					client.end((err) => done(err))
 				})
 			})
@@ -1090,7 +1092,8 @@ export default function abstractTest(server, config) {
 			const opts: IClientPublishOptions = { qos: 1 }
 
 			client.once('connect', () => {
-				client.publish('a', 'b', opts, () => {
+				client.publish('a', 'b', opts, (_, packet?: mqtt.Packet) => {
+					assert.exists(packet)
 					client.end((err) => done(err))
 				})
 			})
@@ -1132,7 +1135,8 @@ export default function abstractTest(server, config) {
 				})
 
 				client.once('connect', () => {
-					client.publish('a', 'b', pubOpts, (err) => {
+					client.publish('a', 'b', pubOpts, (err, packet?: mqtt.Packet) => {
+						assert.exists(packet)
 						if (version === 5) {
 							assert.strictEqual(err.code, pubackReasonCode)
 						} else {
@@ -1153,7 +1157,8 @@ export default function abstractTest(server, config) {
 			const opts: IClientPublishOptions = { qos: 2 }
 
 			client.once('connect', () => {
-				client.publish('a', 'b', opts, () => {
+				client.publish('a', 'b', opts, (_, packet?: mqtt.Packet) => {
+					assert.exists(packet)
 					client.end((err) => done(err))
 				})
 			})
@@ -1199,7 +1204,8 @@ export default function abstractTest(server, config) {
 				})
 
 				client.once('connect', () => {
-					client.publish('a', 'b', pubOpts, (err) => {
+					client.publish('a', 'b', pubOpts, (err, packet?: mqtt.Packet) => {
+						assert.exists(packet)
 						if (version === 5) {
 							assert.strictEqual(err.code, pubrecReasonCode)
 						} else {
@@ -1908,7 +1914,9 @@ export default function abstractTest(server, config) {
 			const topic = 'topic'
 
 			client.once('connect', () => {
-				client.unsubscribe(topic, () => {
+				// callback args can be typed
+				client.unsubscribe(topic, (_, packet?: mqtt.Packet) => {
+					assert.isUndefined(packet)
 					client.end(true, done)
 				})
 			})
