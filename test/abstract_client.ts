@@ -372,7 +372,7 @@ export default function abstractTest(server, config) {
 		it('should emit connect', function _test(done) {
 			const client = connect()
 			client.once('connect', (packet: mqtt.IConnackPacket) => {
-				assert.equal(packet.cmd, "connack")
+				assert.equal(packet.cmd, 'connack')
 				client.end(true, (err) => done(err))
 			})
 			client.once('error', done)
@@ -1135,19 +1135,24 @@ export default function abstractTest(server, config) {
 				})
 
 				client.once('connect', () => {
-					client.publish('a', 'b', pubOpts, (err, packet?: mqtt.Packet) => {
-						assert.exists(packet)
-						if (version === 5) {
-							assert.strictEqual(err.code, pubackReasonCode)
-						} else {
-							assert.ifError(err)
-						}
-						setImmediate(() => {
-							client.end(() => {
-								server2.close(done)
+					client.publish(
+						'a',
+						'b',
+						pubOpts,
+						(err, packet?: mqtt.Packet) => {
+							assert.exists(packet)
+							if (version === 5) {
+								assert.strictEqual(err.code, pubackReasonCode)
+							} else {
+								assert.ifError(err)
+							}
+							setImmediate(() => {
+								client.end(() => {
+									server2.close(done)
+								})
 							})
-						})
-					})
+						},
+					)
 				})
 			})
 		})
@@ -1204,19 +1209,24 @@ export default function abstractTest(server, config) {
 				})
 
 				client.once('connect', () => {
-					client.publish('a', 'b', pubOpts, (err, packet?: mqtt.Packet) => {
-						assert.exists(packet)
-						if (version === 5) {
-							assert.strictEqual(err.code, pubrecReasonCode)
-						} else {
-							assert.ifError(err)
-						}
-						setImmediate(() => {
-							client.end(true, () => {
-								server2.close(done)
+					client.publish(
+						'a',
+						'b',
+						pubOpts,
+						(err, packet?: mqtt.Packet) => {
+							assert.exists(packet)
+							if (version === 5) {
+								assert.strictEqual(err.code, pubrecReasonCode)
+							} else {
+								assert.ifError(err)
+							}
+							setImmediate(() => {
+								client.end(true, () => {
+									server2.close(done)
+								})
 							})
-						})
-					})
+						},
+					)
 				})
 			})
 		})
@@ -2381,12 +2391,15 @@ export default function abstractTest(server, config) {
 
 			//
 			client.subscribe(testPacket.topic)
-			client.once('message', (topic, message, packet: mqtt.IPublishPacket) => {
-				assert.strictEqual(topic, testPacket.topic)
-				assert.strictEqual(message.toString(), testPacket.payload)
-				assert.strictEqual(packet.cmd, 'publish')
-				client.end(true, done)
-			})
+			client.once(
+				'message',
+				(topic, message, packet: mqtt.IPublishPacket) => {
+					assert.strictEqual(topic, testPacket.topic)
+					assert.strictEqual(message.toString(), testPacket.payload)
+					assert.strictEqual(packet.cmd, 'publish')
+					client.end(true, done)
+				},
+			)
 
 			server.once('client', (serverClient) => {
 				serverClient.on('subscribe', () => {

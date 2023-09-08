@@ -977,7 +977,10 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		return this
 	}
 
-	public publishAsync(topic: string, message: string | Buffer): Promise<Packet | undefined>
+	public publishAsync(
+		topic: string,
+		message: string | Buffer,
+	): Promise<Packet | undefined>
 	public publishAsync(
 		topic: string,
 		message: string | Buffer,
@@ -1347,7 +1350,9 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		return this
 	}
 
-	public unsubscribeAsync(topic: string | string[]): Promise<Packet | undefined>
+	public unsubscribeAsync(
+		topic: string | string[],
+	): Promise<Packet | undefined>
 	public unsubscribeAsync(
 		topic: string | string[],
 		opts?: IClientSubscribeOptions,
