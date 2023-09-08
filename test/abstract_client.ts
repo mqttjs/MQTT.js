@@ -371,7 +371,8 @@ export default function abstractTest(server, config) {
 
 		it('should emit connect', function _test(done) {
 			const client = connect()
-			client.once('connect', () => {
+			client.once('connect', (packet: mqtt.IConnackPacket) => {
+				assert.equal(packet.cmd, 'connack')
 				client.end(true, (err) => done(err))
 			})
 			client.once('error', done)
@@ -1078,7 +1079,9 @@ export default function abstractTest(server, config) {
 			const client = connect()
 
 			client.once('connect', () => {
-				client.publish('a', 'b', () => {
+				// callback args can be typed
+				client.publish('a', 'b', (_, packet?: mqtt.Packet) => {
+					assert.isUndefined(packet)
 					client.end((err) => done(err))
 				})
 			})
@@ -1089,7 +1092,8 @@ export default function abstractTest(server, config) {
 			const opts: IClientPublishOptions = { qos: 1 }
 
 			client.once('connect', () => {
-				client.publish('a', 'b', opts, () => {
+				client.publish('a', 'b', opts, (_, packet?: mqtt.Packet) => {
+					assert.exists(packet)
 					client.end((err) => done(err))
 				})
 			})
@@ -1131,18 +1135,24 @@ export default function abstractTest(server, config) {
 				})
 
 				client.once('connect', () => {
-					client.publish('a', 'b', pubOpts, (err) => {
-						if (version === 5) {
-							assert.strictEqual(err.code, pubackReasonCode)
-						} else {
-							assert.ifError(err)
-						}
-						setImmediate(() => {
-							client.end(() => {
-								server2.close(done)
+					client.publish(
+						'a',
+						'b',
+						pubOpts,
+						(err, packet?: mqtt.Packet) => {
+							assert.exists(packet)
+							if (version === 5) {
+								assert.strictEqual(err.code, pubackReasonCode)
+							} else {
+								assert.ifError(err)
+							}
+							setImmediate(() => {
+								client.end(() => {
+									server2.close(done)
+								})
 							})
-						})
-					})
+						},
+					)
 				})
 			})
 		})
@@ -1152,7 +1162,8 @@ export default function abstractTest(server, config) {
 			const opts: IClientPublishOptions = { qos: 2 }
 
 			client.once('connect', () => {
-				client.publish('a', 'b', opts, () => {
+				client.publish('a', 'b', opts, (_, packet?: mqtt.Packet) => {
+					assert.exists(packet)
 					client.end((err) => done(err))
 				})
 			})
@@ -1198,18 +1209,24 @@ export default function abstractTest(server, config) {
 				})
 
 				client.once('connect', () => {
-					client.publish('a', 'b', pubOpts, (err) => {
-						if (version === 5) {
-							assert.strictEqual(err.code, pubrecReasonCode)
-						} else {
-							assert.ifError(err)
-						}
-						setImmediate(() => {
-							client.end(true, () => {
-								server2.close(done)
+					client.publish(
+						'a',
+						'b',
+						pubOpts,
+						(err, packet?: mqtt.Packet) => {
+							assert.exists(packet)
+							if (version === 5) {
+								assert.strictEqual(err.code, pubrecReasonCode)
+							} else {
+								assert.ifError(err)
+							}
+							setImmediate(() => {
+								client.end(true, () => {
+									server2.close(done)
+								})
 							})
-						})
-					})
+						},
+					)
 				})
 			})
 		})
@@ -1907,7 +1924,9 @@ export default function abstractTest(server, config) {
 			const topic = 'topic'
 
 			client.once('connect', () => {
-				client.unsubscribe(topic, () => {
+				// callback args can be typed
+				client.unsubscribe(topic, (_, packet?: mqtt.Packet) => {
+					assert.isUndefined(packet)
 					client.end(true, done)
 				})
 			})
@@ -2372,12 +2391,15 @@ export default function abstractTest(server, config) {
 
 			//
 			client.subscribe(testPacket.topic)
-			client.once('message', (topic, message, packet) => {
-				assert.strictEqual(topic, testPacket.topic)
-				assert.strictEqual(message.toString(), testPacket.payload)
-				assert.strictEqual(packet.cmd, 'publish')
-				client.end(true, done)
-			})
+			client.once(
+				'message',
+				(topic, message, packet: mqtt.IPublishPacket) => {
+					assert.strictEqual(topic, testPacket.topic)
+					assert.strictEqual(message.toString(), testPacket.payload)
+					assert.strictEqual(packet.cmd, 'publish')
+					client.end(true, done)
+				},
+			)
 
 			server.once('client', (serverClient) => {
 				serverClient.on('subscribe', () => {
@@ -2397,7 +2419,7 @@ export default function abstractTest(server, config) {
 			}
 
 			client.subscribe(testPacket.topic)
-			client.on('packetreceive', (packet) => {
+			client.on('packetreceive', (packet: mqtt.Packet) => {
 				if (packet.cmd === 'publish') {
 					assert.strictEqual(packet.qos, 1)
 					assert.strictEqual(packet.topic, testPacket.topic)

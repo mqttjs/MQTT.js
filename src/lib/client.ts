@@ -355,6 +355,7 @@ export type ISubscriptionMap = {
 	resubscribe?: boolean
 }
 
+export { IConnackPacket, IDisconnectPacket, IPublishPacket, Packet }
 export type OnConnectCallback = (packet: IConnackPacket) => void
 export type OnDisconnectCallback = (packet: IDisconnectPacket) => void
 export type ClientSubscribeCallback = (
@@ -879,19 +880,19 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	public publish(
 		topic: string,
 		message: string | Buffer,
-		callback?: DoneCallback,
+		callback?: PacketCallback,
 	): MqttClient
 	public publish(
 		topic: string,
 		message: string | Buffer,
 		opts?: IClientPublishOptions,
-		callback?: DoneCallback,
+		callback?: PacketCallback,
 	): MqttClient
 	public publish(
 		topic: string,
 		message: string | Buffer,
 		opts?: IClientPublishOptions | DoneCallback,
-		callback?: DoneCallback,
+		callback?: PacketCallback,
 	): MqttClient {
 		this.log('publish :: message `%s` to topic `%s`', message, topic)
 		const { options } = this
@@ -976,23 +977,26 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		return this
 	}
 
-	public publishAsync(topic: string, message: string | Buffer): Promise<void>
+	public publishAsync(
+		topic: string,
+		message: string | Buffer,
+	): Promise<Packet | undefined>
 	public publishAsync(
 		topic: string,
 		message: string | Buffer,
 		opts?: IClientPublishOptions,
-	): Promise<void>
+	): Promise<Packet | undefined>
 	public publishAsync(
 		topic: string,
 		message: string | Buffer,
 		opts?: IClientPublishOptions,
-	): Promise<void> {
+	): Promise<Packet | undefined> {
 		return new Promise((resolve, reject) => {
-			this.publish(topic, message, opts, (err) => {
+			this.publish(topic, message, opts, (err, packet) => {
 				if (err) {
 					reject(err)
 				} else {
-					resolve()
+					resolve(packet)
 				}
 			})
 		})
@@ -1346,21 +1350,23 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		return this
 	}
 
-	public unsubscribeAsync(topic: string | string[]): Promise<void>
+	public unsubscribeAsync(
+		topic: string | string[],
+	): Promise<Packet | undefined>
 	public unsubscribeAsync(
 		topic: string | string[],
 		opts?: IClientSubscribeOptions,
-	): Promise<void>
+	): Promise<Packet | undefined>
 	public unsubscribeAsync(
 		topic: string | string[],
 		opts?: IClientSubscribeOptions,
-	): Promise<void> {
+	): Promise<Packet | undefined> {
 		return new Promise((resolve, reject) => {
-			this.unsubscribe(topic, opts, (err) => {
+			this.unsubscribe(topic, opts, (err, packet) => {
 				if (err) {
 					reject(err)
 				} else {
-					resolve()
+					resolve(packet)
 				}
 			})
 		})

@@ -1048,10 +1048,13 @@ describe('MQTT 5.0', () => {
 		}
 
 		const client = mqtt.connect(opts)
-		client.once('disconnect', (disconnectPacket) => {
-			assert.strictEqual(disconnectPacket.reasonCode, 128)
-			client.end(true, (err) => done(err))
-		})
+		client.once(
+			'disconnect',
+			(disconnectPacket: mqtt.IDisconnectPacket) => {
+				assert.strictEqual(disconnectPacket.reasonCode, 128)
+				client.end(true, (err) => done(err))
+			},
+		)
 	})
 
 	it('pubrec handling custom reason code', function test(done) {
