@@ -1,5 +1,12 @@
 
 
+## [5.0.5](https://github.com/mqttjs/MQTT.js/compare/v5.0.4...v5.0.5) (2023-09-08)
+
+
+### Bug Fixes
+
+* publish/subscribe/unsubscribe types and missing types exports ([#1688](https://github.com/mqttjs/MQTT.js/issues/1688)) ([2df6af7](https://github.com/mqttjs/MQTT.js/commit/2df6af717a7458eff1bf69be026734c973ade0a6))
+
 ## [5.0.4](https://github.com/mqttjs/MQTT.js/compare/v5.0.3...v5.0.4) (2023-08-31)
 
 
