@@ -108,11 +108,16 @@ function createWebSocket(
 	debug(
 		`creating new Websocket for url: ${url} and protocol: ${websocketSubProtocol}`,
 	)
-	const socket = new WS(
-		url,
-		[websocketSubProtocol],
-		opts.wsOptions as ClientOptions,
-	)
+	let socket: WS
+	if (opts.createWebsocket) {
+		socket = opts.createWebsocket(url, [websocketSubProtocol], opts)
+	} else {
+		socket = new WS(
+			url,
+			[websocketSubProtocol],
+			opts.wsOptions as ClientOptions,
+		)
+	}
 	return socket
 }
 
@@ -123,7 +128,12 @@ function createBrowserWebSocket(client: MqttClient, opts: IClientOptions) {
 			: 'mqtt'
 
 	const url = buildUrl(opts, client)
-	const socket = new WebSocket(url, [websocketSubProtocol])
+	let socket: WebSocket
+	if (opts.createWebsocket) {
+		socket = opts.createWebsocket(url, [websocketSubProtocol], opts)
+	} else {
+		socket = new WebSocket(url, [websocketSubProtocol])
+	}
 	socket.binaryType = 'arraybuffer'
 	return socket
 }
