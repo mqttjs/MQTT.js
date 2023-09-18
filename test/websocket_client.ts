@@ -7,6 +7,7 @@ import ports from './helpers/port_list'
 import { MqttServerNoWait } from './server'
 import * as mqtt from '../src/mqtt'
 import { IClientOptions } from '../src/lib/client'
+import { describe, it } from 'node:test'
 
 const port = 9999
 const httpServer = http.createServer()
@@ -93,7 +94,7 @@ describe('Websocket Client', () => {
 		return { ...baseConfig, ...(custom || {}) }
 	}
 
-	it('should use mqtt as the protocol by default', function test(done) {
+	it('should use mqtt as the protocol by default', function _test(t, done) {
 		httpServer.once('client', (client) => {
 			assert.strictEqual(client.protocol, 'mqtt')
 		})
@@ -104,7 +105,7 @@ describe('Websocket Client', () => {
 		})
 	})
 
-	it('should be able to transform the url (for e.g. to sign it)', function test(done) {
+	it('should be able to transform the url (for e.g. to sign it)', function _test(t, done) {
 		const baseUrl = 'ws://localhost:9999/mqtt'
 		const sig = '?AUTH=token'
 		const expected = baseUrl + sig
@@ -132,7 +133,7 @@ describe('Websocket Client', () => {
 		})
 	})
 
-	it('should use mqttv3.1 as the protocol if using v3.1', function test(done) {
+	it('should use mqttv3.1 as the protocol if using v3.1', function _test(t, done) {
 		httpServer.once('client', (client) => {
 			assert.strictEqual(client.protocol, 'mqttv3.1')
 		})
@@ -150,66 +151,71 @@ describe('Websocket Client', () => {
 	})
 
 	describe('reconnecting', () => {
-		it('should reconnect to multiple host-ports-protocol combinations if servers is passed', function test(done) {
-			let serverPort42Connected = false
-			const handler = (serverClient) => {
-				serverClient.on('connect', (packet) => {
-					serverClient.connack({ returnCode: 0 })
-				})
-			}
-			this.timeout(15000)
-			const actualURL41 = 'wss://localhost:9917/'
-			const actualURL42 = 'ws://localhost:9918/'
-			const serverPort41 = new MqttServerNoWait(handler).listen(
-				ports.PORTAND41,
-			)
-			const serverPort42 = new MqttServerNoWait(handler).listen(
-				ports.PORTAND42,
-			)
+		it(
+			'should reconnect to multiple host-ports-protocol combinations if servers is passed',
+			{
+				timeout: 15000,
+			},
+			function _test(t, done) {
+				let serverPort42Connected = false
+				const handler = (serverClient) => {
+					serverClient.on('connect', (packet) => {
+						serverClient.connack({ returnCode: 0 })
+					})
+				}
+				const actualURL41 = 'wss://localhost:9917/'
+				const actualURL42 = 'ws://localhost:9918/'
+				const serverPort41 = new MqttServerNoWait(handler).listen(
+					ports.PORTAND41,
+				)
+				const serverPort42 = new MqttServerNoWait(handler).listen(
+					ports.PORTAND42,
+				)
 
-			serverPort42.on('listening', () => {
-				const client = mqtt.connect({
-					protocol: 'wss',
-					servers: [
-						{
-							port: ports.PORTAND42,
-							host: 'localhost',
-							protocol: 'ws',
-						},
-						{ port: ports.PORTAND41, host: 'localhost' },
-					],
-					keepalive: 50,
-				})
-				serverPort41.once('client', (c) => {
-					assert.equal(
-						(client.stream as any).url,
-						actualURL41,
-						'Protocol for second client should use the default protocol: wss, on port: port + 41.',
-					)
-					assert(serverPort42Connected)
-					c.stream.destroy()
-					client.end(true, (err1) => {
-						serverPort41.close((err2) => {
-							done(err1 || err2)
+				serverPort42.on('listening', () => {
+					const client = mqtt.connect({
+						protocol: 'wss',
+						servers: [
+							{
+								port: ports.PORTAND42,
+								host: 'localhost',
+								protocol: 'ws',
+							},
+							{ port: ports.PORTAND41, host: 'localhost' },
+						],
+						keepalive: 50,
+					})
+					serverPort41.once('client', (c) => {
+						assert.equal(
+							(client.stream as any).url,
+							actualURL41,
+							'Protocol for second client should use the default protocol: wss, on port: port + 41.',
+						)
+						assert(serverPort42Connected)
+						c.stream.destroy()
+						client.end(true, (err1) => {
+							serverPort41.close((err2) => {
+								done(err1 || err2)
+							})
 						})
 					})
-				})
-				serverPort42.once('client', (c) => {
-					serverPort42Connected = true
-					assert.equal(
-						(client.stream as any).url,
-						actualURL42,
-						'Protocol for connection should use ws, on port: port + 42.',
-					)
-					c.stream.destroy()
-					serverPort42.close()
-				})
+					serverPort42.once('client', (c) => {
+						serverPort42Connected = true
+						assert.equal(
+							(client.stream as any).url,
+							actualURL42,
+							'Protocol for connection should use ws, on port: port + 42.',
+						)
+						c.stream.destroy()
+						serverPort42.close()
+					})
 
-				client.once('connect', () => {
-					client.stream.destroy()
+					client.once('connect', () => {
+						client.stream.destroy()
+					})
 				})
-			})
-		})
+			},
+		)
 	})
 
 	abstractClientTests(httpServer, makeOptions())

@@ -3,6 +3,7 @@ import serverBuilder from './server_helpers_for_client_tests'
 import UniqueMessageIdProvider from '../src/lib/unique-message-id-provider'
 import ports from './helpers/port_list'
 import { IClientOptions } from 'src/mqtt'
+import { describe } from 'node:test'
 
 describe('UniqueMessageIdProviderMqttClient', () => {
 	const server = serverBuilder('mqtt')

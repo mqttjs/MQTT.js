@@ -2,10 +2,11 @@ import fs from 'fs'
 import path from 'path'
 import * as mqtt from '../src/mqtt'
 import { IClientOptions } from '../src/lib/client'
+import { describe, it } from 'node:test'
 
 describe('mqtt', () => {
 	describe('#connect', () => {
-		it('should return an MqttClient when connect is called with mqtt:/ url', function test(done) {
+		it('should return an MqttClient when connect is called with mqtt:/ url', function _test(t, done) {
 			const c = mqtt.connect('mqtt://localhost:1883')
 
 			c.should.be.instanceOf(mqtt.MqttClient)
@@ -24,7 +25,7 @@ describe('mqtt', () => {
 			}).should.throw('Missing protocol')
 		})
 
-		it('should return an MqttClient with username option set', function test(done) {
+		it('should return an MqttClient with username option set', function _test(t, done) {
 			const c = mqtt.connect('mqtt://user:pass@localhost:1883')
 
 			c.should.be.instanceOf(mqtt.MqttClient)
@@ -33,7 +34,7 @@ describe('mqtt', () => {
 			c.end((err) => done(err))
 		})
 
-		it('should return an MqttClient with username and password options set', function test(done) {
+		it('should return an MqttClient with username and password options set', function _test(t, done) {
 			const c = mqtt.connect('mqtt://user@localhost:1883')
 
 			c.should.be.instanceOf(mqtt.MqttClient)
@@ -41,7 +42,7 @@ describe('mqtt', () => {
 			c.end((err) => done(err))
 		})
 
-		it('should return an MqttClient with the clientid with random value', function test(done) {
+		it('should return an MqttClient with the clientid with random value', function _test(t, done) {
 			const c = mqtt.connect('mqtt://user@localhost:1883')
 
 			c.should.be.instanceOf(mqtt.MqttClient)
@@ -49,7 +50,7 @@ describe('mqtt', () => {
 			c.end((err) => done(err))
 		})
 
-		it('should return an MqttClient with the clientid with empty string', function test(done) {
+		it('should return an MqttClient with the clientid with empty string', function _test(t, done) {
 			const c = mqtt.connect('mqtt://user@localhost:1883?clientId=')
 
 			c.should.be.instanceOf(mqtt.MqttClient)
@@ -57,7 +58,7 @@ describe('mqtt', () => {
 			c.end((err) => done(err))
 		})
 
-		it('should return an MqttClient with the clientid option set', function test(done) {
+		it('should return an MqttClient with the clientid option set', function _test(t, done) {
 			const c = mqtt.connect('mqtt://user@localhost:1883?clientId=123')
 
 			c.should.be.instanceOf(mqtt.MqttClient)
@@ -65,14 +66,14 @@ describe('mqtt', () => {
 			c.end((err) => done(err))
 		})
 
-		it('should return an MqttClient when connect is called with tcp:/ url', function test(done) {
+		it('should return an MqttClient when connect is called with tcp:/ url', function _test(t, done) {
 			const c = mqtt.connect('tcp://localhost')
 
 			c.should.be.instanceOf(mqtt.MqttClient)
 			c.end((err) => done(err))
 		})
 
-		it('should return an MqttClient with correct host when called with a host and port', function test(done) {
+		it('should return an MqttClient with correct host when called with a host and port', function _test(t, done) {
 			const c = mqtt.connect('tcp://user:pass@localhost:1883')
 
 			c.options.should.have.property('hostname', 'localhost')
@@ -86,7 +87,7 @@ describe('mqtt', () => {
 			caPaths: [path.join(__dirname, 'helpers', 'public-cert.pem')],
 		}
 
-		it('should return an MqttClient when connect is called with mqtts:/ url', function test(done) {
+		it('should return an MqttClient when connect is called with mqtts:/ url', function _test(t, done) {
 			const c = mqtt.connect('mqtts://localhost', sslOpts)
 
 			c.options.should.have.property('protocol', 'mqtts')
@@ -97,7 +98,7 @@ describe('mqtt', () => {
 			c.end((err) => done(err))
 		})
 
-		it('should return an MqttClient when connect is called with ssl:/ url', function test(done) {
+		it('should return an MqttClient when connect is called with ssl:/ url', function _test(t, done) {
 			const c = mqtt.connect('ssl://localhost', sslOpts)
 
 			c.options.should.have.property('protocol', 'ssl')
@@ -108,7 +109,7 @@ describe('mqtt', () => {
 			c.end((err) => done(err))
 		})
 
-		it('should return an MqttClient when connect is called with ws:/ url', function test(done) {
+		it('should return an MqttClient when connect is called with ws:/ url', function _test(t, done) {
 			const c = mqtt.connect('ws://localhost', sslOpts)
 
 			c.options.should.have.property('protocol', 'ws')
@@ -119,7 +120,7 @@ describe('mqtt', () => {
 			c.end((err) => done(err))
 		})
 
-		it('should return an MqttClient when connect is called with wss:/ url', function test(done) {
+		it('should return an MqttClient when connect is called with wss:/ url', function _test(t, done) {
 			const c = mqtt.connect('wss://localhost', sslOpts)
 
 			c.options.should.have.property('protocol', 'wss')
@@ -158,7 +159,7 @@ describe('mqtt', () => {
 			}).should.throw()
 		})
 
-		it('should return a MqttClient with mqtts set when connect is called key and cert set and protocol mqtt', function test(done) {
+		it('should return a MqttClient with mqtts set when connect is called key and cert set and protocol mqtt', function _test(t, done) {
 			sslOpts2.protocol = 'mqtt'
 			const c = mqtt.connect(sslOpts2)
 
@@ -170,7 +171,7 @@ describe('mqtt', () => {
 			c.end((err) => done(err))
 		})
 
-		it('should return a MqttClient with mqtts set when connect is called key and cert set and protocol mqtts', function test(done) {
+		it('should return a MqttClient with mqtts set when connect is called key and cert set and protocol mqtts', function _test(t, done) {
 			sslOpts2.protocol = 'mqtts'
 			const c = mqtt.connect(sslOpts2)
 
@@ -182,7 +183,7 @@ describe('mqtt', () => {
 			c.end((err) => done(err))
 		})
 
-		it('should return a MqttClient with wss set when connect is called key and cert set and protocol ws', function test(done) {
+		it('should return a MqttClient with wss set when connect is called key and cert set and protocol ws', function _test(t, done) {
 			sslOpts2.protocol = 'ws'
 			const c = mqtt.connect(sslOpts2)
 
@@ -194,7 +195,7 @@ describe('mqtt', () => {
 			c.end((err) => done(err))
 		})
 
-		it('should return a MqttClient with wss set when connect is called key and cert set and protocol wss', function test(done) {
+		it('should return a MqttClient with wss set when connect is called key and cert set and protocol wss', function _test(t, done) {
 			sslOpts2.protocol = 'wss'
 			const c = mqtt.connect(sslOpts2)
 
@@ -206,7 +207,7 @@ describe('mqtt', () => {
 			c.end((err) => done(err))
 		})
 
-		it('should return an MqttClient with the clientid with option of clientId as empty string', function test(done) {
+		it('should return an MqttClient with the clientid with option of clientId as empty string', function _test(t, done) {
 			const c = mqtt.connect('mqtt://localhost:1883', {
 				clientId: '',
 			})
@@ -216,7 +217,7 @@ describe('mqtt', () => {
 			c.end((err) => done(err))
 		})
 
-		it('should return an MqttClient with the clientid with option of clientId empty', function test(done) {
+		it('should return an MqttClient with the clientid with option of clientId empty', function _test(t, done) {
 			const c = mqtt.connect('mqtt://localhost:1883')
 
 			c.should.be.instanceOf(mqtt.MqttClient)
@@ -224,7 +225,7 @@ describe('mqtt', () => {
 			c.end((err) => done(err))
 		})
 
-		it('should return an MqttClient with the clientid with option of with specific clientId', function test(done) {
+		it('should return an MqttClient with the clientid with option of with specific clientId', function _test(t, done) {
 			const c = mqtt.connect('mqtt://localhost:1883', {
 				clientId: '123',
 			})

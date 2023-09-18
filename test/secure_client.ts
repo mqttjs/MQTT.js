@@ -5,6 +5,7 @@ import abstractClientTests from './abstract_client'
 import { MqttSecureServer, MqttServerListener } from './server'
 import { assert } from 'chai'
 import 'should'
+import { describe, it, beforeEach, afterEach } from 'node:test'
 
 const port = 9899
 const KEY = path.join(__dirname, 'helpers', 'tls-key.pem')
@@ -81,7 +82,7 @@ describe('MqttSecureClient', () => {
 	abstractClientTests(server, config)
 
 	describe('with secure parameters', () => {
-		it('should validate successfully the CA', function test(done) {
+		it('should validate successfully the CA', function _test(t, done) {
 			const client = mqtt.connect({
 				protocol: 'mqtts',
 				port,
@@ -98,7 +99,7 @@ describe('MqttSecureClient', () => {
 			})
 		})
 
-		it('should validate successfully the CA using URI', function test(done) {
+		it('should validate successfully the CA using URI', function _test(t, done) {
 			const client = mqtt.connect(`mqtts://localhost:${port}`, {
 				ca: [fs.readFileSync(CERT)],
 				rejectUnauthorized: true,
@@ -113,7 +114,7 @@ describe('MqttSecureClient', () => {
 			})
 		})
 
-		it('should validate successfully the CA using URI with path', function test(done) {
+		it('should validate successfully the CA using URI with path', function _test(t, done) {
 			const client = mqtt.connect(`mqtts://localhost:${port}/`, {
 				ca: [fs.readFileSync(CERT)],
 				rejectUnauthorized: true,
@@ -128,7 +129,7 @@ describe('MqttSecureClient', () => {
 			})
 		})
 
-		it('should validate unsuccessfully the CA', function test(done) {
+		it('should validate unsuccessfully the CA', function _test(t, done) {
 			const client = mqtt.connect({
 				protocol: 'mqtts',
 				port,
@@ -142,7 +143,7 @@ describe('MqttSecureClient', () => {
 			})
 		})
 
-		it('should emit close on TLS error', function test(done) {
+		it('should emit close on TLS error', function _test(t, done) {
 			const client = mqtt.connect({
 				protocol: 'mqtts',
 				port,
@@ -157,7 +158,7 @@ describe('MqttSecureClient', () => {
 			})
 		})
 
-		it('should support SNI on the TLS connection', function test(done) {
+		it('should support SNI on the TLS connection', function _test(t, done) {
 			const hostname = 'localhost'
 
 			server.removeAllListeners('secureConnection') // clear eventHandler

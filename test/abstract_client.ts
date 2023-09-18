@@ -22,6 +22,7 @@ import {
 import { IPublishPacket, IPubrelPacket, ISubackPacket, QoS } from 'mqtt-packet'
 import { DoneCallback, ErrorWithReasonCode } from 'src/lib/shared'
 import { fail } from 'assert'
+import { describe, it, beforeEach, afterEach } from 'node:test'
 
 /**
  * These tests try to be consistent with names for servers (brokers) and clients,
@@ -56,7 +57,7 @@ export default function abstractTest(server, config) {
 	}
 
 	describe('closing', () => {
-		it('should emit close if stream closes', function _test(done) {
+		it('should emit close if stream closes', function _test(t, done) {
 			const client = connect()
 
 			client.once('connect', () => {
@@ -67,7 +68,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should mark the client as disconnected', function _test(done) {
+		it('should mark the client as disconnected', function _test(t, done) {
 			const client = connect()
 
 			client.once('close', () => {
@@ -85,7 +86,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should stop ping timer if stream closes', function _test(done) {
+		it('should stop ping timer if stream closes', function _test(t, done) {
 			const client = connect()
 
 			client.once('close', () => {
@@ -99,7 +100,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should emit close after end called', function _test(done) {
+		it('should emit close after end called', function _test(t, done) {
 			const client = connect()
 
 			client.once('close', () => {
@@ -111,7 +112,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should emit end after end called and client must be disconnected', function _test(done) {
+		it('should emit end after end called and client must be disconnected', function _test(t, done) {
 			const client = connect()
 
 			client.once('end', () => {
@@ -126,7 +127,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should pass store close error to end callback but not to end listeners (incomingStore)', function _test(done) {
+		it('should pass store close error to end callback but not to end listeners (incomingStore)', function _test(t, done) {
 			const store = new Store()
 			const client = connect({ incomingStore: store })
 
@@ -150,7 +151,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should pass store close error to end callback but not to end listeners (outgoingStore)', function _test(done) {
+		it('should pass store close error to end callback but not to end listeners (outgoingStore)', function _test(t, done) {
 			const store = new Store()
 			const client = connect({ outgoingStore: store })
 
@@ -174,7 +175,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should return `this` if end called twice', function _test(done) {
+		it('should return `this` if end called twice', function _test(t, done) {
 			const client = connect()
 
 			client.once('connect', () => {
@@ -188,7 +189,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should emit end only on first client end', function _test(done) {
+		it('should emit end only on first client end', function _test(t, done) {
 			const client = connect()
 
 			client.once('end', () => {
@@ -205,7 +206,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should stop ping timer after end called', function _test(done) {
+		it('should stop ping timer after end called', function _test(t, done) {
 			const client = connect()
 
 			client.once('connect', () => {
@@ -217,7 +218,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should be able to end even on a failed connection', function _test(done) {
+		it('should be able to end even on a failed connection', function _test(t, done) {
 			const client = connect({ host: 'this_hostname_should_not_exist' })
 
 			const timeout = setTimeout(() => {
@@ -232,7 +233,7 @@ export default function abstractTest(server, config) {
 			}, 200)
 		})
 
-		it('should emit end even on a failed connection', function _test(done) {
+		it('should emit end even on a failed connection', function _test(t, done) {
 			const client = connect({ host: 'this_hostname_should_not_exist' })
 
 			const timeout = setTimeout(() => {
@@ -250,7 +251,7 @@ export default function abstractTest(server, config) {
 			}, 200)
 		})
 
-		it.skip('should emit end only once for a reconnecting client', function _test(done) {
+		it.skip('should emit end only once for a reconnecting client', function _test(t, done) {
 			// I want to fix this test, but it will take signficant work, so I am marking it as a skipping test right now.
 			// Reason for it is that there are overlaps in the reconnectTimer and connectTimer. In the PR for this code
 			// there will be gists showing the difference between a successful test here and a failed test. For now we
@@ -278,7 +279,7 @@ export default function abstractTest(server, config) {
 	})
 
 	describe('connecting', () => {
-		it('should connect to the broker', function _test(done) {
+		it('should connect to the broker', function _test(t, done) {
 			const client = connect()
 			client.on('error', done)
 
@@ -287,7 +288,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should send a default client id', function _test(done) {
+		it('should send a default client id', function _test(t, done) {
 			const client = connect()
 			client.on('error', done)
 
@@ -299,7 +300,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should send be clean by default', function _test(done) {
+		it('should send be clean by default', function _test(t, done) {
 			const client = connect()
 			client.on('error', done)
 
@@ -311,7 +312,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should connect with the given client id', function _test(done) {
+		it('should connect with the given client id', function _test(t, done) {
 			const client = connect({ clientId: 'testclient' })
 			client.on('error', (err) => {
 				throw err
@@ -325,7 +326,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should connect with the client id and unclean state', function _test(done) {
+		it('should connect with the client id and unclean state', function _test(t, done) {
 			const client = connect({ clientId: 'testclient', clean: false })
 			client.on('error', (err) => {
 				throw err
@@ -340,7 +341,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should require a clientId with clean=false', function _test(done) {
+		it('should require a clientId with clean=false', function _test(t, done) {
 			try {
 				const client = connect({ clean: false })
 				client.on('error', (err) => {
@@ -355,7 +356,7 @@ export default function abstractTest(server, config) {
 			}
 		})
 
-		it('should default to localhost', function _test(done) {
+		it('should default to localhost', function _test(t, done) {
 			const client = connect({ clientId: 'testclient' })
 			client.on('error', (err) => {
 				throw err
@@ -369,7 +370,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should emit connect', function _test(done) {
+		it('should emit connect', function _test(t, done) {
 			const client = connect()
 			client.once('connect', (packet: mqtt.IConnackPacket) => {
 				assert.equal(packet.cmd, 'connack')
@@ -378,7 +379,7 @@ export default function abstractTest(server, config) {
 			client.once('error', done)
 		})
 
-		it('should provide connack packet with connect event', function _test(done) {
+		it('should provide connack packet with connect event', function _test(t, done) {
 			const connack =
 				version === 5
 					? { reasonCode: 0, sessionPresent: undefined }
@@ -402,7 +403,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should mark the client as connected', function _test(done) {
+		it('should mark the client as connected', function _test(t, done) {
 			const client = connect()
 			client.once('connect', () => {
 				assert.isTrue(client.connected)
@@ -410,7 +411,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should emit error on invalid clientId', function _test(done) {
+		it('should emit error on invalid clientId', function _test(t, done) {
 			const client = connect({ clientId: 'invalid' })
 			client.once('connect', () => {
 				done(new Error('Should not emit connect'))
@@ -422,7 +423,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should emit error event if the socket refuses the connection', function _test(done) {
+		it('should emit error event if the socket refuses the connection', function _test(t, done) {
 			// fake a port
 			const client = connect({ port: 4557 })
 
@@ -432,7 +433,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should have different client ids', function _test(done) {
+		it('should have different client ids', function _test(t, done) {
 			// bug identified in this test: the client.end callback is invoked twice, once when the `end`
 			// method completes closing the stores and invokes the callback, and another time when the
 			// stream is closed. When the stream is closed, for some reason the closeStores method is called
@@ -453,7 +454,7 @@ export default function abstractTest(server, config) {
 	})
 
 	describe('handling offline states', () => {
-		it('should emit offline event once when the client transitions from connected states to disconnected ones', function _test(done) {
+		it('should emit offline event once when the client transitions from connected states to disconnected ones', function _test(t, done) {
 			const client = connect({ reconnectPeriod: 20 })
 
 			client.on('connect', () => {
@@ -465,7 +466,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should emit offline event once when the client (at first) can NOT connect to servers', function _test(done) {
+		it('should emit offline event once when the client (at first) can NOT connect to servers', function _test(t, done) {
 			// fake a port
 			const client = connect({ reconnectPeriod: 20, port: 4557 })
 
@@ -478,7 +479,7 @@ export default function abstractTest(server, config) {
 	})
 
 	describe('topic validations when subscribing', () => {
-		it('should be ok for well-formated topics', function _test(done) {
+		it('should be ok for well-formated topics', function _test(t, done) {
 			const client = connect()
 			client.subscribe(
 				[
@@ -505,7 +506,7 @@ export default function abstractTest(server, config) {
 			)
 		})
 
-		it('should return an error (via callbacks) for topic #/event', function _test(done) {
+		it('should return an error (via callbacks) for topic #/event', function _test(t, done) {
 			const client = connect()
 			client.subscribe(['#/event', 'event#', 'event+'], (err) => {
 				client.end(false, () => {
@@ -517,7 +518,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should return an empty array for duplicate subs', function _test(done) {
+		it('should return an empty array for duplicate subs', function _test(t, done) {
 			const client = connect()
 			client.subscribe('event', (err, granted1) => {
 				if (err) {
@@ -534,7 +535,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should return an error (via callbacks) for topic #/event', function _test(done) {
+		it('should return an error (via callbacks) for topic #/event', function _test(t, done) {
 			const client = connect()
 			client.subscribe('#/event', (err) => {
 				client.end(() => {
@@ -546,7 +547,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should return an error (via callbacks) for topic event#', function _test(done) {
+		it('should return an error (via callbacks) for topic event#', function _test(t, done) {
 			const client = connect()
 			client.subscribe('event#', (err) => {
 				client.end(() => {
@@ -558,7 +559,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should return an error (via callbacks) for topic system/#/event', function _test(done) {
+		it('should return an error (via callbacks) for topic system/#/event', function _test(t, done) {
 			const client = connect()
 			client.subscribe('system/#/event', (err) => {
 				client.end(() => {
@@ -570,7 +571,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should return an error (via callbacks) for empty topic list', function _test(done) {
+		it('should return an error (via callbacks) for empty topic list', function _test(t, done) {
 			const client = connect()
 			client.subscribe([], (subErr) => {
 				client.end((endErr) => {
@@ -582,7 +583,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should return an error (via callbacks) for topic system/+/#/event', function _test(done) {
+		it('should return an error (via callbacks) for topic system/+/#/event', function _test(t, done) {
 			const client = connect()
 			client.subscribe('system/+/#/event', (subErr) => {
 				client.end(true, (endErr) => {
@@ -596,7 +597,7 @@ export default function abstractTest(server, config) {
 	})
 
 	describe('offline messages', () => {
-		it('should queue message until connected', function _test(done) {
+		it('should queue message until connected', function _test(t, done) {
 			const client = connect()
 
 			client.publish('test', 'test')
@@ -612,7 +613,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should not queue qos 0 messages if queueQoSZero is false', function _test(done) {
+		it('should not queue qos 0 messages if queueQoSZero is false', function _test(t, done) {
 			const client = connect({ queueQoSZero: false })
 
 			client.publish('test', 'test', { qos: 0 })
@@ -624,7 +625,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should queue qos != 0 messages', function _test(done) {
+		it('should queue qos != 0 messages', function _test(t, done) {
 			const client = connect({ queueQoSZero: false })
 
 			client.publish('test', 'test', { qos: 1 })
@@ -639,7 +640,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should not interrupt messages', function _test(done) {
+		it('should not interrupt messages', function _test(t, done) {
 			let client = null
 			let publishCount = 0
 			const incomingStore = new mqtt.Store({ clean: false })
@@ -709,7 +710,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should not overtake the messages stored in the level-db-store', function _test(done) {
+		it('should not overtake the messages stored in the level-db-store', function _test(t, done) {
 			const storePath = fs.mkdtempSync('test-store_')
 			const store = levelStore(storePath)
 			let client = null
@@ -793,7 +794,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should call cb if an outgoing QoS 0 message is not sent', function _test(done) {
+		it('should call cb if an outgoing QoS 0 message is not sent', function _test(t, done) {
 			const client = connect({ queueQoSZero: false })
 			let called = false
 
@@ -809,7 +810,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should delay ending up until all inflight messages are delivered', function _test(done) {
+		it('should delay ending up until all inflight messages are delivered', function _test(t, done) {
 			const client = connect()
 			let subscribeCalled = false
 
@@ -826,7 +827,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('wait QoS 1 publish messages', function _test(done) {
+		it('wait QoS 1 publish messages', function _test(t, done) {
 			const client = connect()
 			let messageReceived = false
 
@@ -852,14 +853,14 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('does not wait acks when force-closing', function _test(done) {
+		it('does not wait acks when force-closing', function _test(t, done) {
 			// non-running broker
 			const client = connect('mqtt://localhost:8993')
 			client.publish('test', 'test', { qos: 1 })
 			client.end(true, done)
 		})
 
-		it('should call cb if store.put fails', function _test(done) {
+		it('should call cb if store.put fails', function _test(t, done) {
 			const store = new Store()
 			store.put = (packet, cb) => {
 				process.nextTick(cb, new Error('oops there is an error'))
@@ -878,7 +879,7 @@ export default function abstractTest(server, config) {
 	})
 
 	describe('publishing', () => {
-		it('should publish a message (offline)', function _test(done) {
+		it('should publish a message (offline)', function _test(t, done) {
 			const client = connect()
 			const payload = 'test'
 			const topic = 'test'
@@ -902,7 +903,7 @@ export default function abstractTest(server, config) {
 			}
 		})
 
-		it('should publish a message (online)', function _test(done) {
+		it('should publish a message (online)', function _test(t, done) {
 			const client = connect()
 			const payload = 'test'
 			const topic = 'test'
@@ -928,7 +929,7 @@ export default function abstractTest(server, config) {
 			}
 		})
 
-		it('should publish a message (retain, offline)', function _test(done) {
+		it('should publish a message (retain, offline)', function _test(t, done) {
 			const client = connect({ queueQoSZero: true })
 			const payload = 'test'
 			const topic = 'test'
@@ -950,7 +951,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should emit a packetsend event', function _test(done) {
+		it('should emit a packetsend event', function _test(t, done) {
 			const client = connect()
 			const payload = 'test_payload'
 			const topic = 'testTopic'
@@ -970,7 +971,7 @@ export default function abstractTest(server, config) {
 			client.publish(topic, payload)
 		})
 
-		it('should accept options', function _test(done) {
+		it('should accept options', function _test(t, done) {
 			const client = connect()
 			const payload = 'test'
 			const topic = 'test'
@@ -1005,7 +1006,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should publish with the default options for an empty parameter', function _test(done) {
+		it('should publish with the default options for an empty parameter', function _test(t, done) {
 			const client = connect()
 			const payload = 'test'
 			const topic = 'test'
@@ -1039,7 +1040,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should mark a message as duplicate when "dup" option is set', function _test(done) {
+		it('should mark a message as duplicate when "dup" option is set', function _test(t, done) {
 			const client = connect()
 			const payload = 'duplicated-test'
 			const topic = 'test'
@@ -1075,7 +1076,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should fire a callback (qos 0)', function _test(done) {
+		it('should fire a callback (qos 0)', function _test(t, done) {
 			const client = connect()
 
 			client.once('connect', () => {
@@ -1087,7 +1088,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should fire a callback (qos 1)', function _test(done) {
+		it('should fire a callback (qos 1)', function _test(t, done) {
 			const client = connect()
 			const opts: IClientPublishOptions = { qos: 1 }
 
@@ -1099,7 +1100,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should fire a callback (qos 1) on error', function _test(done) {
+		it('should fire a callback (qos 1) on error', function _test(t, done) {
 			// 145 = Packet Identifier in use
 			const pubackReasonCode = 145
 			const pubOpts = { qos: 1 }
@@ -1157,7 +1158,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should fire a callback (qos 2)', function _test(done) {
+		it('should fire a callback (qos 2)', function _test(t, done) {
 			const client = connect()
 			const opts: IClientPublishOptions = { qos: 2 }
 
@@ -1169,7 +1170,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should fire a callback (qos 2) on error', function _test(done) {
+		it('should fire a callback (qos 2) on error', function _test(t, done) {
 			// 145 = Packet Identifier in use
 			const pubrecReasonCode = 145
 			const pubOpts = { qos: 2 }
@@ -1231,7 +1232,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should support UTF-8 characters in topic', function _test(done) {
+		it('should support UTF-8 characters in topic', function _test(t, done) {
 			const client = connect()
 
 			client.once('connect', () => {
@@ -1241,7 +1242,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should support UTF-8 characters in payload', function _test(done) {
+		it('should support UTF-8 characters in payload', function _test(t, done) {
 			const client = connect()
 
 			client.once('connect', () => {
@@ -1251,7 +1252,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should publish 10 QoS 2 and receive them', function _test(done) {
+		it('should publish 10 QoS 2 and receive them', function _test(t, done) {
 			const client = connect()
 			let countSent = 0
 			let countReceived = 0
@@ -1343,12 +1344,12 @@ export default function abstractTest(server, config) {
 
 		const qosTests = [0, 1, 2]
 		qosTests.forEach((qos) => {
-			it(`should publish 10 QoS ${qos}and receive them only when \`handleMessage\` finishes`, function _test(done) {
+			it(`should publish 10 QoS ${qos}and receive them only when \`handleMessage\` finishes`, function _test(t, done) {
 				testQosHandleMessage(qos, done)
 			})
 		})
 
-		it('should not send a `puback` if the execution of `handleMessage` fails for messages with QoS `1`', function _test(done) {
+		it('should not send a `puback` if the execution of `handleMessage` fails for messages with QoS `1`', function _test(t, done) {
 			const client = connect()
 
 			client.handleMessage = (packet, callback) => {
@@ -1385,7 +1386,7 @@ export default function abstractTest(server, config) {
 		it(
 			'should silently ignore errors thrown by `handleMessage` and return when no callback is passed ' +
 				'into `handlePublish` method',
-			function _test(done) {
+			function _test(t, done) {
 				const client = connect()
 
 				client.handleMessage = (packet, callback) => {
@@ -1411,7 +1412,7 @@ export default function abstractTest(server, config) {
 			},
 		)
 
-		it('should handle error with async incoming store in QoS 1 `handlePublish` method', function _test(done) {
+		it('should handle error with async incoming store in QoS 1 `handlePublish` method', function _test(t, done) {
 			class AsyncStore extends Store {
 				put(packet, cb) {
 					process.nextTick(() => {
@@ -1446,7 +1447,7 @@ export default function abstractTest(server, config) {
 			)
 		})
 
-		it('should handle error with async incoming store in QoS 2 `handlePublish` method', function _test(done) {
+		it('should handle error with async incoming store in QoS 2 `handlePublish` method', function _test(t, done) {
 			class AsyncStore extends Store {
 				put(packet, cb) {
 					process.nextTick(() => {
@@ -1496,7 +1497,7 @@ export default function abstractTest(server, config) {
 			)
 		})
 
-		it('should handle error with async incoming store in QoS 2 `handlePubrel` method', function _test(done) {
+		it('should handle error with async incoming store in QoS 2 `handlePubrel` method', function _test(t, done) {
 			class AsyncStore extends Store {
 				put(packet, cb) {
 					process.nextTick(() => {
@@ -1543,7 +1544,7 @@ export default function abstractTest(server, config) {
 			)
 		})
 
-		it('should handle success with async incoming store in QoS 2 `handlePubrel` method', function _test(done) {
+		it('should handle success with async incoming store in QoS 2 `handlePubrel` method', function _test(t, done) {
 			let delComplete = false
 			class AsyncStore extends Store {
 				put(packet, cb) {
@@ -1592,7 +1593,7 @@ export default function abstractTest(server, config) {
 			)
 		})
 
-		it('should not send a `pubcomp` if the execution of `handleMessage` fails for messages with QoS `2`', function _test(done) {
+		it('should not send a `pubcomp` if the execution of `handleMessage` fails for messages with QoS `2`', function _test(t, done) {
 			const store = new Store()
 			const client = connect({ incomingStore: store })
 
@@ -1639,7 +1640,7 @@ export default function abstractTest(server, config) {
 		it(
 			'should silently ignore errors thrown by `handleMessage` and return when no callback is passed ' +
 				'into `handlePubrel` method',
-			function _test(done) {
+			function _test(t, done) {
 				const store = new Store()
 				const client = connect({ incomingStore: store })
 
@@ -1683,7 +1684,7 @@ export default function abstractTest(server, config) {
 			},
 		)
 
-		it('should keep message order', function _test(done) {
+		it('should keep message order', function _test(t, done) {
 			let publishCount = 0
 			let reconnect = false
 			let client: mqtt.MqttClient
@@ -1806,7 +1807,7 @@ export default function abstractTest(server, config) {
 		callbackStorePutByQoSParameters.forEach((test) => {
 			if (test.args[0] === 0) {
 				// QoS 0
-				it(`should not call cbStorePut when publishing message with QoS \`${test.args[0]}\` and clean \`${test.args[1]}\``, function _test(done) {
+				it(`should not call cbStorePut when publishing message with QoS \`${test.args[0]}\` and clean \`${test.args[1]}\``, function _test(t, done) {
 					testCallbackStorePutByQoS(
 						test.args[0] as number,
 						test.args[1] as boolean,
@@ -1816,7 +1817,7 @@ export default function abstractTest(server, config) {
 				})
 			} else {
 				// QoS 1 and 2
-				it(`should call cbStorePut before publish completes when publishing message with QoS \`${test.args[0]}\` and clean \`${test.args[1]}\``, function _test(done) {
+				it(`should call cbStorePut before publish completes when publishing message with QoS \`${test.args[0]}\` and clean \`${test.args[1]}\``, function _test(t, done) {
 					testCallbackStorePutByQoS(
 						test.args[0] as number,
 						test.args[1] as boolean,
@@ -1829,7 +1830,7 @@ export default function abstractTest(server, config) {
 	})
 
 	describe('unsubscribing', () => {
-		it('should send an unsubscribe packet (offline)', function _test(done) {
+		it('should send an unsubscribe packet (offline)', function _test(t, done) {
 			const client = connect()
 			let received = false
 
@@ -1847,7 +1848,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should send an unsubscribe packet', function _test(done) {
+		it('should send an unsubscribe packet', function _test(t, done) {
 			const client = connect()
 			const topic = 'topic'
 			let received = false
@@ -1868,7 +1869,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should emit a packetsend event', function _test(done) {
+		it('should emit a packetsend event', function _test(t, done) {
 			const client = connect()
 			const testTopic = 'testTopic'
 
@@ -1883,7 +1884,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should emit a packetreceive event', function _test(done) {
+		it('should emit a packetreceive event', function _test(t, done) {
 			const client = connect()
 			const testTopic = 'testTopic'
 
@@ -1898,7 +1899,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should accept an array of unsubs', function _test(done) {
+		it('should accept an array of unsubs', function _test(t, done) {
 			const client = connect()
 			const topics = ['topic1', 'topic2']
 			let received = false
@@ -1919,7 +1920,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should fire a callback on unsuback', function _test(done) {
+		it('should fire a callback on unsuback', function _test(t, done) {
 			const client = connect()
 			const topic = 'topic'
 
@@ -1938,7 +1939,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should unsubscribe from a chinese topic', function _test(done) {
+		it('should unsubscribe from a chinese topic', function _test(t, done) {
 			const client = connect()
 			const topic = '中国'
 
@@ -1959,7 +1960,7 @@ export default function abstractTest(server, config) {
 	})
 
 	describe('keepalive', () => {
-		let clock
+		let clock: sinon.SinonFakeTimers
 
 		// eslint-disable-next-line
 		beforeEach(() => {
@@ -1970,7 +1971,7 @@ export default function abstractTest(server, config) {
 			clock.restore()
 		})
 
-		it('should checkPing at keepalive interval', function _test(done) {
+		it('should checkPing at keepalive interval', function _test(t, done) {
 			const interval = 3
 			const client = connect({ keepalive: interval })
 
@@ -1991,7 +1992,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should not checkPing if publishing at a higher rate than keepalive', function _test(done) {
+		it('should not checkPing if publishing at a higher rate than keepalive', function _test(t, done) {
 			const intervalMs = 3000
 			const client = connect({ keepalive: intervalMs / 1000 })
 
@@ -2009,7 +2010,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should checkPing if publishing at a higher rate than keepalive and reschedulePings===false', function _test(done) {
+		it('should checkPing if publishing at a higher rate than keepalive and reschedulePings===false', function _test(t, done) {
 			const intervalMs = 3000
 			const client = connect({
 				keepalive: intervalMs / 1000,
@@ -2032,7 +2033,7 @@ export default function abstractTest(server, config) {
 	})
 
 	describe('pinging', () => {
-		it('should set a ping timer', function _test(done) {
+		it('should set a ping timer', function _test(t, done) {
 			const client = connect({ keepalive: 3 })
 			client.once('connect', () => {
 				assert.exists(client.pingTimer)
@@ -2040,7 +2041,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should not set a ping timer keepalive=0', function _test(done) {
+		it('should not set a ping timer keepalive=0', function _test(t, done) {
 			const client = connect({ keepalive: 0 })
 			client.on('connect', () => {
 				assert.notExists(client.pingTimer)
@@ -2048,27 +2049,32 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should reconnect if pingresp is not sent', function _test(done) {
-			this.timeout(4000)
-			const client = connect({ keepalive: 1, reconnectPeriod: 100 })
+		it(
+			'should reconnect if pingresp is not sent',
+			{
+				timeout: 4000,
+			},
+			function _test(t, done) {
+				const client = connect({ keepalive: 1, reconnectPeriod: 100 })
 
-			// Fake no pingresp being send by stubbing the _handlePingresp function
-			client.on('packetreceive', (packet) => {
-				if (packet.cmd === 'pingresp') {
-					setImmediate(() => {
-						client.pingResp = false
-					})
-				}
-			})
-
-			client.once('connect', () => {
-				client.once('connect', () => {
-					client.end(true, done)
+				// Fake no pingresp being send by stubbing the _handlePingresp function
+				client.on('packetreceive', (packet) => {
+					if (packet.cmd === 'pingresp') {
+						setImmediate(() => {
+							client.pingResp = false
+						})
+					}
 				})
-			})
-		})
 
-		it('should not reconnect if pingresp is successful', function _test(done) {
+				client.once('connect', () => {
+					client.once('connect', () => {
+						client.end(true, done)
+					})
+				})
+			},
+		)
+
+		it('should not reconnect if pingresp is successful', function _test(t, done) {
 			const client = connect({ keepalive: 100 })
 			client.once('close', () => {
 				done(new Error('Client closed connection'))
@@ -2079,7 +2085,7 @@ export default function abstractTest(server, config) {
 			}, 1000)
 		})
 
-		it('should defer the next ping when sending a control packet', function _test(done) {
+		it('should defer the next ping when sending a control packet', function _test(t, done) {
 			const client = connect({ keepalive: 1 })
 
 			client.once('connect', () => {
@@ -2106,7 +2112,7 @@ export default function abstractTest(server, config) {
 	})
 
 	describe('subscribing', () => {
-		it('should send a subscribe message (offline)', function _test(done) {
+		it('should send a subscribe message (offline)', function _test(t, done) {
 			const client = connect()
 
 			client.subscribe('test')
@@ -2118,7 +2124,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should send a subscribe message', function _test(done) {
+		it('should send a subscribe message', function _test(t, done) {
 			const client = connect()
 			const topic = 'test'
 
@@ -2143,7 +2149,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should emit a packetsend event', function _test(done) {
+		it('should emit a packetsend event', function _test(t, done) {
 			const client = connect()
 			const testTopic = 'testTopic'
 
@@ -2158,7 +2164,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should emit a packetreceive event', function _test(done) {
+		it('should emit a packetreceive event', function _test(t, done) {
 			const client = connect()
 			const testTopic = 'testTopic'
 
@@ -2173,7 +2179,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should accept an array of subscriptions', function _test(done) {
+		it('should accept an array of subscriptions', function _test(t, done) {
 			const client = connect()
 			const subs = ['test1', 'test2']
 
@@ -2203,7 +2209,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should accept a hash of subscriptions', function _test(done) {
+		it('should accept a hash of subscriptions', function _test(t, done) {
 			const client = connect()
 			const topics: ISubscriptionMap = {
 				test1: { qos: 0 },
@@ -2239,7 +2245,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should accept an options parameter', function _test(done) {
+		it('should accept an options parameter', function _test(t, done) {
 			const client = connect()
 			const topic = 'test'
 			const opts: IClientSubscribeOptions = { qos: 1 }
@@ -2269,7 +2275,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should subscribe with the default options for an empty options parameter', function _test(done) {
+		it('should subscribe with the default options for an empty options parameter', function _test(t, done) {
 			const client = connect()
 			const topic = 'test'
 			const defaultOpts = { qos: 0 }
@@ -2296,7 +2302,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should fire a callback on suback', function _test(done) {
+		it('should fire a callback on suback', function _test(t, done) {
 			const client = connect()
 			const topic = 'test'
 
@@ -2323,7 +2329,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should fire a callback with error if disconnected (options provided)', function _test(done) {
+		it('should fire a callback with error if disconnected (options provided)', function _test(t, done) {
 			const client = connect()
 			const topic = 'test'
 			client.once('connect', () => {
@@ -2337,7 +2343,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should fire a callback with error if disconnected (options not provided)', function _test(done) {
+		it('should fire a callback with error if disconnected (options not provided)', function _test(t, done) {
 			const client = connect()
 			const topic = 'test'
 
@@ -2352,7 +2358,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should subscribe with a chinese topic', function _test(done) {
+		it('should subscribe with a chinese topic', function _test(t, done) {
 			const client = connect()
 			const topic = '中国'
 
@@ -2379,7 +2385,7 @@ export default function abstractTest(server, config) {
 	})
 
 	describe('receiving messages', () => {
-		it('should fire the message event', function _test(done) {
+		it('should fire the message event', function _test(t, done) {
 			const client = connect()
 			const testPacket = {
 				topic: 'test',
@@ -2408,7 +2414,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should emit a packetreceive event', function _test(done) {
+		it('should emit a packetreceive event', function _test(t, done) {
 			const client = connect()
 			const testPacket = {
 				topic: 'test',
@@ -2439,7 +2445,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should support binary data', function _test(done) {
+		it('should support binary data', function _test(t, done) {
 			const client = connect({ encoding: 'binary' })
 			const testPacket = {
 				topic: 'test',
@@ -2465,7 +2471,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should emit a message event (qos=2)', function _test(done) {
+		it('should emit a message event (qos=2)', function _test(t, done) {
 			const client = connect()
 			const testPacket = {
 				topic: 'test',
@@ -2493,7 +2499,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should emit a message event (qos=2) - repeated publish', function _test(done) {
+		it('should emit a message event (qos=2) - repeated publish', function _test(t, done) {
 			const client = connect()
 			const testPacket = {
 				topic: 'test',
@@ -2529,7 +2535,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should support a chinese topic', function _test(done) {
+		it('should support a chinese topic', function _test(t, done) {
 			const client = connect({ encoding: 'binary' })
 			const testPacket = {
 				topic: '国',
@@ -2558,7 +2564,7 @@ export default function abstractTest(server, config) {
 	})
 
 	describe('qos handling', () => {
-		it('should follow qos 0 semantics (trivial)', function _test(done) {
+		it('should follow qos 0 semantics (trivial)', function _test(t, done) {
 			const client = connect()
 			const testTopic = 'test'
 			const testMessage = 'message'
@@ -2581,7 +2587,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should follow qos 1 semantics', function _test(done) {
+		it('should follow qos 1 semantics', function _test(t, done) {
 			const client = connect()
 			const testTopic = 'test'
 			const testMessage = 'message'
@@ -2608,7 +2614,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should follow qos 2 semantics', function _test(done) {
+		it('should follow qos 2 semantics', function _test(t, done) {
 			const client = connect()
 			const testTopic = 'test'
 			const testMessage = 'message'
@@ -2705,7 +2711,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should should empty the incoming store after a qos 2 handshake is completed', function _test(done) {
+		it('should should empty the incoming store after a qos 2 handshake is completed', function _test(t, done) {
 			const client = connect()
 			const testTopic = 'test'
 			const testMessage = 'message'
@@ -2842,17 +2848,17 @@ export default function abstractTest(server, config) {
 			})
 		}
 
-		it('handle qos 2 messages exactly once when multiple pubrel received', function _test(done) {
+		it('handle qos 2 messages exactly once when multiple pubrel received', function _test(t, done) {
 			testMultiplePubrel(false, done)
 		})
 
-		it('handle qos 2 messages exactly once when multiple pubrel received and sending pubcomp fails on client', function _test(done) {
+		it('handle qos 2 messages exactly once when multiple pubrel received and sending pubcomp fails on client', function _test(t, done) {
 			testMultiplePubrel(true, done)
 		})
 	})
 
 	describe('auto reconnect', () => {
-		it('should mark the client disconnecting if #end called', function _test(done) {
+		it('should mark the client disconnecting if #end called', function _test(t, done) {
 			const client = connect()
 
 			client.end(true, (err) => {
@@ -2861,7 +2867,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should reconnect after stream disconnect', function _test(done) {
+		it('should reconnect after stream disconnect', function _test(t, done) {
 			const client = connect()
 
 			let tryReconnect = true
@@ -2876,7 +2882,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it("should emit 'reconnect' when reconnecting", function _test(done) {
+		it("should emit 'reconnect' when reconnecting", function _test(t, done) {
 			const client = connect()
 			let tryReconnect = true
 			let reconnectEvent = false
@@ -2896,7 +2902,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it("should emit 'offline' after going offline", function _test(done) {
+		it("should emit 'offline' after going offline", function _test(t, done) {
 			const client = connect()
 
 			let tryReconnect = true
@@ -2917,7 +2923,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should not reconnect if it was ended by the user', function _test(done) {
+		it('should not reconnect if it was ended by the user', function _test(t, done) {
 			const client = connect()
 
 			client.on('connect', () => {
@@ -2926,7 +2932,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should setup a reconnect timer on disconnect', function _test(done) {
+		it('should setup a reconnect timer on disconnect', function _test(t, done) {
 			const client = connect()
 
 			client.once('connect', () => {
@@ -2946,44 +2952,49 @@ export default function abstractTest(server, config) {
 			{ period: 4000 },
 		]
 		reconnectPeriodTests.forEach((test) => {
-			it(`should allow specification of a reconnect period (${test.period}ms)`, function _test(done) {
-				this.timeout(10000)
-				let end
-				const reconnectSlushTime = 200
-				const client = connect({ reconnectPeriod: test.period })
-				let reconnect = false
-				const start = Date.now()
+			it(
+				`should allow specification of a reconnect period (${test.period}ms)`,
+				{
+					timeout: 10000,
+				},
+				function _test(t, done) {
+					let end
+					const reconnectSlushTime = 200
+					const client = connect({ reconnectPeriod: test.period })
+					let reconnect = false
+					const start = Date.now()
 
-				client.on('connect', () => {
-					if (!reconnect) {
-						client.stream.end()
-						reconnect = true
-					} else {
-						end = Date.now()
-						client.end(() => {
-							const reconnectPeriodDuringTest = end - start
-							if (
-								reconnectPeriodDuringTest >=
-									test.period - reconnectSlushTime &&
-								reconnectPeriodDuringTest <=
-									test.period + reconnectSlushTime
-							) {
-								// give the connection a 200 ms slush window
-								done()
-							} else {
-								done(
-									new Error(
-										`Strange reconnect period: ${reconnectPeriodDuringTest}`,
-									),
-								)
-							}
-						})
-					}
-				})
-			})
+					client.on('connect', () => {
+						if (!reconnect) {
+							client.stream.end()
+							reconnect = true
+						} else {
+							end = Date.now()
+							client.end(() => {
+								const reconnectPeriodDuringTest = end - start
+								if (
+									reconnectPeriodDuringTest >=
+										test.period - reconnectSlushTime &&
+									reconnectPeriodDuringTest <=
+										test.period + reconnectSlushTime
+								) {
+									// give the connection a 200 ms slush window
+									done()
+								} else {
+									done(
+										new Error(
+											`Strange reconnect period: ${reconnectPeriodDuringTest}`,
+										),
+									)
+								}
+							})
+						}
+					})
+				},
+			)
 		})
 
-		it('should always cleanup successfully on reconnection', function _test(done) {
+		it('should always cleanup successfully on reconnection', function _test(t, done) {
 			const client = connect({
 				host: 'this_hostname_should_not_exist',
 				connectTimeout: 0,
@@ -2995,40 +3006,45 @@ export default function abstractTest(server, config) {
 			}, 50)
 		})
 
-		it('should resend in-flight QoS 1 publish messages from the client', function _test(done) {
-			this.timeout(4000)
-			const client = connect({ reconnectPeriod: 200 })
-			let serverPublished = false
-			let clientCalledBack = false
+		it(
+			'should resend in-flight QoS 1 publish messages from the client',
+			{
+				timeout: 4000,
+			},
+			function _test(t, done) {
+				const client = connect({ reconnectPeriod: 200 })
+				let serverPublished = false
+				let clientCalledBack = false
 
-			server.once('client', (serverClient) => {
-				serverClient.on('connect', () => {
-					setImmediate(() => {
-						serverClient.stream.destroy()
+				server.once('client', (serverClient) => {
+					serverClient.on('connect', () => {
+						setImmediate(() => {
+							serverClient.stream.destroy()
+						})
+					})
+
+					server.once('client', (serverClientNew) => {
+						serverClientNew.on('publish', () => {
+							serverPublished = true
+							check()
+						})
 					})
 				})
 
-				server.once('client', (serverClientNew) => {
-					serverClientNew.on('publish', () => {
-						serverPublished = true
-						check()
-					})
+				client.publish('hello', 'world', { qos: 1 }, () => {
+					clientCalledBack = true
+					check()
 				})
-			})
 
-			client.publish('hello', 'world', { qos: 1 }, () => {
-				clientCalledBack = true
-				check()
-			})
-
-			function check() {
-				if (serverPublished && clientCalledBack) {
-					client.end(true, done)
+				function check() {
+					if (serverPublished && clientCalledBack) {
+						client.end(true, done)
+					}
 				}
-			}
-		})
+			},
+		)
 
-		it('should not resend in-flight publish messages if disconnecting', function _test(done) {
+		it('should not resend in-flight publish messages if disconnecting', function _test(t, done) {
 			const client = connect({ reconnectPeriod: 200 })
 			let serverPublished = false
 			let clientCalledBack = false
@@ -3054,7 +3070,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should resend in-flight QoS 2 publish messages from the client', function _test(done) {
+		it('should resend in-flight QoS 2 publish messages from the client', function _test(t, done) {
 			const client = connect({ reconnectPeriod: 200 })
 			let serverPublished = false
 			let clientCalledBack = false
@@ -3088,7 +3104,7 @@ export default function abstractTest(server, config) {
 			}
 		})
 
-		it('should not resend in-flight QoS 1 removed publish messages from the client', function _test(done) {
+		it('should not resend in-flight QoS 1 removed publish messages from the client', function _test(t, done) {
 			const client = connect({ reconnectPeriod: 200 })
 			let clientCalledBack = false
 
@@ -3127,7 +3143,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should not resend in-flight QoS 2 removed publish messages from the client', function _test(done) {
+		it('should not resend in-flight QoS 2 removed publish messages from the client', function _test(t, done) {
 			const client = connect({ reconnectPeriod: 200 })
 			let clientCalledBack = false
 
@@ -3159,7 +3175,7 @@ export default function abstractTest(server, config) {
 			client.end(true, done)
 		})
 
-		it('should resubscribe when reconnecting', function _test(done) {
+		it('should resubscribe when reconnecting', function _test(t, done) {
 			const client = connect({ reconnectPeriod: 100 })
 			let tryReconnect = true
 			let reconnectEvent = false
@@ -3187,7 +3203,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should resubscribe when clean=false and sessionPresent=false', function _test(done) {
+		it('should resubscribe when clean=false and sessionPresent=false', function _test(t, done) {
 			const client = connect({
 				clientId: 'test',
 				reconnectPeriod: 100,
@@ -3220,7 +3236,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should not resubscribe when reconnecting if resubscribe is disabled', function _test(done) {
+		it('should not resubscribe when reconnecting if resubscribe is disabled', function _test(t, done) {
 			const client = connect({ reconnectPeriod: 100, resubscribe: false })
 			let tryReconnect = true
 			let reconnectEvent = false
@@ -3253,7 +3269,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should not resubscribe when reconnecting if suback is error', function _test(done) {
+		it('should not resubscribe when reconnecting if suback is error', function _test(t, done) {
 			let tryReconnect = true
 			let reconnectEvent = false
 			const server2 = serverBuilder(config.protocol, (serverClient) => {
@@ -3310,7 +3326,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should preserved incomingStore after disconnecting if clean is false', function _test(done) {
+		it('should preserved incomingStore after disconnecting if clean is false', function _test(t, done) {
 			let reconnect = false
 			let client: mqtt.MqttClient
 			const incomingStore = new mqtt.Store({ clean: false })
@@ -3376,7 +3392,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should clear outgoing if close from server', function _test(done) {
+		it('should clear outgoing if close from server', function _test(t, done) {
 			let reconnect = false
 			let client: mqtt.MqttClient
 			const server2 = serverBuilder(config.protocol, (serverClient) => {
@@ -3430,7 +3446,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should resend in-flight QoS 1 publish messages from the client if clean is false', function _test(done) {
+		it('should resend in-flight QoS 1 publish messages from the client if clean is false', function _test(t, done) {
 			let reconnect = false
 			let client: mqtt.MqttClient
 			const incomingStore = new mqtt.Store({ clean: false })
@@ -3478,7 +3494,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should resend in-flight QoS 2 publish messages from the client if clean is false', function _test(done) {
+		it('should resend in-flight QoS 2 publish messages from the client if clean is false', function _test(t, done) {
 			let reconnect = false
 			let client: mqtt.MqttClient
 			const incomingStore = new mqtt.Store({ clean: false })
@@ -3526,7 +3542,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should resend in-flight QoS 2 pubrel messages from the client if clean is false', function _test(done) {
+		it('should resend in-flight QoS 2 pubrel messages from the client if clean is false', function _test(t, done) {
 			let reconnect = false
 			let client: mqtt.MqttClient
 			const incomingStore = new mqtt.Store({ clean: false })
@@ -3588,7 +3604,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should resend in-flight publish messages by published order', function _test(done) {
+		it('should resend in-flight publish messages by published order', function _test(t, done) {
 			let publishCount = 0
 			let reconnect = false
 			let disconnectOnce = true
@@ -3668,7 +3684,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should be able to pub/sub if reconnect() is called at close handler', function _test(done) {
+		it('should be able to pub/sub if reconnect() is called at close handler', function _test(t, done) {
 			const client = connect({ reconnectPeriod: 0 })
 			let tryReconnect = true
 			let reconnectEvent = false
@@ -3698,7 +3714,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		it('should be able to pub/sub if reconnect() is called at out of close handler', function _test(done) {
+		it('should be able to pub/sub if reconnect() is called at out of close handler', function _test(t, done) {
 			const client = connect({ reconnectPeriod: 0 })
 			let tryReconnect = true
 			let reconnectEvent = false
@@ -3730,7 +3746,7 @@ export default function abstractTest(server, config) {
 			})
 		})
 
-		context('with alternate server client', () => {
+		describe('with alternate server client', () => {
 			let cachedClientListeners
 			const connack =
 				version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
@@ -3747,7 +3763,7 @@ export default function abstractTest(server, config) {
 				})
 			})
 
-			it('should resubscribe even if disconnect is before suback', function _test(done) {
+			it('should resubscribe even if disconnect is before suback', function _test(t, done) {
 				const client = connect({ reconnectPeriod: 100, ...config })
 				let subscribeCount = 0
 				let connectCount = 0
@@ -3778,7 +3794,7 @@ export default function abstractTest(server, config) {
 				client.subscribe('hello')
 			})
 
-			it('should resubscribe exactly once', function _test(done) {
+			it('should resubscribe exactly once', function _test(t, done) {
 				const client = connect({ reconnectPeriod: 100, ...config })
 				let subscribeCount = 0
 
@@ -3809,7 +3825,7 @@ export default function abstractTest(server, config) {
 	})
 
 	describe('message id to subscription topic mapping', () => {
-		it('should not create a mapping if resubscribe is disabled', function _test(done) {
+		it('should not create a mapping if resubscribe is disabled', function _test(t, done) {
 			const client = connect({ resubscribe: false })
 			client.subscribe('test1')
 			client.subscribe('test2')
@@ -3817,7 +3833,7 @@ export default function abstractTest(server, config) {
 			client.end(true, done)
 		})
 
-		it('should create a mapping for each subscribe call', function _test(done) {
+		it('should create a mapping for each subscribe call', function _test(t, done) {
 			const client = connect()
 			client.subscribe('test1')
 			assert.strictEqual(Object.keys(client.messageIdToTopic).length, 1)
@@ -3832,7 +3848,7 @@ export default function abstractTest(server, config) {
 			client.end(true, done)
 		})
 
-		it('should remove the mapping after suback', function _test(done) {
+		it('should remove the mapping after suback', function _test(t, done) {
 			const client = connect()
 			client.once('connect', () => {
 				client.subscribe('test1', { qos: 2 }, () => {
