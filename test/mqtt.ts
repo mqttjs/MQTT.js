@@ -3,6 +3,7 @@ import path from 'path'
 import * as mqtt from '../src/mqtt'
 import { IClientOptions } from '../src/lib/client'
 import { describe, it } from 'node:test'
+import 'should'
 
 describe('mqtt', () => {
 	describe('#connect', () => {

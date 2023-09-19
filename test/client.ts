@@ -14,7 +14,7 @@ import _debug from 'debug'
 import { MqttServer } from './server'
 import abstractClientTests from './abstract_client'
 import { IClientOptions } from 'src/lib/client'
-import { describe, it } from 'node:test'
+import { describe, it, after } from 'node:test'
 
 const debug = _debug('mqttjs:client-test')
 
@@ -585,7 +585,7 @@ describe('MqttClient', () => {
 			{
 				timeout: 15000,
 			},
-			function _test(t, done) {
+			function _test(t) {
 				// eslint-disable-next-line no-async-promise-executor
 				return new Promise<void>(async (resolve, reject) => {
 					server.once('client', (serverClient) => {
@@ -615,7 +615,7 @@ describe('MqttClient', () => {
 			{
 				timeout: 5000,
 			},
-			async function _test(t, done) {
+			async function _test(t) {
 				let error = false
 
 				try {
@@ -637,7 +637,7 @@ describe('MqttClient', () => {
 			{
 				timeout: 5000,
 			},
-			async function _test(t, done) {
+			async function _test(t) {
 				let error = false
 
 				try {

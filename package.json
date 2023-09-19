@@ -56,7 +56,7 @@
     "build:browser": "rimraf dist/ && mkdirp dist/ && browserify build/mqtt.js --standalone mqtt > dist/mqtt.js && terser dist/mqtt.js --compress --mangle --output dist/mqtt.min.js",
     "build": "npm run build:ts && npm run build:browser",
     "prepare": "npm run build",
-    "unit-test:node": "node_modules/.bin/nyc --reporter=lcov --reporter=text node --test --loader tsx test/*.ts",
+    "unit-test:node": "node_modules/.bin/nyc --reporter=lcov --reporter=text node -r ts-node/register test/runTests.ts",
     "unit-test:browser": "airtap --server test/browser/server.js test/browser/test.js",
     "test:node": "npm run unit-test:node && codecov",
     "test:browser": "npm run build && npm run unit-test:browser",
