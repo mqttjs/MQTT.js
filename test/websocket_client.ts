@@ -10,10 +10,14 @@ import { IClientOptions } from '../src/lib/client'
 
 const port = 9999
 const httpServer = http.createServer()
-
+let lastProcotols = new Set<string>()
 function attachWebsocketServer(httpServer2) {
 	const webSocketServer = new WebSocket.Server({
 		server: httpServer2,
+		handleProtocols: (protocols: Set<string>, request: any) => {
+			lastProcotols = protocols
+			return [...protocols][0]
+		},
 		perMessageDeflate: false,
 	})
 
@@ -128,6 +132,34 @@ describe('Websocket Client', () => {
 			// `url` is set in `connect/ws.ts` `streamBuilder`
 			assert.equal((client.stream as any).url, expected)
 			assert.equal(actual, expected)
+			client.end(true, (err) => done(err))
+		})
+	})
+
+	it('should be able to create custom Websocket instance', function test(done) {
+		const baseUrl = 'ws://localhost:9999/mqtt'
+		let urlInCallback: string
+		const opts = makeOptions({
+			path: '/mqtt',
+			createWebsocket(
+				url: string,
+				websocketSubProtocols: string[],
+				options: IClientOptions,
+			) {
+				urlInCallback = url
+				assert.equal(url, baseUrl)
+				const subProtocols = [
+					websocketSubProtocols[0],
+					'myCustomSubprotocol',
+				]
+				return new WebSocket(url, subProtocols)
+			},
+		})
+		const client = mqtt.connect(opts)
+		client.on('connect', () => {
+			assert.equal((client.stream as any).url, urlInCallback)
+			assert.equal(baseUrl, urlInCallback)
+			assert.equal('myCustomSubprotocol', [...lastProcotols][1])
 			client.end(true, (err) => done(err))
 		})
 	})

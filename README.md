@@ -237,6 +237,28 @@ use the latest auth token, you must have some outside mechanism running that
 handles application-level authentication refreshing so that the websocket
 connection can simply grab the latest valid token or signed url.
 
+#### Customize Websockets with `createWebsocket` (Websocket Only)
+
+When you need to add a custom websocket subprotocol or header to open a connection
+through a proxy with custom authentication this callback allows you to create your own
+instance of a websocket which will be used in the mqtt client.
+
+```js
+  const createWebsocket = createWebsocket(url, websocketSubProtocols, options) => {
+    const subProtocols = [
+      websocketSubProtocols[0],
+      'myCustomSubprotocolOrOAuthToken',
+    ]
+    return new WebSocket(url, subProtocols)
+  }
+
+    const connection = await mqtt.connectAsync(<wss url>, {
+      ...,
+      createWebsocket: createWebsocket,
+    });
+```
+
+
 #### Enabling Reconnection with `reconnectPeriod` option
 
 To ensure that the mqtt client automatically tries to reconnect when the
@@ -429,6 +451,8 @@ The arguments are:
   - `transformWsUrl` : optional `(url, options, client) => url` function
     For ws/wss protocols only. Can be used to implement signing
     urls which upon reconnect can have become expired.
+  - `createWebsocket` : optional `url, websocketSubProtocols, options) => Websocket` function
+      For ws/wss protocols only. Can be used to implement a custom websocket subprotocol or implementation.
   - `resubscribe` : if connection is broken and reconnects,
     subscribed topics are automatically subscribed again (default `true`)
   - `messageIdProvider`: custom messageId provider. when `new UniqueMessageIdProvider()` is set, then non conflict messageId is provided.
