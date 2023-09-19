@@ -214,10 +214,15 @@ describe('MqttClient', () => {
 				timeout: 30000,
 			},
 			function _test(t, done) {
+				const args = ['-r', 'ts-node/register']
+
+				if (process.env.DEBUG_SERVER) {
+					args.unshift('--inspect')
+				}
 				const innerServer = fork(
 					path.join(__dirname, 'helpers', 'server_process.ts'),
 					{
-						execArgv: ['--inspect', '-r', 'ts-node/register'],
+						execArgv: args,
 					},
 				)
 				innerServer.on('close', (code) => {
