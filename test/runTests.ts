@@ -7,8 +7,6 @@ const files = readdirSync(__dirname)
 	.filter((f) => f.endsWith('.ts'))
 	.map((f) => `${__dirname}/${f}`)
 
-console.log('Running tests:')
-
-run({ files, timeout: 60 * 1000 })
+run({ files, timeout: 60 * 1000, concurrency: 2 })
 	.compose(tap)
 	.pipe(process.stdout)
