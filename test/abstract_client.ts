@@ -7,7 +7,6 @@ import fs from 'fs'
 import levelStore from 'mqtt-level-store'
 import * as mqtt from '../src/mqtt'
 import Store from '../src/lib/store'
-import ports from './helpers/port_list'
 import serverBuilder from './server_helpers_for_client_tests'
 import handlePubrel from '../src/lib/handlers/pubrel'
 import handle from '../src/lib/handlers/index'
@@ -45,7 +44,7 @@ import { describe, it, beforeEach, afterEach } from 'node:test'
  *
  */
 
-export default function abstractTest(server, config) {
+export default function abstractTest(server, config, ports) {
 	const version = config.protocolVersion || 4
 
 	function connect(opts?: IClientOptions | string) {

@@ -8,7 +8,7 @@ import mqttPacket from 'mqtt-packet'
 import { Duplex } from 'readable-stream'
 import Connection from 'mqtt-connection'
 import util from 'util'
-import ports from './helpers/port_list'
+import getPorts from './helpers/port_list'
 import serverBuilder from './server_helpers_for_client_tests'
 import _debug from 'debug'
 import { MqttServer } from './server'
@@ -17,6 +17,8 @@ import { IClientOptions } from 'src/lib/client'
 import { describe, it, after } from 'node:test'
 
 const debug = _debug('mqttjs:client-test')
+
+const ports = getPorts(2)
 
 describe('MqttClient', () => {
 	let client: mqtt.MqttClient
@@ -36,7 +38,7 @@ describe('MqttClient', () => {
 		process.exit(0)
 	})
 
-	abstractClientTests(server, config)
+	abstractClientTests(server, config, ports)
 
 	describe('creating', () => {
 		it('should allow instantiation of MqttClient', function _test(t, done) {

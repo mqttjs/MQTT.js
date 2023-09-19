@@ -3,9 +3,11 @@ import * as mqtt from '../src/mqtt'
 import abstractClientTests from './abstract_client'
 import { MqttServer } from './server'
 import serverBuilder from './server_helpers_for_client_tests'
-import ports from './helpers/port_list'
+import getPorts from './helpers/port_list'
 import { ErrorWithReasonCode } from '../src/lib/shared'
 import { after, describe, it } from 'node:test'
+
+const ports = getPorts(1)
 
 describe('MQTT 5.0', () => {
 	const server = serverBuilder('mqtt').listen(ports.PORTAND115)
@@ -25,7 +27,7 @@ describe('MQTT 5.0', () => {
 		process.exit(0)
 	})
 
-	abstractClientTests(server, config)
+	abstractClientTests(server, config, ports)
 
 	it(
 		'topic should be complemented on receive',

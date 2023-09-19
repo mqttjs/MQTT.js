@@ -3,11 +3,13 @@ import WebSocket from 'ws'
 import MQTTConnection from 'mqtt-connection'
 import assert from 'assert'
 import abstractClientTests from './abstract_client'
-import ports from './helpers/port_list'
+import getPorts from './helpers/port_list'
 import { MqttServerNoWait } from './server'
 import * as mqtt from '../src/mqtt'
 import { IClientOptions } from '../src/lib/client'
 import { after, describe, it } from 'node:test'
+
+const ports = getPorts(4)
 
 const port = 9999
 const httpServer = http.createServer()
@@ -259,5 +261,5 @@ describe('Websocket Client', () => {
 		)
 	})
 
-	abstractClientTests(httpServer, makeOptions())
+	abstractClientTests(httpServer, makeOptions(), ports)
 })

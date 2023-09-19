@@ -1,9 +1,11 @@
 import abstractClientTests from './abstract_client'
 import serverBuilder from './server_helpers_for_client_tests'
 import UniqueMessageIdProvider from '../src/lib/unique-message-id-provider'
-import ports from './helpers/port_list'
+import getPorts from './helpers/port_list'
 import { IClientOptions } from 'src/mqtt'
 import { describe, after } from 'node:test'
+
+const ports = getPorts(3)
 
 describe('UniqueMessageIdProviderMqttClient', () => {
 	const server = serverBuilder('mqtt')
@@ -23,5 +25,5 @@ describe('UniqueMessageIdProviderMqttClient', () => {
 		process.exit(0)
 	})
 
-	abstractClientTests(server, config)
+	abstractClientTests(server, config, ports)
 })
