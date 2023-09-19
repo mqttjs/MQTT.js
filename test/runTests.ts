@@ -25,7 +25,11 @@ const summary: string[] = []
 
 testStream.once('test:fail', (data) => {
 	exitCode = 1
-	summary.push(`${data.file} - Test ${data.name} failed:\n${data.details} `)
+	summary.push(
+		`✖ ${data.file} - Test ${data.name} failed in ${Math.round(
+			data.details.duration_ms,
+		)}ms:\n${data.details.error} `,
+	)
 })
 
 testStream.once('test:stderr', (data) => {
@@ -36,8 +40,8 @@ testStream.once('test:stderr', (data) => {
 testStream.once('end', () => {
 	if (summary.length > 0) {
 		console.error('--- ERRORS SUMMARY ---\n')
-		console.error(summary.join('\n'))
-		console.error('\n--- END OF SUMMARY ---')
+		console.error('\x1b[31m%s\x1b[0m', summary.join('\n'), '\x1b[0m\n')
+		console.error('--- END OF SUMMARY ---')
 	}
 	process.exit(exitCode)
 })
