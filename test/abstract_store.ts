@@ -11,8 +11,6 @@ export default function abstractStoreTest(
 	// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 	// @ts-expect-error
 	beforeEach((_ctx, done) => {
-		console.log('beforeEach', done)
-		console.log('build', typeof done)
 		build((err, _store) => {
 			store = _store
 			done(err)

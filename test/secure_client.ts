@@ -5,7 +5,7 @@ import abstractClientTests from './abstract_client'
 import { MqttSecureServer, MqttServerListener } from './server'
 import { assert } from 'chai'
 import 'should'
-import { describe, it, beforeEach, afterEach, after } from 'node:test'
+import { describe, it, after } from 'node:test'
 
 const port = 9899
 const KEY = path.join(__dirname, 'helpers', 'tls-key.pem')
