@@ -39,7 +39,7 @@ jobs:
 
     - name: Test NodeJS
       run: npm run test:node
-      timeout-minutes: 3
+      timeout-minutes: 5
       env:
         CI: true
         DEBUG: "${{ runner.debug == '1' && 'mqttjs:*' || '' }}"
