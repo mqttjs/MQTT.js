@@ -206,8 +206,8 @@ describe('Websocket Client', () => {
 						serverClient.connack({ returnCode: 0 })
 					})
 				}
-				const actualURL41 = 'wss://localhost:9917/'
-				const actualURL42 = 'ws://localhost:9918/'
+				const actualURL41 = `wss://localhost:${ports.PORTAND41}/`
+				const actualURL42 = `ws://localhost:${ports.PORTAND42}/`
 				const serverPort41 = new MqttServerNoWait(handler).listen(
 					ports.PORTAND41,
 				)
