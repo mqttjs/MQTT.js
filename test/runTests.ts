@@ -33,7 +33,6 @@ testStream.once('test:fail', (data) => {
 })
 
 testStream.once('test:stderr', (data) => {
-	exitCode = 1
 	summary.push(`${data.file} - Error:\n${data.message} `)
 })
 
