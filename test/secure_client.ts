@@ -6,8 +6,11 @@ import { MqttSecureServer, MqttServerListener } from './server'
 import { assert } from 'chai'
 import 'should'
 import { describe, it, after } from 'node:test'
+import getPorts from './helpers/port_list'
 
-const port = 9899
+const ports = getPorts(5)
+
+const port = ports.PORT
 const KEY = path.join(__dirname, 'helpers', 'tls-key.pem')
 const CERT = path.join(__dirname, 'helpers', 'tls-cert.pem')
 const WRONG_CERT = path.join(__dirname, 'helpers', 'wrong-cert.pem')
@@ -89,7 +92,7 @@ describe('MqttSecureClient', () => {
 		process.exit(0)
 	})
 
-	abstractClientTests(server, config)
+	abstractClientTests(server, config, ports)
 
 	describe('with secure parameters', () => {
 		it('should validate successfully the CA', function _test(t, done) {
