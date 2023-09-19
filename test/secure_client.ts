@@ -5,7 +5,7 @@ import abstractClientTests from './abstract_client'
 import { MqttSecureServer, MqttServerListener } from './server'
 import { assert } from 'chai'
 import 'should'
-import { describe, it, beforeEach, afterEach } from 'node:test'
+import { describe, it, beforeEach, afterEach, after } from 'node:test'
 
 const port = 9899
 const KEY = path.join(__dirname, 'helpers', 'tls-key.pem')
@@ -79,6 +79,16 @@ const server = new MqttSecureServer(
 
 describe('MqttSecureClient', () => {
 	const config = { protocol: 'mqtts', port, rejectUnauthorized: false }
+
+	after(() => {
+		// clean up and make sure the server is no longer listening...
+		if (server.listening) {
+			server.close()
+		}
+
+		process.exit(0)
+	})
+
 	abstractClientTests(server, config)
 
 	describe('with secure parameters', () => {

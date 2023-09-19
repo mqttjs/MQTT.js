@@ -5,7 +5,7 @@ import { MqttServer } from './server'
 import serverBuilder from './server_helpers_for_client_tests'
 import ports from './helpers/port_list'
 import { ErrorWithReasonCode } from '../src/lib/shared'
-import { describe, it } from 'node:test'
+import { after, describe, it } from 'node:test'
 
 describe('MQTT 5.0', () => {
 	const server = serverBuilder('mqtt').listen(ports.PORTAND115)
@@ -15,6 +15,15 @@ describe('MQTT 5.0', () => {
 		protocolVersion: 5,
 		properties: { maximumPacketSize: 200 },
 	}
+
+	after(() => {
+		// clean up and make sure the server is no longer listening...
+		if (server.listening) {
+			server.close()
+		}
+
+		process.exit(0)
+	})
 
 	abstractClientTests(server, config)
 

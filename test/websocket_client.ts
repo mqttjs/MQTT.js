@@ -7,7 +7,7 @@ import ports from './helpers/port_list'
 import { MqttServerNoWait } from './server'
 import * as mqtt from '../src/mqtt'
 import { IClientOptions } from '../src/lib/client'
-import { describe, it } from 'node:test'
+import { after, describe, it } from 'node:test'
 
 const port = 9999
 const httpServer = http.createServer()
@@ -97,6 +97,15 @@ describe('Websocket Client', () => {
 	function makeOptions(custom?: IClientOptions): IClientOptions {
 		return { ...baseConfig, ...(custom || {}) }
 	}
+
+	after(() => {
+		// clean up and make sure the server is no longer listening...
+		if (httpServer.listening) {
+			httpServer.close()
+		}
+
+		process.exit(0)
+	})
 
 	it('should use mqtt as the protocol by default', function _test(t, done) {
 		httpServer.once('client', (client) => {

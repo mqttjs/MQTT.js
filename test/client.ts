@@ -21,7 +21,10 @@ const debug = _debug('mqttjs:client-test')
 describe('MqttClient', () => {
 	let client: mqtt.MqttClient
 	const server = serverBuilder('mqtt')
-	const config: IClientOptions = { protocol: 'mqtt', port: ports.PORT }
+	const config: IClientOptions = {
+		protocol: 'mqtt',
+		port: ports.PORT,
+	}
 	server.listen(ports.PORT)
 
 	after(() => {
@@ -29,6 +32,8 @@ describe('MqttClient', () => {
 		if (server.listening) {
 			server.close()
 		}
+
+		process.exit(0)
 	})
 
 	abstractClientTests(server, config)
@@ -627,6 +632,7 @@ describe('MqttClient', () => {
 					await mqtt.connectAsync({
 						port: 1000,
 						host: '127.0.0.1',
+						reconnectPeriod: 0,
 					})
 				} catch (err) {
 					error = true
@@ -651,8 +657,11 @@ describe('MqttClient', () => {
 					await client.publishAsync('#/#', 'world')
 				} catch (err) {
 					error = true
+					client.disconnecting = false
 					assert.equal(err.message, 'client disconnecting')
 				}
+
+				await client.endAsync()
 
 				assert.isTrue(error)
 			},

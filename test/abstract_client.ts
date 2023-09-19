@@ -307,7 +307,7 @@ export default function abstractTest(server, config) {
 			server.once('client', (serverClient) => {
 				serverClient.once('connect', (packet) => {
 					assert.strictEqual(packet.clean, true)
-					done()
+					client.end((err) => done(err))
 				})
 			})
 		})
@@ -343,7 +343,7 @@ export default function abstractTest(server, config) {
 
 		it('should require a clientId with clean=false', function _test(t, done) {
 			try {
-				const client = connect({ clean: false })
+				const client = connect({ clean: false, reconnectPeriod: 0 })
 				client.on('error', (err) => {
 					done(err)
 				})
@@ -365,7 +365,7 @@ export default function abstractTest(server, config) {
 			server.once('client', (serverClient) => {
 				serverClient.once('connect', (packet) => {
 					assert.include(packet.clientId, 'testclient')
-					done()
+					client.end((err) => done(err))
 				})
 			})
 		})
@@ -530,7 +530,7 @@ export default function abstractTest(server, config) {
 					}
 					assert.isArray(granted2)
 					assert.isEmpty(granted2)
-					done()
+					client.end((err3) => done(err3))
 				})
 			})
 		})
