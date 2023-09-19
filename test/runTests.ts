@@ -23,16 +23,17 @@ testStream.compose(spec).pipe(process.stdout)
 
 const summary: string[] = []
 
-testStream.once('test:fail', (data) => {
+testStream.on('test:fail', (data) => {
 	exitCode = 1
+	const error = data.details.error
 	summary.push(
-		`✖ ${data.file} - Test ${data.name} failed in ${Math.round(
+		`✖ ${data.file} - Test "${data.name}" failed in ${Math.round(
 			data.details.duration_ms,
-		)}ms:\n${data.details.error} `,
+		)}ms: ${error.message}\n${error.stack} `,
 	)
 })
 
-testStream.once('test:stderr', (data) => {
+testStream.on('test:stderr', (data) => {
 	summary.push(`${data.file} - Error:\n${data.message} `)
 })
 
