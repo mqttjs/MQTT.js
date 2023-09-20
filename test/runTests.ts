@@ -45,7 +45,7 @@ testStream.once('end', () => {
 	// print duration in blue
 	console.log(
 		'\x1b[34m%s\x1b[0m',
-		`ℹ Duration: ${duration / 1000}s`,
+		`\nℹ Duration: ${duration / 1000}s\n`,
 		'\x1b[0m',
 	)
 	if (summary.length > 0) {
