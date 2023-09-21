@@ -56,7 +56,7 @@
     "build:browser": "rimraf dist/ && mkdirp dist/ && browserify build/mqtt.js --standalone mqtt > dist/mqtt.js && terser dist/mqtt.js --compress --mangle --output dist/mqtt.min.js",
     "build": "npm run build:ts && npm run build:browser",
     "prepare": "npm run build",
-    "unit-test:node": "node_modules/.bin/nyc --reporter=lcov --reporter=text ./node_modules/mocha/bin/_mocha -r ts-node/register test/*.ts --exit",
+    "unit-test:node": "node_modules/.bin/nyc --reporter=lcov --reporter=text node -r esbuild-register test/runTests.ts",
     "unit-test:browser": "airtap --server test/browser/server.js test/browser/test.js",
     "test:node": "npm run unit-test:node && codecov",
     "test:browser": "npm run build && npm run unit-test:browser",
@@ -92,7 +92,7 @@
     "lint"
   ],
   "engines": {
-    "node": ">=16.0.0"
+    "node": ">=18.0.0"
   },
   "browser": {
     "./mqtt.js": "./build/mqtt.js",
@@ -122,7 +122,6 @@
     "@release-it/conventional-changelog": "^7.0.0",
     "@types/chai": "^4.3.5",
     "@types/duplexify": "^3.6.1",
-    "@types/mocha": "^10.0.1",
     "@types/node": "^20.5.0",
     "@types/sinon": "^10.0.16",
     "@types/tape": "^5.6.0",
@@ -136,6 +135,7 @@
     "codecov": "^3.8.2",
     "conventional-changelog-cli": "^3.0.0",
     "end-of-stream": "^1.4.4",
+    "esbuild-register": "^3.5.0",
     "eslint": "^8.46.0",
     "eslint-config-airbnb-base": "^15.0.0",
     "eslint-config-airbnb-typescript": "^17.1.0",
@@ -143,8 +143,8 @@
     "eslint-plugin-import": "^2.28.0",
     "eslint-plugin-prettier": "^5.0.0",
     "global": "^4.4.0",
+    "leaked-handles": "^5.2.0",
     "mkdirp": "^3.0.1",
-    "mocha": "^10.2.0",
     "mqtt-connection": "^4.1.0",
     "mqtt-level-store": "^3.1.0",
     "nyc": "^15.1.0",

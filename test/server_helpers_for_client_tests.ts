@@ -24,7 +24,9 @@ export default function serverBuilder(
 	protocol: string,
 	handler?: MqttServerListener,
 ): Server {
+	const sockets = []
 	const defaultHandler: MqttServerListener = (serverClient) => {
+		sockets.push(serverClient)
 		serverClient.on('auth', (packet) => {
 			if (serverClient.writable) return false
 			const rc = 'reasonCode'
@@ -111,6 +113,10 @@ export default function serverBuilder(
 
 		serverClient.on('end', () => {
 			debug('disconnected from server')
+			const index = sockets.findIndex((s) => s === serverClient)
+			if (index !== -1) {
+				sockets.splice(index, 1)
+			}
 		})
 	}
 
@@ -118,11 +124,13 @@ export default function serverBuilder(
 		handler = defaultHandler
 	}
 
+	let mqttServer = null
+
 	if (protocol === 'mqtt') {
-		return new MqttServer(handler)
+		mqttServer = new MqttServer(handler)
 	}
 	if (protocol === 'mqtts') {
-		return new MqttSecureServer(
+		mqttServer = new MqttSecureServer(
 			{
 				key: fs.readFileSync(KEY),
 				cert: fs.readFileSync(CERT),
@@ -153,6 +161,16 @@ export default function serverBuilder(
 		// httpServer.connectionList = []
 		attachWebsocketServer(httpServer)
 		httpServer.on('client', handler)
-		return httpServer
+		mqttServer = httpServer
 	}
+
+	const originalClose = mqttServer.close
+	mqttServer.close = (cb) => {
+		sockets.forEach((socket) => {
+			socket.destroy()
+		})
+		originalClose.call(mqttServer, cb)
+	}
+
+	return mqttServer
 }

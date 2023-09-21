@@ -20,7 +20,6 @@
 		],
 		"types": [
 			"node",
-			"mocha"
 		],
 	},
 	"include": [

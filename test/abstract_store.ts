@@ -1,25 +1,29 @@
 import { IPublishPacket, IPubrelPacket } from 'mqtt-packet'
 import { IStore } from '../src/lib/store'
 import 'should'
+import { it, beforeEach, afterEach } from 'node:test'
 
 export default function abstractStoreTest(
 	build: (cb: (err?: Error, store?: IStore) => void) => void,
 ) {
 	let store: IStore
 
-	// eslint-disable-next-line
-	beforeEach(function (done) {
+	// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+	// @ts-expect-error
+	beforeEach((_ctx, done) => {
 		build((err, _store) => {
 			store = _store
 			done(err)
 		})
 	})
 
-	afterEach(function test(done) {
+	// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+	// @ts-expect-error
+	afterEach((_ctx, done) => {
 		store.close(done)
 	})
 
-	it('should put and stream in-flight packets', function test(done) {
+	it('should put and stream in-flight packets', function _test(t, done) {
 		const packet: IPublishPacket = {
 			topic: 'hello',
 			payload: 'world',
@@ -38,7 +42,7 @@ export default function abstractStoreTest(
 		})
 	})
 
-	it('should support destroying the stream', function test(done) {
+	it('should support destroying the stream', function _test(t, done) {
 		const packet: IPublishPacket = {
 			topic: 'hello',
 			payload: 'world',
@@ -56,7 +60,7 @@ export default function abstractStoreTest(
 		})
 	})
 
-	it('should add and del in-flight packets', function test(done) {
+	it('should add and del in-flight packets', function _test(t, done) {
 		const packet: IPublishPacket = {
 			topic: 'hello',
 			payload: 'world',
@@ -79,7 +83,7 @@ export default function abstractStoreTest(
 		})
 	})
 
-	it('should replace a packet when doing put with the same messageId', function test(done) {
+	it('should replace a packet when doing put with the same messageId', function _test(t, done) {
 		const packet1: IPublishPacket = {
 			cmd: 'publish', // added
 			topic: 'hello',
@@ -105,7 +109,7 @@ export default function abstractStoreTest(
 		})
 	})
 
-	it('should return the original packet on del', function test(done) {
+	it('should return the original packet on del', function _test(t, done) {
 		const packet: IPublishPacket = {
 			topic: 'hello',
 			payload: 'world',
@@ -127,7 +131,7 @@ export default function abstractStoreTest(
 		})
 	})
 
-	it('should get a packet with the same messageId', function test(done) {
+	it('should get a packet with the same messageId', function _test(t, done) {
 		const packet: IPublishPacket = {
 			topic: 'hello',
 			payload: 'world',
