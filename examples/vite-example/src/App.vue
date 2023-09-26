@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue'
-import { connect } from 'mqtt'
+import { connect } from 'mqtt/dist/mqtt.min'
 
 const connected = ref(false)
 

@@ -258,7 +258,6 @@ instance of a websocket which will be used in the mqtt client.
     });
 ```
 
-
 #### Enabling Reconnection with `reconnectPeriod` option
 
 To ensure that the mqtt client automatically tries to reconnect when the
@@ -825,93 +824,20 @@ See <http://unpkg.com> for the full documentation on version ranges.
 
 ### Webpack
 
-If you are using webpack simply import MQTT.js as you would any other module.
+If you are using webpack simply import MQTT.js like this:
 
 ```js
-import * as mqtt from 'mqtt'
-
-const client = mqtt.connect('ws://test.mosquitto.org:8080')
-```
-
-If you get errors when building your app with webpack v5, it's because starting from v5, webpack doesn't polyfill Node.js core modules anymore. You can fix this by adding the following to your webpack config:
-
-```js
-const NodePolyfillPlugin = require("node-polyfill-webpack-plugin")
-
-module.exports = {
-    // Other rules...
-    plugins: [
-        new NodePolyfillPlugin()
-    ]
-}
-```
-
-Otherwise just add the missing polyfills manually:
-
-```js
-
-module.exports = {
-  // Other rules...
-  resolve: {
-    fallback: {
-      "buffer": require.resolve("buffer/"),
-      "stream": require.resolve("stream-browserify"),
-      "process": require.resolve("process/browser"),
-      "path": require.resolve("path-browserify"),
-      "fs": false
-    }
-  }
-}
+import * as mqtt from 'mqtt/dist/mqtt.min'
 ```
 
 <a name="vite"></a>
 
 ### Vite
 
-If you are using vite simply import MQTT.js as you would any other module. In order to use MQTT.js with vite, you need to add the following to your vite config:
+If you are using vite simply import MQTT.js like this:
 
 ```js
-// other imports
-import { NodeGlobalsPolyfillPlugin } from '@esbuild-plugins/node-globals-polyfill'
-import nodePolyfills from "rollup-plugin-polyfill-node";
-
-
-export default defineConfig({
-  // Other rules...
-  resolve: {
-    alias: {
-      util: "util/",
-    }
-  },
-  optimizeDeps: {
-        esbuildOptions: {
-            // Node.js global to browser globalThis
-            define: {
-                global: 'globalThis'
-            },
-            // Enable esbuild polyfill plugins
-            plugins: [
-              NodeGlobalsPolyfillPlugin({
-                buffer: true,
-                process: true,
-              }),
-            ],
-        }
-    },
-    build: {
-      rollupOptions: {
-        // Enable rollup polyfills plugin
-        // used during production bundling
-        plugins: [nodePolyfills()],
-      },
-  },
-});
-```
-
-This requires you to install some plugins:
-
-```bash
-npm install -D @esbuild-plugins/node-globals-polyfill rollup-plugin-polyfill-node
+import * as mqtt from 'mqtt/dist/mqtt.min'
 ```
 
 <a name="qos"></a>
