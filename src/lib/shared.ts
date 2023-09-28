@@ -1,5 +1,5 @@
 import type { Packet } from 'mqtt-packet'
-import type internal from 'stream'
+import type { internal } from 'stream'
 import type MqttClient from './client'
 import type { IClientOptions } from './client'
 
