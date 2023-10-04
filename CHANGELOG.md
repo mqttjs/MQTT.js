@@ -1,5 +1,17 @@
 
 
+# [5.1.0](https://github.com/mqttjs/MQTT.js/compare/v5.0.5...v5.1.0) (2023-10-04)
+
+
+### Bug Fixes
+
+* **types:** import type error ([#1705](https://github.com/mqttjs/MQTT.js/issues/1705)) ([0960b68](https://github.com/mqttjs/MQTT.js/commit/0960b68f9b612640318931e971d7a715f0945bdd))
+
+
+### Features
+
+* custom websocket support ([#1696](https://github.com/mqttjs/MQTT.js/issues/1696)) ([d6fd3a8](https://github.com/mqttjs/MQTT.js/commit/d6fd3a8316642a17ff1e90b4d6c9d4656c3831e5))
+
 ## [5.0.5](https://github.com/mqttjs/MQTT.js/compare/v5.0.4...v5.0.5) (2023-09-08)
 
 
