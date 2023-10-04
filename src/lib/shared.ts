@@ -1,5 +1,5 @@
 import type { Packet } from 'mqtt-packet'
-import { Duplex } from 'stream'
+import type { Duplex } from 'stream'
 import type MqttClient from './client'
 import type { IClientOptions } from './client'
 
