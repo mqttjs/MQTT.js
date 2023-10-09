@@ -8,9 +8,6 @@ module.exports = {
 		node: true,
 		worker: true,
 	},
-	global: {
-		WorkerGlobalScope: true,
-	},
 	extends: [
 		'airbnb-base',
 		'airbnb-typescript/base',
