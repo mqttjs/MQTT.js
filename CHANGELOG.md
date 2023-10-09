@@ -1,5 +1,12 @@
 
 
+## [5.1.1](https://github.com/mqttjs/MQTT.js/compare/v5.1.0...v5.1.1) (2023-10-09)
+
+
+### Bug Fixes
+
+* restore nodejs 16 compatibility ([a347c0d](https://github.com/mqttjs/MQTT.js/commit/a347c0d81ff800c1469d8497542a8c5973b59e33)), closes [#1710](https://github.com/mqttjs/MQTT.js/issues/1710)
+
 # [5.1.0](https://github.com/mqttjs/MQTT.js/compare/v5.0.5...v5.1.0) (2023-10-04)
 
 
