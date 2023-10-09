@@ -6,6 +6,10 @@ module.exports = {
 		commonjs: true,
 		es2021: true,
 		node: true,
+		worker: true,
+	},
+	global: {
+		WorkerGlobalScope: true,
 	},
 	extends: [
 		'airbnb-base',
