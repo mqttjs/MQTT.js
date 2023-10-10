@@ -6,6 +6,7 @@ module.exports = {
 		commonjs: true,
 		es2021: true,
 		node: true,
+		worker: true,
 	},
 	extends: [
 		'airbnb-base',
