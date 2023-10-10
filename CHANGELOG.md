@@ -1,5 +1,12 @@
 
 
+## [5.1.2](https://github.com/mqttjs/MQTT.js/compare/v5.1.1...v5.1.2) (2023-10-10)
+
+
+### Bug Fixes
+
+* detect web worker ([#1711](https://github.com/mqttjs/MQTT.js/issues/1711)) ([a75a467](https://github.com/mqttjs/MQTT.js/commit/a75a467e3524aef1d6038ed4ed14ab0407c146cb))
+
 ## [5.1.1](https://github.com/mqttjs/MQTT.js/compare/v5.1.0...v5.1.1) (2023-10-09)
 
 
