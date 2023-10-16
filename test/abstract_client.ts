@@ -89,12 +89,12 @@ export default function abstractTest(server, config, ports) {
 			const client = connect()
 
 			client.once('close', () => {
-				assert.notExists(client.pingTimer)
+				assert.notExists(client.pingTimer._interval)
 				client.end(true, (err) => done(err))
 			})
 
 			client.once('connect', () => {
-				assert.exists(client.pingTimer)
+				assert.exists(client.pingTimer._interval)
 				client.stream.end()
 			})
 		})
@@ -209,9 +209,9 @@ export default function abstractTest(server, config, ports) {
 			const client = connect()
 
 			client.once('connect', () => {
-				assert.exists(client.pingTimer)
+				assert.exists(client.pingTimer._interval)
 				client.end((err) => {
-					assert.notExists(client.pingTimer)
+					assert.notExists(client.pingTimer._interval)
 					done(err)
 				})
 			})
@@ -2036,7 +2036,10 @@ export default function abstractTest(server, config, ports) {
 			const client = connect({ keepalive: 3 })
 			client.once('connect', () => {
 				assert.exists(client.pingTimer)
+				assert.exists(client.pingTimer._interval)
 				client.end(true, done)
+				assert.exists(client.pingTimer)
+				assert.notExists(client.pingTimer._interval)
 			})
 		})
 

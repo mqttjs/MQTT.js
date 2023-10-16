@@ -647,10 +647,9 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			this.log('close :: clearing connackTimer')
 			clearTimeout(this.connackTimer)
 
-			this.log('close :: destroy ping timer')
+			this.log('close :: clearing ping timer')
 			if (this.pingTimer !== null) {
-				this.pingTimer.destroy()
-				this.pingTimer = null
+				this.pingTimer.clear()
 			}
 
 			if (this.topicAliasRecv) {
@@ -1768,9 +1767,8 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		}
 
 		if (this.pingTimer !== null) {
-			this.log('_cleanUp :: destroy pingTimer')
-			this.pingTimer.destroy()
-			this.pingTimer = null
+			this.log('_cleanUp :: clearing pingTimer')
+			this.pingTimer.clear()
 		}
 
 		if (done && !this.connected) {
@@ -2068,11 +2066,16 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			this.options.keepalive,
 		)
 
-		if (!this.pingTimer && this.options.keepalive) {
-			this.pingResp = true
-			this.pingTimer = reInterval(() => {
-				this._checkPing()
-			}, this.options.keepalive * 1000)
+		if (this.options.keepalive) {
+			const interval = this.options.keepalive * 1000
+			if (!this.pingTimer) {
+				this.pingResp = true
+				this.pingTimer = reInterval(() => {
+					this._checkPing()
+				}, interval)
+			} else {
+				this.pingTimer.reschedule(interval)
+			}
 		}
 	}
 
