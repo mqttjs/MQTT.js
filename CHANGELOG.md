@@ -1,5 +1,12 @@
 
 
+## [5.1.3](https://github.com/mqttjs/MQTT.js/compare/v5.1.2...v5.1.3) (2023-10-20)
+
+
+### Bug Fixes
+
+* add all `EventListener` methods to `TypedEventEmitter` interface ([#1718](https://github.com/mqttjs/MQTT.js/issues/1718)) ([b96882a](https://github.com/mqttjs/MQTT.js/commit/b96882a7e5ff2869badbbd34c9b2e1ac51c25d2a))
+
 ## [5.1.2](https://github.com/mqttjs/MQTT.js/compare/v5.1.1...v5.1.2) (2023-10-10)
 
 
