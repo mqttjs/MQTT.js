@@ -20,6 +20,15 @@ export interface TypedEventEmitter<
 		event: TEvent,
 		callback: TEvents[TEvent],
 	): this
+	prependListener<TEvent extends keyof TEvents>(
+		event: TEvent,
+		callback: TEvents[TEvent],
+	): this
+	prependOnceListener<TEvent extends keyof TEvents>(
+		event: TEvent,
+		callback: TEvents[TEvent],
+	): this
+
 	removeListener<TEvent extends keyof TEvents>(
 		event: TEvent,
 		callback: TEvents[TEvent],
@@ -28,12 +37,29 @@ export interface TypedEventEmitter<
 		event: TEvent,
 		callback: TEvents[TEvent],
 	): this
+
 	removeAllListeners(event?: keyof TEvents): this
 
 	emit<TEvent extends keyof TEvents>(
 		event: TEvent,
 		...args: Parameters<TEvents[TEvent]>
 	): boolean
+
+	setMaxListeners(n: number): this
+	getMaxListeners(): number
+
+	listeners<TEvent extends keyof TEvents>(
+		eventName: TEvent,
+	): TEvents[TEvent][]
+	rawListeners<TEvent extends keyof TEvents>(
+		eventName: TEvent,
+	): TEvents[TEvent][]
+	listenerCount<TEvent extends keyof TEvents>(
+		event: TEvent,
+		listener?: TEvents[TEvent],
+	): number
+
+	eventNames(): Array<keyof TEvents>
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unsafe-declaration-merging
