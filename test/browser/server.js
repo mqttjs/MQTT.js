@@ -3,6 +3,8 @@ const WS = require('ws')
 const WebSocketServer = WS.Server
 const Connection = require('mqtt-connection')
 const http = require('http')
+const https = require('https')
+const fs = require('fs')
 
 const handleClient = (client) => {
 	if (!this.clients) {
@@ -98,8 +100,17 @@ const handleClient = (client) => {
 	})
 }
 
+const isHttps = !!process.env.AIRTAP_HTTPS
+
 function start(startPort, done) {
-	const server = http.createServer()
+
+	const protocol = isHttps ? https : http
+
+	const server = protocol.createServer(isHttps ? {
+		key: fs.readFileSync('./test/certs/server-key.pem'),
+		cert: fs.readFileSync('./test/certs/server-cert.pem'),
+	} : undefined)
+
 	const wss = new WebSocketServer({ server })
 
 	wss.on('connection', (ws) => {
@@ -116,6 +127,7 @@ function start(startPort, done) {
 		res.statusCode = 404
 		res.end('Not Found')
 	})
+
 	return server
 }
 
@@ -127,6 +139,6 @@ if (require.main === module) {
 			console.error(err)
 			return
 		}
-		console.log('tunnelled server started on port', port)
+		console.log('tunnelled ' + (isHttps ? 'HTTPS' : 'HTTP') + ' server started on port', port)
 	})
 }
