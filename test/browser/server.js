@@ -100,7 +100,7 @@ const handleClient = (client) => {
 	})
 }
 
-const isHttps = !!process.env.AIRTAP_HTTPS
+const isHttps = !!process.env.HTTPS
 
 function start(startPort, done) {
 
@@ -142,3 +142,5 @@ if (require.main === module) {
 		console.log('tunnelled ' + (isHttps ? 'HTTPS' : 'HTTP') + ' server started on port', port)
 	})
 }
+
+module.exports = start

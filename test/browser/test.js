@@ -1,4 +1,4 @@
-import { expect } from '@esm-bundle/chai';
+import { expect } from '../../node_modules/@esm-bundle/chai/esm/chai.js';
 
 const mqtt = window.mqtt
 
