@@ -24,8 +24,8 @@ export default {
     testRunnerHtml: (testFrameworkImport) =>
         `<html>
         <body>
-        <script src="dist/mqtt.js"></script>
-        <script type="module" src="${testFrameworkImport}"></script>
+            <script src="dist/mqtt.js"></script>
+            <script type="module" src="${testFrameworkImport}"></script>
         </body>
     </html>`
 };
