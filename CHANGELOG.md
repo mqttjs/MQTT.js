@@ -1,5 +1,13 @@
 
 
+## [5.1.4](https://github.com/mqttjs/MQTT.js/compare/v5.1.3...v5.1.4) (2023-10-30)
+
+
+### Bug Fixes
+
+* crash with React Native ([#1724](https://github.com/mqttjs/MQTT.js/issues/1724)) ([f6123f2](https://github.com/mqttjs/MQTT.js/commit/f6123f22a11a4eb4c34c874b47056cea7ef264a6))
+* unambiguously detect web workers ([#1728](https://github.com/mqttjs/MQTT.js/issues/1728)) ([e44368c](https://github.com/mqttjs/MQTT.js/commit/e44368c0d7541d005ad668d5d44d080e29ca5778))
+
 ## [5.1.3](https://github.com/mqttjs/MQTT.js/compare/v5.1.2...v5.1.3) (2023-10-20)
 
 
