@@ -130,6 +130,7 @@
     "@typescript-eslint/parser": "^6.9.0",
     "@web/test-runner": "^0.17.2",
     "browserify": "^17.0.0",
+    "chai": "^4.3.10",
     "chokidar": "^3.5.3",
     "codecov": "^3.8.2",
     "conventional-changelog-cli": "^4.1.0",
