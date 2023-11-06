@@ -15,11 +15,14 @@ await start({
 
 console.log('Broker setup done')
 
+/**
+ * @type { import('@web/test-runner').TestRunnerConfig }
+ */
 export default {
     // https://modern-web.dev/docs/test-runner/browser-launchers/playwright/#testing-multiple-browsers
     // Requires: @web/test-runner-playwright
     browsers: [
-        playwrightLauncher({ product: 'chromium' }),
+        playwrightLauncher({ product: 'chromium' }), // { headless: false, devtools: true }  }),
         playwrightLauncher({ product: 'firefox' }),
         playwrightLauncher({ product: 'webkit' }),
     ],
@@ -27,9 +30,17 @@ export default {
     concurrency: 10,
     files: ['./test/browser/test.js'],
     nodeResove: true,
+    testFramework: {
+        config: {
+            timeout: '10000',
+        },
+    },
     // manual: true,
     // open: true,
     // rootDir: path.resolve(__dirname)
+    // http2: true,
+    // sslCert: './test/certs/server-cert.pem',
+    // sslKey: './test/certs/server-key.pem',
     testRunnerHtml: (testFrameworkImport) =>
         `<html>
         <body>
