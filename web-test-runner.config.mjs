@@ -20,7 +20,7 @@ export default {
         playwrightLauncher({ product: 'firefox' }),
         playwrightLauncher({ product: 'webkit' }),
     ],
-    playwright: false,
+    playwright: true,
     concurrency: 10,
     files: ['./test/browser/test.js'],
     nodeResove: true,
