@@ -1,12 +1,7 @@
-name: MQTT.js Tests
+name: MQTT.js Browser Tests
 
 on:
-  workflow_dispatch:
-    inputs:
-      logLevel:
-        description: 'Debug Filter'     
-        required: true
-        default: 'mqttjs*'
+  workflow_dispatch:      
   push:
     branches: [ main ]
   pull_request:
@@ -15,9 +10,10 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    container: mcr.microsoft.com/playwright:v1.39.0 # https://playwright.dev/docs/ci-intro#via-containers
     strategy:
       matrix:
-        node-version: [18.x, 20.x]
+        node-version: [20.x]
       fail-fast: false
 
     steps:
@@ -30,20 +26,13 @@ jobs:
 
     - name: Install Dependencies
       run: npm ci
-    
-    - name: Lint
-      if: matrix.node-version == '20.x'
+
+    - name: Test Browser
       # only run on latest node version, no reason to run on all
+      timeout-minutes: 2
       run: |
-        npm run lint
-
-    - name: Test NodeJS
-      run: npm run test:node
-      timeout-minutes: 5
-      env:
-        CI: true
-        DEBUG: "${{ runner.debug == '1' && 'mqttjs:*' || '' }}"
-
+        npm run build:browser
+        npm run unit-test:browser
   
 
 
