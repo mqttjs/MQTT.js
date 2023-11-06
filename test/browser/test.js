@@ -1,21 +1,22 @@
 import { expect } from '../../node_modules/@esm-bundle/chai/esm/chai.js';
 
+/** @type { import('../../src/mqtt').MqttClient }*/
 const mqtt = window.mqtt
 
-const client = mqtt.connect('ws://localhost:4000', {
-	log: console.log.bind(console),
-})
-client.on('offline', () => {
-	console.log('client offline')
-})
-client.on('connect', () => {
-	console.log('client connect')
-})
-client.on('reconnect', () => {
-	console.log('client reconnect')
-})
-
 describe('MQTT.js browser test', () => {
+	const client = mqtt.connect('ws://localhost:4000', {
+		// log: console.log.bind(console),
+	})
+	client.on('offline', () => {
+		console.log('client offline')
+	})
+	client.on('connect', () => {
+		console.log('client connect')
+	})
+	client.on('reconnect', () => {
+		console.log('client reconnect')
+	})
+
 	it('should connect to the server', (done) => {
 		client.on('connect', () => {
 			client.on('message', (topic, msg) => {

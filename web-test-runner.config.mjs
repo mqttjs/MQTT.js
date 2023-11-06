@@ -1,20 +1,26 @@
 // Docs: https://modern-web.dev/docs/test-runner/cli-and-configuration/
-// import { playwrightLauncher } from '@web/test-runner-playwright';
-import { start } from './test/browser/server.js'
+import { playwrightLauncher } from '@web/test-runner-playwright';
+import { start } from 'aedes-cli'
 
-start(4000, () => {
-    console.log('server started')
+await start({
+    protos: ['tcp', 'tls', 'ws', 'wss'],
+    wsPort: 4000,
+    wssPort: 4443,
+    key: './test/certs/server-key.pem',
+    cert: './test/certs/server-cert.pem',
 })
+
+console.log('Broker setup done')
 
 export default {
     // https://modern-web.dev/docs/test-runner/browser-launchers/playwright/#testing-multiple-browsers
     // Requires: @web/test-runner-playwright
-    // browsers: [
-    //     playwrightLauncher({ product: 'chromium' }),
-    //     playwrightLauncher({ product: 'firefox' }),
-    //     // playwrightLauncher({ product: 'webkit' }),
-    // ],
-    // playwright: true,
+    browsers: [
+        playwrightLauncher({ product: 'chromium' }),
+        playwrightLauncher({ product: 'firefox' }),
+        // playwrightLauncher({ product: 'webkit' }),
+    ],
+    playwright: true,
     concurrency: 10,
     files: ['./test/browser/test.js'],
     nodeResove: true,
