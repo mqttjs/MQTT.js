@@ -8,7 +8,7 @@ on:
     branches: [ main ]
 
 jobs:
-  build:
+  browser:
     runs-on: ubuntu-latest
     container: mcr.microsoft.com/playwright:v1.39.0 # https://playwright.dev/docs/ci-intro#via-containers
     strategy:

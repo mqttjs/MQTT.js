@@ -18,9 +18,9 @@ export default {
     browsers: [
         playwrightLauncher({ product: 'chromium' }),
         playwrightLauncher({ product: 'firefox' }),
-        // playwrightLauncher({ product: 'webkit' }),
+        playwrightLauncher({ product: 'webkit' }),
     ],
-    playwright: true,
+    playwright: false,
     concurrency: 10,
     files: ['./test/browser/test.js'],
     nodeResove: true,
