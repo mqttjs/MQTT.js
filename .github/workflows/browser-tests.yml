@@ -1,4 +1,4 @@
-name: MQTT.js Browser Tests
+name: Browser Tests
 
 on:
   workflow_dispatch:      
@@ -30,6 +30,8 @@ jobs:
     - name: Test Browser
       # only run on latest node version, no reason to run on all
       timeout-minutes: 2
+      env:
+        HOME: /root
       run: |
         npm run build:browser
         npm run unit-test:browser
