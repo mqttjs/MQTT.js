@@ -33,7 +33,6 @@ jobs:
       env:
         HOME: /root
       run: |
-        npm run build:browser
         npm run unit-test:browser
   
 
