@@ -1,7 +1,10 @@
-import { expect } from '../../node_modules/@esm-bundle/chai/esm/chai.js';
+import chai from '../../node_modules/@esm-bundle/chai/esm/chai.js';
 
 /** @type { import('../../src/mqtt').MqttClient }*/
 const mqtt = window.mqtt
+
+/** @type { import('@esm-bundle/chai').expect } */
+const expect = chai.expect;
 
 describe('MQTT.js browser test', () => {
 	const client = mqtt.connect('ws://localhost:4000', {
@@ -28,10 +31,10 @@ describe('MQTT.js browser test', () => {
 			});
 
 			client.subscribe('hello', (err) => {
-				expect(err).to.not.exists;
+				expect(err).to.not.exist;
 				if (!err) {
 					client.publish('hello', 'Hello World!', (err2) => {
-						expect(err2).to.not.exists;
+						expect(err2).to.not.exist;
 					});
 				}
 			});
