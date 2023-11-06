@@ -22,9 +22,42 @@ export default {
     // https://modern-web.dev/docs/test-runner/browser-launchers/playwright/#testing-multiple-browsers
     // Requires: @web/test-runner-playwright
     browsers: [
-        playwrightLauncher({ product: 'chromium' }), // { headless: false, devtools: true }  }),
-        playwrightLauncher({ product: 'firefox' }),
-        playwrightLauncher({ product: 'webkit' }),
+        playwrightLauncher({
+            product: 'chromium', createBrowserContext: ({ browser, config }) => {
+
+                // ignore HTTPS errors
+                const context = browser.newContext({
+                    ignoreHTTPSErrors: true
+                })
+                return context
+
+            },
+           // launchOptions: { headless: false, devtools: true }
+        }),
+        playwrightLauncher({
+            product: 'firefox', createBrowserContext: ({ browser, config }) => {
+
+                // ignore HTTPS errors
+                const context = browser.newContext({
+                    ignoreHTTPSErrors: true
+                })
+                return context
+
+            }, 
+           // launchOptions: { headless: false, devtools: true }
+        }),
+        playwrightLauncher({
+            product: 'webkit', createBrowserContext: ({ browser, config }) => {
+
+                // ignore HTTPS errors
+                const context = browser.newContext({
+                    ignoreHTTPSErrors: true
+                })
+                return context
+
+            },
+           // launchOptions: { headless: false, devtools: true }
+        }),
     ],
     playwright: true,
     concurrency: 10,
