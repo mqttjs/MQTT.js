@@ -49,5 +49,5 @@ function run(proto, port) {
 }
 
 
-run('ws', 4000)
-run('wss', 4443)
+run('ws', window.wsPort)
+run('wss', window.wssPort)

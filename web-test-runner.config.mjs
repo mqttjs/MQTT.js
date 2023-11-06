@@ -2,10 +2,13 @@
 import { playwrightLauncher } from '@web/test-runner-playwright';
 import { start } from 'aedes-cli'
 
+const wsPort = 4000
+const wssPort = 4443
+
 await start({
     protos: ['tcp', 'tls', 'ws', 'wss'],
-    wsPort: 4000,
-    wssPort: 4443,
+    wsPort,
+    wssPort,
     key: './test/certs/server-key.pem',
     cert: './test/certs/server-cert.pem',
 })
@@ -31,6 +34,10 @@ export default {
         `<html>
         <body>
             <script src="dist/mqtt.js"></script>
+            <script type="module">
+                window.wsPort = ${wsPort};
+                window.wssPort = ${wssPort};
+            </script>
             <script type="module" src="${testFrameworkImport}"></script>
         </body>
     </html>`
