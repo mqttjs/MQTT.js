@@ -1,57 +1,61 @@
-const test = require('tape')
-const _URL = require('url')
-const mqtt = require('../../') // package.json will provide 'dist/mqtt.min.js'
-// eslint-disable-next-line
-const parsed = _URL.parse(document.URL)
-const isHttps = parsed.protocol === 'https:'
-const port = parsed.port || (isHttps ? 443 : 80)
-const host = parsed.hostname
-const protocol = isHttps ? 'wss' : 'ws'
+import chai from '../../node_modules/@esm-bundle/chai/esm/chai.js';
 
-const client = mqtt.connect({
-	protocolId: 'MQIsdp',
-	protocolVersion: 3,
-	protocol,
-	port,
-	host,
-	log: console.log.bind(console),
-})
-client.on('offline', () => {
-	console.log('client offline')
-})
-client.on('connect', () => {
-	console.log('client connect')
-})
-client.on('reconnect', () => {
-	console.log('client reconnect')
-})
+/** @type { import('../../src/mqtt').MqttClient }*/
+const mqtt = window.mqtt
 
-test('MQTT.js browser test', (t) => {
-	t.plan(6)
-	client.on('connect', () => {
-		client.on('message', (topic, msg) => {
-			t.equal(topic, 'hello', 'should match topic')
-			t.equal(msg.toString(), 'Hello World!', 'should match payload')
-			client.end(() => {
-				t.pass('client should close')
-			})
-		})
+/** @type { import('@esm-bundle/chai').expect } */
+const expect = chai.expect;
 
-		client.subscribe('hello', (err) => {
-			t.error(err, 'no error on subscribe')
-			if (!err) {
-				client.publish('hello', 'Hello World!', (err2) => {
-					t.error(err2, 'no error on publish')
-				})
+function run(proto, port, cb) {
+
+	describe('MQTT.js browser test with ' + proto.toUpperCase(), () => {
+		after(() => {
+			if (cb) {
+				cb()
 			}
 		})
-	})
 
-	client.on('error', (err) => {
-		t.fail(err, 'no error')
-	})
+		const client = mqtt.connect(`${proto}://localhost:${port}`, {
+			// log: console.log.bind(console),
+		})
+		client.on('offline', () => {
+			console.log('client offline')
+		})
+		client.on('connect', () => {
+			console.log('client connect')
+		})
+		client.on('reconnect', () => {
+			console.log('client reconnect')
+		})
 
-	client.once('close', () => {
-		t.pass('should emit close')
+		it('should connect-publish-subscribe', (done) => {
+			client.on('connect', () => {
+				client.on('message', (topic, msg) => {
+					expect(topic).to.equal('hello');
+					expect(msg.toString()).to.equal('Hello World!');
+					client.end(() => {
+						done();
+					});
+				});
+
+				client.subscribe('hello', (err) => {
+					expect(err).to.not.exist;
+					if (!err) {
+						client.publish('hello', 'Hello World!', (err2) => {
+							expect(err2).to.not.exist;
+						});
+					}
+				});
+			});
+
+			client.on('error', (err) => {
+				done(err);
+			});
+		})
 	})
+}
+
+
+run('ws', window.wsPort, () => {
+	run('wss', window.wssPort)
 })

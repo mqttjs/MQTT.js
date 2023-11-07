@@ -1,0 +1,39 @@
+name: Browser Tests
+
+on:
+  workflow_dispatch:      
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    container: mcr.microsoft.com/playwright:v1.39.0 # https://playwright.dev/docs/ci-intro#via-containers
+    strategy:
+      matrix:
+        node-version: [20.x]
+      fail-fast: false
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+
+    - name: Install Dependencies
+      run: npm ci
+
+    - name: Test Browser
+      # only run on latest node version, no reason to run on all
+      timeout-minutes: 2
+      env:
+        HOME: /root
+      run: |
+        npm run unit-test:browser
+  
+
+
