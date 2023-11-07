@@ -1,7 +1,5 @@
 import { expect } from '@esm-bundle/chai';
-
-/** @type { import('../../src/mqtt').MqttClient }*/
-const mqtt = window.mqtt
+import mqtt from '../../dist/mqtt.esm.js';
 
 function run(proto, port, cb) {
 
