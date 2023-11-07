@@ -12,7 +12,7 @@ const options = {
     entryPoints: ['build/mqtt.js'],
     bundle: true,
     outfile: `${outdir}/mqtt.js`,
-    format: 'cjs',
+    format: 'iife',
     platform: 'browser',
     globalName: 'mqtt',
     define: {
@@ -32,6 +32,10 @@ async function run() {
     const start = Date.now()
     await rimraf(outdir)
     await build(options)
+
+    // monkey patch exports for back compatibility
+    const mqttContent = fs.readFileSync(options.outfile, 'utf8')
+    fs.writeFileSync(options.outfile, `${mqttContent.replace('"use strict";', '"use strict";\nvar exports={}')}\nif(window) window.mqtt = mqtt`)
 
     options.minify = true
     options.outfile = `${outdir}/mqtt.min.js`
