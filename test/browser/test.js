@@ -27,12 +27,6 @@ function run(proto, port, cb) {
 			console.log('client reconnect')
 		})
 
-		it('should work with non-ESM version', () => {
-			expect(mqtt2).to.exist
-			expect(mqtt2.connect).to.exist
-			expect(mqtt2.connect).to.be.a('function')
-		})
-
 		it('should connect-publish-subscribe', (done) => {
 			client.on('connect', () => {
 				client.on('message', (topic, msg) => {
@@ -59,6 +53,12 @@ function run(proto, port, cb) {
 		})
 	})
 }
+
+it('should work with non-ESM version', () => {
+	expect(mqtt2).to.exist
+	expect(mqtt2.connect).to.exist
+	expect(mqtt2.connect).to.be.a('function')
+})
 
 
 run('ws', window.wsPort, () => {
