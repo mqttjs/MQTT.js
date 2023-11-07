@@ -58,6 +58,7 @@ export default {
     testRunnerHtml: (testFrameworkImport) =>
         `<html>
         <body>
+            <script src="dist/mqtt.js"></script>
             <script>
                 window.wsPort = ${wsPort};
                 window.wssPort = ${wssPort};

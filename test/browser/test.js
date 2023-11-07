@@ -1,6 +1,10 @@
 import { expect } from '@esm-bundle/chai';
 import mqtt from '../../dist/mqtt.esm.js';
 
+// needed to test no-esm version /dist/mqtt.js
+/** @type { import('../../src/mqtt').MqttClient }*/
+const mqtt2 = window.mqtt
+
 function run(proto, port, cb) {
 
 	describe('MQTT.js browser test with ' + proto.toUpperCase(), () => {
@@ -21,6 +25,12 @@ function run(proto, port, cb) {
 		})
 		client.on('reconnect', () => {
 			console.log('client reconnect')
+		})
+
+		it('should work with non-ESM version', () => {
+			expect(mqtt2).to.exist
+			expect(mqtt2.connect).to.exist
+			expect(mqtt2.connect).to.be.a('function')
 		})
 
 		it('should connect-publish-subscribe', (done) => {
