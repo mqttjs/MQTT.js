@@ -53,7 +53,7 @@
     "lint": "eslint --ext .ts .",
     "lint-fix": "eslint --fix --ext .ts .",
     "build:ts": "rimraf build/ && tsc -p tsconfig.build.json",
-    "build:browser": "rimraf dist/ && mkdirp dist/ && node esbuild.js && terser dist/mqtt.js --compress --mangle --output dist/mqtt.min.js",
+    "build:browser": "node esbuild.js",
     "build": "npm run build:ts && npm run build:browser",
     "prepare": "npm run build",
     "unit-test:node": "node_modules/.bin/nyc --reporter=lcov --reporter=text node -r esbuild-register test/runTests.ts",
@@ -131,7 +131,6 @@
     "@web/test-runner": "^0.17.2",
     "@web/test-runner-playwright": "^0.11.0",
     "aedes-cli": "^0.8.0",
-    "browserify": "^17.0.0",
     "chai": "^4.3.10",
     "chokidar": "^3.5.3",
     "codecov": "^3.8.2",
@@ -160,7 +159,6 @@
     "sinon": "^17.0.0",
     "snazzy": "^9.0.0",
     "tape": "^5.7.2",
-    "terser": "^5.22.0",
     "ts-node": "^10.9.1",
     "typescript": "^5.2.2"
   }

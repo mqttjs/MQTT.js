@@ -1,5 +1,9 @@
 const { build } = require('esbuild')
-const { polyfillNode } = require('esbuild-plugin-polyfill-node')
+const { polyfillNode } = require('esbuild-plugin-polyfill-node');
+const { rimraf } = require('rimraf')
+const fs = require('fs')
+
+const outdir = 'dist'
 
 /**
  * @type {import('esbuild').BuildOptions}
@@ -7,9 +11,8 @@ const { polyfillNode } = require('esbuild-plugin-polyfill-node')
 const options = {
     entryPoints: ['build/mqtt.js'],
     bundle: true,
-    outfile: 'dist/mqtt.js',
+    outfile: `${outdir}/mqtt.js`,
     format: 'cjs',
-    target: 'es2020',
     platform: 'browser',
     globalName: 'mqtt',
     define: {
@@ -26,13 +29,29 @@ const options = {
 }
 
 async function run() {
+    const start = Date.now()
+    await rimraf(outdir)
     await build(options)
 
-    options.outfile = 'dist/mqtt.esm.js'
-    options.format = 'esm'
     options.minify = true
+    options.outfile = `${outdir}/mqtt.min.js`
+    await build(options)
+
+
+    options.outfile = `${outdir}/mqtt.esm.js`
+    options.format = 'esm'
 
     await build(options)
+
+    console.log(`Build time: ${Date.now() - start}ms`)
+    console.log('Build output:')
+
+    // log generated files with their size in KB
+    const files = fs.readdirSync(outdir)
+    for (const file of files) {
+        const stat = fs.statSync(`${outdir}/${file}`)
+        console.log(`- ${file} ${Math.round(stat.size / 1024)} KB`)
+    }
 }
 
 run().catch((e) => {
