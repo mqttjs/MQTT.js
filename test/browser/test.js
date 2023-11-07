@@ -1,10 +1,7 @@
-import chai from '../../node_modules/@esm-bundle/chai/esm/chai.js';
+import { expect } from '@esm-bundle/chai';
 
 /** @type { import('../../src/mqtt').MqttClient }*/
 const mqtt = window.mqtt
-
-/** @type { import('@esm-bundle/chai').expect } */
-const expect = chai.expect;
 
 function run(proto, port, cb) {
 

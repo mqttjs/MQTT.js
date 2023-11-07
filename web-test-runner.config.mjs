@@ -42,7 +42,7 @@ export default {
     playwright: true,
     concurrency: 10,
     files: ['./test/browser/test.js'],
-    nodeResove: true,
+    nodeResolve: true,
     testFramework: {
         config: {
             timeout: '10000',
