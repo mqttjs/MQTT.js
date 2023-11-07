@@ -40,7 +40,7 @@ export default {
     // Requires: @web/test-runner-playwright
     browsers,
     playwright: true,
-    concurrency: 10,
+    concurrency: 1,
     files: ['./test/browser/test.js'],
     nodeResolve: true,
     testFramework: {
