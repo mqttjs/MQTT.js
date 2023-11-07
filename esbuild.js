@@ -33,10 +33,6 @@ async function run() {
     await rimraf(outdir)
     await build(options)
 
-    // monkey patch exports for back compatibility
-    const mqttContent = fs.readFileSync(options.outfile, 'utf8')
-    fs.writeFileSync(options.outfile, `${mqttContent.replace('"use strict";', '"use strict";\nvar exports={}')}\nif(window) window.mqtt = mqtt`)
-
     options.minify = true
     options.outfile = `${outdir}/mqtt.min.js`
     await build(options)
