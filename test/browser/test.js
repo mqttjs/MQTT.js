@@ -6,8 +6,15 @@ const mqtt = window.mqtt
 /** @type { import('@esm-bundle/chai').expect } */
 const expect = chai.expect;
 
-function run(proto, port) {
+function run(proto, port, cb) {
+
 	describe('MQTT.js browser test with ' + proto.toUpperCase(), () => {
+		after(() => {
+			if (cb) {
+				cb()
+			}
+		})
+
 		const client = mqtt.connect(`${proto}://localhost:${port}`, {
 			// log: console.log.bind(console),
 		})
@@ -20,7 +27,7 @@ function run(proto, port) {
 		client.on('reconnect', () => {
 			console.log('client reconnect')
 		})
-	
+
 		it('should connect-publish-subscribe', (done) => {
 			client.on('connect', () => {
 				client.on('message', (topic, msg) => {
@@ -30,7 +37,7 @@ function run(proto, port) {
 						done();
 					});
 				});
-	
+
 				client.subscribe('hello', (err) => {
 					expect(err).to.not.exist;
 					if (!err) {
@@ -40,7 +47,7 @@ function run(proto, port) {
 					}
 				});
 			});
-	
+
 			client.on('error', (err) => {
 				done(err);
 			});
@@ -49,5 +56,6 @@ function run(proto, port) {
 }
 
 
-run('ws', window.wsPort)
-run('wss', window.wssPort)
+run('ws', window.wsPort, () => {
+	run('wss', window.wssPort)
+})

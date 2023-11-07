@@ -15,50 +15,30 @@ await start({
 
 console.log('Broker setup done')
 
+/** @type { import('@web/test-runner-playwright').PlaywrightLauncher[] } */
+const browsers = ['chromium', 'firefox', 'webkit'].map(product => playwrightLauncher({
+    product,
+    createBrowserContext: ({ browser, config }) => {
+
+        // ignore HTTPS errors
+        const context = browser.newContext({
+            ignoreHTTPSErrors: true,
+            extraHTTPHeaders: {
+                'x-forwarded-proto': 'https',
+            },
+        })
+        return context
+    },
+    launchOptions: { headless: true, devtools: false }
+}))
+
 /**
  * @type { import('@web/test-runner').TestRunnerConfig }
  */
 export default {
     // https://modern-web.dev/docs/test-runner/browser-launchers/playwright/#testing-multiple-browsers
     // Requires: @web/test-runner-playwright
-    browsers: [
-        playwrightLauncher({
-            product: 'chromium', createBrowserContext: ({ browser, config }) => {
-
-                // ignore HTTPS errors
-                const context = browser.newContext({
-                    ignoreHTTPSErrors: true
-                })
-                return context
-
-            },
-           // launchOptions: { headless: false, devtools: true }
-        }),
-        playwrightLauncher({
-            product: 'firefox', createBrowserContext: ({ browser, config }) => {
-
-                // ignore HTTPS errors
-                const context = browser.newContext({
-                    ignoreHTTPSErrors: true
-                })
-                return context
-
-            }, 
-           // launchOptions: { headless: false, devtools: true }
-        }),
-        playwrightLauncher({
-            product: 'webkit', createBrowserContext: ({ browser, config }) => {
-
-                // ignore HTTPS errors
-                const context = browser.newContext({
-                    ignoreHTTPSErrors: true
-                })
-                return context
-
-            },
-           // launchOptions: { headless: false, devtools: true }
-        }),
-    ],
+    browsers,
     playwright: true,
     concurrency: 10,
     files: ['./test/browser/test.js'],
@@ -72,13 +52,14 @@ export default {
     // open: true,
     // rootDir: path.resolve(__dirname)
     // http2: true,
+    // protocol: 'https:',
     // sslCert: './test/certs/server-cert.pem',
     // sslKey: './test/certs/server-key.pem',
     testRunnerHtml: (testFrameworkImport) =>
         `<html>
         <body>
             <script src="dist/mqtt.js"></script>
-            <script type="module">
+            <script>
                 window.wsPort = ${wsPort};
                 window.wssPort = ${wssPort};
             </script>
