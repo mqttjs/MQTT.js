@@ -22,10 +22,7 @@ const browsers = ['chromium', 'firefox', 'webkit'].map(product => playwrightLaun
 
         // ignore HTTPS errors
         const context = browser.newContext({
-            ignoreHTTPSErrors: true,
-            extraHTTPHeaders: {
-                'x-forwarded-proto': 'https',
-            },
+            ignoreHTTPSErrors: true
         })
         return context
     },
