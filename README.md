@@ -804,10 +804,20 @@ Closes the Store.
 
 ## Browser
 
-MQTT.js is bundled using [browserify](http://browserify.org/). You can find the browser build in the `dist` folder.
+MQTT.js is bundled using [esbuild](https://esbuild.github.io/). It is tested working with all bundlers like Webpack, Vite and React.
+
+You can find all mqtt bundles versions in `dist` folder:
+
+- `mqtt.js` - iife format, not minified
+- `mqtt.min.js` - iife format, minified
+- `mqtt.esm.js` - esm format minified
+
+In order to import them use one of the following:
 
 ```js
+import * as mqtt from 'mqtt/dist/mqtt'
 import * as mqtt from 'mqtt/dist/mqtt.min'
+import mqtt from 'mqtt/dist/mqtt.esm'
 ```
 
 <a name="cdn"></a>
@@ -824,10 +834,12 @@ See <http://unpkg.com> for the full documentation on version ranges.
 
 ### Webpack
 
-If you are using webpack simply import MQTT.js like this:
+If you are using webpack simply import MQTT.js in one of the following ways:
 
 ```js
+import * as mqtt from 'mqtt/dist/mqtt'
 import * as mqtt from 'mqtt/dist/mqtt.min'
+import mqtt from 'mqtt/dist/mqtt.esm'
 ```
 
 <a name="vite"></a>
@@ -837,7 +849,9 @@ import * as mqtt from 'mqtt/dist/mqtt.min'
 If you are using vite simply import MQTT.js like this:
 
 ```js
+import * as mqtt from 'mqtt/dist/mqtt'
 import * as mqtt from 'mqtt/dist/mqtt.min'
+import mqtt from 'mqtt/dist/mqtt.esm'
 ```
 
 <a name="qos"></a>

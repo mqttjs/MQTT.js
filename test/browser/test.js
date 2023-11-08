@@ -1,7 +1,9 @@
 import { expect } from '@esm-bundle/chai';
+import mqtt from '../../dist/mqtt.esm.js';
 
+// needed to test no-esm version /dist/mqtt.js
 /** @type { import('../../src/mqtt').MqttClient }*/
-const mqtt = window.mqtt
+const mqtt2 = window.mqtt
 
 function run(proto, port, cb) {
 
@@ -51,6 +53,12 @@ function run(proto, port, cb) {
 		})
 	})
 }
+
+it('should work with non-ESM version', () => {
+	expect(mqtt2).to.exist
+	expect(mqtt2.connect).to.exist
+	expect(mqtt2.connect).to.be.a('function')
+})
 
 
 run('ws', window.wsPort, () => {
