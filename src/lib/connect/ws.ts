@@ -3,10 +3,10 @@ import { StreamBuilder } from '../shared'
 import { Buffer } from 'buffer'
 import WS, { ClientOptions } from 'ws'
 import _debug from 'debug'
-import duplexify from 'duplexify'
-import { DuplexOptions, Transform } from 'readable-stream'
+import { DuplexOptions, Transform, Duplex } from 'readable-stream'
 import IS_BROWSER from '../is-browser'
 import MqttClient, { IClientOptions } from '../client'
+import { Writable } from 'stream'
 
 const debug = _debug('mqttjs:ws')
 
@@ -157,7 +157,7 @@ const streamBuilder: StreamBuilder = (client, opts) => {
 
 const browserStreamBuilder: StreamBuilder = (client, opts) => {
 	debug('browserStreamBuilder')
-	let stream
+	let stream: (Duplex | Transform) & { socket?: WebSocket }
 	const options = setDefaultBrowserOpts(opts)
 	// sets the maximum socket buffer size before throttling
 	const bufferSize = options.browserBufferSize || 1024 * 512
@@ -182,7 +182,7 @@ const browserStreamBuilder: StreamBuilder = (client, opts) => {
 	if (socket.readyState === socket.OPEN) {
 		stream = proxy
 	} else {
-		stream = duplexify(undefined, undefined, opts)
+		stream = new Duplex(opts)
 		if (!opts.objectMode) {
 			stream._writev = writev
 		}
@@ -208,7 +208,11 @@ const browserStreamBuilder: StreamBuilder = (client, opts) => {
 
 	// methods for browserStreamBuilder
 
-	function buildProxy(pOptions: IClientOptions, socketWrite, socketEnd) {
+	function buildProxy(
+		pOptions: IClientOptions,
+		socketWrite: typeof socketWriteBrowser,
+		socketEnd: typeof socketEndBrowser,
+	) {
 		const _proxy = new Transform({
 			objectMode: pOptions.objectMode,
 		})
@@ -220,8 +224,7 @@ const browserStreamBuilder: StreamBuilder = (client, opts) => {
 	}
 
 	function onOpen() {
-		stream.setReadable(proxy)
-		stream.setWritable(proxy)
+		proxy.pipe(stream)
 		stream.emit('connect')
 	}
 
@@ -231,7 +234,7 @@ const browserStreamBuilder: StreamBuilder = (client, opts) => {
 	}
 
 	function onError(err: Event) {
-		stream.destroy(err)
+		stream.destroy(err as any)
 	}
 
 	function onMessage(event: MessageEvent) {
@@ -278,7 +281,7 @@ const browserStreamBuilder: StreamBuilder = (client, opts) => {
 		next()
 	}
 
-	function socketEndBrowser(done) {
+	function socketEndBrowser(done: (error?: Error, data?: any) => void) {
 		socket.close()
 		done()
 	}

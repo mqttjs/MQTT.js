@@ -1,14 +1,17 @@
 import { StreamBuilder } from '../shared'
 
 import { Buffer } from 'buffer'
-import { Transform } from 'readable-stream'
-import duplexify, { Duplexify } from 'duplexify'
+import { Transform, Duplex } from 'readable-stream'
 import MqttClient, { IClientOptions } from '../client'
 
 /* global wx */
 let socketTask: any
 let proxy: Transform
-let stream: Duplexify
+let stream: Duplex
+
+declare global {
+	const wx: any
+}
 
 function buildProxy() {
 	const _proxy = new Transform()
@@ -61,8 +64,7 @@ function buildUrl(opts: IClientOptions, client: MqttClient) {
 
 function bindEventHandler() {
 	socketTask.onOpen(() => {
-		stream.setReadable(proxy)
-		stream.setWritable(proxy)
+		proxy.pipe(stream)
 		stream.emit('connect')
 	})
 
@@ -100,15 +102,13 @@ const buildStream: StreamBuilder = (client, opts) => {
 	setDefaultOpts(opts)
 
 	const url = buildUrl(opts, client)
-	// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-	// @ts-ignore
 	socketTask = wx.connectSocket({
 		url,
 		protocols: [websocketSubProtocol],
 	})
 
 	proxy = buildProxy()
-	stream = duplexify.obj()
+	stream = new Duplex({ objectMode: true })
 	stream._destroy = (err, cb) => {
 		socketTask.close({
 			success() {
@@ -118,20 +118,18 @@ const buildStream: StreamBuilder = (client, opts) => {
 	}
 
 	const destroyRef = stream.destroy
-	// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-	// @ts-ignore
-	stream.destroy = () => {
+	stream.destroy = (err, cb) => {
 		stream.destroy = destroyRef
 
 		setTimeout(() => {
 			socketTask.close({
 				fail() {
-					// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-					// @ts-ignore
-					stream._destroy(new Error())
+					stream._destroy(err, cb)
 				},
 			})
 		}, 0)
+
+		return stream
 	}
 
 	bindEventHandler()
