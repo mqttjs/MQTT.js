@@ -108,7 +108,7 @@
     "debug": "^4.3.4",
     "duplexify": "^4.1.2",
     "help-me": "^4.2.0",
-    "lru-cache": "^7.18.3",
+    "lru-cache": "^10.0.1",
     "minimist": "^1.2.8",
     "mqtt-packet": "^8.2.1",
     "number-allocator": "^1.0.14",
