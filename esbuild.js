@@ -16,13 +16,12 @@ const options = {
     platform: 'browser',
     globalName: 'mqtt',
     define: {
-        'global': 'window',
+        'global': 'window'
     },
     plugins: [
         polyfillNode({
             polyfills: [
-                'buffer',
-                'readable-stream',
+                'readable-stream'
             ]
         }),
     ],
@@ -50,7 +49,7 @@ async function run() {
     const files = fs.readdirSync(outdir)
     for (const file of files) {
         const stat = fs.statSync(`${outdir}/${file}`)
-        console.log(`- ${file} ${Math.round(stat.size / 1024)} KB`)
+        console.log(`- ${file} ${Math.round(stat.size / 1024 * 100) / 100} KB`)
     }
 }
 
