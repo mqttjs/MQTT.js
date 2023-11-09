@@ -257,6 +257,7 @@ const browserStreamBuilder: StreamBuilder = (client, opts) => {
 		if (socket.bufferedAmount > bufferSize) {
 			// throttle data until buffered amount is reduced.
 			setTimeout(socketWriteBrowser, bufferTimeout, chunk, enc, next)
+			return
 		}
 
 		if (coerceToBuffer && typeof chunk === 'string') {
@@ -264,6 +265,7 @@ const browserStreamBuilder: StreamBuilder = (client, opts) => {
 		}
 
 		try {
+			// https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/send (not this doesn't have a cb as second arg)
 			socket.send(chunk)
 		} catch (err) {
 			return next(err)

@@ -22,8 +22,11 @@ export function writev(
 }
 
 /**
- * This util class extends Duplex and accepts a stream as input and returns a stream that accepts incoming data
- * and buffers it until the input stream is open.
+ * How this works:
+ * - `socket` is the `WebSocket` instance, the connection to our broker.
+ * - `proxy` is a `Transform`, it ensure data written to the `socket` is a `Buffer`.
+ * This class buffers the data written to the `proxy` (so then to `socket`) until the `socket` is ready.
+ * The stream returned from this class, will be passed to the `MqttClient`.
  */
 export class BufferedDuplex extends Duplex {
 	public socket: WebSocket
