@@ -15,6 +15,7 @@ const options = {
     format: 'iife',
     platform: 'browser',
     globalName: 'mqtt',
+    sourcemap: true,
     define: {
         'global': 'window'
     },
