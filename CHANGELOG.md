@@ -1,5 +1,12 @@
 
 
+# [5.2.0](https://github.com/mqttjs/MQTT.js/compare/v5.1.4...v5.2.0) (2023-11-09)
+
+
+### Features
+
+* esm version `dist/mqtt.esm.js` and replace `browserify` with `esbuild` ([#1731](https://github.com/mqttjs/MQTT.js/issues/1731)) ([3d6c3be](https://github.com/mqttjs/MQTT.js/commit/3d6c3be60eae8416dbfea1d15a826c0b5fc52c45))
+
 ## [5.1.4](https://github.com/mqttjs/MQTT.js/compare/v5.1.3...v5.1.4) (2023-10-30)
 
 
