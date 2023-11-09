@@ -5,7 +5,15 @@ import mqtt from '../../dist/mqtt.esm.js';
 /** @type { import('../../src/mqtt').MqttClient }*/
 const mqtt2 = window.mqtt
 
+// get browser name
+const browser = navigator.userAgent.toLowerCase().replace(/ /g, '_').replace(/\//g, '_')
+
+const browserTopic = `test/${browser}`
+
+
 function run(proto, port, cb) {
+
+	const testTopic = `${browserTopic}/${proto}`
 
 	describe('MQTT.js browser test with ' + proto.toUpperCase(), () => {
 		after(() => {
@@ -28,19 +36,20 @@ function run(proto, port, cb) {
 		})
 
 		it('should connect-publish-subscribe', (done) => {
+			const payload = 'Hello World!'
 			client.on('connect', () => {
 				client.on('message', (topic, msg) => {
-					expect(topic).to.equal('hello');
-					expect(msg.toString()).to.equal('Hello World!');
+					expect(topic).to.equal(testTopic);
+					expect(msg.toString()).to.equal(payload);
 					client.end(() => {
 						done();
 					});
 				});
 
-				client.subscribe('hello', (err) => {
+				client.subscribe(testTopic, (err) => {
 					expect(err).to.not.exist;
 					if (!err) {
-						client.publish('hello', 'Hello World!', (err2) => {
+						client.publish(testTopic, payload, (err2) => {
 							expect(err2).to.not.exist;
 						});
 					}
