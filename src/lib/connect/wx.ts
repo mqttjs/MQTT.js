@@ -82,8 +82,11 @@ function bindEventHandler() {
 		stream.destroy()
 	})
 
-	socketTask.onError((res) => {
-		stream.destroy(new Error(res.errMsg))
+	socketTask.onError((err) => {
+		// fixes https://github.com/mqttjs/MQTT.js/issues/876
+		// this will be catched on client streamErrorHandler
+		stream.emit('error', err)
+		stream.destroy(new Error(err.errMsg))
 	})
 }
 
