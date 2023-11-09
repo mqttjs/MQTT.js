@@ -240,6 +240,7 @@ const browserStreamBuilder: StreamBuilder = (client, opts) => {
 
 	function onError(err: ErrorEvent) {
 		// fixes https://github.com/mqttjs/MQTT.js/issues/876
+		// this will be catched on client streamErrorHandler
 		stream.emit('error', err)
 		stream.destroy(err as any)
 	}
