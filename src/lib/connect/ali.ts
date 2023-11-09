@@ -64,7 +64,7 @@ function bindEventHandler() {
 	isInitialized = true
 
 	my.onSocketOpen(() => {
-		stream.onSocketOpen()
+		stream.socketReady()
 	})
 
 	my.onSocketMessage((res) => {

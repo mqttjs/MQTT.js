@@ -169,7 +169,11 @@ const browserStreamBuilder: StreamBuilder = (client, opts) => {
 
 	const coerceToBuffer = !opts.objectMode
 
+	// the websocket connection
 	const socket = createBrowserWebSocket(client, opts)
+
+	// the proxy is a transform stream that forwards data to the socket
+	// it ensures that data write to socket is a buffer
 	const proxy = buildProxy(opts, socketWriteBrowser, socketEndBrowser)
 
 	if (!opts.objectMode) {
@@ -186,7 +190,7 @@ const browserStreamBuilder: StreamBuilder = (client, opts) => {
 		stream = proxy
 		stream.socket = socket
 	} else {
-		// while not open we want to buffer writes
+		// socket is not open. Use this to buffer writes until it is opened
 		stream = new BufferedDuplex(opts, proxy, socket)
 
 		if (eventListenerSupport) {
@@ -225,7 +229,7 @@ const browserStreamBuilder: StreamBuilder = (client, opts) => {
 
 	function onOpen() {
 		if (stream instanceof BufferedDuplex) {
-			stream.onSocketOpen()
+			stream.socketReady()
 		}
 	}
 

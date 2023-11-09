@@ -30,7 +30,7 @@ export class BufferedDuplex extends Duplex {
 
 	private proxy: Transform
 
-	private socketOpen: boolean
+	private isSocketOpen: boolean
 
 	private isReadyPromise: Promise<void>
 
@@ -47,7 +47,7 @@ export class BufferedDuplex extends Duplex {
 			this._writev = writev.bind(this)
 		}
 
-		this.socketOpen = false
+		this.isSocketOpen = false
 
 		this.isReadyPromise = new Promise((resolve) => {
 			this.resolveReady = resolve
@@ -58,9 +58,10 @@ export class BufferedDuplex extends Duplex {
 		})
 	}
 
-	onSocketOpen() {
+	/** Method to call when socket is ready to stop buffering writes */
+	socketReady() {
 		this.emit('connect')
-		this.socketOpen = true
+		this.isSocketOpen = true
 		this.resolveReady()
 	}
 
@@ -69,7 +70,7 @@ export class BufferedDuplex extends Duplex {
 	}
 
 	async _write(chunk: any, encoding: string, cb: (err?: Error) => void) {
-		if (!this.socketOpen) {
+		if (!this.isSocketOpen) {
 			// wait for socket to open
 			await this.isReadyPromise
 		}

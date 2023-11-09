@@ -65,7 +65,7 @@ function buildUrl(opts: IClientOptions, client: MqttClient) {
 
 function bindEventHandler() {
 	socketTask.onOpen(() => {
-		stream.onSocketOpen()
+		stream.socketReady()
 	})
 
 	socketTask.onMessage((res) => {
