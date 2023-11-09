@@ -28,11 +28,9 @@ export function writev(
 export class BufferedDuplex extends Duplex {
 	public socket: WebSocket
 
-	public proxy: Transform
+	private proxy: Transform
 
-	public eventListenerSupport: boolean
-
-	public socketOpen: boolean
+	private socketOpen: boolean
 
 	private isReadyPromise: Promise<void>
 
@@ -44,8 +42,6 @@ export class BufferedDuplex extends Duplex {
 		})
 		this.proxy = proxy
 		this.socket = socket
-		this.eventListenerSupport =
-			typeof socket.addEventListener !== 'undefined'
 
 		if (!opts.objectMode) {
 			this._writev = writev.bind(this)
@@ -57,25 +53,15 @@ export class BufferedDuplex extends Duplex {
 			this.resolveReady = resolve
 		})
 
-		const onOpen = () => {
-			this.onSocketOpen()
-		}
-
-		if (this.eventListenerSupport) {
-			socket.addEventListener('open', onOpen)
-		} else {
-			socket.onopen = onOpen
-		}
-
 		this.proxy.on('data', (chunk) => {
 			this.push(chunk)
 		})
 	}
 
 	onSocketOpen() {
+		this.emit('connect')
 		this.socketOpen = true
 		this.resolveReady()
-		this.emit('connect')
 	}
 
 	_read(size?: number): void {

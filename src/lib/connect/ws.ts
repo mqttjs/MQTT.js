@@ -184,12 +184,17 @@ const browserStreamBuilder: StreamBuilder = (client, opts) => {
 	// was already open when passed in
 	if (socket.readyState === socket.OPEN) {
 		stream = proxy
+		stream.socket = socket
 	} else {
 		// while not open we want to buffer writes
 		stream = new BufferedDuplex(opts, proxy, socket)
-	}
 
-	stream.socket = socket
+		if (eventListenerSupport) {
+			socket.addEventListener('open', onOpen)
+		} else {
+			socket.onopen = onOpen
+		}
+	}
 
 	if (eventListenerSupport) {
 		socket.addEventListener('close', onClose)
@@ -216,6 +221,12 @@ const browserStreamBuilder: StreamBuilder = (client, opts) => {
 		_proxy._flush = socketEnd
 
 		return _proxy
+	}
+
+	function onOpen() {
+		if (stream instanceof BufferedDuplex) {
+			stream.onSocketOpen()
+		}
 	}
 
 	function onClose() {

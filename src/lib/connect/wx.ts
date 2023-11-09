@@ -1,13 +1,14 @@
 import { StreamBuilder } from '../shared'
 
 import { Buffer } from 'buffer'
-import { Transform, Duplex } from 'readable-stream'
+import { Transform } from 'readable-stream'
 import MqttClient, { IClientOptions } from '../client'
+import { BufferedDuplex } from '../BufferedDuplex'
 
 /* global wx */
 let socketTask: any
 let proxy: Transform
-let stream: Duplex
+let stream: BufferedDuplex
 
 declare global {
 	const wx: any
@@ -64,8 +65,7 @@ function buildUrl(opts: IClientOptions, client: MqttClient) {
 
 function bindEventHandler() {
 	socketTask.onOpen(() => {
-		proxy.pipe(stream)
-		stream.emit('connect')
+		stream.onSocketOpen()
 	})
 
 	socketTask.onMessage((res) => {
@@ -108,7 +108,7 @@ const buildStream: StreamBuilder = (client, opts) => {
 	})
 
 	proxy = buildProxy()
-	stream = new Duplex({ objectMode: true })
+	stream = new BufferedDuplex(opts, proxy, socketTask)
 	stream._destroy = (err, cb) => {
 		socketTask.close({
 			success() {

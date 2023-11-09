@@ -1,11 +1,12 @@
 import { Buffer } from 'buffer'
-import { Transform, Duplex } from 'readable-stream'
+import { Transform } from 'readable-stream'
 import { StreamBuilder } from '../shared'
 import MqttClient, { IClientOptions } from '../client'
+import { BufferedDuplex } from '../BufferedDuplex'
 
 let my: any
 let proxy: Transform
-let stream: Duplex
+let stream: BufferedDuplex
 let isInitialized = false
 
 function buildProxy() {
@@ -63,8 +64,7 @@ function bindEventHandler() {
 	isInitialized = true
 
 	my.onSocketOpen(() => {
-		proxy.pipe(stream)
-		stream.emit('connect')
+		stream.onSocketOpen()
 	})
 
 	my.onSocketMessage((res) => {
@@ -116,9 +116,7 @@ const buildStream: StreamBuilder = (client, opts) => {
 	})
 
 	proxy = buildProxy()
-	stream = new Duplex({
-		objectMode: true,
-	})
+	stream = new BufferedDuplex(opts, proxy, my)
 
 	bindEventHandler()
 
