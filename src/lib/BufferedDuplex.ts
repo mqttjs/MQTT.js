@@ -67,10 +67,6 @@ export class BufferedDuplex extends Duplex {
 			socket.onopen = onOpen
 		}
 
-		this.on('end', () => {
-			this.proxy.end()
-		})
-
 		this.proxy.on('data', (chunk) => {
 			this.push(chunk)
 		})
@@ -92,7 +88,9 @@ export class BufferedDuplex extends Duplex {
 			await this.isReadyPromise
 		}
 
-		this.proxy.write(chunk, encoding, cb)
+		if (this.proxy.write(chunk, encoding, cb) === false) {
+			this.proxy.once('drain', cb)
+		}
 	}
 
 	_final(callback: (error?: Error) => void): void {
