@@ -265,7 +265,7 @@ const browserStreamBuilder: StreamBuilder = (client, opts) => {
 		}
 
 		try {
-			// https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/send (not this doesn't have a cb as second arg)
+			// https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/send (note this doesn't have a cb as second arg)
 			socket.send(chunk)
 		} catch (err) {
 			return next(err)
