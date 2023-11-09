@@ -8,8 +8,6 @@ export default function abstractStoreTest(
 ) {
 	let store: IStore
 
-	// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-	// @ts-expect-error
 	beforeEach((_ctx, done) => {
 		build((err, _store) => {
 			store = _store
@@ -17,8 +15,6 @@ export default function abstractStoreTest(
 		})
 	})
 
-	// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-	// @ts-expect-error
 	afterEach((_ctx, done) => {
 		store.close(done)
 	})
