@@ -70,6 +70,10 @@ export class BufferedDuplex extends Duplex {
 		this.on('end', () => {
 			this.proxy.end()
 		})
+
+		this.proxy.on('data', (chunk) => {
+			this.push(chunk)
+		})
 	}
 
 	onSocketOpen() {
