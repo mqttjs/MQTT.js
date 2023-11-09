@@ -88,8 +88,10 @@ export class BufferedDuplex extends Duplex {
 			await this.isReadyPromise
 		}
 
-		if (this.proxy.write(chunk, encoding, cb) === false) {
+		if (this.proxy.write(chunk, encoding) === false) {
 			this.proxy.once('drain', cb)
+		} else {
+			cb()
 		}
 	}
 
