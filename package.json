@@ -38,7 +38,7 @@
   "exports": {
     ".": {
       "browser": {
-        "import": "./dist/mqtt.esm.js", 
+        "import": "./dist/mqtt.esm.js",
         "default": "./dist/mqtt.js"
       },
       "default": "./build/mqtt.js"
@@ -129,7 +129,6 @@
     "@esm-bundle/chai": "^4.3.4-fix.0",
     "@release-it/conventional-changelog": "^7.0.2",
     "@types/chai": "^4.3.10",
-    "@types/duplexify": "^3.6.4",
     "@types/node": "^20.9.0",
     "@types/sinon": "^17.0.1",
     "@types/tape": "^5.6.4",
