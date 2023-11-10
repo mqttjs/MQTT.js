@@ -21,6 +21,7 @@
     "url": "git://github.com/mqttjs/MQTT.js.git"
   },
   "main": "./build/mqtt.js",
+  "module": "./dist/mqtt.esm.js",
   "bin": {
     "mqtt_pub": "./build/bin/pub.js",
     "mqtt_sub": "./build/bin/sub.js",
@@ -35,7 +36,13 @@
     "src/"
   ],
   "exports": {
-    ".": "./build/mqtt.js",
+    ".": {
+      "browser": {
+        "import": "./dist/mqtt.esm.js", 
+        "default": "./dist/mqtt.js"
+      },
+      "default": "./build/mqtt.js"
+    },
     "./package.json": "./package.json",
     "./*.map": "./build/*.js.map",
     "./dist/*": "./dist/*.js",
@@ -95,7 +102,7 @@
     "node": ">=16.0.0"
   },
   "browser": {
-    "./mqtt.js": "./build/mqtt.js",
+    "./mqtt.js": "./dist/mqtt.js",
     "fs": false,
     "tls": false,
     "net": false
@@ -110,6 +117,7 @@
     "help-me": "^4.2.0",
     "lru-cache": "^10.0.1",
     "minimist": "^1.2.8",
+    "mqtt": "^5.2.0",
     "mqtt-packet": "^9.0.0",
     "number-allocator": "^1.0.14",
     "readable-stream": "^4.4.2",
