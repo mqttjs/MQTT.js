@@ -103,6 +103,7 @@ const buildStream: StreamBuilder = (client, opts) => {
 	setDefaultOpts(opts)
 
 	const url = buildUrl(opts, client)
+	// https://github.com/wechat-miniprogram/api-typings/blob/master/types/wx/lib.wx.api.d.ts#L20984
 	socketTask = wx.connectSocket({
 		url,
 		protocols: [websocketSubProtocol],

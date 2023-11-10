@@ -110,6 +110,7 @@ const buildStream: StreamBuilder = (client, opts) => {
 
 	const url = buildUrl(opts, client)
 	my = opts.my
+	// https://miniprogram.alipay.com/docs/miniprogram/mpdev/api_network_connectsocket
 	my.connectSocket({
 		url,
 		protocols: websocketSubProtocol,
