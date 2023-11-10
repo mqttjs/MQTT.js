@@ -1,7 +1,7 @@
 {
   "name": "mqtt",
   "description": "A library for the MQTT protocol",
-  "version": "5.2.0",
+  "version": "5.2.1",
   "contributors": [
     "Adam Rudd <adamvrr@gmail.com>",
     "Matteo Collina <matteo.collina@gmail.com> (https://github.com/mcollina)",
@@ -38,7 +38,7 @@
   "exports": {
     ".": {
       "browser": {
-        "import": "./dist/mqtt.esm.js", 
+        "import": "./dist/mqtt.esm.js",
         "default": "./dist/mqtt.js"
       },
       "default": "./build/mqtt.js"
