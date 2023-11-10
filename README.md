@@ -814,7 +814,7 @@ You can find all mqtt bundles versions in `dist` folder:
 - `mqtt.min.js` - iife format, minified
 - `mqtt.esm.js` - esm format minified
 
-Starting from MQTT.js 5.2.0 you can import mqtt in your code like this:
+Starting from MQTT.js > 5.2.0 you can import mqtt in your code like this:
 
 ```js
 import mqtt from 'mqtt'
