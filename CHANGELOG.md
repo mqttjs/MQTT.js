@@ -1,5 +1,12 @@
 
 
+## [5.2.1](https://github.com/mqttjs/MQTT.js/compare/v5.2.0...v5.2.1) (2023-11-10)
+
+
+### Bug Fixes
+
+* make `import mqtt from 'mqtt'` work in browsers ([#1734](https://github.com/mqttjs/MQTT.js/issues/1734)) ([80e29a9](https://github.com/mqttjs/MQTT.js/commit/80e29a9dc6bb6ad51a7ac968361a550bc1da68cb))
+
 # [5.2.0](https://github.com/mqttjs/MQTT.js/compare/v5.1.4...v5.2.0) (2023-11-09)
 
 
