@@ -21,7 +21,6 @@
     "url": "git://github.com/mqttjs/MQTT.js.git"
   },
   "main": "./build/mqtt.js",
-  "module": "./dist/mqtt.esm.js",
   "bin": {
     "mqtt_pub": "./build/bin/pub.js",
     "mqtt_sub": "./build/bin/sub.js",
