@@ -440,6 +440,10 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 	public pingTimer: any
 
+	/**
+	 * The connection to the Broker. In browsers env this also have `socket` property
+	 * set to the `WebSocket` instance.
+	 */
 	public stream: IStream
 
 	public queue: { packet: Packet; cb: PacketCallback }[]

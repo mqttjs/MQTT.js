@@ -10,7 +10,7 @@ export type GenericCallback<T> = (error?: Error, result?: T) => void
 export type VoidCallback = () => void
 
 export type IStream = Duplex & {
-	socket?: any
+	socket?: WebSocket
 }
 
 export type StreamBuilder = (
