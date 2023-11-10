@@ -801,6 +801,8 @@ The callback is called when the packet has been removed.
 Closes the Store.
 
 <a name="browser"></a>
+<a name="webpack"></a>
+<a name="vite"></a>
 
 ## Browser
 
@@ -812,7 +814,15 @@ You can find all mqtt bundles versions in `dist` folder:
 - `mqtt.min.js` - iife format, minified
 - `mqtt.esm.js` - esm format minified
 
-In order to import them use one of the following:
+Starting from MQTT.js > 5.2.0 you can import mqtt in your code like this:
+
+```js
+import mqtt from 'mqtt'
+```
+
+This will be automatically handled by your bundler.
+
+Otherwise you can choose to use a specific bundle like:
 
 ```js
 import * as mqtt from 'mqtt/dist/mqtt'
@@ -829,30 +839,6 @@ at <https://unpkg.com/mqtt/dist/mqtt.min.js>.
 See <http://unpkg.com> for the full documentation on version ranges.
 
 **Be sure to only use this bundle with `ws` or `wss` URLs in the browser. Others URL types will likey fail**
-
-<a name="webpack"></a>
-
-### Webpack
-
-If you are using webpack simply import MQTT.js in one of the following ways:
-
-```js
-import * as mqtt from 'mqtt/dist/mqtt'
-import * as mqtt from 'mqtt/dist/mqtt.min'
-import mqtt from 'mqtt/dist/mqtt.esm'
-```
-
-<a name="vite"></a>
-
-### Vite
-
-If you are using vite simply import MQTT.js like this:
-
-```js
-import * as mqtt from 'mqtt/dist/mqtt'
-import * as mqtt from 'mqtt/dist/mqtt.min'
-import mqtt from 'mqtt/dist/mqtt.esm'
-```
 
 <a name="qos"></a>
 

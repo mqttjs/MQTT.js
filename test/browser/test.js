@@ -1,5 +1,5 @@
 import { expect } from '@esm-bundle/chai';
-import mqtt from '../../dist/mqtt.esm.js';
+import mqtt from '../../'; // this will resolve to mqtt/dist/mqtt.esm.js
 
 // needed to test no-esm version /dist/mqtt.js
 /** @type { import('../../src/mqtt').MqttClient }*/
