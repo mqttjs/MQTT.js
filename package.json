@@ -107,7 +107,6 @@
     "concat-stream": "^2.0.0",
     "debug": "^4.3.4",
     "help-me": "^4.2.0",
-    "isomorphic-ws": "^5.0.0",
     "lru-cache": "^10.0.1",
     "minimist": "^1.2.8",
     "mqtt-packet": "^9.0.0",

@@ -1,10 +1,6 @@
 import { StreamBuilder } from '../shared'
 import { Buffer } from 'buffer'
-import WebSocket, {
-	ClientOptions,
-	ErrorEvent,
-	MessageEvent,
-} from 'isomorphic-ws'
+import Ws, { ClientOptions } from 'ws'
 import _debug from 'debug'
 import { DuplexOptions, Transform } from 'readable-stream'
 import IS_BROWSER from '../is-browser'
@@ -111,11 +107,11 @@ function createWebSocket(
 	debug(
 		`creating new Websocket for url: ${url} and protocol: ${websocketSubProtocol}`,
 	)
-	let socket: WebSocket
+	let socket: Ws
 	if (opts.createWebsocket) {
 		socket = opts.createWebsocket(url, [websocketSubProtocol], opts)
 	} else {
-		socket = new WebSocket(
+		socket = new Ws(
 			url,
 			[websocketSubProtocol],
 			opts.wsOptions as ClientOptions,
@@ -146,7 +142,7 @@ const streamBuilder: StreamBuilder = (client, opts) => {
 	const options = setDefaultOpts(opts)
 	const url = buildUrl(options, client)
 	const socket = createWebSocket(client, url, options)
-	const webSocketStream = WebSocket.createWebSocketStream(
+	const webSocketStream = Ws.createWebSocketStream(
 		socket,
 		options.wsOptions as DuplexOptions,
 	)
@@ -173,7 +169,7 @@ const browserStreamBuilder: StreamBuilder = (client, opts) => {
 	const socket = createBrowserWebSocket(client, opts)
 
 	// the proxy is a transform stream that forwards data to the socket
-	// it ensures that data write to socket is a buffer
+	// it ensures data written to socket is a Buffer
 	const proxy = buildProxy(opts, socketWriteBrowser, socketEndBrowser)
 
 	if (!opts.objectMode) {
@@ -228,22 +224,34 @@ const browserStreamBuilder: StreamBuilder = (client, opts) => {
 	}
 
 	function onOpen() {
+		debug('WebSocket onOpen')
 		if (stream instanceof BufferedDuplex) {
 			stream.socketReady()
 		}
 	}
 
-	function onClose() {
+	/**
+	 * https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/close_event
+	 */
+	function onClose(event: CloseEvent) {
+		debug('WebSocket onClose', event)
 		stream.end()
 		stream.destroy()
 	}
 
-	function onError(err: ErrorEvent) {
+	/**
+	 * https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/error_event
+	 */
+	function onError(err: Event) {
+		debug('WebSocket onError', err)
 		const error = new Error('WebSocket error')
 		error['event'] = err
 		stream.destroy(error)
 	}
 
+	/**
+	 * https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/message_event
+	 */
 	function onMessage(event: MessageEvent) {
 		let { data } = event
 		if (data instanceof ArrayBuffer) data = Buffer.from(data)

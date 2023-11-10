@@ -1,5 +1,4 @@
 import { Duplex, Transform } from 'readable-stream'
-import WebSocket from 'isomorphic-ws'
 import { IClientOptions } from './client'
 
 /**

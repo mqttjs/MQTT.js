@@ -25,7 +25,7 @@ import * as validations from './validations'
 import _debug from 'debug'
 import Store, { IStore } from './store'
 import handlePacket from './handlers'
-import { ClientOptions } from 'isomorphic-ws'
+import { ClientOptions } from 'ws'
 import { ClientRequestArgs } from 'http'
 import {
 	DoneCallback,
