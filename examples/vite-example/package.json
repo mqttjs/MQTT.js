@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "@esbuild-plugins/node-modules-polyfill": "^0.2.2",
-    "mqtt": "^5.0.5",
+    "mqtt": "^5.2.1",
     "process": "^0.11.10",
     "vue": "^3.3.4"
   },
