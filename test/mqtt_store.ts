@@ -1,4 +1,4 @@
-import Store from '../src/lib/store'
+import { Store } from '../src'
 import { describe, it } from 'node:test'
 import 'should'
 
