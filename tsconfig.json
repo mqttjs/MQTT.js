@@ -25,6 +25,7 @@
 	"include": [
 		"src",
 		"test",
+		"example.ts"
 	],
 	"exclude": [
 		"dist",

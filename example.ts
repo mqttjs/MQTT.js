@@ -2,16 +2,16 @@ import mqtt from '.'
 
 const client = mqtt.connect('mqtt://test.mosquitto.org')
 
-const topic = 'presence'
+const testTopic = 'presence'
 
-client.subscribe(topic, (err) => {
+client.subscribe(testTopic, (err) => {
 	if (!err) {
-		console.log('subscribed to', topic)
-		client.publish(topic, 'Hello mqtt', (err) => {
-			if (!err) {
+		console.log('subscribed to', testTopic)
+		client.publish(testTopic, 'Hello mqtt', (err2) => {
+			if (!err2) {
 				console.log('message published')
 			} else {
-				console.error(err)
+				console.error(err2)
 			}
 		})
 	} else {
