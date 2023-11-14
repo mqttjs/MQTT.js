@@ -20,7 +20,7 @@
     "type": "git",
     "url": "git://github.com/mqttjs/MQTT.js.git"
   },
-  "main": "./build/mqtt.js",
+  "main": "./build/index.js",
   "module": "./dist/mqtt.esm.js",
   "bin": {
     "mqtt_pub": "./build/bin/pub.js",
@@ -39,20 +39,20 @@
     ".": {
       "browser": {
         "import": "./dist/mqtt.esm.js",
-        "default": "./dist/mqtt.js"
+        "default": "./dist/index.js"
       },
-      "default": "./build/mqtt.js"
+      "default": "./build/index.js"
     },
     "./package.json": "./package.json",
     "./*.map": "./build/*.js.map",
     "./dist/*": "./dist/*.js",
     "./*": "./build/*.js"
   },
-  "types": "build/mqtt.d.ts",
+  "types": "build/index.d.ts",
   "typesVersions": {
     "*": {
       "*": [
-        "./build/mqtt.d.ts"
+        "./build/index.d.ts"
       ]
     }
   },
