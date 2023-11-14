@@ -1,6 +1,6 @@
 import path from 'path'
 import fs from 'fs'
-import * as mqtt from '../src/mqtt'
+import mqtt from '../src'
 import abstractClientTests from './abstract_client'
 import { MqttSecureServer, MqttServerListener } from './server'
 import { assert } from 'chai'

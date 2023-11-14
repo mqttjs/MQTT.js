@@ -9,7 +9,7 @@ const outdir = 'dist'
  * @type {import('esbuild').BuildOptions}
  */
 const options = {
-    entryPoints: ['build/mqtt.js'],
+    entryPoints: ['build/index.js'],
     bundle: true,
     outfile: `${outdir}/mqtt.js`,
     format: 'iife',

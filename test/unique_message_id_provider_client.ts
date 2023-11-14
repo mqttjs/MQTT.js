@@ -1,8 +1,7 @@
 import abstractClientTests from './abstract_client'
 import serverBuilder from './server_helpers_for_client_tests'
-import UniqueMessageIdProvider from '../src/lib/unique-message-id-provider'
+import { UniqueMessageIdProvider, IClientOptions } from '../src'
 import getPorts from './helpers/port_list'
-import { IClientOptions } from 'src/mqtt'
 import { describe, after } from 'node:test'
 
 const ports = getPorts(3)

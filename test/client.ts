@@ -1,4 +1,4 @@
-import * as mqtt from '../src/mqtt'
+import mqtt from '../src'
 import { assert } from 'chai'
 import { fork } from 'child_process'
 import path from 'path'
