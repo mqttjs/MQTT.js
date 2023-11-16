@@ -34,9 +34,11 @@ export class BufferedDuplex extends Duplex {
 
 	private isSocketOpen: boolean
 
-	private isReadyPromise: Promise<void>
-
-	private resolveReady: () => void
+	private writeQueue: Array<{
+		chunk: any
+		encoding: string
+		cb: (err?: Error) => void
+	}>
 
 	constructor(opts: IClientOptions, proxy: Transform, socket: WebSocket) {
 		super({
@@ -44,6 +46,7 @@ export class BufferedDuplex extends Duplex {
 		})
 		this.proxy = proxy
 		this.socket = socket
+		this.writeQueue = []
 
 		if (!opts.objectMode) {
 			this._writev = writev.bind(this)
@@ -51,32 +54,41 @@ export class BufferedDuplex extends Duplex {
 
 		this.isSocketOpen = false
 
-		this.isReadyPromise = new Promise((resolve) => {
-			this.resolveReady = resolve
-		})
-
 		this.proxy.on('data', (chunk) => {
 			this.push(chunk)
 		})
-	}
-
-	/** Method to call when socket is ready to stop buffering writes */
-	socketReady() {
-		this.emit('connect')
-		this.isSocketOpen = true
-		this.resolveReady()
 	}
 
 	_read(size?: number): void {
 		this.proxy.read(size)
 	}
 
-	async _write(chunk: any, encoding: string, cb: (err?: Error) => void) {
+	_write(chunk: any, encoding: string, cb: (err?: Error) => void) {
 		if (!this.isSocketOpen) {
-			// wait for socket to open
-			await this.isReadyPromise
+			// Buffer the data in a queue
+			this.writeQueue.push({ chunk, encoding, cb })
+		} else {
+			this.writeToProxy(chunk, encoding, cb)
 		}
+	}
 
+	_final(callback: (error?: Error) => void): void {
+		this.writeQueue = []
+		this.proxy.end(callback)
+	}
+
+	/** Method to call when socket is ready to stop buffering writes */
+	socketReady() {
+		this.emit('connect')
+		this.isSocketOpen = true
+		this.processWriteQueue()
+	}
+
+	private writeToProxy(
+		chunk: any,
+		encoding: string,
+		cb: (err?: Error) => void,
+	) {
 		if (this.proxy.write(chunk, encoding) === false) {
 			this.proxy.once('drain', cb)
 		} else {
@@ -84,7 +96,10 @@ export class BufferedDuplex extends Duplex {
 		}
 	}
 
-	_final(callback: (error?: Error) => void): void {
-		this.proxy.end(callback)
+	private processWriteQueue() {
+		while (this.writeQueue.length > 0) {
+			const { chunk, encoding, cb } = this.writeQueue.shift()!
+			this.writeToProxy(chunk, encoding, cb)
+		}
 	}
 }
