@@ -1,5 +1,12 @@
 
 
+## [5.2.2](https://github.com/mqttjs/MQTT.js/compare/v5.2.1...v5.2.2) (2023-11-14)
+
+
+### Bug Fixes
+
+* add default export ([#1740](https://github.com/mqttjs/MQTT.js/issues/1740)) ([fdb498f](https://github.com/mqttjs/MQTT.js/commit/fdb498fe7ebbdf2be0d1fbcb897f093d4fa40d05))
+
 ## [5.2.1](https://github.com/mqttjs/MQTT.js/compare/v5.2.0...v5.2.1) (2023-11-10)
 
 
