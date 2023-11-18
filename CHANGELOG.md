@@ -1,5 +1,12 @@
 
 
+# [5.3.0](https://github.com/mqttjs/MQTT.js/compare/v5.2.2...v5.3.0) (2023-11-18)
+
+
+### Features
+
+* **browser:** websockets improvements and bundle optimizations ([#1732](https://github.com/mqttjs/MQTT.js/issues/1732)) ([0928f85](https://github.com/mqttjs/MQTT.js/commit/0928f8575a7b4c717fbd960c802e1dc41b436d0e))
+
 ## [5.2.2](https://github.com/mqttjs/MQTT.js/compare/v5.2.1...v5.2.2) (2023-11-14)
 
 
