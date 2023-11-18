@@ -9,7 +9,9 @@ export type GenericCallback<T> = (error?: Error, result?: T) => void
 
 export type VoidCallback = () => void
 
-export type IStream = Duplex
+export type IStream = Duplex & {
+	socket?: WebSocket
+}
 
 export type StreamBuilder = (
 	client: MqttClient,

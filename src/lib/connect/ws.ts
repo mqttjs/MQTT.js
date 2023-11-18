@@ -1,12 +1,11 @@
 import { StreamBuilder } from '../shared'
-
 import { Buffer } from 'buffer'
-import WS, { ClientOptions } from 'ws'
+import Ws, { ClientOptions } from 'ws'
 import _debug from 'debug'
-import duplexify from 'duplexify'
 import { DuplexOptions, Transform } from 'readable-stream'
 import IS_BROWSER from '../is-browser'
 import MqttClient, { IClientOptions } from '../client'
+import { BufferedDuplex, writev } from '../BufferedDuplex'
 
 const debug = _debug('mqttjs:ws')
 
@@ -108,11 +107,11 @@ function createWebSocket(
 	debug(
 		`creating new Websocket for url: ${url} and protocol: ${websocketSubProtocol}`,
 	)
-	let socket: WS
+	let socket: Ws
 	if (opts.createWebsocket) {
 		socket = opts.createWebsocket(url, [websocketSubProtocol], opts)
 	} else {
-		socket = new WS(
+		socket = new Ws(
 			url,
 			[websocketSubProtocol],
 			opts.wsOptions as ClientOptions,
@@ -143,7 +142,7 @@ const streamBuilder: StreamBuilder = (client, opts) => {
 	const options = setDefaultOpts(opts)
 	const url = buildUrl(options, client)
 	const socket = createWebSocket(client, url, options)
-	const webSocketStream = WS.createWebSocketStream(
+	const webSocketStream = Ws.createWebSocketStream(
 		socket,
 		options.wsOptions as DuplexOptions,
 	)
@@ -157,7 +156,7 @@ const streamBuilder: StreamBuilder = (client, opts) => {
 
 const browserStreamBuilder: StreamBuilder = (client, opts) => {
 	debug('browserStreamBuilder')
-	let stream
+	let stream: BufferedDuplex | (Transform & { socket?: WebSocket })
 	const options = setDefaultBrowserOpts(opts)
 	// sets the maximum socket buffer size before throttling
 	const bufferSize = options.browserBufferSize || 1024 * 512
@@ -166,11 +165,15 @@ const browserStreamBuilder: StreamBuilder = (client, opts) => {
 
 	const coerceToBuffer = !opts.objectMode
 
+	// the websocket connection
 	const socket = createBrowserWebSocket(client, opts)
+
+	// the proxy is a transform stream that forwards data to the socket
+	// it ensures data written to socket is a Buffer
 	const proxy = buildProxy(opts, socketWriteBrowser, socketEndBrowser)
 
 	if (!opts.objectMode) {
-		proxy._writev = writev
+		proxy._writev = writev.bind(proxy)
 	}
 	proxy.on('close', () => {
 		socket.close()
@@ -181,11 +184,10 @@ const browserStreamBuilder: StreamBuilder = (client, opts) => {
 	// was already open when passed in
 	if (socket.readyState === socket.OPEN) {
 		stream = proxy
+		stream.socket = socket
 	} else {
-		stream = duplexify(undefined, undefined, opts)
-		if (!opts.objectMode) {
-			stream._writev = writev
-		}
+		// socket is not open. Use this to buffer writes until it is opened
+		stream = new BufferedDuplex(opts, proxy, socket)
 
 		if (eventListenerSupport) {
 			socket.addEventListener('open', onOpen)
@@ -193,8 +195,6 @@ const browserStreamBuilder: StreamBuilder = (client, opts) => {
 			socket.onopen = onOpen
 		}
 	}
-
-	stream.socket = socket
 
 	if (eventListenerSupport) {
 		socket.addEventListener('close', onClose)
@@ -208,7 +208,11 @@ const browserStreamBuilder: StreamBuilder = (client, opts) => {
 
 	// methods for browserStreamBuilder
 
-	function buildProxy(pOptions: IClientOptions, socketWrite, socketEnd) {
+	function buildProxy(
+		pOptions: IClientOptions,
+		socketWrite: typeof socketWriteBrowser,
+		socketEnd: typeof socketEndBrowser,
+	) {
 		const _proxy = new Transform({
 			objectMode: pOptions.objectMode,
 		})
@@ -220,39 +224,39 @@ const browserStreamBuilder: StreamBuilder = (client, opts) => {
 	}
 
 	function onOpen() {
-		stream.setReadable(proxy)
-		stream.setWritable(proxy)
-		stream.emit('connect')
+		debug('WebSocket onOpen')
+		if (stream instanceof BufferedDuplex) {
+			stream.socketReady()
+		}
 	}
 
-	function onClose() {
+	/**
+	 * https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/close_event
+	 */
+	function onClose(event: CloseEvent) {
+		debug('WebSocket onClose', event)
 		stream.end()
 		stream.destroy()
 	}
 
+	/**
+	 * https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/error_event
+	 */
 	function onError(err: Event) {
-		stream.destroy(err)
+		debug('WebSocket onError', err)
+		const error = new Error('WebSocket error')
+		error['event'] = err
+		stream.destroy(error)
 	}
 
+	/**
+	 * https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/message_event
+	 */
 	function onMessage(event: MessageEvent) {
 		let { data } = event
 		if (data instanceof ArrayBuffer) data = Buffer.from(data)
-		else data = Buffer.from(data, 'utf8')
+		else data = Buffer.from(data as string, 'utf8')
 		proxy.push(data)
-	}
-
-	// this is to be enabled only if objectMode is false
-	function writev(chunks: any, cb: (err?: Error) => void) {
-		const buffers = new Array(chunks.length)
-		for (let i = 0; i < chunks.length; i++) {
-			if (typeof chunks[i].chunk === 'string') {
-				buffers[i] = Buffer.from(chunks[i], 'utf8')
-			} else {
-				buffers[i] = chunks[i].chunk
-			}
-		}
-
-		this._write(Buffer.concat(buffers), 'binary', cb)
 	}
 
 	function socketWriteBrowser(
@@ -263,6 +267,7 @@ const browserStreamBuilder: StreamBuilder = (client, opts) => {
 		if (socket.bufferedAmount > bufferSize) {
 			// throttle data until buffered amount is reduced.
 			setTimeout(socketWriteBrowser, bufferTimeout, chunk, enc, next)
+			return
 		}
 
 		if (coerceToBuffer && typeof chunk === 'string') {
@@ -270,6 +275,7 @@ const browserStreamBuilder: StreamBuilder = (client, opts) => {
 		}
 
 		try {
+			// https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/send (note this doesn't have a cb as second arg)
 			socket.send(chunk)
 		} catch (err) {
 			return next(err)
@@ -278,7 +284,7 @@ const browserStreamBuilder: StreamBuilder = (client, opts) => {
 		next()
 	}
 
-	function socketEndBrowser(done) {
+	function socketEndBrowser(done: (error?: Error, data?: any) => void) {
 		socket.close()
 		done()
 	}

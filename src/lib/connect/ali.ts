@@ -1,12 +1,12 @@
 import { Buffer } from 'buffer'
 import { Transform } from 'readable-stream'
-import duplexify, { Duplexify } from 'duplexify'
 import { StreamBuilder } from '../shared'
 import MqttClient, { IClientOptions } from '../client'
+import { BufferedDuplex } from '../BufferedDuplex'
 
 let my: any
 let proxy: Transform
-let stream: Duplexify
+let stream: BufferedDuplex
 let isInitialized = false
 
 function buildProxy() {
@@ -64,9 +64,7 @@ function bindEventHandler() {
 	isInitialized = true
 
 	my.onSocketOpen(() => {
-		stream.setReadable(proxy)
-		stream.setWritable(proxy)
-		stream.emit('connect')
+		stream.socketReady()
 	})
 
 	my.onSocketMessage((res) => {
@@ -91,8 +89,8 @@ function bindEventHandler() {
 		stream.destroy()
 	})
 
-	my.onSocketError((res) => {
-		stream.destroy(res)
+	my.onSocketError((err) => {
+		stream.destroy(err)
 	})
 }
 
@@ -112,13 +110,14 @@ const buildStream: StreamBuilder = (client, opts) => {
 
 	const url = buildUrl(opts, client)
 	my = opts.my
+	// https://miniprogram.alipay.com/docs/miniprogram/mpdev/api_network_connectsocket
 	my.connectSocket({
 		url,
 		protocols: websocketSubProtocol,
 	})
 
 	proxy = buildProxy()
-	stream = duplexify.obj()
+	stream = new BufferedDuplex(opts, proxy, my)
 
 	bindEventHandler()
 

@@ -15,6 +15,7 @@ const options = {
     format: 'iife',
     platform: 'browser',
     globalName: 'mqtt',
+    sourcemap: false, // this can be enabled while debugging, if we decide to keep this enabled we should also ship the `src` folder to npm
     define: {
         'global': 'window'
     },

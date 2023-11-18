@@ -2,13 +2,17 @@ import { StreamBuilder } from '../shared'
 
 import { Buffer } from 'buffer'
 import { Transform } from 'readable-stream'
-import duplexify, { Duplexify } from 'duplexify'
 import MqttClient, { IClientOptions } from '../client'
+import { BufferedDuplex } from '../BufferedDuplex'
 
 /* global wx */
 let socketTask: any
 let proxy: Transform
-let stream: Duplexify
+let stream: BufferedDuplex
+
+declare global {
+	const wx: any
+}
 
 function buildProxy() {
 	const _proxy = new Transform()
@@ -61,9 +65,7 @@ function buildUrl(opts: IClientOptions, client: MqttClient) {
 
 function bindEventHandler() {
 	socketTask.onOpen(() => {
-		stream.setReadable(proxy)
-		stream.setWritable(proxy)
-		stream.emit('connect')
+		stream.socketReady()
 	})
 
 	socketTask.onMessage((res) => {
@@ -80,8 +82,9 @@ function bindEventHandler() {
 		stream.destroy()
 	})
 
-	socketTask.onError((res) => {
-		stream.destroy(new Error(res.errMsg))
+	socketTask.onError((error) => {
+		const err = new Error(error.errMsg)
+		stream.destroy(err)
 	})
 }
 
@@ -100,15 +103,14 @@ const buildStream: StreamBuilder = (client, opts) => {
 	setDefaultOpts(opts)
 
 	const url = buildUrl(opts, client)
-	// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-	// @ts-ignore
+	// https://github.com/wechat-miniprogram/api-typings/blob/master/types/wx/lib.wx.api.d.ts#L20984
 	socketTask = wx.connectSocket({
 		url,
 		protocols: [websocketSubProtocol],
 	})
 
 	proxy = buildProxy()
-	stream = duplexify.obj()
+	stream = new BufferedDuplex(opts, proxy, socketTask)
 	stream._destroy = (err, cb) => {
 		socketTask.close({
 			success() {
@@ -118,20 +120,18 @@ const buildStream: StreamBuilder = (client, opts) => {
 	}
 
 	const destroyRef = stream.destroy
-	// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-	// @ts-ignore
-	stream.destroy = () => {
+	stream.destroy = (err, cb) => {
 		stream.destroy = destroyRef
 
 		setTimeout(() => {
 			socketTask.close({
 				fail() {
-					// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-					// @ts-ignore
-					stream._destroy(new Error())
+					stream._destroy(err, cb)
 				},
 			})
 		}, 0)
+
+		return stream
 	}
 
 	bindEventHandler()
