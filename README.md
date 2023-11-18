@@ -139,10 +139,10 @@ const client = mqtt.connect("test.mosquitto.org")  // create a client
 
 ### ES6 Modules (Import)
 
-#### Aliased wildcard import
+#### Default import
 
 ```js
-import * as mqtt from "mqtt"; // import everything inside the mqtt module and give it the namespace "mqtt"
+import mqtt from "mqtt"; // import namespace "mqtt"
 let client = mqtt.connect("mqtt://test.mosquitto.org"); // create a client
 ```
 
