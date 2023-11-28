@@ -1,5 +1,13 @@
 
 
+## [5.3.1](https://github.com/mqttjs/MQTT.js/compare/v5.3.0...v5.3.1) (2023-11-28)
+
+
+### Bug Fixes
+
+* improve environment detection in is-browser utility ([#1744](https://github.com/mqttjs/MQTT.js/issues/1744)) ([b094142](https://github.com/mqttjs/MQTT.js/commit/b09414285d5c27cf76a9ff72cbb5ffe8ecec3981))
+* typescript compile error ([2655feb](https://github.com/mqttjs/MQTT.js/commit/2655feb7a182c53bfa5ea7321b4e1a6d5b031311)), closes [#1746](https://github.com/mqttjs/MQTT.js/issues/1746)
+
 # [5.3.0](https://github.com/mqttjs/MQTT.js/compare/v5.2.2...v5.3.0) (2023-11-18)
 
 
