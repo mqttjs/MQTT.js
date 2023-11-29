@@ -45,7 +45,7 @@ const nextTick = process
 	  }
 
 const setImmediate =
-	global.setImmediate ||
+	globalThis.setImmediate ||
 	((...args: any[]) => {
 		const callback = args.shift()
 		nextTick(() => {
