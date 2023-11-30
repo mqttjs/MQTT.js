@@ -65,13 +65,19 @@ const defaultConnectOptions = {
 	writeCache: true,
 }
 
-const socketErrors = [
-	'ECONNREFUSED',
-	'EADDRINUSE',
-	'ECONNRESET',
-	'ENOTFOUND',
-	'ETIMEDOUT',
-]
+// const socketErrors = [
+// 	'ECONNREFUSED',
+// 	'EADDRINUSE',
+// 	'ECONNRESET',
+// 	'ENOTFOUND',
+// 	'ETIMEDOUT',
+// 	'EHOSTUNREACH',
+// 	'EADDRNOTAVAIL',
+// 	'ECONNABORTED',
+// 	'ENETUNREACH',
+// 	'ERR_TLS_CERT_ALTNAME_INVALID',
+// 	'DEPTH_ZERO_SELF_SIGNED_CERT'
+// ]
 
 export type MqttProtocol =
 	| 'wss'
@@ -765,7 +771,9 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 		const streamErrorHandler = (error) => {
 			this.log('streamErrorHandler :: error', error.message)
-			if (socketErrors.includes(error.code)) {
+			// error.code will only be set on NodeJS env, browser don't allow to detect errors on sockets
+			// also emitting errors on browsers seems to create issues
+			if (error.code) {
 				// handle error
 				this.log('streamErrorHandler :: emitting error')
 				this.emit('error', error)
