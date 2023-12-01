@@ -65,20 +65,6 @@ const defaultConnectOptions = {
 	writeCache: true,
 }
 
-// const socketErrors = [
-// 	'ECONNREFUSED',
-// 	'EADDRINUSE',
-// 	'ECONNRESET',
-// 	'ENOTFOUND',
-// 	'ETIMEDOUT',
-// 	'EHOSTUNREACH',
-// 	'EADDRNOTAVAIL',
-// 	'ECONNABORTED',
-// 	'ENETUNREACH',
-// 	'ERR_TLS_CERT_ALTNAME_INVALID',
-// 	'DEPTH_ZERO_SELF_SIGNED_CERT'
-// ]
-
 export type MqttProtocol =
 	| 'wss'
 	| 'ws'
