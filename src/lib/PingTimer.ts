@@ -1,3 +1,5 @@
+import { setTimeout, clearTimeout } from './timers'
+
 export default class PingTimer {
 	private keepalive: number
 

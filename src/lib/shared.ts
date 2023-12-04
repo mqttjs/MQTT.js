@@ -74,3 +74,8 @@ export function applyMixin(
 		}
 	}
 }
+export const nextTick = process
+	? process.nextTick
+	: (callback: () => void) => {
+			setTimeout(callback, 0)
+	  }

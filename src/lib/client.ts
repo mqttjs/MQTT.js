@@ -33,11 +33,11 @@ import {
 	IStream,
 	StreamBuilder,
 	VoidCallback,
+	nextTick,
 } from './shared'
 import TopicAliasSend from './topic-alias-send'
 import { TypedEventEmitter } from './TypedEmitter'
 import PingTimer from './PingTimer'
-import nextTick from './timers'
 
 const defaultConnectOptions = {
 	keepalive: 60,

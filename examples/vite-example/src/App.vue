@@ -6,6 +6,7 @@ const connected = ref(false)
 
 const client = mqtt.connect('wss://test.mosquitto.org:8081', {
   log: console.log.bind(console),
+  keepalive: 10,
 });
 
 const messages = ref([])
