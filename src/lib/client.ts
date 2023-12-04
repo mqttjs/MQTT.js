@@ -19,7 +19,6 @@ import DefaultMessageIdProvider, {
 	IMessageIdProvider,
 } from './default-message-id-provider'
 import { DuplexOptions, Writable } from 'readable-stream'
-import reInterval from 'reinterval'
 import clone from 'rfdc/default'
 import * as validations from './validations'
 import _debug from 'debug'
@@ -37,21 +36,8 @@ import {
 } from './shared'
 import TopicAliasSend from './topic-alias-send'
 import { TypedEventEmitter } from './TypedEmitter'
-
-const nextTick = process
-	? process.nextTick
-	: (callback: () => void) => {
-			setTimeout(callback, 0)
-	  }
-
-const setImmediate =
-	globalThis.setImmediate ||
-	((...args: any[]) => {
-		const callback = args.shift()
-		nextTick(() => {
-			callback(...args)
-		})
-	})
+import PingTimer from './PingTimer'
+import nextTick from './timers'
 
 const defaultConnectOptions = {
 	keepalive: 60,
@@ -367,7 +353,7 @@ export type OnConnectCallback = (packet: IConnackPacket) => void
 export type OnDisconnectCallback = (packet: IDisconnectPacket) => void
 export type ClientSubscribeCallback = (
 	err: Error | null,
-	granted: ISubscriptionGrant[],
+	granted?: ISubscriptionGrant[],
 ) => void
 export type OnMessageCallback = (
 	topic: string,
@@ -438,7 +424,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 	public noop: (error?: any) => void
 
-	public pingTimer: any
+	public pingTimer: PingTimer
 
 	/**
 	 * The connection to the Broker. In browsers env this also have `socket` property
@@ -2074,9 +2060,9 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 		if (!this.pingTimer && this.options.keepalive) {
 			this.pingResp = true
-			this.pingTimer = reInterval(() => {
+			this.pingTimer = new PingTimer(this.options.keepalive, () => {
 				this._checkPing()
-			}, this.options.keepalive * 1000)
+			})
 		}
 	}
 
@@ -2091,7 +2077,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			this.options.keepalive &&
 			this.options.reschedulePings
 		) {
-			this.pingTimer.reschedule(this.options.keepalive * 1000)
+			this.pingTimer.reschedule()
 		}
 	}
 
