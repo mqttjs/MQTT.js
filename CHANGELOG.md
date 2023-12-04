@@ -1,5 +1,14 @@
 
 
+## [5.3.2](https://github.com/mqttjs/MQTT.js/compare/v5.3.1...v5.3.2) (2023-12-04)
+
+
+### Bug Fixes
+
+* **browser:** use worker timers to prevent unexpected client close ([#1753](https://github.com/mqttjs/MQTT.js/issues/1753)) ([35448f3](https://github.com/mqttjs/MQTT.js/commit/35448f386687030e7b68bd88f5f4852fbb833c9d))
+* catch all socket errors ([#1752](https://github.com/mqttjs/MQTT.js/issues/1752)) ([a50e85c](https://github.com/mqttjs/MQTT.js/commit/a50e85ccf780621cdf2fd0a0bfcf5575a590f173))
+* prop `window` is not defined in web worker ([#1749](https://github.com/mqttjs/MQTT.js/issues/1749)) ([6591404](https://github.com/mqttjs/MQTT.js/commit/6591404b38c73550157e22f3e57683a634bb919c))
+
 ## [5.3.1](https://github.com/mqttjs/MQTT.js/compare/v5.3.0...v5.3.1) (2023-11-28)
 
 
