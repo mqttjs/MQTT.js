@@ -4,7 +4,6 @@
  *
  * See LICENSE for more information
  */
-
 import MqttClient from './lib/client'
 import DefaultMessageIdProvider from './lib/default-message-id-provider'
 import UniqueMessageIdProvider from './lib/unique-message-id-provider'
