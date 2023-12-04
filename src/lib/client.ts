@@ -39,6 +39,15 @@ import TopicAliasSend from './topic-alias-send'
 import { TypedEventEmitter } from './TypedEmitter'
 import PingTimer from './PingTimer'
 
+const setImmediate =
+	globalThis.setImmediate ||
+	(((...args: any[]) => {
+		const callback = args.shift()
+		nextTick(() => {
+			callback(...args)
+		})
+	}) as typeof globalThis.setImmediate)
+
 const defaultConnectOptions = {
 	keepalive: 60,
 	reschedulePings: true,

@@ -103,7 +103,6 @@
   },
   "browser": {
     "./mqtt.js": "./dist/mqtt.js",
-    "./build/lib/timers.js": "./build/lib/timers-browser.js",
     "fs": false,
     "tls": false,
     "net": false

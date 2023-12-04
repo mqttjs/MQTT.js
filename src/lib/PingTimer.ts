@@ -1,4 +1,5 @@
-import { setTimeout, clearTimeout } from './timers'
+import { clearTimeout as clearT, setTimeout as setT } from 'worker-timers'
+import isBrowser from './is-browser'
 
 export default class PingTimer {
 	private keepalive: number
@@ -7,6 +8,10 @@ export default class PingTimer {
 
 	private checkPing: () => void
 
+	private setTimeout = isBrowser ? setT : setTimeout
+
+	private clearTimeout = isBrowser ? clearT : clearTimeout
+
 	constructor(keepalive: number, checkPing: () => void) {
 		this.keepalive = keepalive * 1000
 		this.checkPing = checkPing
@@ -14,7 +19,7 @@ export default class PingTimer {
 	}
 
 	private setup() {
-		this.timer = setTimeout(() => {
+		this.timer = this.setTimeout(() => {
 			this.checkPing()
 			this.reschedule()
 		}, this.keepalive)
@@ -22,7 +27,7 @@ export default class PingTimer {
 
 	clear() {
 		if (this.timer) {
-			clearTimeout(this.timer)
+			this.clearTimeout(this.timer)
 			this.timer = null
 		}
 	}
