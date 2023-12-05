@@ -56,6 +56,8 @@ export default {
         `<html>
         <body>
             <script src="dist/mqtt.js"></script>
+            <!-- web worker code -->
+            <link rel="modulepreload" href="test/browser/worker.js">
             <script>
                 window.wsPort = ${wsPort};
                 window.wssPort = ${wssPort};

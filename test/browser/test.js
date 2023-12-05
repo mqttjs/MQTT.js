@@ -6,10 +6,21 @@ import mqtt from '../../'; // this will resolve to mqtt/dist/mqtt.esm.js
 const mqtt2 = window.mqtt
 
 // get browser name
-const browser = navigator.userAgent.toLowerCase().replace(/ /g, '_').replace(/\//g, '_')
+const userAgent = navigator.userAgent.toLowerCase().replace(/ /g, '_').replace(/\//g, '_')
+
+let browser = 'unknown'
+
+if (userAgent.includes('_firefox_')) {
+	browser = 'firefox'
+} else if (userAgent.includes('_chrome_')) {
+	browser = 'chrome'
+} else if (userAgent.includes('_safari_')) {
+	browser = 'safari'
+}
 
 const browserTopic = `test/${browser}`
 
+console.log('browser:', browser)
 
 function run(proto, port, cb) {
 
@@ -71,5 +82,25 @@ it('should work with non-ESM version', () => {
 
 
 run('ws', window.wsPort, () => {
-	run('wss', window.wssPort)
+	run('wss', window.wssPort, () => {
+		// test web worker only on chromium
+		if (browser === 'chrome') {
+			describe('MQTT.js browser test with web worker', () => {
+				it('should work with web worker', async () => {
+					const worker = new Worker('test/browser/worker.js')
+					const ready = new Promise((resolve, reject) => {
+						worker.onmessage = (e) => {
+							if (e.data === 'worker ready') {
+								resolve()
+							} else {
+								reject(e.data)
+							}
+						}
+					})
+					await ready
+				})
+			})
+		}
+	})
 })
+
