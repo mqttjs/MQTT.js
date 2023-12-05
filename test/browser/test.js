@@ -10,11 +10,13 @@ const userAgent = navigator.userAgent.toLowerCase().replace(/ /g, '_').replace(/
 
 let browser = 'unknown'
 
-if (userAgent.includes('_firefox_')) {
-	browser = 'firefox'
-} else if (userAgent.includes('_chrome_')) {
+console.log('userAgent:', userAgent)
+
+if (userAgent.includes('chrome')) {
 	browser = 'chrome'
-} else if (userAgent.includes('_safari_')) {
+} else if (userAgent.includes('firefox')) {
+	browser = 'firefox'
+} else if (userAgent.includes('safari')) {
 	browser = 'safari'
 }
 
@@ -83,24 +85,21 @@ it('should work with non-ESM version', () => {
 
 run('ws', window.wsPort, () => {
 	run('wss', window.wssPort, () => {
-		// test web worker only on chromium
-		if (browser === 'chrome') {
-			describe('MQTT.js browser test with web worker', () => {
-				it('should work with web worker', async () => {
-					const worker = new Worker('test/browser/worker.js')
-					const ready = new Promise((resolve, reject) => {
-						worker.onmessage = (e) => {
-							if (e.data === 'worker ready') {
-								resolve()
-							} else {
-								reject(e.data)
-							}
+		describe('MQTT.js browser test with web worker', () => {
+			it('should work with web worker', async () => {
+				const worker = new Worker('test/browser/worker.js')
+				const ready = new Promise((resolve, reject) => {
+					worker.onmessage = (e) => {
+						if (e.data === 'worker ready') {
+							resolve()
+						} else {
+							reject(e.data)
 						}
-					})
-					await ready
+					}
 				})
+				await ready
 			})
-		}
+		})
 	})
 })
 

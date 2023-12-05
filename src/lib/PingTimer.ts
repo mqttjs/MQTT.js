@@ -8,9 +8,9 @@ export default class PingTimer {
 
 	private checkPing: () => void
 
-	private setTimeout = isBrowser && !isWebWorker ? setT : setTimeout
+	private setTimeout = isBrowser ? setT : setTimeout
 
-	private clearTimeout = isBrowser && !isWebWorker ? clearT : clearTimeout
+	private clearTimeout = isBrowser ? clearT : clearTimeout
 
 	constructor(keepalive: number, checkPing: () => void) {
 		this.keepalive = keepalive * 1000
