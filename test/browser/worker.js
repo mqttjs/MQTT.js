@@ -3,7 +3,9 @@ importScripts('/dist/mqtt.js');
 /** @type { import('../../src').MqttClient }*/
 const MQTT = mqtt;
 
-const client = MQTT.connect(`ws://localhost:4000`);
+const client = MQTT.connect(`ws://localhost:4000`, {
+    clientId: `testClient-worker_` + Math.random().toString(16).substr(2, 8),
+});
 
 client.on('offline', () => {
     console.log('worker client offline');
@@ -22,5 +24,5 @@ client.on('connect', () => {
     client.end(() => {
         console.log('worker client end');
         postMessage('worker ready');
-    });    
+    });
 })

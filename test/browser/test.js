@@ -43,6 +43,7 @@ function testProto(proto, port, cb = () => { }) {
 		it('should connect-publish-subscribe', (done) => {
 			client = mqtt.connect(`${proto}://localhost:${port}`, {
 				// log: console.log.bind(console),
+				clientId: `testClient-${browser}-${proto}`,
 			})
 			client.on('offline', () => {
 				console.log('client offline')
