@@ -8,9 +8,9 @@ export default class PingTimer {
 
 	private checkPing: () => void
 
-	private setTimeout = isBrowser && !isWebWorker ? setT : setTimeout
+	private _setTimeout = isBrowser && !isWebWorker ? setT : setTimeout
 
-	private clearTimeout = isBrowser && !isWebWorker ? clearT : clearTimeout
+	private _clearTimeout = isBrowser && !isWebWorker ? clearT : clearTimeout
 
 	constructor(keepalive: number, checkPing: () => void) {
 		this.keepalive = keepalive * 1000
@@ -19,7 +19,7 @@ export default class PingTimer {
 	}
 
 	private setup() {
-		this.timer = this.setTimeout(() => {
+		this.timer = this._setTimeout(() => {
 			this.checkPing()
 			this.reschedule()
 		}, this.keepalive)
@@ -27,7 +27,7 @@ export default class PingTimer {
 
 	clear() {
 		if (this.timer) {
-			this.clearTimeout(this.timer)
+			this._clearTimeout(this.timer)
 			this.timer = null
 		}
 	}

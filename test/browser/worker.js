@@ -5,6 +5,18 @@ const MQTT = mqtt;
 
 const client = MQTT.connect(`ws://localhost:4000`);
 
+client.on('offline', () => {
+    console.log('worker client offline');
+})
+
+client.on('reconnect', () => {
+    console.log('worker client reconnect');
+})
+
+client.on('error', (err) => {
+    console.log('worker client error', err);
+})
+
 client.on('connect', () => {
     console.log('worker client connect');
     client.end(() => {

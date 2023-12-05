@@ -30,11 +30,12 @@ function run(proto, port, cb) {
 
 	describe('MQTT.js browser test with ' + proto.toUpperCase(), () => {
 		after(() => {
-			if(client) {
-				client.end(true);
-			}
-
-			if (cb) {
+			if (client) {
+				client.end(() => {
+					cb()
+					client = null;
+				});
+			} else {
 				cb()
 			}
 		})
@@ -48,6 +49,7 @@ function run(proto, port, cb) {
 			})
 			client.on('offline', () => {
 				console.log('client offline')
+				done(new Error('client offline'))
 			})
 			client.on('connect', () => {
 				console.log('client connect')
@@ -84,28 +86,30 @@ function run(proto, port, cb) {
 	})
 }
 
-it('should work with non-ESM version', () => {
+it('should work with non-ESM version', (done) => {
 	expect(mqtt2).to.exist
 	expect(mqtt2.connect).to.exist
 	expect(mqtt2.connect).to.be.a('function')
+	done()
 })
 
 
 run('ws', window.wsPort, () => {
 	run('wss', window.wssPort, () => {
 		describe('MQTT.js browser test with web worker', () => {
-			it('should work with web worker', async () => {
+			it('should work with web worker', (done) => {
 				const worker = new Worker('test/browser/worker.js')
-				const ready = new Promise((resolve, reject) => {
-					worker.onmessage = (e) => {
-						if (e.data === 'worker ready') {
-							resolve()
-						} else {
-							reject(e.data)
-						}
+				worker.onmessage = (e) => {
+					if (e.data === 'worker ready') {
+						done()
+					} else {
+						done(Error(e.data))
 					}
-				})
-				await ready
+				}
+
+				worker.onerror = (e) => {
+					done(Error(e.message))
+				}
 			})
 		})
 	})
