@@ -1,8 +1,14 @@
-// test mqttjs in worker
-
 importScripts('/dist/mqtt.js');
 
 /** @type { import('../../src').MqttClient }*/
 const MQTT = mqtt;
 
-postMessage(typeof MQTT?.connect === 'function' ? 'worker ready' : 'worker error');
+const client = MQTT.connect(`ws://localhost:4000`);
+
+client.on('connect', () => {
+    console.log('worker client connect');
+    client.end(() => {
+        console.log('worker client end');
+        postMessage('worker ready');
+    });    
+})
