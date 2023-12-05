@@ -1,5 +1,13 @@
 
 
+## [5.3.3](https://github.com/mqttjs/MQTT.js/compare/v5.3.2...v5.3.3) (2023-12-05)
+
+
+### Bug Fixes
+
+* don't use worker timers in worker and add web worker tests ([#1755](https://github.com/mqttjs/MQTT.js/issues/1755)) ([38fb6ae](https://github.com/mqttjs/MQTT.js/commit/38fb6ae16073ce31e38dbc1e41a155ad98e04dcc))
+* improve worker tests ([#1757](https://github.com/mqttjs/MQTT.js/issues/1757)) ([4facb18](https://github.com/mqttjs/MQTT.js/commit/4facb18dd9f81bb6af437a6257960e6e878349ad))
+
 ## [5.3.2](https://github.com/mqttjs/MQTT.js/compare/v5.3.1...v5.3.2) (2023-12-04)
 
 
