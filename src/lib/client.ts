@@ -2260,9 +2260,9 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 						break
 					}
 				}
+				this.removeListener('close', remove)
 				if (allProcessed) {
 					clearStoreProcessing()
-					this.removeListener('close', remove)
 					this._invokeAllStoreProcessingQueue()
 					this.emit('connect', packet)
 				} else {
