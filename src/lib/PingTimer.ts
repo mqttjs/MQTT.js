@@ -1,5 +1,5 @@
 import { clearTimeout as clearT, setTimeout as setT } from 'worker-timers'
-import isBrowser from './is-browser'
+import isBrowser, { isWebWorker } from './is-browser'
 
 export default class PingTimer {
 	private keepalive: number

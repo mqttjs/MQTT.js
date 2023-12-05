@@ -15,4 +15,6 @@ const isReactNativeEnv = () =>
 const isBrowser =
 	isStandardBrowserEnv() || isWebWorkerEnv() || isReactNativeEnv()
 
+export const isWebWorker = isWebWorkerEnv()
+
 export default isBrowser
