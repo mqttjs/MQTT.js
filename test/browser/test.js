@@ -30,31 +30,39 @@ function run(proto, port, cb) {
 
 	describe('MQTT.js browser test with ' + proto.toUpperCase(), () => {
 		after(() => {
+			if(client) {
+				client.end(true);
+			}
+
 			if (cb) {
 				cb()
 			}
 		})
 
-		const client = mqtt.connect(`${proto}://localhost:${port}`, {
-			// log: console.log.bind(console),
-		})
-		client.on('offline', () => {
-			console.log('client offline')
-		})
-		client.on('connect', () => {
-			console.log('client connect')
-		})
-		client.on('reconnect', () => {
-			console.log('client reconnect')
-		})
+		/** @type { import('../../src').MqttClient }*/
+		let client = null;
 
 		it('should connect-publish-subscribe', (done) => {
+			client = mqtt.connect(`${proto}://localhost:${port}`, {
+				// log: console.log.bind(console),
+			})
+			client.on('offline', () => {
+				console.log('client offline')
+			})
+			client.on('connect', () => {
+				console.log('client connect')
+			})
+			client.on('reconnect', () => {
+				console.log('client reconnect')
+			})
+
 			const payload = 'Hello World!'
 			client.on('connect', () => {
 				client.on('message', (topic, msg) => {
 					expect(topic).to.equal(testTopic);
 					expect(msg.toString()).to.equal(payload);
 					client.end(() => {
+						client = null;
 						done();
 					});
 				});
