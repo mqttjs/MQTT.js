@@ -1,7 +1,7 @@
 const isStandardBrowserEnv = () =>
 	typeof window !== 'undefined' && typeof window.document !== 'undefined'
 
-const isWebWorkerEnv = () =>
+export const isWebWorkerEnv = () =>
 	Boolean(
 		// eslint-disable-next-line no-restricted-globals
 		typeof self === 'object' &&
