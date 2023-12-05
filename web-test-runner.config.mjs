@@ -11,6 +11,8 @@ await start({
     wssPort,
     key: './test/certs/server-key.pem',
     cert: './test/certs/server-cert.pem',
+    verbose: true,
+    stats: false
 })
 
 console.log('Broker setup done')

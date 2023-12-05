@@ -2,15 +2,13 @@ import { expect } from '@esm-bundle/chai';
 import mqtt from '../../'; // this will resolve to mqtt/dist/mqtt.esm.js
 
 // needed to test no-esm version /dist/mqtt.js
-/** @type { import('../../src').MqttClient }*/
+/** @type { import('../../src') }*/
 const mqtt2 = window.mqtt
 
 // get browser name
 const userAgent = navigator.userAgent.toLowerCase().replace(/ /g, '_').replace(/\//g, '_')
 
 let browser = 'unknown'
-
-console.log('userAgent:', userAgent)
 
 if (userAgent.includes('chrome')) {
 	browser = 'chrome'
@@ -21,11 +19,10 @@ if (userAgent.includes('chrome')) {
 }
 
 const browserTopic = `test/${browser}`
+console.log('User Agent:', userAgent)
+console.log('Browser:', browser)
 
-console.log('browser:', browser)
-
-function run(proto, port, cb) {
-
+function testProto(proto, port, cb = () => { }) {
 	const testTopic = `${browserTopic}/${proto}`
 
 	describe('MQTT.js browser test with ' + proto.toUpperCase(), () => {
@@ -86,32 +83,32 @@ function run(proto, port, cb) {
 	})
 }
 
-it('should work with non-ESM version', (done) => {
-	expect(mqtt2).to.exist
-	expect(mqtt2.connect).to.exist
-	expect(mqtt2.connect).to.be.a('function')
-	done()
-})
+describe('MQTT.js browser tests', () => {
+	it('should work with ESM version', (done) => {
+		expect(mqtt2).to.exist
+		expect(mqtt2.connect).to.be.a('function')
+		expect(mqtt2.Client).to.be.a('function')
+		done()
+	})
 
+	it('should work in a Web Worker', (done) => {
+		const worker = new Worker('test/browser/worker.js')
+		worker.onmessage = (e) => {
+			if (e.data === 'worker ready') {
+				done()
+			} else {
+				done(Error(e.data))
+			}
+		}
 
-run('ws', window.wsPort, () => {
-	run('wss', window.wssPort, () => {
-		describe('MQTT.js browser test with web worker', () => {
-			it('should work with web worker', (done) => {
-				const worker = new Worker('test/browser/worker.js')
-				worker.onmessage = (e) => {
-					if (e.data === 'worker ready') {
-						done()
-					} else {
-						done(Error(e.data))
-					}
-				}
+		worker.onerror = (e) => {
+			done(Error(e.message))
+		}
+	})
 
-				worker.onerror = (e) => {
-					done(Error(e.message))
-				}
-			})
-		})
+	testProto('ws', window.wsPort, () => {
+		testProto('wss', window.wssPort)
 	})
 })
+
 
