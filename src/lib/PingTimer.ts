@@ -1,5 +1,5 @@
 import { clearTimeout as clearT, setTimeout as setT } from 'worker-timers'
-import isBrowser, { isWebWorkerEnv } from './is-browser'
+import isBrowser, { isWebWorker } from './is-browser'
 
 export default class PingTimer {
 	private keepalive: number
@@ -8,10 +8,9 @@ export default class PingTimer {
 
 	private checkPing: () => void
 
-	private setTimeout = isBrowser && !isWebWorkerEnv() ? setT : setTimeout
+	private setTimeout = isBrowser && !isWebWorker ? setT : setTimeout
 
-	private clearTimeout =
-		isBrowser && !isWebWorkerEnv() ? clearT : clearTimeout
+	private clearTimeout = isBrowser && !isWebWorker ? clearT : clearTimeout
 
 	constructor(keepalive: number, checkPing: () => void) {
 		this.keepalive = keepalive * 1000

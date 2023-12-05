@@ -1,7 +1,7 @@
 const isStandardBrowserEnv = () =>
 	typeof window !== 'undefined' && typeof window.document !== 'undefined'
 
-export const isWebWorkerEnv = () =>
+const isWebWorkerEnv = () =>
 	Boolean(
 		// eslint-disable-next-line no-restricted-globals
 		typeof self === 'object' &&
@@ -14,5 +14,7 @@ const isReactNativeEnv = () =>
 
 const isBrowser =
 	isStandardBrowserEnv() || isWebWorkerEnv() || isReactNativeEnv()
+
+export const isWebWorker = isWebWorkerEnv()
 
 export default isBrowser
