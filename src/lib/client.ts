@@ -248,7 +248,7 @@ export interface IClientOptions extends ISecureClientOptions {
 	 */
 	clean?: boolean
 	/**
-	 *  10 seconds, set to 0 to disable
+	 *  60 seconds, set to 0 to disable
 	 */
 	keepalive?: number
 	/**
