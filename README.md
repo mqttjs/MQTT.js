@@ -806,6 +806,22 @@ Closes the Store.
 
 ## Browser
 
+> [!IMPORTANT]
+> The only protocol supported in the browser is MQTT over WebSockets, so you must use `ws://` or `wss://` URLs.
+
+While in NodeJS the [ws](https://www.npmjs.com/package/ws) module is used, in the browser the [WebSocket](https://developer.mozilla.org/en-US/docs/Web/API/WebSocket) is used.
+
+This is totally transparent to users except for the following:
+
+- The `wsOption` is not supported in the browser.
+- Browser doesn't allow to catch many WebSocket errors for [security reasons](https://stackoverflow.com/a/31003057) as:
+
+  > Access to this information could allow a malicious Web page to gain information about your network, so they require browsers report all connection-time errors in an indistinguishable way.
+
+  So listening for `client.on('error')` may not catch all the errors you would get in NodeJS env.
+
+### Bundle
+
 MQTT.js is bundled using [esbuild](https://esbuild.github.io/). It is tested working with all bundlers like Webpack, Vite and React.
 
 You can find all mqtt bundles versions in `dist` folder:
@@ -837,8 +853,6 @@ import mqtt from 'mqtt/dist/mqtt.esm'
 The MQTT.js bundle is available through <http://unpkg.com>, specifically
 at <https://unpkg.com/mqtt/dist/mqtt.min.js>.
 See <http://unpkg.com> for the full documentation on version ranges.
-
-**Be sure to only use this bundle with `ws` or `wss` URLs in the browser. Others URL types will likey fail**
 
 <a name="qos"></a>
 

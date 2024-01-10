@@ -1,5 +1,13 @@
 
 
+## [5.3.4](https://github.com/mqttjs/MQTT.js/compare/v5.3.3...v5.3.4) (2023-12-22)
+
+
+### Bug Fixes
+
+* leaked `close` listener in `startStreamProcess` loop ([#1759](https://github.com/mqttjs/MQTT.js/issues/1759)) ([0c10ef6](https://github.com/mqttjs/MQTT.js/commit/0c10ef680ccc34bbe49948d414f36879d816e4e0))
+* typo in `client.ts` ([#1763](https://github.com/mqttjs/MQTT.js/issues/1763)) ([e3528ac](https://github.com/mqttjs/MQTT.js/commit/e3528ac32d9dc165f8f1238397bd4d02e1990279))
+
 ## [5.3.3](https://github.com/mqttjs/MQTT.js/compare/v5.3.2...v5.3.3) (2023-12-05)
 
 
