@@ -807,14 +807,12 @@ Closes the Store.
 ## Browser
 
 > [!IMPORTANT]
-> The only protocol supported in the browser is MQTT over WebSockets, so you must use `ws://` or `wss://` URLs.
+> The only protocol supported in browsers is MQTT over WebSockets, so you must use `ws://` or `wss://` protocols.
 
-While in NodeJS the [ws](https://www.npmjs.com/package/ws) module is used, in the browser the [WebSocket](https://developer.mozilla.org/en-US/docs/Web/API/WebSocket) is used.
+While the [ws](https://www.npmjs.com/package/ws) module is used in NodeJS, [WebSocket](https://developer.mozilla.org/en-US/docs/Web/API/WebSocket) is used in browsers. This is totally transparent to users except for the following:
 
-This is totally transparent to users except for the following:
-
-- The `wsOption` is not supported in the browser.
-- Browser doesn't allow to catch many WebSocket errors for [security reasons](https://stackoverflow.com/a/31003057) as:
+- The `wsOption` is not supported in browsers.
+- Browsers doesn't allow to catch many WebSocket errors for [security reasons](https://stackoverflow.com/a/31003057) as:
 
   > Access to this information could allow a malicious Web page to gain information about your network, so they require browsers report all connection-time errors in an indistinguishable way.
 
