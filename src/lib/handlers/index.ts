@@ -6,6 +6,11 @@ import handlePubrel from './pubrel'
 import { PacketHandler } from '../shared'
 
 const handle: PacketHandler = (client, packet, done) => {
+	if (client.disconnecting) {
+		done()
+		return
+	}
+
 	const { options } = client
 
 	if (

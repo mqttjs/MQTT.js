@@ -2865,6 +2865,29 @@ export default function abstractTest(server, config, ports) {
 			})
 		})
 
+		it('should ignore packets when disconnecting', function _test(t, done) {
+			const client = connect()
+
+			client.end()
+			handle(
+				client,
+				{
+					cmd: 'publish',
+					messageId: 1,
+					topic: 'test',
+					payload: 'test',
+					qos: 1,
+					dup: false,
+					retain: false,
+				},
+				done,
+			)
+
+			client.on('packetreceive', () => {
+				done(new Error('packet should be ignored while disconnecting'))
+			})
+		})
+
 		it('should reconnect after stream disconnect', function _test(t, done) {
 			const client = connect()
 
