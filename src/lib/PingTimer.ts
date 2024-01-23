@@ -21,14 +21,7 @@ export default class PingTimer {
 	constructor(keepalive: number, checkPing: () => void) {
 		this.keepalive = keepalive * 1000
 		this.checkPing = checkPing
-		this.setup()
-	}
-
-	private setup() {
-		this.timer = this._setTimeout(() => {
-			this.checkPing()
-			this.reschedule()
-		}, this.keepalive)
+		this.reschedule()
 	}
 
 	clear() {
@@ -40,6 +33,13 @@ export default class PingTimer {
 
 	reschedule() {
 		this.clear()
-		this.setup()
+		this.timer = this._setTimeout(() => {
+			this.checkPing()
+			// prevent possible race condition where the timer is destroyed on _cleauUp
+			// and recreated here
+			if (this.timer) {
+				this.reschedule()
+			}
+		}, this.keepalive)
 	}
 }
