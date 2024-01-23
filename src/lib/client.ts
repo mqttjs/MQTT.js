@@ -639,7 +639,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			clearTimeout(this.connackTimer)
 
 			this.log('close :: clearing ping timer')
-			if (this.pingTimer !== null) {
+			if (this.pingTimer) {
 				this.pingTimer.clear()
 				this.pingTimer = null
 			}
@@ -1752,15 +1752,15 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			})
 		}
 
-		if (!this.disconnecting) {
+		if (!this.disconnecting && !this.reconnecting) {
 			this.log(
-				'_cleanUp :: client not disconnecting. Clearing and resetting reconnect.',
+				'_cleanUp :: client not disconnecting/reconnecting. Clearing and resetting reconnect.',
 			)
 			this._clearReconnect()
 			this._setupReconnect()
 		}
 
-		if (this.pingTimer !== null) {
+		if (this.pingTimer) {
 			this.log('_cleanUp :: clearing pingTimer')
 			this.pingTimer.clear()
 			this.pingTimer = null
