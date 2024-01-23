@@ -1,5 +1,13 @@
 
 
+## [5.3.5](https://github.com/mqttjs/MQTT.js/compare/v5.3.4...v5.3.5) (2024-01-23)
+
+
+### Bug Fixes
+
+* bump help-me version to fix vulnerability in glob/inflight ([#1773](https://github.com/mqttjs/MQTT.js/issues/1773)) ([72f99dc](https://github.com/mqttjs/MQTT.js/commit/72f99dcb33b016bced8a2c03ac857c3940ddcda3))
+* keepalive causes a reconnect loop when connection is lost ([#1779](https://github.com/mqttjs/MQTT.js/issues/1779)) ([3da5e84](https://github.com/mqttjs/MQTT.js/commit/3da5e84a158985cbe7bdf60d3a9744b71d98bb56)), closes [#1778](https://github.com/mqttjs/MQTT.js/issues/1778)
+
 ## [5.3.4](https://github.com/mqttjs/MQTT.js/compare/v5.3.3...v5.3.4) (2023-12-22)
 
 
