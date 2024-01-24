@@ -3012,7 +3012,7 @@ export default function abstractTest(server, config, ports) {
 
 			client.on('error', (err) => {
 				assert.equal(err.message, 'connack timeout')
-				client.end(done)
+				client.end(true, done)
 			})
 		})
 
