@@ -850,6 +850,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			this.log(
 				'!!connectTimeout hit!! Calling _cleanUp with force `true`',
 			)
+			this.emit('error', new Error('connack timeout'))
 			this._cleanUp(true)
 		}, this.options.connectTimeout)
 
