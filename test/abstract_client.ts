@@ -3004,6 +3004,18 @@ export default function abstractTest(server, config, ports) {
 			}, 50)
 		})
 
+		it('should emit connack timeout error', function _test(t, done) {
+			const client = connect({
+				connectTimeout: 0,
+				reconnectPeriod: 5000,
+			})
+
+			client.on('error', (err) => {
+				assert.equal(err.message, 'connack timeout')
+				client.end(done)
+			})
+		})
+
 		it(
 			'should resend in-flight QoS 1 publish messages from the client',
 			{
