@@ -244,7 +244,7 @@ through a proxy with custom authentication this callback allows you to create yo
 instance of a websocket which will be used in the mqtt client.
 
 ```js
-  const createWebsocket = createWebsocket(url, websocketSubProtocols, options) => {
+  const createWebsocket = (url, websocketSubProtocols, options) => {
     const subProtocols = [
       websocketSubProtocols[0],
       'myCustomSubprotocolOrOAuthToken',
@@ -252,10 +252,10 @@ instance of a websocket which will be used in the mqtt client.
     return new WebSocket(url, subProtocols)
   }
 
-    const connection = await mqtt.connectAsync(<wss url>, {
-      ...,
-      createWebsocket: createWebsocket,
-    });
+  const client = await mqtt.connectAsync(<wss url>, {
+    ...,
+    createWebsocket: createWebsocket,
+  });
 ```
 
 #### Enabling Reconnection with `reconnectPeriod` option
