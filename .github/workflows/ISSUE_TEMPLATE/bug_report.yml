@@ -1,0 +1,54 @@
+name: Bug report
+description: Template for bug reports
+title: '[Bug]: '
+labels:
+  - bug
+body:
+  - type: input
+    attributes:
+      label: MQTTjs Version
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: Broker
+      description: >-
+        The broker you are using (Aedes, Mosca, mosquitto, RabbitMQ, HiveMQ
+        etc...)
+    validations:
+      required: true
+  - type: dropdown
+    attributes:
+      label: Environment
+      options:
+        - NodeJS
+        - Browser
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Description
+      description: A clear and concise description of the problem
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Minimal Reproduction
+      description: provide steps to reproduce the problem
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Debug logs
+      description: Provide logs to help diagnose your issue
+      placeholder: >-
+        On NodeJS simply run your application using `DEBUG=mqttjs*` env var, on
+        browsers you should enable `verbose` level in console or you can set
+        `log` option to `console.log.bind(console)`
+    validations:
+      required: true
+  - type: markdown
+    attributes:
+      value: >-
+        This template was generated with [Issue Forms
+        Creator](https://issue-forms-creator.netlify.app)
