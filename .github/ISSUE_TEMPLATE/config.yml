@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: ❓ Ask a Question
+    url: https://github.com/mqttjs/MQTT.js/discussions/new
+    about: If you have any other questions, ask them here.
