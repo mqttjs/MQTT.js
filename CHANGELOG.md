@@ -1,5 +1,13 @@
 
 
+## [5.3.6](https://github.com/mqttjs/MQTT.js/compare/v5.3.5...v5.3.6) (2024-02-26)
+
+
+### Bug Fixes
+
+* **browser:** add `navigator` polifilly for wechat mini ([#1796](https://github.com/mqttjs/MQTT.js/issues/1796)) ([c26908a](https://github.com/mqttjs/MQTT.js/commit/c26908a242fa1f573689b03f554bb95d83e61c84)), closes [#1789](https://github.com/mqttjs/MQTT.js/issues/1789)
+* emit `error` event on connack timeout ([#1781](https://github.com/mqttjs/MQTT.js/issues/1781)) ([56e6e23](https://github.com/mqttjs/MQTT.js/commit/56e6e23c0fb775bfd16edf04d6b28f6bbcf05023))
+
 ## [5.3.5](https://github.com/mqttjs/MQTT.js/compare/v5.3.4...v5.3.5) (2024-01-23)
 
 
