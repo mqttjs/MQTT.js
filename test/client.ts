@@ -15,7 +15,7 @@ import _debug from 'debug'
 import { MqttServer } from './server'
 import abstractClientTests from './abstract_client'
 import { IClientOptions } from 'src/lib/client'
-import { describe, it, after, afterEach } from 'node:test'
+import { describe, it, after } from 'node:test'
 
 const debug = _debug('mqttjs:client-test')
 
@@ -169,6 +169,12 @@ describe('MqttClient', () => {
 				timeout: 10000,
 			},
 			function _test(t, done) {
+				// const clock = useFakeTimers()
+
+				// t.after(() => {
+				// 	clock.restore()
+				// })
+
 				const server2 = new MqttServer((serverClient) => {
 					serverClient.on('connect', (packet) => {
 						serverClient.connack({ returnCode: 0 })
@@ -182,7 +188,7 @@ describe('MqttClient', () => {
 					host: 'localhost',
 					keepalive: 1,
 					connectTimeout: 350,
-					reconnectPeriod: 0,
+					reconnectPeriod: 0, // disable reconnect
 				})
 				client.once('connect', () => {
 					client.publish(
@@ -190,26 +196,36 @@ describe('MqttClient', () => {
 						'fakeMessage',
 						{ qos: 1 },
 						(err) => {
+							// connection closed
 							assert.exists(err)
 							pubCallbackCalled = true
 						},
 					)
 					client.unsubscribe('fakeTopic', (err, result) => {
+						// connection closed
 						assert.exists(err)
 						unsubscribeCallbackCalled = true
 					})
-					setTimeout(() => {
-						client.end((err1) => {
-							assert.strictEqual(
-								pubCallbackCalled && unsubscribeCallbackCalled,
-								true,
-								'callbacks not invoked',
-							)
-							server2.close((err2) => {
-								done(err1 || err2)
+
+					client.on('error', (err) => {
+						assert.equal(err.message, 'Keepalive timeout')
+						const originalFLush = client['_flush']
+						// flush will be called on _cleanUp because of keepalive timeout
+						client['_flush'] = function _flush() {
+							originalFLush.call(client)
+							client.end((err1) => {
+								assert.strictEqual(
+									pubCallbackCalled &&
+										unsubscribeCallbackCalled,
+									true,
+									'callbacks should be invoked with error',
+								)
+								server2.close((err2) => {
+									done(err1 || err2)
+								})
 							})
-						})
-					}, 5000)
+						}
+					})
 				})
 			},
 		)
