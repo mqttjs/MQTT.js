@@ -169,12 +169,6 @@ describe('MqttClient', () => {
 				timeout: 10000,
 			},
 			function _test(t, done) {
-				// const clock = useFakeTimers()
-
-				// t.after(() => {
-				// 	clock.restore()
-				// })
-
 				const server2 = new MqttServer((serverClient) => {
 					serverClient.on('connect', (packet) => {
 						serverClient.connack({ returnCode: 0 })
@@ -207,7 +201,7 @@ describe('MqttClient', () => {
 						unsubscribeCallbackCalled = true
 					})
 
-					client.on('error', (err) => {
+					client.once('error', (err) => {
 						assert.equal(err.message, 'Keepalive timeout')
 						const originalFLush = client['_flush']
 						// flush will be called on _cleanUp because of keepalive timeout
