@@ -2073,7 +2073,7 @@ export default function abstractTest(server, config, ports) {
 					client.pingResp = false
 
 					client.once('error', (err) => {
-						assert.equal(err.message, 'Keep Alive timeout')
+						assert.equal(err.message, 'Keepalive timeout')
 						client.once('connect', () => {
 							client.end(true, done)
 							client = null

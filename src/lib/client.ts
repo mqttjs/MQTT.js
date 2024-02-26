@@ -2100,7 +2100,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			this._sendPacket({ cmd: 'pingreq' })
 		} else {
 			// do a forced cleanup since socket will be in bad shape
-			this.emit('error', new Error('Keep Alive timeout'))
+			this.emit('error', new Error('Keepalive timeout'))
 			this.log('_checkPing :: calling _cleanUp with force true')
 			this._cleanUp(true)
 		}
