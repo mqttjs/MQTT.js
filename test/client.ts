@@ -1,3 +1,4 @@
+import { useFakeTimers } from 'sinon'
 import mqtt from '../src'
 import { assert } from 'chai'
 import { fork } from 'child_process'
@@ -181,7 +182,7 @@ describe('MqttClient', () => {
 					host: 'localhost',
 					keepalive: 1,
 					connectTimeout: 350,
-					reconnectPeriod: 0,
+					reconnectPeriod: 0, // disable reconnect
 				})
 				client.once('connect', () => {
 					client.publish(
@@ -189,26 +190,36 @@ describe('MqttClient', () => {
 						'fakeMessage',
 						{ qos: 1 },
 						(err) => {
+							// connection closed
 							assert.exists(err)
 							pubCallbackCalled = true
 						},
 					)
 					client.unsubscribe('fakeTopic', (err, result) => {
+						// connection closed
 						assert.exists(err)
 						unsubscribeCallbackCalled = true
 					})
-					setTimeout(() => {
-						client.end((err1) => {
-							assert.strictEqual(
-								pubCallbackCalled && unsubscribeCallbackCalled,
-								true,
-								'callbacks not invoked',
-							)
-							server2.close((err2) => {
-								done(err1 || err2)
+
+					client.once('error', (err) => {
+						assert.equal(err.message, 'Keepalive timeout')
+						const originalFLush = client['_flush']
+						// flush will be called on _cleanUp because of keepalive timeout
+						client['_flush'] = function _flush() {
+							originalFLush.call(client)
+							client.end((err1) => {
+								assert.strictEqual(
+									pubCallbackCalled &&
+										unsubscribeCallbackCalled,
+									true,
+									'callbacks should be invoked with error',
+								)
+								server2.close((err2) => {
+									done(err1 || err2)
+								})
 							})
-						})
-					}, 5000)
+						}
+					})
 				})
 			},
 		)
@@ -218,7 +229,7 @@ describe('MqttClient', () => {
 		it(
 			'should attempt to reconnect once server is down',
 			{
-				timeout: 30000,
+				timeout: 5000,
 			},
 			function _test(t, done) {
 				const args = ['-r', 'ts-node/register']
@@ -344,7 +355,7 @@ describe('MqttClient', () => {
 		it(
 			'should not keep requeueing the first message when offline',
 			{
-				timeout: 2500,
+				timeout: 1000,
 			},
 			function _test(t, done) {
 				const server2 = serverBuilder('mqtt').listen(ports.PORTAND45)
@@ -365,16 +376,22 @@ describe('MqttClient', () => {
 					})
 				})
 
-				setTimeout(() => {
-					if (client.queue.length === 0) {
-						debug('calling final client.end()')
-						client.end(true, (err) => done(err))
-					} else {
-						debug('calling client.end()')
-						// Do not call done. We want to trigger a reconnect here.
-						client.end(true)
+				let reconnections = 0
+
+				client.on('reconnect', () => {
+					reconnections++
+					if (reconnections === 2) {
+						if (client.queue.length === 0) {
+							debug('calling final client.end()')
+							client.end(true, (err) => done(err))
+						} else {
+							debug('calling client.end()')
+							// Do not call done. We want to trigger a reconnect here.
+							client.end(true)
+							done(Error('client queue not empty'))
+						}
 					}
-				}, 2000)
+				})
 			},
 		)
 
