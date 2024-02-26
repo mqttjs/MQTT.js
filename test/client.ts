@@ -14,7 +14,7 @@ import _debug from 'debug'
 import { MqttServer } from './server'
 import abstractClientTests from './abstract_client'
 import { IClientOptions } from 'src/lib/client'
-import { describe, it, after } from 'node:test'
+import { describe, it, after, afterEach } from 'node:test'
 
 const debug = _debug('mqttjs:client-test')
 
@@ -218,7 +218,7 @@ describe('MqttClient', () => {
 		it(
 			'should attempt to reconnect once server is down',
 			{
-				timeout: 30000,
+				timeout: 5000,
 			},
 			function _test(t, done) {
 				const args = ['-r', 'ts-node/register']

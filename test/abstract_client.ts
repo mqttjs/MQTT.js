@@ -21,6 +21,7 @@ import { IPublishPacket, IPubrelPacket, ISubackPacket, QoS } from 'mqtt-packet'
 import { DoneCallback, ErrorWithReasonCode } from 'src/lib/shared'
 import { fail } from 'assert'
 import { describe, it, beforeEach, afterEach } from 'node:test'
+import { nextTick } from 'process'
 
 /**
  * These tests try to be consistent with names for servers (brokers) and clients,
@@ -1309,7 +1310,7 @@ export default function abstractTest(server, config, ports) {
 						})
 					}
 					callback()
-				}, 100)
+				}, 10)
 			}
 
 			client.on('message', (topic, message, packet) => {
@@ -1342,7 +1343,7 @@ export default function abstractTest(server, config, ports) {
 
 		const qosTests = [0, 1, 2]
 		qosTests.forEach((qos) => {
-			it(`should publish 10 QoS ${qos}and receive them only when \`handleMessage\` finishes`, function _test(t, done) {
+			it(`should publish 10 QoS ${qos} and receive them only when \`handleMessage\` finishes`, function _test(t, done) {
 				testQosHandleMessage(qos, done)
 			})
 		})
@@ -2048,40 +2049,83 @@ export default function abstractTest(server, config, ports) {
 		})
 
 		it(
-			'should reconnect if pingresp is not sent',
+			'should reconnect on keepalive timeout',
 			{
-				timeout: 4000,
+				timeout: 10000,
 			},
 			function _test(t, done) {
-				const client = connect({ keepalive: 1, reconnectPeriod: 100 })
+				const clock = sinon.useFakeTimers()
 
-				// Fake no pingresp being send by stubbing the _handlePingresp function
-				client.on('packetreceive', (packet) => {
-					if (packet.cmd === 'pingresp') {
-						setImmediate(() => {
-							client.pingResp = false
-						})
+				t.after(() => {
+					clock.restore()
+					if (client) {
+						client.end(true)
+						throw new Error('Test timed out')
 					}
 				})
 
+				let client = connect({
+					keepalive: 60,
+					reconnectPeriod: 5000,
+				})
+
 				client.once('connect', () => {
-					client.once('connect', () => {
-						client.end(true, done)
+					client.pingResp = false
+
+					client.once('error', (err) => {
+						assert.equal(err.message, 'Keep Alive timeout')
+						client.once('connect', () => {
+							client.end(true, done)
+							client = null
+						})
 					})
+
+					client.once('close', () => {
+						// Wait for the reconnect to happen
+						clock.tick(client.options.reconnectPeriod)
+					})
+
+					clock.tick(client.options.keepalive * 1000)
 				})
 			},
 		)
 
-		it('should not reconnect if pingresp is successful', function _test(t, done) {
-			const client = connect({ keepalive: 100 })
-			client.once('close', () => {
-				done(new Error('Client closed connection'))
-			})
-			setTimeout(() => {
-				client.removeAllListeners('close')
-				client.end(true, done)
-			}, 1000)
-		})
+		it(
+			'should not reconnect if pingresp is successful',
+			{ timeout: 1000 },
+			function _test(t, done) {
+				const clock = sinon.useFakeTimers()
+
+				t.after(() => {
+					clock.restore()
+					if (client) {
+						client.end(true)
+					}
+				})
+
+				let client = connect({ keepalive: 10 })
+				client.once('close', () => {
+					done(new Error('Client closed connection'))
+				})
+
+				client.once('connect', () => {
+					setImmediate(() => {
+						// make keepalive check trigger
+						clock.tick(client.options.keepalive * 1000)
+					})
+
+					client.on('packetsend', (packet) => {
+						if (packet.cmd === 'pingreq') {
+							client.removeAllListeners('close')
+							client.end(true, done)
+							client = null
+						}
+					})
+
+					clock.tick(1)
+				})
+			},
+		)
 
 		it('should defer the next ping when sending a control packet', function _test(t, done) {
 			const client = connect({ keepalive: 1 })
@@ -2866,13 +2910,22 @@ export default function abstractTest(server, config, ports) {
 		})
 
 		it('should reconnect after stream disconnect', function _test(t, done) {
-			const client = connect()
+			const clock = sinon.useFakeTimers()
+
+			t.after(() => {
+				clock.restore()
+			})
+
+			const client = connect({ reconnectPeriod: 1000 })
 
 			let tryReconnect = true
 
 			client.on('connect', () => {
 				if (tryReconnect) {
 					client.stream.end()
+					client.once('close', () => {
+						clock.tick(client.options.reconnectPeriod)
+					})
 					tryReconnect = false
 				} else {
 					client.end(true, done)
@@ -2881,7 +2934,15 @@ export default function abstractTest(server, config, ports) {
 		})
 
 		it("should emit 'reconnect' when reconnecting", function _test(t, done) {
-			const client = connect()
+			const clock = sinon.useFakeTimers()
+
+			t.after(() => {
+				clock.restore()
+			})
+
+			const client = connect({
+				reconnectPeriod: 1000,
+			})
 			let tryReconnect = true
 			let reconnectEvent = false
 
@@ -2892,6 +2953,9 @@ export default function abstractTest(server, config, ports) {
 			client.on('connect', () => {
 				if (tryReconnect) {
 					client.stream.end()
+					client.once('close', () => {
+						clock.tick(client.options.reconnectPeriod)
+					})
 					tryReconnect = false
 				} else {
 					assert.isTrue(reconnectEvent)
@@ -2956,18 +3020,28 @@ export default function abstractTest(server, config, ports) {
 					timeout: 10000,
 				},
 				function _test(t, done) {
+					const clock = sinon.useFakeTimers()
+
+					t.after(() => {
+						clock.restore()
+					})
+
 					let end
 					const reconnectSlushTime = 200
 					const client = connect({ reconnectPeriod: test.period })
 					let reconnect = false
-					const start = Date.now()
+					const start = clock.now
 
 					client.on('connect', () => {
 						if (!reconnect) {
 							client.stream.end()
+							client.once('close', () => {
+								// ensure the tick is done after the reconnect timer is setup (on close)
+								clock.tick(test.period)
+							})
 							reconnect = true
 						} else {
-							end = Date.now()
+							end = clock.now
 							client.end(() => {
 								const reconnectPeriodDuringTest = end - start
 								if (
