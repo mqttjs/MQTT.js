@@ -2965,7 +2965,14 @@ export default function abstractTest(server, config, ports) {
 		})
 
 		it("should emit 'offline' after going offline", function _test(t, done) {
-			const client = connect()
+			const clock = sinon.useFakeTimers()
+
+			t.after(() => {
+				clock.restore()
+			})
+			const client = connect({
+				reconnectPeriod: 1000,
+			})
 
 			let tryReconnect = true
 			let offlineEvent = false
@@ -2978,6 +2985,9 @@ export default function abstractTest(server, config, ports) {
 				if (tryReconnect) {
 					client.stream.end()
 					tryReconnect = false
+					client.once('close', () => {
+						clock.tick(client.options.reconnectPeriod)
+					})
 				} else {
 					assert.isTrue(offlineEvent)
 					client.end(true, done)

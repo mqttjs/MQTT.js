@@ -1,3 +1,4 @@
+import { useFakeTimers } from 'sinon'
 import mqtt from '../src'
 import { assert } from 'chai'
 import { fork } from 'child_process'
@@ -344,7 +345,7 @@ describe('MqttClient', () => {
 		it(
 			'should not keep requeueing the first message when offline',
 			{
-				timeout: 2500,
+				timeout: 1000,
 			},
 			function _test(t, done) {
 				const server2 = serverBuilder('mqtt').listen(ports.PORTAND45)
@@ -365,16 +366,22 @@ describe('MqttClient', () => {
 					})
 				})
 
-				setTimeout(() => {
-					if (client.queue.length === 0) {
-						debug('calling final client.end()')
-						client.end(true, (err) => done(err))
-					} else {
-						debug('calling client.end()')
-						// Do not call done. We want to trigger a reconnect here.
-						client.end(true)
+				let reconnections = 0
+
+				client.on('reconnect', () => {
+					reconnections++
+					if (reconnections === 2) {
+						if (client.queue.length === 0) {
+							debug('calling final client.end()')
+							client.end(true, (err) => done(err))
+						} else {
+							debug('calling client.end()')
+							// Do not call done. We want to trigger a reconnect here.
+							client.end(true)
+							done(Error('client queue not empty'))
+						}
 					}
-				}, 2000)
+				})
 			},
 		)
 
