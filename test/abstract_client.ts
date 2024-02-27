@@ -3106,35 +3106,53 @@ export default function abstractTest(server, config, ports) {
 				timeout: 4000,
 			},
 			function _test(t, done) {
-				const client = connect({ reconnectPeriod: 200 })
+				t.after(() => {
+					// close client if not closed
+					if (client) {
+						client.end(true)
+					}
+				})
+				let client = connect({ reconnectPeriod: 100 })
 				let serverPublished = false
 				let clientCalledBack = false
 
+				// client is connected the first time
 				server.once('client', (serverClient) => {
-					serverClient.on('connect', () => {
+					// destroy the stream before the publish is acknowledged
+					serverClient.once('connect', () => {
 						setImmediate(() => {
 							serverClient.stream.destroy()
 						})
 					})
 
+					// after 100ms the client should reconnect
 					server.once('client', (serverClientNew) => {
 						serverClientNew.on('publish', () => {
 							serverPublished = true
-							check()
 						})
 					})
 				})
 
-				client.publish('hello', 'world', { qos: 1 }, () => {
-					clientCalledBack = true
-					check()
+				// ensure that on first reconnect the publish is still not acknowledged
+				client.once('reconnect', () => {
+					// client callback should not be triggered on first connection
+					assert.isFalse(clientCalledBack)
 				})
 
-				function check() {
-					if (serverPublished && clientCalledBack) {
-						client.end(true, done)
+				client.publish('hello', 'world', { qos: 1 }, () => {
+					clientCalledBack = true
+				})
+
+				client.on('packetreceive', (packet) => {
+					if (packet.cmd === 'puback') {
+						assert.isTrue(serverPublished)
+						setImmediate(() => {
+							assert.isTrue(clientCalledBack)
+							client.end(true, done)
+							client = null
+						})
 					}
-				}
+				})
 			},
 		)
 
@@ -3143,7 +3161,7 @@ export default function abstractTest(server, config, ports) {
 			let serverPublished = false
 			let clientCalledBack = false
 			server.once('client', (serverClient) => {
-				serverClient.on('connect', () => {
+				serverClient.once('connect', () => {
 					setImmediate(() => {
 						serverClient.stream.destroy()
 						client.end(true, (err) => {
@@ -3164,42 +3182,65 @@ export default function abstractTest(server, config, ports) {
 			})
 		})
 
-		it('should resend in-flight QoS 2 publish messages from the client', function _test(t, done) {
-			const client = connect({ reconnectPeriod: 200 })
-			let serverPublished = false
-			let clientCalledBack = false
+		it(
+			'should resend in-flight QoS 2 publish messages from the client',
+			{
+				timeout: 4000,
+			},
+			function _test(t, done) {
+				t.after(() => {
+					// close client if not closed
+					if (client) {
+						client.end(true)
+					}
+				})
 
-			server.once('client', (serverClient) => {
-				// ignore errors
-				serverClient.on('error', () => {})
-				serverClient.on('publish', () => {
-					setImmediate(() => {
-						serverClient.stream.destroy()
+				let client = connect({ reconnectPeriod: 100 })
+				let serverPublished = false
+				let clientCalledBack = false
+
+				server.once('client', (serverClient) => {
+					// ignore errors
+					serverClient.on('error', () => {})
+					serverClient.on('publish', () => {
+						setImmediate(() => {
+							serverClient.stream.destroy()
+						})
+					})
+
+					server.once('client', (serverClientNew) => {
+						serverClientNew.on('pubrel', () => {
+							serverPublished = true
+						})
 					})
 				})
 
-				server.once('client', (serverClientNew) => {
-					serverClientNew.on('pubrel', () => {
-						serverPublished = true
-						check()
-					})
+				client.publish('hello', 'world', { qos: 2 }, () => {
+					clientCalledBack = true
 				})
-			})
 
-			client.publish('hello', 'world', { qos: 2 }, () => {
-				clientCalledBack = true
-				check()
-			})
-
-			function check() {
-				if (serverPublished && clientCalledBack) {
-					client.end(true, done)
-				}
-			}
-		})
+				client.on('packetreceive', (packet) => {
+					if (packet.cmd === 'pubcomp') {
+						assert.isTrue(serverPublished)
+						setImmediate(() => {
+							assert.isTrue(clientCalledBack)
+							client.end(true, done)
+							client = null
+						})
+					}
+				})
+			},
+		)
 
 		it('should not resend in-flight QoS 1 removed publish messages from the client', function _test(t, done) {
-			const client = connect({ reconnectPeriod: 200 })
+			t.after(() => {
+				// close client if not closed
+				if (client) {
+					client.end(true)
+				}
+			})
+
+			let client = connect({ reconnectPeriod: 100 })
 			let clientCalledBack = false
 
 			server.once('client', (serverClient) => {
@@ -3211,8 +3252,7 @@ export default function abstractTest(server, config, ports) {
 
 				server.once('client', (serverClientNew) => {
 					serverClientNew.on('publish', () => {
-						fail()
-						done()
+						done(Error('should not have received publish'))
 					})
 				})
 			})
@@ -3234,6 +3274,7 @@ export default function abstractTest(server, config, ports) {
 			assert.isTrue(clientCalledBack)
 			client.end(true, (err) => {
 				done(err)
+				client = null
 			})
 		})
 
@@ -3250,8 +3291,7 @@ export default function abstractTest(server, config, ports) {
 
 				server.once('client', (serverClientNew) => {
 					serverClientNew.on('publish', () => {
-						fail()
-						done()
+						done(Error('should not have received publish'))
 					})
 				})
 			})
