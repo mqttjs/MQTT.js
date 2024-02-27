@@ -39,7 +39,7 @@
     ".": {
       "browser": {
         "import": "./dist/mqtt.esm.js",
-        "default": "./dist/index.js"
+        "default": "./dist/mqtt.min.js"
       },
       "default": "./build/index.js"
     },
