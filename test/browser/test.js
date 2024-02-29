@@ -94,10 +94,16 @@ describe('MQTT.js browser tests', () => {
 
 	it('should work in a Web Worker', (done) => {
 		const worker = new Worker('test/browser/worker.js')
+		let ready = false
 		worker.onmessage = (e) => {
 			if (e.data === 'worker ready') {
+				ready = true
+			} else if(e.data === 'keepalive'){
+				worker.onerror = null
+				// worker.terminate()
+				expect(ready).to.be.true
 				done()
-			} else {
+			 }else {
 				done(Error(e.data))
 			}
 		}
