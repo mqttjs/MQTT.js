@@ -134,7 +134,7 @@ If you do not want to install a separate broker, you can try using the
 
 ```js
 const mqtt = require("mqtt")  // require mqtt
-const client = mqtt.connect("test.mosquitto.org")  // create a client
+const client = mqtt.connect("mqtt://test.mosquitto.org")  // create a client
 ```
 
 ### ES6 Modules (Import)
