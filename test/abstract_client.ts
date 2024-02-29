@@ -3112,7 +3112,7 @@ export default function abstractTest(server, config, ports) {
 						client.end(true)
 					}
 				})
-				let client = connect({ reconnectPeriod: 100 })
+				let client = connect({ reconnectPeriod: 200 })
 				let serverPublished = false
 				let clientCalledBack = false
 
@@ -3125,7 +3125,7 @@ export default function abstractTest(server, config, ports) {
 						})
 					})
 
-					// after 100ms the client should reconnect
+					// after 200ms the client should reconnect
 					server.once('client', (serverClientNew) => {
 						serverClientNew.on('publish', () => {
 							serverPublished = true
@@ -3195,7 +3195,7 @@ export default function abstractTest(server, config, ports) {
 					}
 				})
 
-				let client = connect({ reconnectPeriod: 100 })
+				let client = connect({ reconnectPeriod: 200 })
 				let serverPublished = false
 				let clientCalledBack = false
 
