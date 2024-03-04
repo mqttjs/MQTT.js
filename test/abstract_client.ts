@@ -2076,6 +2076,7 @@ export default function abstractTest(server, config, ports) {
 						assert.equal(err.message, 'Keepalive timeout')
 						client.once('connect', () => {
 							client.end(true, done)
+							clock.tick(100)
 							client = null
 						})
 					})
@@ -2118,6 +2119,7 @@ export default function abstractTest(server, config, ports) {
 						if (packet.cmd === 'pingreq') {
 							client.removeAllListeners('close')
 							client.end(true, done)
+							clock.tick(100)
 							client = null
 						}
 					})
@@ -2929,6 +2931,7 @@ export default function abstractTest(server, config, ports) {
 					tryReconnect = false
 				} else {
 					client.end(true, done)
+					clock.tick(100)
 				}
 			})
 		})
@@ -2960,6 +2963,7 @@ export default function abstractTest(server, config, ports) {
 				} else {
 					assert.isTrue(reconnectEvent)
 					client.end(true, done)
+					clock.tick(100)
 				}
 			})
 		})
@@ -2991,6 +2995,7 @@ export default function abstractTest(server, config, ports) {
 				} else {
 					assert.isTrue(offlineEvent)
 					client.end(true, done)
+					clock.tick(100)
 				}
 			})
 		})
@@ -3070,6 +3075,7 @@ export default function abstractTest(server, config, ports) {
 									)
 								}
 							})
+							clock.tick(100)
 						}
 					})
 				},
@@ -3084,8 +3090,8 @@ export default function abstractTest(server, config, ports) {
 			})
 			// bind client.end so that when it is called it is automatically passed in the done callback
 			setTimeout(() => {
-				client.end.call(client, done)
-			}, 50)
+				client.end(done)
+			}, 100)
 		})
 
 		it('should emit connack timeout error', function _test(t, done) {
