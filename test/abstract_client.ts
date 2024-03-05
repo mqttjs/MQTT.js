@@ -21,7 +21,6 @@ import { IPublishPacket, IPubrelPacket, ISubackPacket, QoS } from 'mqtt-packet'
 import { DoneCallback, ErrorWithReasonCode } from 'src/lib/shared'
 import { fail } from 'assert'
 import { describe, it, beforeEach, afterEach } from 'node:test'
-import { nextTick } from 'process'
 
 /**
  * These tests try to be consistent with names for servers (brokers) and clients,
@@ -43,6 +42,10 @@ import { nextTick } from 'process'
  * or `serverClient.stream.destroy()`.
  *
  */
+
+const fakeTimersOptions = {
+	shouldClearNativeTimers: true,
+}
 
 export default function abstractTest(server, config, ports) {
 	const version = config.protocolVersion || 4
@@ -1963,7 +1966,7 @@ export default function abstractTest(server, config, ports) {
 
 		// eslint-disable-next-line
 		beforeEach(() => {
-			clock = sinon.useFakeTimers()
+			clock = sinon.useFakeTimers(fakeTimersOptions)
 		})
 
 		afterEach(() => {
@@ -2054,7 +2057,7 @@ export default function abstractTest(server, config, ports) {
 				timeout: 10000,
 			},
 			function _test(t, done) {
-				const clock = sinon.useFakeTimers()
+				const clock = sinon.useFakeTimers(fakeTimersOptions)
 
 				t.after(() => {
 					clock.restore()
@@ -2095,7 +2098,7 @@ export default function abstractTest(server, config, ports) {
 			'should not reconnect if pingresp is successful',
 			{ timeout: 1000 },
 			function _test(t, done) {
-				const clock = sinon.useFakeTimers()
+				const clock = sinon.useFakeTimers(fakeTimersOptions)
 
 				t.after(() => {
 					clock.restore()
@@ -2912,7 +2915,7 @@ export default function abstractTest(server, config, ports) {
 		})
 
 		it('should reconnect after stream disconnect', function _test(t, done) {
-			const clock = sinon.useFakeTimers()
+			const clock = sinon.useFakeTimers(fakeTimersOptions)
 
 			t.after(() => {
 				clock.restore()
@@ -2937,7 +2940,7 @@ export default function abstractTest(server, config, ports) {
 		})
 
 		it("should emit 'reconnect' when reconnecting", function _test(t, done) {
-			const clock = sinon.useFakeTimers()
+			const clock = sinon.useFakeTimers(fakeTimersOptions)
 
 			t.after(() => {
 				clock.restore()
@@ -2969,7 +2972,7 @@ export default function abstractTest(server, config, ports) {
 		})
 
 		it("should emit 'offline' after going offline", function _test(t, done) {
-			const clock = sinon.useFakeTimers()
+			const clock = sinon.useFakeTimers(fakeTimersOptions)
 
 			t.after(() => {
 				clock.restore()
@@ -3035,7 +3038,7 @@ export default function abstractTest(server, config, ports) {
 					timeout: 10000,
 				},
 				function _test(t, done) {
-					const clock = sinon.useFakeTimers()
+					const clock = sinon.useFakeTimers(fakeTimersOptions)
 
 					t.after(() => {
 						clock.restore()
