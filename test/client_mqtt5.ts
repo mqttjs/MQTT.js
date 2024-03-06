@@ -702,10 +702,8 @@ describe('MQTT 5.0', () => {
 				protocolVersion: 5,
 				properties: { authenticationData: Buffer.from([1, 2, 3, 4]) },
 			}
-			console.log('client connecting')
 			const client = mqtt.connect(opts)
 			client.on('error', (error) => {
-				console.log('error hit')
 				assert.strictEqual(
 					error.message,
 					'Packet has no Authentication Method',
