@@ -21,7 +21,6 @@ import { IPublishPacket, IPubrelPacket, ISubackPacket, QoS } from 'mqtt-packet'
 import { DoneCallback, ErrorWithReasonCode } from 'src/lib/shared'
 import { fail } from 'assert'
 import { describe, it, beforeEach, afterEach } from 'node:test'
-import { nextTick } from 'process'
 
 /**
  * These tests try to be consistent with names for servers (brokers) and clients,
@@ -43,6 +42,10 @@ import { nextTick } from 'process'
  * or `serverClient.stream.destroy()`.
  *
  */
+
+const fakeTimersOptions = {
+	shouldClearNativeTimers: true,
+}
 
 export default function abstractTest(server, config, ports) {
 	const version = config.protocolVersion || 4
@@ -1963,7 +1966,7 @@ export default function abstractTest(server, config, ports) {
 
 		// eslint-disable-next-line
 		beforeEach(() => {
-			clock = sinon.useFakeTimers()
+			clock = sinon.useFakeTimers(fakeTimersOptions)
 		})
 
 		afterEach(() => {
@@ -2054,7 +2057,7 @@ export default function abstractTest(server, config, ports) {
 				timeout: 10000,
 			},
 			function _test(t, done) {
-				const clock = sinon.useFakeTimers()
+				const clock = sinon.useFakeTimers(fakeTimersOptions)
 
 				t.after(() => {
 					clock.restore()
@@ -2076,6 +2079,7 @@ export default function abstractTest(server, config, ports) {
 						assert.equal(err.message, 'Keepalive timeout')
 						client.once('connect', () => {
 							client.end(true, done)
+							clock.tick(100)
 							client = null
 						})
 					})
@@ -2094,7 +2098,7 @@ export default function abstractTest(server, config, ports) {
 			'should not reconnect if pingresp is successful',
 			{ timeout: 1000 },
 			function _test(t, done) {
-				const clock = sinon.useFakeTimers()
+				const clock = sinon.useFakeTimers(fakeTimersOptions)
 
 				t.after(() => {
 					clock.restore()
@@ -2118,6 +2122,7 @@ export default function abstractTest(server, config, ports) {
 						if (packet.cmd === 'pingreq') {
 							client.removeAllListeners('close')
 							client.end(true, done)
+							clock.tick(100)
 							client = null
 						}
 					})
@@ -2910,7 +2915,7 @@ export default function abstractTest(server, config, ports) {
 		})
 
 		it('should reconnect after stream disconnect', function _test(t, done) {
-			const clock = sinon.useFakeTimers()
+			const clock = sinon.useFakeTimers(fakeTimersOptions)
 
 			t.after(() => {
 				clock.restore()
@@ -2929,12 +2934,13 @@ export default function abstractTest(server, config, ports) {
 					tryReconnect = false
 				} else {
 					client.end(true, done)
+					clock.tick(100)
 				}
 			})
 		})
 
 		it("should emit 'reconnect' when reconnecting", function _test(t, done) {
-			const clock = sinon.useFakeTimers()
+			const clock = sinon.useFakeTimers(fakeTimersOptions)
 
 			t.after(() => {
 				clock.restore()
@@ -2960,12 +2966,13 @@ export default function abstractTest(server, config, ports) {
 				} else {
 					assert.isTrue(reconnectEvent)
 					client.end(true, done)
+					clock.tick(100)
 				}
 			})
 		})
 
 		it("should emit 'offline' after going offline", function _test(t, done) {
-			const clock = sinon.useFakeTimers()
+			const clock = sinon.useFakeTimers(fakeTimersOptions)
 
 			t.after(() => {
 				clock.restore()
@@ -2991,6 +2998,7 @@ export default function abstractTest(server, config, ports) {
 				} else {
 					assert.isTrue(offlineEvent)
 					client.end(true, done)
+					clock.tick(100)
 				}
 			})
 		})
@@ -3030,7 +3038,7 @@ export default function abstractTest(server, config, ports) {
 					timeout: 10000,
 				},
 				function _test(t, done) {
-					const clock = sinon.useFakeTimers()
+					const clock = sinon.useFakeTimers(fakeTimersOptions)
 
 					t.after(() => {
 						clock.restore()
@@ -3070,6 +3078,7 @@ export default function abstractTest(server, config, ports) {
 									)
 								}
 							})
+							clock.tick(100)
 						}
 					})
 				},
@@ -3084,8 +3093,8 @@ export default function abstractTest(server, config, ports) {
 			})
 			// bind client.end so that when it is called it is automatically passed in the done callback
 			setTimeout(() => {
-				client.end.call(client, done)
-			}, 50)
+				client.end(done)
+			}, 100)
 		})
 
 		it('should emit connack timeout error', function _test(t, done) {
