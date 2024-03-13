@@ -40,9 +40,6 @@ import { TypedEventEmitter } from './TypedEmitter'
 import PingTimer from './PingTimer'
 import isBrowser, { isWebWorker } from './is-browser'
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const pkgVersion = require('../../package.json').version
-
 const setImmediate =
 	globalThis.setImmediate ||
 	(((...args: any[]) => {
@@ -492,7 +489,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		this.log = this.options.log || _debug('mqttjs:client')
 		this.noop = this._noop.bind(this)
 
-		this.log('MqttClient :: version:', pkgVersion)
+		this.log('MqttClient :: version:', process.env.npm_package_version)
 
 		if (isWebWorker) {
 			this.log('MqttClient :: environment', 'webworker')

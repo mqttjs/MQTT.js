@@ -2,6 +2,7 @@ const { build } = require('esbuild')
 const { polyfillNode } = require('esbuild-plugin-polyfill-node');
 const { rimraf } = require('rimraf')
 const fs = require('fs')
+const { version } = require('./package.json');
 
 const outdir = 'dist'
 
@@ -15,6 +16,9 @@ const options = {
     format: 'iife',
     platform: 'browser',
     globalName: 'mqtt',
+    define: {
+        'process.env.npm_package_version': JSON.stringify(version),
+    },
     sourcemap: false, // this can be enabled while debugging, if we decide to keep this enabled we should also ship the `src` folder to npm
     plugins: [
         polyfillNode({
