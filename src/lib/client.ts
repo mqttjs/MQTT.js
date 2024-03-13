@@ -38,6 +38,7 @@ import {
 import TopicAliasSend from './topic-alias-send'
 import { TypedEventEmitter } from './TypedEmitter'
 import PingTimer from './PingTimer'
+import isBrowser, { isWebWorker } from './is-browser'
 
 const setImmediate =
 	globalThis.setImmediate ||
@@ -487,6 +488,17 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 		this.log = this.options.log || _debug('mqttjs:client')
 		this.noop = this._noop.bind(this)
+
+		this.log('MqttClient :: version:', process.env.npm_package_version)
+
+		if (isWebWorker) {
+			this.log('MqttClient :: environment', 'webworker')
+		} else {
+			this.log(
+				'MqttClient :: environment',
+				isBrowser ? 'browser' : 'node',
+			)
+		}
 
 		this.log('MqttClient :: options.protocol', options.protocol)
 		this.log(
