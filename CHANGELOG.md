@@ -1,5 +1,22 @@
 
 
+# [5.4.0](https://github.com/mqttjs/MQTT.js/compare/v5.3.6...v5.4.0) (2024-03-13)
+
+
+### Bug Fixes
+
+* add keepalive test in webworker ([#1807](https://github.com/mqttjs/MQTT.js/issues/1807)) ([8697b06](https://github.com/mqttjs/MQTT.js/commit/8697b06cae3265422620c38b76126381502a9c17))
+* improve some flaky tests ([#1801](https://github.com/mqttjs/MQTT.js/issues/1801)) ([78e8f13](https://github.com/mqttjs/MQTT.js/commit/78e8f139ee0ad61e752421b9e594bea742af9745))
+* print MQTTjs version and environment on constructor ([#1816](https://github.com/mqttjs/MQTT.js/issues/1816)) ([c0a6668](https://github.com/mqttjs/MQTT.js/commit/c0a666887ec313ee82142a825166e5b1d2e668bb))
+* some others flaky tests ([#1808](https://github.com/mqttjs/MQTT.js/issues/1808)) ([f988058](https://github.com/mqttjs/MQTT.js/commit/f9880588244ac35c945302fad474f6c47f27acbc))
+* update worker-timers from 7.0.78 to 7.1.4 ([#1813](https://github.com/mqttjs/MQTT.js/issues/1813)) ([2b75186](https://github.com/mqttjs/MQTT.js/commit/2b751861f2af7b914c3eb84265fb8474428045ec)), closes [#1802](https://github.com/mqttjs/MQTT.js/issues/1802)
+* wrong default export for browser ([#1800](https://github.com/mqttjs/MQTT.js/issues/1800)) ([6237f45](https://github.com/mqttjs/MQTT.js/commit/6237f45f3f455b1b6ae7d339fc8a56a5eff91dc2))
+
+
+### Features
+
+* emit `Keepalive timeout` error and speed up tests using fake timers ([#1798](https://github.com/mqttjs/MQTT.js/issues/1798)) ([5d9bf10](https://github.com/mqttjs/MQTT.js/commit/5d9bf1004ba76098d4ae315fa7a4b44a9d26750b))
+
 ## [5.3.6](https://github.com/mqttjs/MQTT.js/compare/v5.3.5...v5.3.6) (2024-02-26)
 
 
