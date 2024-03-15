@@ -77,6 +77,12 @@ export class BufferedDuplex extends Duplex {
 		this.proxy.end(callback)
 	}
 
+	_destroy(err: Error, callback: (error: Error) => void): void {
+		this.writeQueue = []
+		this.proxy.destroy(err)
+		callback(err)
+	}
+
 	/** Method to call when socket is ready to stop buffering writes */
 	socketReady() {
 		this.emit('connect')
