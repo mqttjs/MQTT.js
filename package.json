@@ -63,7 +63,7 @@
     "build:browser": "node esbuild.js",
     "build": "npm run build:ts && npm run build:browser",
     "prepare": "npm run build",
-    "unit-test:node": "node_modules/.bin/nyc --reporter=lcov --reporter=text node -r esbuild-register test/runTests.ts",
+    "unit-test:node": "node_modules/.bin/nyc node -r esbuild-register test/runTests.ts",
     "unit-test:browser": "wtr",
     "test:node": "npm run unit-test:node && codecov",
     "test:browser": "npm run build && npm run unit-test:browser",
