@@ -1,5 +1,4 @@
 
-/** @type {  } */
 module.exports = {
     include: [
         'src/**',
