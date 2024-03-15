@@ -1,5 +1,5 @@
 import { expect } from '@esm-bundle/chai';
-import mqtt, { MqttClient } from '../../'; // this will resolve to mqtt/dist/mqtt.esm.js
+import mqtt from '../../'; // this will resolve to mqtt/dist/mqtt.esm.js
 
 // needed to test no-esm version /dist/mqtt.js
 /** @type { import('../../src') }*/
@@ -42,7 +42,7 @@ function testProto(proto, port, cb = () => { }) {
 
 		it('should connect-publish-subscribe', (done) => {
 			
-			expect(typeof MqttClient.VERSION).to.equal('string')
+			expect(typeof mqtt.Client.VERSION).to.equal('string')
 			
 			client = mqtt.connect(`${proto}://localhost:${port}`, {
 				// log: console.log.bind(console),
