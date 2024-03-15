@@ -1,12 +1,12 @@
-import getTimer from './get-timer'
+import getTimer, { type Timer } from './get-timer'
 import type { TimerVariant } from './shared'
 
 export default class PingTimer {
 	private keepalive: number
 
-	private timer: any
+	private timerId: number
 
-	private variant: TimerVariant
+	private timer: Timer
 
 	private checkPing: () => void
 
@@ -17,24 +17,24 @@ export default class PingTimer {
 	) {
 		this.keepalive = keepalive * 1000
 		this.checkPing = checkPing
-		this.variant = variant
+		this.timer = getTimer(variant)
 		this.reschedule()
 	}
 
 	clear() {
-		if (this.timer) {
-			getTimer(this.variant).clear(this.timer)
-			this.timer = null
+		if (this.timerId) {
+			this.timer.clear(this.timerId)
+			this.timerId = null
 		}
 	}
 
 	reschedule() {
 		this.clear()
-		this.timer = getTimer(this.variant).set(() => {
+		this.timerId = this.timer.set(() => {
 			this.checkPing()
 			// prevent possible race condition where the timer is destroyed on _cleauUp
 			// and recreated here
-			if (this.timer) {
+			if (this.timerId) {
 				this.reschedule()
 			}
 		}, this.keepalive)

@@ -5,7 +5,7 @@ import type { TimerVariant } from './shared'
 // dont directly assign globals to class props otherwise this throws in web workers: Uncaught TypeError: Illegal invocation
 // See: https://stackoverflow.com/questions/9677985/uncaught-typeerror-illegal-invocation-in-chrome
 
-interface Timer {
+export interface Timer {
 	set: typeof setT
 	clear: typeof clearT
 }
