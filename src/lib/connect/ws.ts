@@ -120,6 +120,7 @@ function createWebSocket(
 	return socket
 }
 
+/* istanbul ignore next */
 function createBrowserWebSocket(client: MqttClient, opts: IClientOptions) {
 	const websocketSubProtocol =
 		opts.protocolId === 'MQIsdp' && opts.protocolVersion === 3
@@ -154,6 +155,7 @@ const streamBuilder: StreamBuilder = (client, opts) => {
 	return webSocketStream
 }
 
+/* istanbul ignore next */
 const browserStreamBuilder: StreamBuilder = (client, opts) => {
 	debug('browserStreamBuilder')
 	let stream: BufferedDuplex | (Transform & { socket?: WebSocket })
