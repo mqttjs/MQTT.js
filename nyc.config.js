@@ -9,9 +9,13 @@ module.exports = {
         'src/connect/wx.ts',
         'src/connect/ali.ts',
     ],
+    reporter: [
+        'text',
+        'lcov',
+    ],
     branches: 80,
-    functions: 80,
-    lines: 80,
-    statements: 80,
+    functions: 89,
+    lines: 86,
+    statements: 86,
     'check-coverage': true,
 }
