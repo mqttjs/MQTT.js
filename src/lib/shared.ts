@@ -27,6 +27,8 @@ export type PacketHandler = (
 	done?: DoneCallback,
 ) => void
 
+export type TimerVariant = 'auto' | 'worker' | 'native'
+
 export class ErrorWithReasonCode extends Error {
 	public code: number
 

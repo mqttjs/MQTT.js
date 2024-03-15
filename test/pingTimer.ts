@@ -16,7 +16,7 @@ describe('PingTimer', () => {
 	it('should schedule and clear', () => {
 		const keepalive = 10 // seconds
 		const cb = spy()
-		const pingTimer = new PingTimer(keepalive, cb)
+		const pingTimer = new PingTimer(keepalive, cb, 'auto')
 
 		assert.ok(pingTimer['timer'], 'timer should be created automatically')
 
@@ -35,10 +35,14 @@ describe('PingTimer', () => {
 	it('should not re-schedule if timer has been cleared in check ping', () => {
 		const keepalive = 10 // seconds
 		const cb = spy()
-		const pingTimer = new PingTimer(keepalive, () => {
-			pingTimer.clear()
-			cb()
-		})
+		const pingTimer = new PingTimer(
+			keepalive,
+			() => {
+				pingTimer.clear()
+				cb()
+			},
+			'auto',
+		)
 
 		clock.tick(keepalive * 1000 + 1)
 		assert.equal(
