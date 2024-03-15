@@ -41,6 +41,9 @@ function testProto(proto, port, cb = () => { }) {
 		let client = null;
 
 		it('should connect-publish-subscribe', (done) => {
+			
+			expect(typeof mqtt.Client.VERSION).to.equal('string')
+			
 			client = mqtt.connect(`${proto}://localhost:${port}`, {
 				// log: console.log.bind(console),
 				clientId: `testClient-${browser}-${proto}`,

@@ -17,6 +17,9 @@ import abstractClientTests from './abstract_client'
 import { IClientOptions } from 'src/lib/client'
 import { describe, it, after } from 'node:test'
 
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const pkgJson = require('../package.json')
+
 const debug = _debug('mqttjs:client-test')
 
 const ports = getPorts(2)
@@ -37,6 +40,10 @@ describe('MqttClient', () => {
 		}
 
 		process.exit(0)
+	})
+
+	it('should have static VERSION set', function _test(t) {
+		assert.equal(mqtt.MqttClient.VERSION, pkgJson.version)
 	})
 
 	abstractClientTests(server, config, ports)
