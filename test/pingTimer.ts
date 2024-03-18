@@ -18,7 +18,7 @@ describe('PingTimer', () => {
 		const cb = spy()
 		const pingTimer = new PingTimer(keepalive, cb, 'auto')
 
-		assert.ok(pingTimer['timer'], 'timer should be created automatically')
+		assert.ok(pingTimer['timerId'], 'timer should be created automatically')
 
 		clock.tick(keepalive * 1000 + 1)
 		assert.equal(
@@ -29,7 +29,10 @@ describe('PingTimer', () => {
 		clock.tick(keepalive * 1000 + 1)
 		assert.equal(cb.callCount, 2, 'should reschedule automatically')
 		pingTimer.clear()
-		assert.ok(!pingTimer['timer'], 'timer should not exists after clear()')
+		assert.ok(
+			!pingTimer['timerId'],
+			'timer should not exists after clear()',
+		)
 	})
 
 	it('should not re-schedule if timer has been cleared in check ping', () => {
@@ -52,6 +55,6 @@ describe('PingTimer', () => {
 		)
 		clock.tick(keepalive * 1000 + 1)
 		assert.equal(cb.callCount, 1, 'should not re-schedule')
-		assert.ok(!pingTimer['timer'], 'timer should not exists')
+		assert.ok(!pingTimer['timerId'], 'timer should not exists')
 	})
 })

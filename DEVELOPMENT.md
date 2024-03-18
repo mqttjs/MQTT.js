@@ -19,6 +19,11 @@ npm test
 
 This will run both `browser` and `node` tests.
 
+
+### Running specific tests
+
+For example, you can run `node -r esbuild-register --test test/pingTimer.ts`
+
 ### Browser
 
 Browser tests use [`wtr`](https://modern-web.dev/docs/test-runner/overview/) as the test runner. To build browser bundle using [esbuild](https://esbuild.github.io/) and run browser tests, you can use the following command:
