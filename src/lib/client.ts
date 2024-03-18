@@ -32,6 +32,7 @@ import {
 	GenericCallback,
 	IStream,
 	StreamBuilder,
+	TimerVariant,
 	VoidCallback,
 	nextTick,
 } from './shared'
@@ -49,7 +50,7 @@ const setImmediate =
 		})
 	}) as typeof globalThis.setImmediate)
 
-const defaultConnectOptions = {
+const defaultConnectOptions: IClientOptions = {
 	keepalive: 60,
 	reschedulePings: true,
 	protocolId: 'MQTT',
@@ -59,6 +60,7 @@ const defaultConnectOptions = {
 	clean: true,
 	resubscribe: true,
 	writeCache: true,
+	timerVariant: 'auto',
 }
 
 export type MqttProtocol =
@@ -266,6 +268,10 @@ export interface IClientOptions extends ISecureClientOptions {
 	will?: IConnectPacket['will']
 	/** see `connect` packet: https://github.com/mqttjs/mqtt-packet/blob/master/types/index.d.ts#L65 */
 	properties?: IConnectPacket['properties']
+	/**
+	 * @description 'auto', set to 'native' or 'worker' if you're having issues with 'auto' detection
+	 */
+	timerVariant?: TimerVariant
 }
 
 export interface IClientPublishOptions {
@@ -2078,9 +2084,13 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 		if (!this.pingTimer && this.options.keepalive) {
 			this.pingResp = true
-			this.pingTimer = new PingTimer(this.options.keepalive, () => {
-				this._checkPing()
-			})
+			this.pingTimer = new PingTimer(
+				this.options.keepalive,
+				() => {
+					this._checkPing()
+				},
+				this.options.timerVariant,
+			)
 		}
 	}
 
