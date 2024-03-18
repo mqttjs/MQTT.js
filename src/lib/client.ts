@@ -396,6 +396,8 @@ export interface MqttClientEventCallbacks {
  * (see Connection#connect)
  */
 export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbacks> {
+	public static VERSION = process.env.npm_package_version
+
 	/** Public fields */
 
 	/** It's true when client is connected to broker */
@@ -495,7 +497,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		this.log = this.options.log || _debug('mqttjs:client')
 		this.noop = this._noop.bind(this)
 
-		this.log('MqttClient :: version:', process.env.npm_package_version)
+		this.log('MqttClient :: version:', MqttClient.VERSION)
 
 		if (isWebWorker) {
 			this.log('MqttClient :: environment', 'webworker')
