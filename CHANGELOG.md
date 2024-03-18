@@ -1,5 +1,18 @@
 
 
+# [5.5.0](https://github.com/mqttjs/MQTT.js/compare/v5.4.0...v5.5.0) (2024-03-18)
+
+
+### Bug Fixes
+
+* **browser:** force closing client doesn't destroy websocket correctly ([#1820](https://github.com/mqttjs/MQTT.js/issues/1820)) ([f9b1204](https://github.com/mqttjs/MQTT.js/commit/f9b1204d7e0a04bb809be6205091fd89281b1e73)), closes [#1817](https://github.com/mqttjs/MQTT.js/issues/1817)
+* expose mqttjs version on `MqttClient.VERSION` ([#1821](https://github.com/mqttjs/MQTT.js/issues/1821)) ([50776a7](https://github.com/mqttjs/MQTT.js/commit/50776a74c73c188f67faf399af90cfe0957a0e1f))
+
+
+### Features
+
+* `timerVariant` option to choose between native and worker timers ([#1818](https://github.com/mqttjs/MQTT.js/issues/1818)) ([547519d](https://github.com/mqttjs/MQTT.js/commit/547519daa8353a2d8a7fe9e4ae715601570b085f))
+
 # [5.4.0](https://github.com/mqttjs/MQTT.js/compare/v5.3.6...v5.4.0) (2024-03-13)
 
 
