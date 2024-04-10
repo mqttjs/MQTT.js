@@ -79,7 +79,8 @@ export class BufferedDuplex extends Duplex {
 
 	_destroy(err: Error, callback: (error: Error) => void): void {
 		this.writeQueue = []
-		this.proxy.destroy(err)
+		// do not pass error here otherwise we should listen for `error` event on proxy to prevent uncaught exception
+		this.proxy.destroy()
 		callback(err)
 	}
 
