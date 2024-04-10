@@ -31,11 +31,7 @@ const getTimer = (variant: TimerVariant): Timer => {
 		case 'auto':
 		default: {
 
-			if (isBrowser && isReactNativeBrowser) {
-				return nativeTimer
-			}
-
-			return isBrowser && !isWebWorker ? workerTimer : nativeTimer
+			return isBrowser && !isWebWorker && !isReactNativeBrowser ? workerTimer : nativeTimer
 
 		}
 	}

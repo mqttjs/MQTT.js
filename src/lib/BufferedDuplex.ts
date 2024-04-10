@@ -1,5 +1,5 @@
 import { Duplex, Transform } from 'readable-stream'
-import { Buffer } from 'buffer';
+import { Buffer } from 'buffer'
 import { IClientOptions } from './client'
 
 /**
