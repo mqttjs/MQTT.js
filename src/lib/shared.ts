@@ -76,7 +76,7 @@ export function applyMixin(
 		}
 	}
 }
-export const nextTick = process
+export const nextTick = typeof process?.nextTick === 'function'
 	? process.nextTick
 	: (callback: () => void) => {
 			setTimeout(callback, 0)

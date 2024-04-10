@@ -1,4 +1,4 @@
-import isBrowser, { isWebWorker } from './is-browser'
+import isBrowser, { isWebWorker, isReactNativeBrowser } from './is-browser'
 import { clearTimeout as clearT, setTimeout as setT } from 'worker-timers'
 import type { TimerVariant } from './shared'
 
@@ -30,7 +30,13 @@ const getTimer = (variant: TimerVariant): Timer => {
 		}
 		case 'auto':
 		default: {
+
+			if (isBrowser && isReactNativeBrowser) {
+				return nativeTimer
+			}
+
 			return isBrowser && !isWebWorker ? workerTimer : nativeTimer
+
 		}
 	}
 }
