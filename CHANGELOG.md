@@ -1,5 +1,12 @@
 
 
+## [5.5.1](https://github.com/mqttjs/MQTT.js/compare/v5.5.0...v5.5.1) (2024-04-10)
+
+
+### Bug Fixes
+
+* **browser:** uncaught error when stream is destroyed with error ([380f286](https://github.com/mqttjs/MQTT.js/commit/380f286d46f1c3d7a64c7bd851bbe8d84b797074)), closes [#1839](https://github.com/mqttjs/MQTT.js/issues/1839)
+
 # [5.5.0](https://github.com/mqttjs/MQTT.js/compare/v5.4.0...v5.5.0) (2024-03-18)
 
 
