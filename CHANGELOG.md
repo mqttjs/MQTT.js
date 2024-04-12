@@ -1,5 +1,12 @@
 
 
+## [5.5.2](https://github.com/mqttjs/MQTT.js/compare/v5.5.1...v5.5.2) (2024-04-12)
+
+
+### Bug Fixes
+
+* **react-native:** error Cannot create URL for blob ([#1840](https://github.com/mqttjs/MQTT.js/issues/1840)) ([fc8fafb](https://github.com/mqttjs/MQTT.js/commit/fc8fafbdf5e01edc487192393293b944e77f5920))
+
 ## [5.5.1](https://github.com/mqttjs/MQTT.js/compare/v5.5.0...v5.5.1) (2024-04-10)
 
 
