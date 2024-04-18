@@ -15,6 +15,7 @@ in JavaScript for node.js and the browser.
 - [Upgrade notes](#notes)
 - [Installation](#install)
 - [Example](#example)
+- [React Native](#react-native)
 - [Import Styles](#example)
 - [Command Line Tools](#cli)
 - [API](#api)
@@ -116,6 +117,13 @@ output:
 ```sh
 Hello mqtt
 ```
+
+<a name="example-react-native"></a>
+
+### React Native
+
+MQTT.js can be used in React Native applications. To use it, see the [React Native example](https://github.com/MaximoLiberata/react-native-mqtt.js-example)
+
 
 If you want to run your own MQTT broker, you can use
 [Mosquitto](http://mosquitto.org) or
