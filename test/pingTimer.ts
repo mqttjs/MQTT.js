@@ -13,7 +13,7 @@ describe('PingTimer', () => {
 		clock.restore()
 	})
 
-	it('should schedule and clear', () => {
+	it('should schedule and destroy', () => {
 		const keepalive = 10 // seconds
 		const cb = spy()
 		const pingTimer = new PingTimer(keepalive, cb, 'auto')
@@ -28,10 +28,15 @@ describe('PingTimer', () => {
 		)
 		clock.tick(keepalive * 1000 + 1)
 		assert.equal(cb.callCount, 2, 'should reschedule automatically')
-		pingTimer.clear()
+		pingTimer.destroy()
 		assert.ok(
 			!pingTimer['timerId'],
-			'timer should not exists after clear()',
+			'timer should not exists after destroy()',
+		)
+
+		assert.ok(
+			pingTimer['destroyed'],
+			'timer should have `destroyed` set to true after destroy()',
 		)
 	})
 
@@ -41,7 +46,7 @@ describe('PingTimer', () => {
 		const pingTimer = new PingTimer(
 			keepalive,
 			() => {
-				pingTimer.clear()
+				pingTimer.destroy()
 				cb()
 			},
 			'auto',
