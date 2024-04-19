@@ -82,3 +82,6 @@ export const nextTick =
 		: (callback: () => void) => {
 				setTimeout(callback, 0)
 		  }
+
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+export const MQTTJS_VERSION = require('../../package.json').version
