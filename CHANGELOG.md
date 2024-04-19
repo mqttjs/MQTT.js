@@ -1,5 +1,13 @@
 
 
+## [5.5.3](https://github.com/mqttjs/MQTT.js/compare/v5.5.2...v5.5.3) (2024-04-19)
+
+
+### Bug Fixes
+
+* possible race condition in ping timer ([#1848](https://github.com/mqttjs/MQTT.js/issues/1848)) ([0b7d687](https://github.com/mqttjs/MQTT.js/commit/0b7d687282e6342d5276946dfd4c4d1e0a66ba47)), closes [#1845](https://github.com/mqttjs/MQTT.js/issues/1845)
+* wrong mqttjs version printed ([#1847](https://github.com/mqttjs/MQTT.js/issues/1847)) ([a24cf14](https://github.com/mqttjs/MQTT.js/commit/a24cf14654cb0fa74da1be2671dfaf57071fec40))
+
 ## [5.5.2](https://github.com/mqttjs/MQTT.js/compare/v5.5.1...v5.5.2) (2024-04-12)
 
 
