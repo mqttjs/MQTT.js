@@ -16,9 +16,6 @@ const options = {
     format: 'iife',
     platform: 'browser',
     globalName: 'mqtt',
-    define: {
-        'process.env.npm_package_version': JSON.stringify(version),
-    },
     sourcemap: false, // this can be enabled while debugging, if we decide to keep this enabled we should also ship the `src` folder to npm
     plugins: [
         polyfillNode({
@@ -34,6 +31,27 @@ const options = {
                 navigator: true, // Needed for WeChat, ref #1789
             }
         }),
+        {
+            name: 'resolve-package-json',
+            setup(build) {
+                // when importing 'package.json' we want to provide a custom object like { version: '1.2.3' }
+
+                build.onResolve({ filter: /package\.json$/ }, args => {
+                    return {
+                        path: args.path,
+                        namespace: 'package-json'
+                    }
+                })
+
+                build.onLoad({ filter: /.*/, namespace: 'package-json' }, args => {
+                    return {
+                        contents: JSON.stringify({ version }),
+                        loader: 'json'
+                    }
+                }
+                )
+            }
+        },
     ],
 }
 

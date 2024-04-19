@@ -31,6 +31,7 @@ import {
 	ErrorWithReasonCode,
 	GenericCallback,
 	IStream,
+	MQTTJS_VERSION,
 	StreamBuilder,
 	TimerVariant,
 	VoidCallback,
@@ -396,7 +397,7 @@ export interface MqttClientEventCallbacks {
  * (see Connection#connect)
  */
 export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbacks> {
-	public static VERSION = process.env.npm_package_version
+	public static VERSION = MQTTJS_VERSION
 
 	/** Public fields */
 
