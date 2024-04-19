@@ -659,9 +659,9 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			this.log('close :: clearing connackTimer')
 			clearTimeout(this.connackTimer)
 
-			this.log('close :: clearing ping timer')
+			this.log('close :: destroy ping timer')
 			if (this.pingTimer) {
-				this.pingTimer.clear()
+				this.pingTimer.destroy()
 				this.pingTimer = null
 			}
 
@@ -1783,8 +1783,8 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		}
 
 		if (this.pingTimer) {
-			this.log('_cleanUp :: clearing pingTimer')
-			this.pingTimer.clear()
+			this.log('_cleanUp :: destroy pingTimer')
+			this.pingTimer.destroy()
 			this.pingTimer = null
 		}
 

@@ -10,6 +10,8 @@ export default class PingTimer {
 
 	private checkPing: () => void
 
+	private destroyed = false
+
 	constructor(
 		keepalive: number,
 		checkPing: () => void,
@@ -21,22 +23,34 @@ export default class PingTimer {
 		this.reschedule()
 	}
 
-	clear() {
+	private clear() {
 		if (this.timerId) {
 			this.timer.clear(this.timerId)
 			this.timerId = null
 		}
 	}
 
+	destroy() {
+		this.clear()
+		this.destroyed = true
+	}
+
 	reschedule() {
+		if (this.destroyed) {
+			return
+		}
+
 		this.clear()
 		this.timerId = this.timer.set(() => {
-			this.checkPing()
-			// prevent possible race condition where the timer is destroyed on _cleauUp
-			// and recreated here
-			if (this.timerId) {
-				this.reschedule()
+			// this should never happen, but just in case
+			if (this.destroyed) {
+				return
 			}
+
+			this.checkPing()
+			// this must be called after `checkPing` otherwise in case `destroy`
+			// is called in `checkPing` the timer would be rescheduled anyway
+			this.reschedule()
 		}, this.keepalive)
 	}
 }
