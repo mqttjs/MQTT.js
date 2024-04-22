@@ -9,6 +9,11 @@ import MqttClient, {
 import IS_BROWSER from '../is-browser'
 import { StreamBuilder } from '../shared'
 
+// Handling the process.nextTick is not a function error in react-native applications.
+if (typeof process?.nextTick !== 'function') {
+	process.nextTick = setImmediate
+}
+
 const debug = _debug('mqttjs')
 
 const protocols: Record<string, StreamBuilder> = {}
