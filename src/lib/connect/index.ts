@@ -11,7 +11,7 @@ import { StreamBuilder } from '../shared'
 
 // Handling the process.nextTick is not a function error in react-native applications.
 if (typeof process?.nextTick !== 'function') {
-	process.nextTick = setImmediate;
+	process.nextTick = setImmediate
 }
 
 const debug = _debug('mqttjs')
