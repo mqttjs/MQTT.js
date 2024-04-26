@@ -1,5 +1,13 @@
 
 
+## [5.5.4](https://github.com/mqttjs/MQTT.js/compare/v5.5.3...v5.5.4) (2024-04-26)
+
+
+### Bug Fixes
+
+* allow to use unix sockets in connect ([#1852](https://github.com/mqttjs/MQTT.js/issues/1852)) ([22c97b5](https://github.com/mqttjs/MQTT.js/commit/22c97b5f7536e3e36317c3b28dc0d70557b820ac)), closes [#1040](https://github.com/mqttjs/MQTT.js/issues/1040)
+* **react-native:** process.nextTick is not a function error ([#1849](https://github.com/mqttjs/MQTT.js/issues/1849)) ([f62e207](https://github.com/mqttjs/MQTT.js/commit/f62e207def81b174af83d2e9525cddd1ce960fc3))
+
 ## [5.5.3](https://github.com/mqttjs/MQTT.js/compare/v5.5.2...v5.5.3) (2024-04-19)
 
 
