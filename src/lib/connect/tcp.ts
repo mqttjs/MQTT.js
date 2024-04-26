@@ -13,11 +13,11 @@ const buildStream: StreamBuilder = (client, opts) => {
 	opts.port = opts.port || 1883
 	opts.hostname = opts.hostname || opts.host || 'localhost'
 
-	const { port } = opts
+	const { port, path } = opts
 	const host = opts.hostname
 
 	debug('port %d and host %s', port, host)
-	return net.createConnection(port, host)
+	return net.createConnection({ port, host, path })
 }
 
 export default buildStream
