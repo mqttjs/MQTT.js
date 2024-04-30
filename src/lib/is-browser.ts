@@ -1,21 +1,16 @@
 const isStandardBrowserEnv = () => {
 	if (typeof window !== 'undefined') {
-		return (
-			window.navigator.userAgent.toLowerCase().indexOf(' electron/') >
-				-1 &&
+		if (
+			navigator.userAgent.toLowerCase().indexOf(' electron/') > -1 &&
 			Object.prototype.hasOwnProperty.call(process.versions, 'electron')
+		) {
+			return false
+		}
+		return (
+			typeof window !== 'undefined' &&
+			typeof window.document !== 'undefined'
 		)
-		// const userAgent = window.navigator.userAgent.toLowerCase()
-		// if (
-		// 	userAgent.indexOf(' electron/') > -1 ||
-		// 	Object.prototype.hasOwnProperty.call(process.versions, 'electron')
-		// ) {
-		// 	return false
-		// }
 	}
-	return (
-		typeof window !== 'undefined' && typeof window.document !== 'undefined'
-	)
 }
 
 const isWebWorkerEnv = () =>
