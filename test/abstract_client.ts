@@ -93,11 +93,13 @@ export default function abstractTest(server, config, ports) {
 
 			client.once('close', () => {
 				assert.notExists(client.pingTimer)
+
 				client.end(true, (err) => done(err))
 			})
 
 			client.once('connect', () => {
 				assert.exists(client.pingTimer)
+
 				client.stream.end()
 			})
 		})
@@ -1994,7 +1996,7 @@ export default function abstractTest(server, config, ports) {
 			})
 		})
 
-		it('should not checkPing if publishing at a higher rate than keepalive', function _test(t, done) {
+		it('should not shift ping on publish', function _test(t, done) {
 			const intervalMs = 3000
 			const client = connect({ keepalive: intervalMs / 1000 })
 
@@ -2007,7 +2009,7 @@ export default function abstractTest(server, config, ports) {
 				client.publish('foo', 'bar')
 				clock.tick(2)
 
-				assert.strictEqual(spy.callCount, 0)
+				assert.strictEqual(spy.callCount, 1)
 				client.end(true, done)
 			})
 		})
@@ -2067,13 +2069,16 @@ export default function abstractTest(server, config, ports) {
 					}
 				})
 
-				let client = connect({
+				const options: IClientOptions = {
 					keepalive: 60,
 					reconnectPeriod: 5000,
-				})
+				}
+
+				let client = connect()
 
 				client.once('connect', () => {
-					client.pingResp = false
+					// when using fake timers Date.now() counts from 0: https://sinonjs.org/releases/latest/fake-timers/
+					client.pingResp = -options.keepalive * 1000
 
 					client.once('error', (err) => {
 						assert.equal(err.message, 'Keepalive timeout')

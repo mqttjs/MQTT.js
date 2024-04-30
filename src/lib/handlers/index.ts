@@ -21,11 +21,16 @@ const handle: PacketHandler = (client, packet, done) => {
 		})
 		return client
 	}
+
+	// keep track of last time we received a packet (for keepalive mechanism)
+	client.pingResp = Date.now()
+
 	client.log('_handlePacket :: emitting packetreceive')
 	client.emit('packetreceive', packet)
 
 	switch (packet.cmd) {
 		case 'publish':
+			client['_shiftPingCheck']()
 			handlePublish(client, packet, done)
 			break
 		case 'puback':
@@ -33,10 +38,12 @@ const handle: PacketHandler = (client, packet, done) => {
 		case 'pubcomp':
 		case 'suback':
 		case 'unsuback':
+			client['_shiftPingCheck']()
 			handleAck(client, packet)
 			done()
 			break
 		case 'pubrel':
+			client['_shiftPingCheck']()
 			handlePubrel(client, packet, done)
 			break
 		case 'connack':
@@ -49,7 +56,6 @@ const handle: PacketHandler = (client, packet, done) => {
 			break
 		case 'pingresp':
 			// this will be checked in _checkPing client method every keepalive interval
-			client.pingResp = true
 			done()
 			break
 		case 'disconnect':
