@@ -2095,11 +2095,12 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	}
 
 	/**
-	 * _shiftPingCheck - reschedule the ping interval
+
+	 * _shiftPingInterval - reschedule the ping interval
 	 *
 	 * @api private
 	 */
-	private _shiftPingCheck() {
+	private _shiftPingInterval() {
 		if (
 			this.pingTimer &&
 			this.options.keepalive &&

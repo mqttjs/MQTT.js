@@ -30,7 +30,7 @@ const handle: PacketHandler = (client, packet, done) => {
 
 	switch (packet.cmd) {
 		case 'publish':
-			client['_shiftPingCheck']()
+			client['_shiftPingInterval']()
 			handlePublish(client, packet, done)
 			break
 		case 'puback':
@@ -38,12 +38,12 @@ const handle: PacketHandler = (client, packet, done) => {
 		case 'pubcomp':
 		case 'suback':
 		case 'unsuback':
-			client['_shiftPingCheck']()
+			client['_shiftPingInterval']()
 			handleAck(client, packet)
 			done()
 			break
 		case 'pubrel':
-			client['_shiftPingCheck']()
+			client['_shiftPingInterval']()
 			handlePubrel(client, packet, done)
 			break
 		case 'connack':
