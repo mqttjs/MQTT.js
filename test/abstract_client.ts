@@ -2,7 +2,7 @@
  * Testing dependencies
  */
 import { assert } from 'chai'
-import sinon from 'sinon'
+import sinon, { SinonSpy } from 'sinon'
 import fs from 'fs'
 import levelStore from 'mqtt-level-store'
 import Store from '../src/lib/store'
@@ -1982,6 +1982,12 @@ export default function abstractTest(server, config, ports) {
 			const spy = sinon.spy()
 			client['_checkPing'] = spy
 
+			client.on('error', (err) => {
+				client.end(true, () => {
+					done(err)
+				})
+			})
+
 			client.once('connect', () => {
 				clock.tick(interval * 1000)
 				assert.strictEqual(spy.callCount, 1)
@@ -2005,35 +2011,70 @@ export default function abstractTest(server, config, ports) {
 
 			client.once('connect', () => {
 				client.publish('foo', 'bar')
-				clock.tick(intervalMs - 1)
+				clock.tick(intervalMs)
 				client.publish('foo', 'bar')
-				clock.tick(2)
+				clock.tick(intervalMs)
 
-				assert.strictEqual(spy.callCount, 1)
+				assert.strictEqual(spy.callCount, 2)
 				client.end(true, done)
 			})
 		})
 
-		it('should checkPing if publishing at a higher rate than keepalive and reschedulePings===false', function _test(t, done) {
-			const intervalMs = 3000
-			const client = connect({
-				keepalive: intervalMs / 1000,
-				reschedulePings: false,
+		const checkPing = (reschedulePings: boolean) => {
+			it(`should checkPing if publishing at a higher rate than keepalive and reschedulePings===${reschedulePings}`, function _test(t, done) {
+				const intervalMs = 3000
+				const client = connect({
+					keepalive: intervalMs / 1000,
+					reschedulePings,
+				})
+
+				const spyReschedule = sinon.spy(
+					client,
+					'_reschedulePing' as any,
+				)
+
+				let received = 0
+
+				client.on('packetreceive', (packet) => {
+					if (packet.cmd === 'puback') {
+						clock.tick(intervalMs)
+
+						received++
+
+						if (reschedulePings) {
+							assert.strictEqual(
+								spyReschedule.callCount,
+								received,
+							)
+						} else {
+							assert.strictEqual(spyReschedule.callCount, 0)
+						}
+
+						if (received === 2) {
+							client.end(true, done)
+						}
+					}
+				})
+
+				server.once('client', (serverClient) => {
+					serverClient.on('publish', () => {
+						// needed to trigger the setImmediate inside server publish listener and send suback
+						clock.tick(1)
+					})
+				})
+
+				client.once('connect', () => {
+					// reset call count (it's called also on connack)
+					spyReschedule.resetHistory()
+					// use qos1 so the puback is received (to reschedule ping)
+					client.publish('foo', 'bar', { qos: 1 })
+					client.publish('foo', 'bar', { qos: 1 })
+				})
 			})
+		}
 
-			const spy = sinon.spy()
-			client['_checkPing'] = spy
-
-			client.once('connect', () => {
-				client.publish('foo', 'bar')
-				clock.tick(intervalMs - 1)
-				client.publish('foo', 'bar')
-				clock.tick(2)
-
-				assert.strictEqual(spy.callCount, 1)
-				client.end(true, done)
-			})
-		})
+		checkPing(true)
+		checkPing(false)
 	})
 
 	describe('pinging', () => {

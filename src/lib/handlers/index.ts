@@ -22,9 +22,6 @@ const handle: PacketHandler = (client, packet, done) => {
 		return client
 	}
 
-	client.log('_handlePacket :: emitting packetreceive')
-	client.emit('packetreceive', packet)
-
 	// keep track of last time we received a packet (for keepalive mechanism)
 	client.pingResp = Date.now()
 
@@ -32,6 +29,9 @@ const handle: PacketHandler = (client, packet, done) => {
 	if (packet.cmd !== 'pingresp') {
 		client['_shiftPingInterval']()
 	}
+
+	client.log('_handlePacket :: emitting packetreceive')
+	client.emit('packetreceive', packet)
 
 	switch (packet.cmd) {
 		case 'publish':

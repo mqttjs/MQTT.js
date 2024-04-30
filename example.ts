@@ -1,13 +1,15 @@
-import mqtt from '.'
+import mqtt from './src/index'
 
 const client = mqtt.connect('mqtts://test.mosquitto.org', {
-	keepalive: 60,
+	keepalive: 10,
 	port: 8883,
 	reconnectPeriod: 15000,
 	rejectUnauthorized: false,
 })
 
-const testTopic = 'presence'
+const randomNumber = Math.floor(Math.random() * 1000)
+
+const testTopic = `presence_${randomNumber.toString()}`
 
 function publish() {
 	const msg = `Hello mqtt ${new Date().toISOString()}`
