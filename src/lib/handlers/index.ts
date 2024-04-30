@@ -22,15 +22,19 @@ const handle: PacketHandler = (client, packet, done) => {
 		return client
 	}
 
-	// keep track of last time we received a packet (for keepalive mechanism)
-	client.pingResp = Date.now()
-
 	client.log('_handlePacket :: emitting packetreceive')
 	client.emit('packetreceive', packet)
 
+	// keep track of last time we received a packet (for keepalive mechanism)
+	client.pingResp = Date.now()
+
+	// do not shift on pingresp otherwise we would skip the pingreq sending
+	if (packet.cmd !== 'pingresp') {
+		client['_shiftPingInterval']()
+	}
+
 	switch (packet.cmd) {
 		case 'publish':
-			client['_shiftPingInterval']()
 			handlePublish(client, packet, done)
 			break
 		case 'puback':
@@ -38,12 +42,10 @@ const handle: PacketHandler = (client, packet, done) => {
 		case 'pubcomp':
 		case 'suback':
 		case 'unsuback':
-			client['_shiftPingInterval']()
 			handleAck(client, packet)
 			done()
 			break
 		case 'pubrel':
-			client['_shiftPingInterval']()
 			handlePubrel(client, packet, done)
 			break
 		case 'connack':

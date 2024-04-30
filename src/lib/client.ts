@@ -2075,7 +2075,6 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		)
 
 		if (!this.pingTimer && this.options.keepalive) {
-			this.pingResp = Date.now()
 			this.pingTimer = new PingTimer(
 				this.options.keepalive,
 				() => {
