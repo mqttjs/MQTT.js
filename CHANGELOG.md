@@ -1,5 +1,12 @@
 
 
+## [5.5.5](https://github.com/mqttjs/MQTT.js/compare/v5.5.4...v5.5.5) (2024-04-30)
+
+
+### Bug Fixes
+
+* keepalive issues ([#1855](https://github.com/mqttjs/MQTT.js/issues/1855)) ([4f242f4](https://github.com/mqttjs/MQTT.js/commit/4f242f47bc8568299f04bade8aa4d1d11b939912))
+
 ## [5.5.4](https://github.com/mqttjs/MQTT.js/compare/v5.5.3...v5.5.4) (2024-04-26)
 
 
