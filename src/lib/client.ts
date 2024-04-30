@@ -2082,6 +2082,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 				},
 				this.options.timerVariant,
 			)
+			this.pingResp = Date.now()
 		}
 	}
 
@@ -2116,7 +2117,8 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	 */
 	private _checkPing() {
 		this.log('_checkPing :: checking ping...')
-		const timeSincePing = Date.now() - this.pingResp
+		// give 100ms offset to avoid ping timeout when receiving fast responses
+		const timeSincePing = Date.now() - this.pingResp - 100
 		if (timeSincePing <= this.options.keepalive * 1000) {
 			this.log('_checkPing :: ping response received in time')
 			this._sendPing()
