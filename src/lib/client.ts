@@ -424,8 +424,6 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 	public messageIdProvider: IMessageIdProvider
 
-	public pingResp: boolean
-
 	public outgoing: Record<
 		number,
 		{ volatile: boolean; cb: (err: Error, packet?: Packet) => void }
@@ -434,6 +432,9 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	public messageIdToTopic: Record<number, string[]>
 
 	public noop: (error?: any) => void
+
+	/** Timestamp of last received control packet */
+	public pingResp: number
 
 	public pingTimer: PingTimer
 
@@ -659,11 +660,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			this.log('close :: clearing connackTimer')
 			clearTimeout(this.connackTimer)
 
-			this.log('close :: destroy ping timer')
-			if (this.pingTimer) {
-				this.pingTimer.destroy()
-				this.pingTimer = null
-			}
+			this._destroyPingTimer()
 
 			if (this.topicAliasRecv) {
 				this.topicAliasRecv.clear()
@@ -722,6 +719,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	public connect() {
 		const writable = new Writable()
 		const parser = mqttPacket.parser(this.options)
+
 		let completeParse = null
 		const packets = []
 
@@ -1782,11 +1780,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			this._setupReconnect()
 		}
 
-		if (this.pingTimer) {
-			this.log('_cleanUp :: destroy pingTimer')
-			this.pingTimer.destroy()
-			this.pingTimer = null
-		}
+		this._destroyPingTimer()
 
 		if (done && !this.connected) {
 			this.log(
@@ -1923,9 +1917,6 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		this.log('_writePacket :: emitting `packetsend`')
 
 		this.emit('packetsend', packet)
-
-		// When writing a packet, reschedule the ping timer
-		this._shiftPingInterval()
 
 		this.log('_writePacket :: writing to stream')
 		const result = mqttPacket.writeToStream(
@@ -2084,7 +2075,6 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		)
 
 		if (!this.pingTimer && this.options.keepalive) {
-			this.pingResp = true
 			this.pingTimer = new PingTimer(
 				this.options.keepalive,
 				() => {
@@ -2092,10 +2082,20 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 				},
 				this.options.timerVariant,
 			)
+			this.pingResp = Date.now()
+		}
+	}
+
+	private _destroyPingTimer() {
+		if (this.pingTimer) {
+			this.log('_destroyPingTimer :: destroying ping timer')
+			this.pingTimer.destroy()
+			this.pingTimer = null
 		}
 	}
 
 	/**
+
 	 * _shiftPingInterval - reschedule the ping interval
 	 *
 	 * @api private
@@ -2106,8 +2106,16 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			this.options.keepalive &&
 			this.options.reschedulePings
 		) {
-			this.pingTimer.reschedule()
+			this._reschedulePing()
 		}
+	}
+
+	/**
+	 * Mostly needed for test purposes
+	 */
+	private _reschedulePing() {
+		this.log('_reschedulePing :: rescheduling ping')
+		this.pingTimer.reschedule()
 	}
 
 	/**
@@ -2117,18 +2125,22 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	 */
 	private _checkPing() {
 		this.log('_checkPing :: checking ping...')
-		if (this.pingResp) {
-			this.log(
-				'_checkPing :: ping response received. Clearing flag and sending `pingreq`',
-			)
-			this.pingResp = false
-			this._sendPacket({ cmd: 'pingreq' })
+		// give 100ms offset to avoid ping timeout when receiving fast responses
+		const timeSincePing = Date.now() - this.pingResp - 100
+		if (timeSincePing <= this.options.keepalive * 1000) {
+			this.log('_checkPing :: ping response received in time')
+			this._sendPing()
 		} else {
 			// do a forced cleanup since socket will be in bad shape
 			this.emit('error', new Error('Keepalive timeout'))
 			this.log('_checkPing :: calling _cleanUp with force true')
 			this._cleanUp(true)
 		}
+	}
+
+	private _sendPing() {
+		this.log('_sendPing :: sending pingreq')
+		this._sendPacket({ cmd: 'pingreq' })
 	}
 
 	/**

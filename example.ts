@@ -1,24 +1,25 @@
-import mqtt from '.'
+import mqtt from './src/index'
 
-const client = mqtt.connect('mqtt://test.mosquitto.org', {
+const client = mqtt.connect('mqtts://test.mosquitto.org', {
 	keepalive: 10,
+	port: 8883,
 	reconnectPeriod: 15000,
+	rejectUnauthorized: false,
 })
 
-const testTopic = 'presence'
+const randomNumber = Math.floor(Math.random() * 1000)
+
+const testTopic = `presence_${randomNumber.toString()}`
 
 function publish() {
-	client.publish(
-		testTopic,
-		`Hello mqtt ${new Date().toISOString()}`,
-		(err2) => {
-			if (!err2) {
-				console.log('message published')
-			} else {
-				console.error(err2)
-			}
-		},
-	)
+	const msg = `Hello mqtt ${new Date().toISOString()}`
+	client.publish(testTopic, msg, { qos: 1 }, (err2) => {
+		if (!err2) {
+			console.log('message published')
+		} else {
+			console.error(err2)
+		}
+	})
 }
 
 client.subscribe(testTopic, (err) => {
@@ -31,10 +32,11 @@ client.subscribe(testTopic, (err) => {
 
 client.on('message', (topic, message) => {
 	console.log('received message "%s" from topic "%s"', message, topic)
-	setTimeout(() => {
-		publish()
-	}, 2000)
 })
+
+setInterval(() => {
+	publish()
+}, 2000)
 
 client.on('error', (err) => {
 	console.error(err)

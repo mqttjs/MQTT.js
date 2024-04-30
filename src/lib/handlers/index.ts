@@ -21,6 +21,15 @@ const handle: PacketHandler = (client, packet, done) => {
 		})
 		return client
 	}
+
+	// keep track of last time we received a packet (for keepalive mechanism)
+	client.pingResp = Date.now()
+
+	// do not shift on pingresp otherwise we would skip the pingreq sending
+	if (packet.cmd !== 'pingresp') {
+		client['_shiftPingInterval']()
+	}
+
 	client.log('_handlePacket :: emitting packetreceive')
 	client.emit('packetreceive', packet)
 
@@ -49,7 +58,6 @@ const handle: PacketHandler = (client, packet, done) => {
 			break
 		case 'pingresp':
 			// this will be checked in _checkPing client method every keepalive interval
-			client.pingResp = true
 			done()
 			break
 		case 'disconnect':
