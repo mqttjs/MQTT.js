@@ -5,11 +5,11 @@ const isStandardBrowserEnv = () => {
 		// check if we are in electron `renderer`
 		const electronRenderCheck =
 			navigator?.userAgent?.toLowerCase().indexOf(' electron/') > -1
-		if (electronRendererCheck && process?.versions) {
-				const electronMainCheck = Object.prototype.hasOwnProperty.call(
-					process.versions,
-					'electron',
-				)
+		if (electronRenderCheck && process?.versions) {
+			const electronMainCheck = Object.prototype.hasOwnProperty.call(
+				process.versions,
+				'electron',
+			)
 			// Both electron checks are only true if the following webPreferences are set in the main electron BrowserWindow()
 			//   webPreferences: {
 			//     sandbox: false,
