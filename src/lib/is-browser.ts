@@ -1,7 +1,7 @@
 const isStandardBrowserEnv = () => {
 	if (typeof window !== 'undefined') {
 		if (
-			navigator.userAgent.toLowerCase().indexOf(' electron/') > -1 &&
+			navigator.userAgent.toLowerCase().indexOf(' electron/') > -1 ||
 			Object.prototype.hasOwnProperty.call(process.versions, 'electron')
 		) {
 			return false
