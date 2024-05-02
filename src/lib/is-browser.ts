@@ -2,22 +2,21 @@ const isStandardBrowserEnv = () => {
 	// window is only defined when it is a browser
 	if (typeof window !== 'undefined') {
 		// Is the process an electron application
-		const electronMainCheck = Object.prototype.hasOwnProperty.call(
-			process.versions,
-			'electron',
-		)
-		// In case of electron the userAgent contains a string formated like: 'Electron/<version>'
-		// we can search for that to detect if it is an electron application
+		// check if we are in electron `renderer`
 		const electronRenderCheck =
-			navigator.userAgent.toLowerCase().indexOf(' electron/') > -1
-		if (electronMainCheck && electronRenderCheck) {
+			navigator?.userAgent?.toLowerCase().indexOf(' electron/') > -1
+		if (electronRendererCheck && process?.versions) {
+				const electronMainCheck = Object.prototype.hasOwnProperty.call(
+					process.versions,
+					'electron',
+				)
 			// Both electron checks are only true if the following webPreferences are set in the main electron BrowserWindow()
 			//   webPreferences: {
 			//     sandbox: false,
 			//     nodeIntegration: true
 			//     contextIsolation: false
 			// }
-			return false
+			return !electronMainCheck
 		}
 		return typeof window.document !== 'undefined'
 	}
