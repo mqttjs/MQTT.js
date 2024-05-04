@@ -2,7 +2,6 @@ import { StreamBuilder } from '../shared'
 
 import net from 'net'
 import _debug from 'debug'
-import { Duplex } from 'readable-stream'
 
 const debug = _debug('mqttjs:tcp')
 /*

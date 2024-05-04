@@ -28,9 +28,7 @@ function buildUrl(opts: IClientOptions, client: MqttClient) {
 
 function setDefaultOpts(opts: IClientOptions) {
 	const options = opts
-	if (!opts.hostname) {
-		options.hostname = 'localhost'
-	}
+
 	if (!opts.port) {
 		if (opts.protocol === 'wss') {
 			options.port = 443
@@ -38,6 +36,7 @@ function setDefaultOpts(opts: IClientOptions) {
 			options.port = 80
 		}
 	}
+
 	if (!opts.path) {
 		options.path = '/'
 	}
@@ -141,6 +140,9 @@ function createBrowserWebSocket(client: MqttClient, opts: IClientOptions) {
 const streamBuilder: StreamBuilder = (client, opts) => {
 	debug('streamBuilder')
 	const options = setDefaultOpts(opts)
+
+	options.hostname = options.hostname || options.host || 'localhost'
+
 	const url = buildUrl(options, client)
 	const socket = createWebSocket(client, url, options)
 	const webSocketStream = Ws.createWebSocketStream(
