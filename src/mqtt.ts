@@ -9,7 +9,7 @@ import DefaultMessageIdProvider from './lib/default-message-id-provider'
 import UniqueMessageIdProvider from './lib/unique-message-id-provider'
 import Store, { IStore } from './lib/store'
 import connect, { connectAsync } from './lib/connect'
-import PingTimer from './lib/PingTimer'
+import KeepaliveManager from './lib/KeepaliveManager'
 
 export const Client = MqttClient
 export {
@@ -20,7 +20,7 @@ export {
 	DefaultMessageIdProvider,
 	UniqueMessageIdProvider,
 	IStore,
-	PingTimer,
+	KeepaliveManager,
 }
 export * from './lib/client'
 export * from './lib/shared'

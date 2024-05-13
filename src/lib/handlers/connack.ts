@@ -29,8 +29,10 @@ const handleConnack: PacketHandler = (client, packet: IConnackPacket) => {
 		}
 		if (packet.properties.serverKeepAlive && options.keepalive) {
 			options.keepalive = packet.properties.serverKeepAlive
-			client['_shiftPingInterval']()
+			client.keepaliveManager.keepalive = options.keepalive
+			client.shiftPing()
 		}
+
 		if (packet.properties.maximumPacketSize) {
 			if (!options.properties) {
 				options.properties = {}
