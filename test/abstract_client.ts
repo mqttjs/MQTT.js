@@ -1987,17 +1987,26 @@ export default function abstractTest(server, config, ports) {
 				})
 			})
 
+			let pingReceived = 0
+
+			client.on('packetreceive', (packet) => {
+				if (packet.cmd === 'pingresp') {
+					process.nextTick(() => {
+						pingReceived++
+						assert.strictEqual(spy.callCount, pingReceived)
+
+						if (pingReceived === 3) {
+							client.end(true, done)
+						} else {
+							clock.tick(interval)
+						}
+					})
+					clock.tick(1)
+				}
+			})
+
 			client.once('connect', () => {
 				clock.tick(interval)
-				assert.strictEqual(spy.callCount, 1)
-
-				clock.tick(interval)
-				assert.strictEqual(spy.callCount, 2)
-
-				clock.tick(interval)
-				assert.strictEqual(spy.callCount, 3)
-
-				client.end(true, done)
 			})
 		})
 
@@ -2067,22 +2076,26 @@ export default function abstractTest(server, config, ports) {
 
 				client.on('packetreceive', (packet) => {
 					if (packet.cmd === 'puback') {
-						clock.tick(intervalMs)
+						process.nextTick(() => {
+							clock.tick(intervalMs)
 
-						received++
+							received++
 
-						if (reschedulePings) {
-							assert.strictEqual(
-								spyReschedule.callCount,
-								received,
-							)
-						} else {
-							assert.strictEqual(spyReschedule.callCount, 0)
-						}
+							if (reschedulePings) {
+								assert.strictEqual(
+									spyReschedule.callCount,
+									received,
+								)
+							} else {
+								assert.strictEqual(spyReschedule.callCount, 0)
+							}
 
-						if (received === 2) {
-							client.end(true, done)
-						}
+							if (received === 2) {
+								client.end(true, done)
+							}
+						})
+
+						clock.tick(1)
 					}
 				})
 
