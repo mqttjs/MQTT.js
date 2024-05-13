@@ -1963,7 +1963,7 @@ export default function abstractTest(server, config, ports) {
 		})
 	})
 
-	describe.only('keepalive', () => {
+	describe('keepalive', () => {
 		let clock: sinon.SinonFakeTimers
 
 		// eslint-disable-next-line
@@ -1975,7 +1975,7 @@ export default function abstractTest(server, config, ports) {
 			clock.restore()
 		})
 
-		it.only('should send ping at keepalive interval', function _test(t, done) {
+		it('should send ping at keepalive interval', function _test(t, done) {
 			const interval = 3000
 			const client = connect({ keepalive: interval / 1000 })
 

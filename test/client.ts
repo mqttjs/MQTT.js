@@ -24,7 +24,7 @@ const debug = _debug('mqttjs:client-test')
 
 const ports = getPorts(2)
 
-describe.only('MqttClient', () => {
+describe('MqttClient', () => {
 	let client: mqtt.MqttClient
 	const server = serverBuilder('mqtt')
 	const config: IClientOptions = {
