@@ -2009,6 +2009,14 @@ export default function abstractTest(server, config, ports) {
 			const spy = sinon.spy()
 			client['_checkPing'] = spy
 
+			server.once('client', (serverClient) => {
+				// send fake packet to client
+				serverClient.publish({
+					topic: 'foo',
+					payload: 'bar',
+				})
+			})
+
 			client.once('connect', () => {
 				client.publish('foo', 'bar')
 				clock.tick(intervalMs)
