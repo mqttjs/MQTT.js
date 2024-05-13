@@ -22,13 +22,12 @@ const handle: PacketHandler = (client, packet, done) => {
 		return client
 	}
 
-	client.shiftPing()
-
 	client.log('_handlePacket :: emitting packetreceive')
 	client.emit('packetreceive', packet)
 
 	switch (packet.cmd) {
 		case 'publish':
+			// DO NOT SHIFT PING HERE, this would lead to https://github.com/mqttjs/MQTT.js/issues/1861
 			handlePublish(client, packet, done)
 			break
 		case 'puback':
@@ -36,22 +35,26 @@ const handle: PacketHandler = (client, packet, done) => {
 		case 'pubcomp':
 		case 'suback':
 		case 'unsuback':
+			client.shiftPing()
 			handleAck(client, packet)
 			done()
 			break
 		case 'pubrel':
+			client.shiftPing()
 			handlePubrel(client, packet, done)
 			break
 		case 'connack':
+			client.shiftPing()
 			handleConnack(client, packet)
 			done()
 			break
 		case 'auth':
+			client.shiftPing()
 			handleAuth(client, packet)
 			done()
 			break
 		case 'pingresp':
-			// this will be checked in keepalive manager
+			client.shiftPing()
 			done()
 			break
 		case 'disconnect':
