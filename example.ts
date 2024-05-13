@@ -1,8 +1,8 @@
 import mqtt from './src/index'
 
-const client = mqtt.connect('mqtts://test.mosquitto.org', {
-	keepalive: 10,
-	port: 8883,
+const client = mqtt.connect('mqtt://broker.hivemq.com', {
+	keepalive: 3,
+	port: 1883,
 	reconnectPeriod: 15000,
 	rejectUnauthorized: false,
 })

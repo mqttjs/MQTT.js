@@ -35,26 +35,27 @@ const handle: PacketHandler = (client, packet, done) => {
 		case 'pubcomp':
 		case 'suback':
 		case 'unsuback':
-			client.shiftPing()
+			client.reschedulePing()
 			handleAck(client, packet)
 			done()
 			break
 		case 'pubrel':
-			client.shiftPing()
+			client.reschedulePing()
 			handlePubrel(client, packet, done)
 			break
 		case 'connack':
-			client.shiftPing()
+			client.reschedulePing()
 			handleConnack(client, packet)
 			done()
 			break
 		case 'auth':
-			client.shiftPing()
+			client.reschedulePing()
 			handleAuth(client, packet)
 			done()
 			break
 		case 'pingresp':
-			client.shiftPing()
+			client.log('_handlePacket :: received pingresp')
+			client.reschedulePing()
 			done()
 			break
 		case 'disconnect':
