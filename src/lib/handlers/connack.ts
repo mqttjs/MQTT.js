@@ -29,7 +29,6 @@ const handleConnack: PacketHandler = (client, packet: IConnackPacket) => {
 		}
 		if (packet.properties.serverKeepAlive && options.keepalive) {
 			options.keepalive = packet.properties.serverKeepAlive
-			client.keepaliveManager.setKeepalive(options.keepalive)
 		}
 
 		if (packet.properties.maximumPacketSize) {
