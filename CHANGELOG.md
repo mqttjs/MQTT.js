@@ -1,5 +1,14 @@
 
 
+## [5.5.6](https://github.com/mqttjs/MQTT.js/compare/v5.5.5...v5.5.6) (2024-05-13)
+
+
+### Bug Fixes
+
+* do not shift pings on 'publish' packets ([#1866](https://github.com/mqttjs/MQTT.js/issues/1866)) ([e4d4663](https://github.com/mqttjs/MQTT.js/commit/e4d4663bcd5f87399b9d7bf101b364cda1c48d0e)), closes [#1863](https://github.com/mqttjs/MQTT.js/issues/1863) [#1861](https://github.com/mqttjs/MQTT.js/issues/1861)
+* **electron:** detect electron context ([#1856](https://github.com/mqttjs/MQTT.js/issues/1856)) ([6a03d29](https://github.com/mqttjs/MQTT.js/commit/6a03d29b86dc4fe8eae04eaf0f9fc661f1c3d1ea))
+* **ws:** ignored `host` option and default hostname in browser ([c6580a6](https://github.com/mqttjs/MQTT.js/commit/c6580a6685821c60a4595986227dba2a615b9958)), closes [#1730](https://github.com/mqttjs/MQTT.js/issues/1730)
+
 ## [5.5.5](https://github.com/mqttjs/MQTT.js/compare/v5.5.4...v5.5.5) (2024-04-30)
 
 
