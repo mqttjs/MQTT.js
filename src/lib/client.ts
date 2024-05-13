@@ -39,7 +39,7 @@ import {
 } from './shared'
 import TopicAliasSend from './topic-alias-send'
 import { TypedEventEmitter } from './TypedEmitter'
-import PingTimer from './PingTimer'
+import KeepaliveManager from './KeepaliveManager'
 import isBrowser, { isWebWorker } from './is-browser'
 
 const setImmediate =
@@ -433,10 +433,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 	public noop: (error?: any) => void
 
-	/** Timestamp of last received control packet */
-	public pingResp: number
-
-	public pingTimer: PingTimer
+	public keepaliveManager: KeepaliveManager
 
 	/**
 	 * The connection to the Broker. In browsers env this also have `socket` property
@@ -572,8 +569,8 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		// map of a subscribe messageId and a topic
 		this.messageIdToTopic = {}
 
-		// Ping timer, setup in _setupPingTimer
-		this.pingTimer = null
+		// Keepalive manager, setup in _setupKeepaliveManager
+		this.keepaliveManager = null
 		// Is the client connected?
 		this.connected = false
 		// Are we disconnecting?
@@ -660,7 +657,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			this.log('close :: clearing connackTimer')
 			clearTimeout(this.connackTimer)
 
-			this._destroyPingTimer()
+			this._destroyKeepaliveManager()
 
 			if (this.topicAliasRecv) {
 				this.topicAliasRecv.clear()
@@ -1780,7 +1777,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			this._setupReconnect()
 		}
 
-		this._destroyPingTimer()
+		this._destroyKeepaliveManager()
 
 		if (done && !this.connected) {
 			this.log(
@@ -2064,45 +2061,36 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	}
 
 	/**
-	 * _setupPingTimer - setup the ping timer
-	 *
-	 * @api private
+	 * _setupKeepaliveManager - setup the keepalive manager
 	 */
-	private _setupPingTimer() {
+	private _setupKeepaliveManager() {
 		this.log(
-			'_setupPingTimer :: keepalive %d (seconds)',
+			'_setupKeepaliveManager :: keepalive %d (seconds)',
 			this.options.keepalive,
 		)
 
-		if (!this.pingTimer && this.options.keepalive) {
-			this.pingTimer = new PingTimer(
-				this.options.keepalive,
-				() => {
-					this._checkPing()
-				},
+		if (!this.keepaliveManager && this.options.keepalive) {
+			this.keepaliveManager = new KeepaliveManager(
+				this,
 				this.options.timerVariant,
 			)
-			this.pingResp = Date.now()
 		}
 	}
 
-	private _destroyPingTimer() {
-		if (this.pingTimer) {
-			this.log('_destroyPingTimer :: destroying ping timer')
-			this.pingTimer.destroy()
-			this.pingTimer = null
+	private _destroyKeepaliveManager() {
+		if (this.keepaliveManager) {
+			this.log('_destroyKeepaliveManager :: destroying keepalive manager')
+			this.keepaliveManager.destroy()
+			this.keepaliveManager = null
 		}
 	}
 
 	/**
-
-	 * _shiftPingInterval - reschedule the ping interval
-	 *
-	 * @api private
+	 * Reschedule the ping interval
 	 */
-	private _shiftPingInterval() {
+	public reschedulePing() {
 		if (
-			this.pingTimer &&
+			this.keepaliveManager &&
 			this.options.keepalive &&
 			this.options.reschedulePings
 		) {
@@ -2115,32 +2103,18 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	 */
 	private _reschedulePing() {
 		this.log('_reschedulePing :: rescheduling ping')
-		this.pingTimer.reschedule()
+		this.keepaliveManager.reschedule()
 	}
 
-	/**
-	 * _checkPing - check if a pingresp has come back, and ping the server again
-	 *
-	 * @api private
-	 */
-	private _checkPing() {
-		this.log('_checkPing :: checking ping...')
-		// give 100ms offset to avoid ping timeout when receiving fast responses
-		const timeSincePing = Date.now() - this.pingResp - 100
-		if (timeSincePing <= this.options.keepalive * 1000) {
-			this.log('_checkPing :: ping response received in time')
-			this._sendPing()
-		} else {
-			// do a forced cleanup since socket will be in bad shape
-			this.emit('error', new Error('Keepalive timeout'))
-			this.log('_checkPing :: calling _cleanUp with force true')
-			this._cleanUp(true)
-		}
-	}
-
-	private _sendPing() {
+	public sendPing() {
 		this.log('_sendPing :: sending pingreq')
 		this._sendPacket({ cmd: 'pingreq' })
+	}
+
+	public onKeepaliveTimeout() {
+		this.emit('error', new Error('Keepalive timeout'))
+		this.log('onKeepaliveTimeout :: calling _cleanUp with force true')
+		this._cleanUp(true)
 	}
 
 	/**
@@ -2205,7 +2179,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 		this.connackPacket = packet
 		this.messageIdProvider.clear()
-		this._setupPingTimer()
+		this._setupKeepaliveManager()
 
 		this.connected = true
 

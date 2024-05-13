@@ -88,17 +88,17 @@ export default function abstractTest(server, config, ports) {
 			})
 		})
 
-		it('should stop ping timer if stream closes', function _test(t, done) {
+		it('should destroy keepalive manager if stream closes', function _test(t, done) {
 			const client = connect()
 
 			client.once('close', () => {
-				assert.notExists(client.pingTimer)
+				assert.notExists(client.keepaliveManager)
 
 				client.end(true, (err) => done(err))
 			})
 
 			client.once('connect', () => {
-				assert.exists(client.pingTimer)
+				assert.exists(client.keepaliveManager)
 
 				client.stream.end()
 			})
@@ -210,13 +210,13 @@ export default function abstractTest(server, config, ports) {
 			})
 		})
 
-		it('should stop ping timer after end called', function _test(t, done) {
+		it('should destroy keepalive manager after end called', function _test(t, done) {
 			const client = connect()
 
 			client.once('connect', () => {
-				assert.exists(client.pingTimer)
+				assert.exists(client.keepaliveManager)
 				client.end((err) => {
-					assert.notExists(client.pingTimer)
+					assert.notExists(client.keepaliveManager)
 					done(err)
 				})
 			})
@@ -1975,12 +1975,11 @@ export default function abstractTest(server, config, ports) {
 			clock.restore()
 		})
 
-		it('should checkPing at keepalive interval', function _test(t, done) {
-			const interval = 3
-			const client = connect({ keepalive: interval })
+		it('should send ping at keepalive interval', function _test(t, done) {
+			const interval = 3000
+			const client = connect({ keepalive: interval / 1000 })
 
-			const spy = sinon.spy()
-			client['_checkPing'] = spy
+			const spy = sinon.spy(client, 'sendPing')
 
 			client.on('error', (err) => {
 				client.end(true, () => {
@@ -1988,17 +1987,26 @@ export default function abstractTest(server, config, ports) {
 				})
 			})
 
+			let pingReceived = 0
+
+			client.on('packetreceive', (packet) => {
+				if (packet.cmd === 'pingresp') {
+					process.nextTick(() => {
+						pingReceived++
+						assert.strictEqual(spy.callCount, pingReceived)
+
+						if (pingReceived === 3) {
+							client.end(true, done)
+						} else {
+							clock.tick(interval)
+						}
+					})
+					clock.tick(1)
+				}
+			})
+
 			client.once('connect', () => {
-				clock.tick(interval * 1000)
-				assert.strictEqual(spy.callCount, 1)
-
-				clock.tick(interval * 1000)
-				assert.strictEqual(spy.callCount, 2)
-
-				clock.tick(interval * 1000)
-				assert.strictEqual(spy.callCount, 3)
-
-				client.end(true, done)
+				clock.tick(interval)
 			})
 		})
 
@@ -2049,8 +2057,10 @@ export default function abstractTest(server, config, ports) {
 			})
 		})
 
-		const checkPing = (reschedulePings: boolean) => {
-			it(`should checkPing if publishing at a higher rate than keepalive and reschedulePings===${reschedulePings}`, function _test(t, done) {
+		const reschedulePing = (reschedulePings: boolean) => {
+			it(`should ${
+				!reschedulePings ? 'not ' : ''
+			}reschedule pings if publishing at a higher rate than keepalive and reschedulePings===${reschedulePings}`, function _test(t, done) {
 				const intervalMs = 3000
 				const client = connect({
 					keepalive: intervalMs / 1000,
@@ -2066,22 +2076,28 @@ export default function abstractTest(server, config, ports) {
 
 				client.on('packetreceive', (packet) => {
 					if (packet.cmd === 'puback') {
-						clock.tick(intervalMs)
+						process.nextTick(() => {
+							clock.tick(intervalMs)
 
-						received++
+							received++
 
-						if (reschedulePings) {
-							assert.strictEqual(
-								spyReschedule.callCount,
-								received,
-							)
-						} else {
-							assert.strictEqual(spyReschedule.callCount, 0)
-						}
+							if (received === 2) {
+								if (reschedulePings) {
+									assert.strictEqual(
+										spyReschedule.callCount,
+										received,
+									)
+								} else {
+									assert.strictEqual(
+										spyReschedule.callCount,
+										0,
+									)
+								}
+								client.end(true, done)
+							}
+						})
 
-						if (received === 2) {
-							client.end(true, done)
-						}
+						clock.tick(1)
 					}
 				})
 
@@ -2102,23 +2118,23 @@ export default function abstractTest(server, config, ports) {
 			})
 		}
 
-		checkPing(true)
-		checkPing(false)
+		reschedulePing(true)
+		reschedulePing(false)
 	})
 
 	describe('pinging', () => {
-		it('should set a ping timer', function _test(t, done) {
+		it('should setup keepalive manager', function _test(t, done) {
 			const client = connect({ keepalive: 3 })
 			client.once('connect', () => {
-				assert.exists(client.pingTimer)
+				assert.exists(client.keepaliveManager)
 				client.end(true, done)
 			})
 		})
 
-		it('should not set a ping timer keepalive=0', function _test(t, done) {
+		it('should not setup keepalive manager if keepalive=0', function _test(t, done) {
 			const client = connect({ keepalive: 0 })
 			client.on('connect', () => {
-				assert.notExists(client.pingTimer)
+				assert.notExists(client.keepaliveManager)
 				client.end(true, done)
 			})
 		})
@@ -2144,12 +2160,9 @@ export default function abstractTest(server, config, ports) {
 					reconnectPeriod: 5000,
 				}
 
-				let client = connect()
+				let client = connect(options)
 
 				client.once('connect', () => {
-					// when using fake timers Date.now() counts from 0: https://sinonjs.org/releases/latest/fake-timers/
-					client.pingResp = -options.keepalive * 1000
-
 					client.once('error', (err) => {
 						assert.equal(err.message, 'Keepalive timeout')
 						client.once('connect', () => {
@@ -2164,7 +2177,10 @@ export default function abstractTest(server, config, ports) {
 						clock.tick(client.options.reconnectPeriod)
 					})
 
-					clock.tick(client.options.keepalive * 1000)
+					const timeoutTimestamp =
+						client.keepaliveManager.keepaliveTimeoutTimestamp
+
+					clock.tick(timeoutTimestamp - Date.now())
 				})
 			},
 		)
@@ -2190,7 +2206,10 @@ export default function abstractTest(server, config, ports) {
 				client.once('connect', () => {
 					setImmediate(() => {
 						// make keepalive check trigger
-						clock.tick(client.options.keepalive * 1000)
+						const timeoutTimestamp =
+							client.keepaliveManager.keepaliveTimeoutTimestamp
+
+						clock.tick(timeoutTimestamp - Date.now())
 					})
 
 					client.on('packetsend', (packet) => {
@@ -2206,31 +2225,6 @@ export default function abstractTest(server, config, ports) {
 				})
 			},
 		)
-
-		it('should defer the next ping when sending a control packet', function _test(t, done) {
-			const client = connect({ keepalive: 1 })
-
-			client.once('connect', () => {
-				const spy = sinon.spy()
-				client['_checkPing'] = spy
-
-				client.publish('foo', 'bar')
-				setTimeout(() => {
-					assert.strictEqual(spy.callCount, 0)
-					client.publish('foo', 'bar')
-
-					setTimeout(() => {
-						assert.strictEqual(spy.callCount, 0)
-						client.publish('foo', 'bar')
-
-						setTimeout(() => {
-							assert.strictEqual(spy.callCount, 0)
-							done()
-						}, 75)
-					}, 75)
-				}, 75)
-			})
-		})
 	})
 
 	describe('subscribing', () => {

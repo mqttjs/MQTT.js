@@ -1,23 +1,23 @@
 import isBrowser, { isWebWorker, isReactNativeBrowser } from './is-browser'
-import { clearTimeout as clearT, setTimeout as setT } from 'worker-timers'
+import { clearInterval as clearI, setInterval as setI } from 'worker-timers'
 import type { TimerVariant } from './shared'
 
 // dont directly assign globals to class props otherwise this throws in web workers: Uncaught TypeError: Illegal invocation
 // See: https://stackoverflow.com/questions/9677985/uncaught-typeerror-illegal-invocation-in-chrome
 
 export interface Timer {
-	set: typeof setT
-	clear: typeof clearT
+	set: typeof setI
+	clear: typeof clearI
 }
 
 const workerTimer: Timer = {
-	set: setT,
-	clear: clearT,
+	set: setI,
+	clear: clearI,
 }
 
 const nativeTimer: Timer = {
-	set: (func, time) => setTimeout(func, time),
-	clear: (timerId) => clearTimeout(timerId),
+	set: (func, time) => setInterval(func, time),
+	clear: (timerId) => clearInterval(timerId),
 }
 
 const getTimer = (variant: TimerVariant): Timer => {

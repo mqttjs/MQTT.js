@@ -19,10 +19,9 @@ npm test
 
 This will run both `browser` and `node` tests.
 
-
 ### Running specific tests
 
-For example, you can run `node -r esbuild-register --test test/pingTimer.ts`
+For example, you can run `node -r esbuild-register --test test/keepaliveManager.ts`
 
 ### Browser
 
