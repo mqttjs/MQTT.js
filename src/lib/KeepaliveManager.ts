@@ -54,7 +54,7 @@ export default class KeepaliveManager {
 		if (
 			// eslint-disable-next-line no-restricted-globals
 			isNaN(value) ||
-			value < 0 ||
+			value <= 0 ||
 			value > 2147483647
 		) {
 			throw new Error(
