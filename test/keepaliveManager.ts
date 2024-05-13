@@ -11,6 +11,7 @@ function mockedClient(keepalive: number) {
 		},
 		onKeepaliveTimeout: () => {},
 		sendPing: () => {},
+		log: () => {},
 	} as unknown as MqttClient
 }
 
