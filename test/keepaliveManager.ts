@@ -32,7 +32,7 @@ describe('KeepaliveManager', () => {
 		const spySendPing = spy(client, 'sendPing')
 		const spyTimeout = spy(client, 'onKeepaliveTimeout')
 
-		const checksEvery = (keepalive / 2) * 1000
+		const checksEvery = manager.intervalEvery
 
 		assert.ok(manager['timerId'], 'timer should be created automatically')
 
@@ -70,7 +70,8 @@ describe('KeepaliveManager', () => {
 		const keepalive = 10 // seconds
 		const manager = new KeepaliveManager(mockedClient(keepalive), 'auto')
 
-		const checksEvery = (keepalive / 2) * 1000
+		const checksEvery = manager.intervalEvery
+
 		clock.tick(checksEvery)
 		assert.equal(
 			manager['counter'],
@@ -83,5 +84,24 @@ describe('KeepaliveManager', () => {
 			0,
 			'should reset counter after reschedule',
 		)
+	})
+
+	it('should validate keepalive', () => {
+		const manager = new KeepaliveManager(mockedClient(1), 'auto')
+
+		assert.throw(
+			() => manager.setKeepalive(-1),
+			'Keepalive value must be an integer between 0 and 2147483647. Provided value is -1',
+		)
+
+		assert.throw(
+			() => manager.setKeepalive(2147483648),
+			'Keepalive value must be an integer between 0 and 2147483647. Provided value is 2147483648',
+		)
+
+		manager.setKeepalive(10)
+
+		assert.equal(manager.keepalive, 10000)
+		assert.equal(manager.intervalEvery, 5000)
 	})
 })

@@ -17,28 +17,16 @@ export default class KeepaliveManager {
 
 	private _keepaliveTimeoutTimestamp: number
 
+	private _intervalEvery: number
+
 	/** Timestamp of next keepalive timeout */
 	get keepaliveTimeoutTimestamp() {
 		return this._keepaliveTimeoutTimestamp
 	}
 
-	set keepalive(value: number) {
-		// keepalive is in seconds
-		value *= 1000
-
-		if (
-			// eslint-disable-next-line no-restricted-globals
-			isNaN(value) ||
-			!Number.isInteger(value) ||
-			value < 0 ||
-			value > 2147483647
-		) {
-			throw new Error(
-				`Keepalive value must be an integer between 0 and 2147483647. Provided value is ${this._keepalive}`,
-			)
-		}
-
-		this._keepalive = value
+	/** Milliseconds of the actual interval */
+	get intervalEvery() {
+		return this._intervalEvery
 	}
 
 	get keepalive() {
@@ -46,10 +34,9 @@ export default class KeepaliveManager {
 	}
 
 	constructor(client: MqttClient, variant: TimerVariant) {
-		this.keepalive = client.options.keepalive
 		this.client = client
 		this.timer = getTimer(variant)
-		this.reschedule()
+		this.setKeepalive(client.options.keepalive)
 	}
 
 	private clear() {
@@ -57,6 +44,29 @@ export default class KeepaliveManager {
 			this.timer.clear(this.timerId)
 			this.timerId = null
 		}
+	}
+
+	/** Change the keepalive */
+	setKeepalive(value: number) {
+		// keepalive is in seconds
+		value *= 1000
+
+		if (
+			// eslint-disable-next-line no-restricted-globals
+			isNaN(value) ||
+			value < 0 ||
+			value > 2147483647
+		) {
+			throw new Error(
+				`Keepalive value must be an integer between 0 and 2147483647. Provided value is ${value}`,
+			)
+		}
+
+		this._keepalive = value
+
+		this.reschedule()
+
+		this.client['log'](`KeepaliveManager: set keepalive to ${value}ms`)
 	}
 
 	destroy() {
@@ -71,8 +81,12 @@ export default class KeepaliveManager {
 
 		this.clear()
 		this.counter = 0
+
 		// https://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Figure_3.5_Keep
-		this._keepaliveTimeoutTimestamp = Date.now() + this._keepalive * 1.5
+		const keepAliveTimeout = Math.ceil(this._keepalive * 1.5)
+
+		this._keepaliveTimeoutTimestamp = Date.now() + keepAliveTimeout
+		this._intervalEvery = this._keepalive / 2
 
 		this.timerId = this.timer.set(() => {
 			// this should never happen, but just in case
@@ -88,6 +102,6 @@ export default class KeepaliveManager {
 			} else if (this.counter > 2) {
 				this.client.onKeepaliveTimeout()
 			}
-		}, this._keepalive / 2)
+		}, this._intervalEvery)
 	}
 }
