@@ -23,18 +23,22 @@ export default class KeepaliveManager {
 	}
 
 	set keepalive(value: number) {
+		// keepalive is in seconds
+		value *= 1000
+
 		if (
 			// eslint-disable-next-line no-restricted-globals
 			isNaN(value) ||
+			!Number.isInteger(value) ||
 			value < 0 ||
-			value * 1000 > 2147483647
+			value > 2147483647
 		) {
 			throw new Error(
-				`Keepalive value must be a number between 0 and 2147483647. Provided value is ${this._keepalive}`,
+				`Keepalive value must be an integer between 0 and 2147483647. Provided value is ${this._keepalive}`,
 			)
 		}
 
-		this._keepalive = value * 1000
+		this._keepalive = value
 	}
 
 	get keepalive() {
