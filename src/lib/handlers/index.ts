@@ -26,7 +26,7 @@ const handle: PacketHandler = (client, packet, done) => {
 	client.pingResp = Date.now()
 
 	// do not shift on pingresp otherwise we would skip the pingreq sending
-	if (packet.cmd !== 'pingresp') {
+	if (!['pingresp', 'publish'].includes(packet.cmd)) {
 		client['_shiftPingInterval']()
 	}
 

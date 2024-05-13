@@ -2004,19 +2004,48 @@ export default function abstractTest(server, config, ports) {
 
 		it('should not shift ping on publish', function _test(t, done) {
 			const intervalMs = 3000
+
 			const client = connect({ keepalive: intervalMs / 1000 })
 
-			const spy = sinon.spy()
-			client['_checkPing'] = spy
+			const spy = sinon.spy(client, '_reschedulePing' as any)
+
+			let serverClient
+
+			function fakePub() {
+				client.publish('foo', 'bar')
+				serverClient.publish({
+					topic: 'foo',
+					payload: 'bar',
+				})
+				clock.tick(1)
+			}
+
+			server.once('client', (_serverClient) => {
+				// send fake packet to client
+				serverClient = _serverClient
+
+				serverClient.on('publish', () => {
+					// needed to trigger the setImmediate inside server publish listener and send suback
+					clock.tick(1)
+				})
+			})
+
+			let received = 0
+
+			client.on('packetreceive', (packet) => {
+				if (packet.cmd === 'publish') {
+					clock.tick(intervalMs)
+					received++
+					assert.strictEqual(spy.callCount, 0)
+					if (received === 2) {
+						client.end(true, done)
+					}
+				}
+			})
 
 			client.once('connect', () => {
-				client.publish('foo', 'bar')
-				clock.tick(intervalMs)
-				client.publish('foo', 'bar')
-				clock.tick(intervalMs)
-
-				assert.strictEqual(spy.callCount, 2)
-				client.end(true, done)
+				fakePub()
+				fakePub()
 			})
 		})
 
