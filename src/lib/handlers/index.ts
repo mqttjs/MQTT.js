@@ -44,7 +44,8 @@ const handle: PacketHandler = (client, packet, done) => {
 			handlePubrel(client, packet, done)
 			break
 		case 'connack':
-			client.reschedulePing()
+			// no need to reschedule ping here as keepalive manager is created after successll connect
+			// (when onConnect is called at the end of handleConnack)
 			handleConnack(client, packet)
 			done()
 			break
