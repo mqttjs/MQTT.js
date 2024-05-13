@@ -86,7 +86,7 @@ export default class KeepaliveManager {
 		const keepAliveTimeout = Math.ceil(this._keepalive * 1.5)
 
 		this._keepaliveTimeoutTimestamp = Date.now() + keepAliveTimeout
-		this._intervalEvery = this._keepalive / 2
+		this._intervalEvery = Math.ceil(this._keepalive / 2)
 
 		this.timerId = this.timer.set(() => {
 			// this should never happen, but just in case
