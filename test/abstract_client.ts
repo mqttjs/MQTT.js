@@ -2081,16 +2081,18 @@ export default function abstractTest(server, config, ports) {
 
 							received++
 
-							if (reschedulePings) {
-								assert.strictEqual(
-									spyReschedule.callCount,
-									received,
-								)
-							} else {
-								assert.strictEqual(spyReschedule.callCount, 0)
-							}
-
 							if (received === 2) {
+								if (reschedulePings) {
+									assert.strictEqual(
+										spyReschedule.callCount,
+										received,
+									)
+								} else {
+									assert.strictEqual(
+										spyReschedule.callCount,
+										0,
+									)
+								}
 								client.end(true, done)
 							}
 						})
