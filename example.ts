@@ -1,7 +1,7 @@
 import mqtt from './src/index'
 
 const client = mqtt.connect('mqtts://test.mosquitto.org', {
-	// keepalive: 10,
+	keepalive: 10,
 	port: 8883,
 	reconnectPeriod: 15000,
 	rejectUnauthorized: false,
