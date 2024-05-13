@@ -1,5 +1,12 @@
 
 
+# [5.6.0](https://github.com/mqttjs/MQTT.js/compare/v5.5.6...v5.6.0) (2024-05-13)
+
+
+### Features
+
+* keepalive manager ([#1865](https://github.com/mqttjs/MQTT.js/issues/1865)) ([bad160a](https://github.com/mqttjs/MQTT.js/commit/bad160af2a7b76a5159652e6d3757e7798337261))
+
 ## [5.5.6](https://github.com/mqttjs/MQTT.js/compare/v5.5.5...v5.5.6) (2024-05-13)
 
 
