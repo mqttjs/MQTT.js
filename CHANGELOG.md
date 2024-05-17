@@ -1,5 +1,12 @@
 
 
+## [5.6.1](https://github.com/mqttjs/MQTT.js/compare/v5.6.0...v5.6.1) (2024-05-17)
+
+
+### Bug Fixes
+
+* update is-browser.ts to account `undefined` navigator ([#1868](https://github.com/mqttjs/MQTT.js/issues/1868)) ([0111a7a](https://github.com/mqttjs/MQTT.js/commit/0111a7af4b71f2a973a712a1f0df6574660d6ec0)), closes [/github.com/mqttjs/MQTT.js/commit/6a03d29b86dc4fe8eae04eaf0f9fc661f1c3d1ea#commitcomment-142114121](https://github.com//github.com/mqttjs/MQTT.js/commit/6a03d29b86dc4fe8eae04eaf0f9fc661f1c3d1ea/issues/commitcomment-142114121) [/github.com/mqttjs/MQTT.js/pull/1868#pullrequestreview-2062507553](https://github.com//github.com/mqttjs/MQTT.js/pull/1868/issues/pullrequestreview-2062507553)
+
 # [5.6.0](https://github.com/mqttjs/MQTT.js/compare/v5.5.6...v5.6.0) (2024-05-13)
 
 
