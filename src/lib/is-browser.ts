@@ -4,6 +4,7 @@ const isStandardBrowserEnv = () => {
 		// Is the process an electron application
 		// check if we are in electron `renderer`
 		const electronRenderCheck =
+      (typeof navigator !== "undefined") &&
 			navigator?.userAgent?.toLowerCase().indexOf(' electron/') > -1
 		if (electronRenderCheck && process?.versions) {
 			const electronMainCheck = Object.prototype.hasOwnProperty.call(
