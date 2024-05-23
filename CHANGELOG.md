@@ -1,5 +1,12 @@
 
 
+## [5.6.2](https://github.com/mqttjs/MQTT.js/compare/v5.6.1...v5.6.2) (2024-05-23)
+
+
+### Bug Fixes
+
+* prevent url.parse to set `path` option ([#1871](https://github.com/mqttjs/MQTT.js/issues/1871)) ([de0174f](https://github.com/mqttjs/MQTT.js/commit/de0174f033367dde352d1eff339064e704f610e1)), closes [#1870](https://github.com/mqttjs/MQTT.js/issues/1870)
+
 ## [5.6.1](https://github.com/mqttjs/MQTT.js/compare/v5.6.0...v5.6.1) (2024-05-17)
 
 
