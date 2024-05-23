@@ -80,7 +80,16 @@ function connect(
 			parsed.port = Number(parsed.port)
 		}
 
-		opts = { ...parsed, ...opts } as IClientOptions
+		opts = {
+			...{
+				port: parsed.port,
+				host: parsed.hostname,
+				protocol: parsed.protocol,
+				query: parsed.query,
+				auth: parsed.auth,
+			},
+			...opts,
+		} as IClientOptions
 
 		if (opts.protocol === null) {
 			throw new Error('Missing protocol')
