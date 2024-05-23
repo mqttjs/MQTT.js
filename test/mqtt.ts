@@ -34,6 +34,15 @@ describe('mqtt', () => {
 			c.end((err) => done(err))
 		})
 
+		it('should not set `path` when parsing url', function _test(t, done) {
+			const c = mqtt.connect('mqtt://[::1]')
+
+			c.should.be.instanceOf(mqtt.MqttClient)
+			c.options.should.not.have.property('path')
+			c.options.should.have.property('host', '::1')
+			c.end((err) => done(err))
+		})
+
 		it('should return an MqttClient with username and password options set', function _test(t, done) {
 			const c = mqtt.connect('mqtt://user@localhost:1883')
 
