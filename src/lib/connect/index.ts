@@ -86,6 +86,7 @@ function connect(
 				host: parsed.hostname,
 				protocol: parsed.protocol,
 				query: parsed.query,
+				auth: parsed.auth,
 			},
 			...opts,
 		} as IClientOptions
