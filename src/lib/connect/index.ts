@@ -87,6 +87,9 @@ function connect(
 				protocol: parsed.protocol,
 				query: parsed.query,
 				auth: parsed.auth,
+				path: parsed.protocol?.startsWith('ws')
+					? parsed.path
+					: undefined,
 			},
 			...opts,
 		} as IClientOptions
