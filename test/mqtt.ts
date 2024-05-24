@@ -31,6 +31,15 @@ describe('mqtt', () => {
 			c.should.be.instanceOf(mqtt.MqttClient)
 			c.options.should.have.property('username', 'user')
 			c.options.should.have.property('password', 'pass')
+			c.options.should.not.have.property('path')
+			c.end((err) => done(err))
+		})
+
+		it('should return an MqttClient with path set when protocol is ws/wss', function _test(t, done) {
+			const c = mqtt.connect('ws://localhost:1883/mqtt')
+
+			c.should.be.instanceOf(mqtt.MqttClient)
+			c.options.should.have.property('path', '/mqtt')
 			c.end((err) => done(err))
 		})
 
@@ -47,6 +56,7 @@ describe('mqtt', () => {
 			const c = mqtt.connect('mqtt://user@localhost:1883')
 
 			c.should.be.instanceOf(mqtt.MqttClient)
+			c.options.should.not.have.property('path')
 			c.options.should.have.property('username', 'user')
 			c.end((err) => done(err))
 		})
