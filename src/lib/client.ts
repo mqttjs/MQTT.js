@@ -64,7 +64,7 @@ const defaultConnectOptions: IClientOptions = {
 	timerVariant: 'auto',
 }
 
-export type MqttProtocol =
+export type BaseMqttProtocol =
 	| 'wss'
 	| 'ws'
 	| 'mqtt'
@@ -75,6 +75,11 @@ export type MqttProtocol =
 	| 'wxs'
 	| 'ali'
 	| 'alis'
+
+// create a type that allows all MqttProtocol + `+unix` string
+export type MqttProtocolWithUnix = `${BaseMqttProtocol}+unix`
+
+export type MqttProtocol = BaseMqttProtocol | MqttProtocolWithUnix
 
 export type StorePutCallback = () => void
 
@@ -142,7 +147,9 @@ export interface IClientOptions extends ISecureClientOptions {
 	host?: string
 	/** @deprecated use `host instead */
 	hostname?: string
-	/** Websocket `path` added as suffix */
+	/** Set to true if the connection is to a unix socket */
+	unixSocket?: boolean
+	/** Websocket `path` added as suffix or Unix socket path when `unixSocket` option is true */
 	path?: string
 	/** The `MqttProtocol` to use */
 	protocol?: MqttProtocol

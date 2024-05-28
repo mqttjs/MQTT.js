@@ -124,7 +124,6 @@ Hello mqtt
 
 MQTT.js can be used in React Native applications. To use it, see the [React Native example](https://github.com/MaximoLiberata/react-native-mqtt.js-example)
 
-
 If you want to run your own MQTT broker, you can use
 [Mosquitto](http://mosquitto.org) or
 [Aedes-cli](https://github.com/moscajs/aedes-cli), and launch it.
@@ -354,7 +353,9 @@ Connects to the broker specified by the given url and options and
 returns a [Client](#client).
 
 The URL can be on the following protocols: 'mqtt', 'mqtts', 'tcp',
-'tls', 'ws', 'wss', 'wxs', 'alis'. The URL can also be an object as returned by
+'tls', 'ws', 'wss', 'wxs', 'alis'. If you are trying to connect to a unix socket just append the `+unix` suffix to the protocol (ex: `mqtt+unix`). This will set the `unixSocket` property automatically.
+
+The URL can also be an object as returned by
 [`URL.parse()`](http://nodejs.org/api/url.html#url_url_parse_urlstr_parsequerystring_slashesdenotehost),
 in that case the two objects are merged, i.e. you can pass a single
 object with both the URL and the connect options.
@@ -466,6 +467,7 @@ The arguments are:
   - `log`: custom log function. Default uses [debug](https://www.npmjs.com/package/debug) package.
   - `manualConnect`: prevents the constructor to call `connect`. In this case after the `mqtt.connect` is called you should call `client.connect` manually.
   - `timerVariant`: defaults to `auto`, which tries to determine which timer is most appropriate for you environment, if you're having detection issues, you can set it to `worker` or `native`
+  - `unixSocket`: if you want to connect to a unix socket, set this to true
 
 In case mqtts (mqtt over tls) is required, the `options` object is passed through to [`tls.connect()`](http://nodejs.org/api/tls.html#tls_tls_connect_options_callback). If using a **self-signed certificate**, set `rejectUnauthorized: false`. However, be cautious as this exposes you to potential man in the middle attacks and isn't recommended for production.
 

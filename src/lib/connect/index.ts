@@ -71,31 +71,46 @@ function connect(
 
 	opts = opts || {}
 
+	// try to parse the broker url
 	if (brokerUrl && typeof brokerUrl === 'string') {
 		// eslint-disable-next-line
-		const parsed = url.parse(brokerUrl, true)
-		if (parsed.port != null) {
+		const parsedUrl = url.parse(brokerUrl, true)
+		const parsedOptions: Partial<IClientOptions> = {}
+
+		if (parsedUrl.port != null) {
 			// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 			// @ts-ignore
-			parsed.port = Number(parsed.port)
+			parsedOptions.port = Number(parsedUrl.port)
 		}
 
-		opts = {
-			...{
-				port: parsed.port,
-				host: parsed.hostname,
-				protocol: parsed.protocol,
-				query: parsed.query,
-				auth: parsed.auth,
-			},
-			...opts,
-		} as IClientOptions
+		parsedOptions.host = parsedUrl.hostname
+		parsedOptions.query = parsedUrl.query as Record<string, string>
+		parsedOptions.auth = parsedUrl.auth
+		parsedOptions.protocol = parsedUrl.protocol as MqttProtocol
+		parsedOptions.path = parsedUrl.path
 
-		if (opts.protocol === null) {
+		parsedOptions.protocol = parsedOptions.protocol?.replace(
+			/:$/,
+			'',
+		) as MqttProtocol
+
+		opts = { ...parsedOptions, ...opts }
+
+		// when parsing an url expect the protocol to be set
+		if (!opts.protocol) {
 			throw new Error('Missing protocol')
 		}
+	}
 
-		opts.protocol = opts.protocol.replace(/:$/, '') as MqttProtocol
+	opts.unixSocket = opts.unixSocket || opts.protocol?.includes('+unix')
+
+	if (opts.unixSocket) {
+		opts.protocol = opts.protocol.replace('+unix', '') as MqttProtocol
+	} else if (!opts.protocol?.startsWith('ws')) {
+		// consider path only with ws protocol or unix socket
+		// url.parse could return path (for example when url ends with a `/`)
+		// that could break the connection. See https://github.com/mqttjs/MQTT.js/pull/1874
+		delete opts.path
 	}
 
 	// merge in the auth options if supplied
@@ -136,6 +151,9 @@ function connect(
 
 	if (!protocols[opts.protocol]) {
 		const isSecure = ['mqtts', 'wss'].indexOf(opts.protocol) !== -1
+		// returns the first available protocol based on available protocols (that depends on environment)
+		// if no protocol is specified this will return mqtt on node and ws on browser
+		// if secure it will return mqtts on node and wss on browser
 		opts.protocol = [
 			'mqtt',
 			'mqtts',
