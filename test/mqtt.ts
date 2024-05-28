@@ -40,6 +40,17 @@ describe('mqtt', () => {
 
 			c.should.be.instanceOf(mqtt.MqttClient)
 			c.options.should.have.property('path', '/mqtt')
+			c.options.should.have.property('unixSocket', false)
+			c.end((err) => done(err))
+		})
+
+		it('should work with unix sockets', function _test(t, done) {
+			const c = mqtt.connect('mqtt+unix:///tmp/mqtt.sock')
+
+			c.should.be.instanceOf(mqtt.MqttClient)
+			c.options.should.have.property('path', '/tmp/mqtt.sock')
+			c.options.should.have.property('unixSocket', true)
+
 			c.end((err) => done(err))
 		})
 

@@ -73,32 +73,42 @@ function connect(
 
 	if (brokerUrl && typeof brokerUrl === 'string') {
 		// eslint-disable-next-line
-		const parsed = url.parse(brokerUrl, true)
-		if (parsed.port != null) {
+		const parsedUrl = url.parse(brokerUrl, true)
+		const parsedOptions: Partial<IClientOptions> = {}
+
+		if (parsedUrl.port != null) {
 			// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 			// @ts-ignore
-			parsed.port = Number(parsed.port)
+			parsedOptions.port = Number(parsedUrl.port)
 		}
 
+		parsedOptions.host = parsedUrl.hostname
+		parsedOptions.query = parsedUrl.query as Record<string, string>
+		parsedOptions.auth = parsedUrl.auth
+		parsedOptions.protocol = parsedUrl.protocol as MqttProtocol
+		parsedOptions.path = parsedUrl.path
+
 		opts = {
-			...{
-				port: parsed.port,
-				host: parsed.hostname,
-				protocol: parsed.protocol,
-				query: parsed.query,
-				auth: parsed.auth,
-				path: parsed.protocol?.startsWith('ws')
-					? parsed.path
-					: undefined,
-			},
+			...parsedOptions,
 			...opts,
-		} as IClientOptions
+		}
 
 		if (opts.protocol === null) {
 			throw new Error('Missing protocol')
 		}
 
 		opts.protocol = opts.protocol.replace(/:$/, '') as MqttProtocol
+	}
+
+	opts.unixSocket = opts.unixSocket || opts.protocol?.includes('+unix')
+
+	if (opts.unixSocket) {
+		opts.protocol = opts.protocol.replace('+unix', '') as MqttProtocol
+	}
+
+	// consider path only with ws protocol or unix socket, url parse could return empty path that could break the connection
+	if (!opts.unixSocket && !opts.protocol?.startsWith('ws')) {
+		delete opts.path
 	}
 
 	// merge in the auth options if supplied
