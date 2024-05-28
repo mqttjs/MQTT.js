@@ -71,6 +71,7 @@ function connect(
 
 	opts = opts || {}
 
+	// try to parse the broker url
 	if (brokerUrl && typeof brokerUrl === 'string') {
 		// eslint-disable-next-line
 		const parsedUrl = url.parse(brokerUrl, true)
@@ -93,21 +94,21 @@ function connect(
 			...opts,
 		}
 
-		if (opts.protocol === null) {
-			throw new Error('Missing protocol')
-		}
-
-		opts.protocol = opts.protocol.replace(/:$/, '') as MqttProtocol
+		opts.protocol = opts.protocol?.replace(/:$/, '') as MqttProtocol
 	}
 
-	opts.unixSocket = opts.unixSocket || opts.protocol?.includes('+unix')
+	if (!opts.protocol) {
+		throw new Error('Missing protocol')
+	}
+
+	opts.unixSocket = opts.unixSocket || opts.protocol.includes('+unix')
 
 	if (opts.unixSocket) {
 		opts.protocol = opts.protocol.replace('+unix', '') as MqttProtocol
-	}
-
-	// consider path only with ws protocol or unix socket, url parse could return empty path that could break the connection
-	if (!opts.unixSocket && !opts.protocol?.startsWith('ws')) {
+	} else if (!opts.protocol?.startsWith('ws')) {
+		// consider path only with ws protocol or unix socket
+		// url.parse could return path (for example when url ends with a `/`)
+		// that could break the connection. See https://github.com/mqttjs/MQTT.js/pull/1874
 		delete opts.path
 	}
 
