@@ -1,5 +1,12 @@
 
 
+# [5.7.0](https://github.com/mqttjs/MQTT.js/compare/v5.6.2...v5.7.0) (2024-05-28)
+
+
+### Features
+
+* add `unixSocket` option and `+unix` suffix support to protocol ([#1874](https://github.com/mqttjs/MQTT.js/issues/1874)) ([1004c78](https://github.com/mqttjs/MQTT.js/commit/1004c78db7d6763f21c98fa3db2f12e688ca33ff))
+
 ## [5.6.2](https://github.com/mqttjs/MQTT.js/compare/v5.6.1...v5.6.2) (2024-05-23)
 
 
