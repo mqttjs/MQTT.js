@@ -96,6 +96,7 @@ function connect(
 
 		opts = { ...parsedOptions, ...opts }
 
+		// when parsing an url expect the protocol to be set
 		if (!opts.protocol) {
 			throw new Error('Missing protocol')
 		}
@@ -150,6 +151,9 @@ function connect(
 
 	if (!protocols[opts.protocol]) {
 		const isSecure = ['mqtts', 'wss'].indexOf(opts.protocol) !== -1
+		// returns the first available protocol based on available protocols (that depends on environment)
+		// if no protocol is specified this will return mqtt on node and ws on browser
+		// if secure it will return mqtts on node and wss on browser
 		opts.protocol = [
 			'mqtt',
 			'mqtts',
