@@ -89,16 +89,16 @@ function connect(
 		parsedOptions.protocol = parsedUrl.protocol as MqttProtocol
 		parsedOptions.path = parsedUrl.path
 
-		if (!parsedOptions.protocol) {
-			throw new Error('Missing protocol')
-		}
-
-		parsedOptions.protocol = parsedOptions.protocol.replace(
+		parsedOptions.protocol = parsedOptions.protocol?.replace(
 			/:$/,
 			'',
 		) as MqttProtocol
 
-		Object.assign(opts, parsedOptions)
+		opts = { ...parsedOptions, ...opts }
+
+		if (!opts.protocol) {
+			throw new Error('Missing protocol')
+		}
 	}
 
 	opts.unixSocket = opts.unixSocket || opts.protocol?.includes('+unix')
