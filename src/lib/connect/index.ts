@@ -94,14 +94,14 @@ function connect(
 			...opts,
 		}
 
-		opts.protocol = opts.protocol?.replace(/:$/, '') as MqttProtocol
+		if (!opts.protocol) {
+			throw new Error('Missing protocol')
+		}
+
+		opts.protocol = opts.protocol.replace(/:$/, '') as MqttProtocol
 	}
 
-	if (!opts.protocol) {
-		throw new Error('Missing protocol')
-	}
-
-	opts.unixSocket = opts.unixSocket || opts.protocol.includes('+unix')
+	opts.unixSocket = opts.unixSocket || opts.protocol?.includes('+unix')
 
 	if (opts.unixSocket) {
 		opts.protocol = opts.protocol.replace('+unix', '') as MqttProtocol
