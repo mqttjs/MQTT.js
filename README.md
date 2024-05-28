@@ -353,7 +353,7 @@ Connects to the broker specified by the given url and options and
 returns a [Client](#client).
 
 The URL can be on the following protocols: 'mqtt', 'mqtts', 'tcp',
-'tls', 'ws', 'wss', 'wxs', 'alis'. If you are trying to connect to a unix socket just append the `+unix` suffix to the url. This will set the `unixSocket` property automatically.
+'tls', 'ws', 'wss', 'wxs', 'alis'. If you are trying to connect to a unix socket just append the `+unix` suffix to the protocol (ex: `mqtt+unix`). This will set the `unixSocket` property automatically.
 
 The URL can also be an object as returned by
 [`URL.parse()`](http://nodejs.org/api/url.html#url_url_parse_urlstr_parsequerystring_slashesdenotehost),
