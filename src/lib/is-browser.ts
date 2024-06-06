@@ -1,3 +1,12 @@
+declare global {
+  namespace NodeJS {
+    interface Process {
+		  readonly electron: string;
+		  readonly type: ('browser' | 'renderer' | 'worker' | 'utility');
+    }
+  }
+}
+
 const isStandardBrowserEnv = () => {
 	// window is only defined when it is a browser
 	if (typeof window !== 'undefined') {
