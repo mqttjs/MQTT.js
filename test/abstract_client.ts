@@ -457,6 +457,54 @@ export default function abstractTest(server, config, ports) {
 		})
 	})
 
+	describe('reconnecting', () => {
+		it('it should auto resubscribe after reconnect is called', function _test(t, done) {
+			const client = connect({ resubscribe: true })
+
+			let reconnect = false
+			let subscribed = false
+			client.on('connect', () => {
+				if (!subscribed) {
+					client.subscribe('event', (err, granted) => {
+						if (err) {
+							done(err)
+						}
+						subscribed = true
+						if (!reconnect) {
+							reconnect = true
+							client.reconnect()
+						}
+					})
+				}
+			})
+			client.on('packetreceive', (packet) => {
+				if (reconnect && packet.cmd === 'suback') {
+					client.end(true, done)
+				}
+			})
+		})
+
+		it('it should be able to subscribe again after reconnect is called', function _test(t, done) {
+			const client = connect({ resubscribe: false })
+
+			let reconnect = false
+			client.on('connect', () => {
+				client.subscribe('event', (err, granted) => {
+					if (!reconnect) {
+						reconnect = true
+						client.reconnect()
+						return
+					}
+					if (err) {
+						done(err)
+					} else {
+						client.end(true, done)
+					}
+				})
+			})
+		})
+	})
+
 	describe('handling offline states', () => {
 		it('should emit offline event once when the client transitions from connected states to disconnected ones', function _test(t, done) {
 			const client = connect({ reconnectPeriod: 20 })

@@ -1457,6 +1457,8 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			})
 			if (this._deferredReconnect) {
 				this._deferredReconnect()
+			} else {
+				this.disconnecting = false
 			}
 		}
 
@@ -2179,6 +2181,8 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	 * @api private
 	 */
 	private _onConnect(packet: IConnackPacket) {
+		this.connected = true
+
 		if (this.disconnected) {
 			this.emit('connect', packet)
 			return
@@ -2187,8 +2191,6 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		this.connackPacket = packet
 		this.messageIdProvider.clear()
 		this._setupKeepaliveManager()
-
-		this.connected = true
 
 		/** check if there are packets in outgoing store and stream them */
 		const startStreamProcess = () => {
