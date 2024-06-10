@@ -1,0 +1,39 @@
+name: Electron Tests
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, feature/automated-electron-tests ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [20.x]
+      fail-fast: false
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+
+    - name: Install Dependencies
+      run: npm ci
+
+    - name: Build MQTT.JS
+      run: npm run build
+
+    - name: Run headless test
+      uses: coactions/setup-xvfb@v1
+      timeout-minutes: 2
+      env:
+        HOME: /root
+      with:
+        run: npm i && npm run wdio
+        working-directory: /root/electron-test
