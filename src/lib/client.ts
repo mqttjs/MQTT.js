@@ -2188,10 +2188,11 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			return
 		}
 
-		this.connected = true
 		this.connackPacket = packet
 		this.messageIdProvider.clear()
 		this._setupKeepaliveManager()
+
+		this.connected = true
 
 		/** check if there are packets in outgoing store and stream them */
 		const startStreamProcess = () => {
