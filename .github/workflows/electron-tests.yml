@@ -30,10 +30,4 @@ jobs:
       run: npm run build
 
     - name: Run headless test
-      uses: coactions/setup-xvfb@v1
-      timeout-minutes: 2
-      env:
-        HOME: /root
-      with:
-        run: npm i && npm run wdio
-        working-directory: /root/electron-test
+      run: cd electron-test && npm i && xvfb-run npm run wdio
