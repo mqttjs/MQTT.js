@@ -2181,13 +2181,14 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	 * @api private
 	 */
 	private _onConnect(packet: IConnackPacket) {
-		this.connected = true
-
 		if (this.disconnected) {
+			this.disconnected = false
+			this.connected = true
 			this.emit('connect', packet)
 			return
 		}
 
+		this.connected = true
 		this.connackPacket = packet
 		this.messageIdProvider.clear()
 		this._setupKeepaliveManager()
