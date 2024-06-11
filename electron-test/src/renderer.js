@@ -7,4 +7,5 @@ const client = mqtt.connect('mqtt://broker.hivemq.com:1883')
 
 client.on('connect', () => {
   $('#status').text('online')
+  $('#protocol').text(client.options.protocol)
 })
