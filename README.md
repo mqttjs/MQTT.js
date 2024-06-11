@@ -897,8 +897,11 @@ const client = connect('mqtt://test.mosquitto.org')
 Supports [WeChat Mini Program](https://mp.weixin.qq.com/). Use the `wxs` protocol. See [the WeChat docs](https://mp.weixin.qq.com/debug/wxadoc/dev/api/network-socket.html).
 
 ```js
+import 'abortcontroller-polyfill/dist/abortcontroller-polyfill-only' // import before mqtt.
 const mqtt = require("mqtt");
-const client = mqtt.connect("wxs://test.mosquitto.org");
+const client = mqtt.connect("wxs://test.mosquitto.org", {
+  timerVariant: 'native' // more info ref issue: #1797
+});
 ```
 
 ### Ali Mini Program
