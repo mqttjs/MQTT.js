@@ -1,28 +1,7 @@
+import MqttClient from './client'
+
 const isStandardBrowserEnv = () => {
-	// window is only defined when it is a browser
-	if (typeof window !== 'undefined') {
-		// Is the process an electron application
-		// check if we are in electron `renderer`
-		const electronRenderCheck =
-			typeof navigator !== 'undefined' &&
-			navigator.userAgent?.toLowerCase().indexOf(' electron/') > -1
-		if (electronRenderCheck && process?.versions) {
-			const electronMainCheck = Object.prototype.hasOwnProperty.call(
-				process.versions,
-				'electron',
-			)
-			// Both electron checks are only true if the following webPreferences are set in the main electron BrowserWindow()
-			//   webPreferences: {
-			//     sandbox: false,
-			//     nodeIntegration: true
-			//     contextIsolation: false
-			// }
-			return !electronMainCheck
-		}
-		return typeof window.document !== 'undefined'
-	}
-	// return false if nothing is detected
-	return false
+	return typeof window !== 'undefined' && typeof window.document !== 'undefined'
 }
 
 const isWebWorkerEnv = () =>
@@ -37,7 +16,7 @@ const isReactNativeEnv = () =>
 	typeof navigator !== 'undefined' && navigator.product === 'ReactNative'
 
 const isBrowser =
-	isStandardBrowserEnv() || isWebWorkerEnv() || isReactNativeEnv()
+	MqttClient.NEED_CHECK_BROWSER_ENVIRONMENT !== false && (isStandardBrowserEnv() || isWebWorkerEnv() || isReactNativeEnv())
 
 export const isWebWorker = isWebWorkerEnv()
 
