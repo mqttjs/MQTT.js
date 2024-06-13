@@ -405,6 +405,7 @@ export interface MqttClientEventCallbacks {
  */
 export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbacks> {
 	public static VERSION = MQTTJS_VERSION
+	public static NEED_CHECK_BROWSER_ENVIRONMENT = true
 
 	/** Public fields */
 
@@ -484,6 +485,10 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 	public static defaultId() {
 		return `mqttjs_${Math.random().toString(16).substr(2, 8)}`
+	}
+
+	public get needCheckBrowserEnvironment() {
+		return MqttClient.NEED_CHECK_BROWSER_ENVIRONMENT
 	}
 
 	constructor(streamBuilder: StreamBuilder, options: IClientOptions) {
