@@ -1,27 +1,7 @@
 import MqttClient from './client'
 
-declare global {
-  namespace NodeJS {
-    interface Process {
-		  readonly electron: string;
-		  readonly type: ('browser' | 'renderer' | 'worker' | 'utility');
-    }
-  }
-}
-
 const isStandardBrowserEnv = () => {
-	// window is only defined when it is a browser
-	if (typeof window !== 'undefined') {
-		if (typeof process !== 'undefined') {
-			if (process.type === 'renderer') return true
-			else if (typeof process.electron !== 'undefined') return false
-		}
-
-		return typeof window.document !== 'undefined'
-	}
-
-	// return false if nothing is detected
-	return false
+	return typeof window !== 'undefined' && typeof window.document !== 'undefined'
 }
 
 const isWebWorkerEnv = () =>
