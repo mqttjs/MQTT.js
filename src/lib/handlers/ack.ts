@@ -54,7 +54,7 @@ const handleAck: PacketHandler = (client, packet) => {
 	const type = packet.cmd
 	let response = null
 	const cb = client.outgoing[messageId] ? client.outgoing[messageId].cb : null
-	let err
+	let err = null
 
 	// Checking `!cb` happens to work, but it's not technically "correct".
 	//
@@ -129,9 +129,6 @@ const handleAck: PacketHandler = (client, packet) => {
 							delete client['_resubscribeTopics'][topic]
 						})
 					}
-					client['_removeOutgoingAndStoreMessage'](messageId, () => {
-						cb(err, packet)
-					})
 				}
 			}
 			delete client.messageIdToTopic[messageId]
