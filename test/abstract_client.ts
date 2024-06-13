@@ -3975,6 +3975,26 @@ export default function abstractTest(server, config, ports) {
 				})
 			})
 
+			it('should return an error (via callbacks) for topic it does not have access to', function _test(t, done) {
+				const client = connect()
+
+				server.on('client', (serverClient) => {
+					serverClient.on('subscribe', () => {
+						// Send an unauthorized error
+						serverClient.suback({ granted: [0x87], messageId: 123542 })
+					})
+				})
+
+				client.subscribe('$SYS/#', (subErr) => {
+					client.end(true, (endErr) => {
+						if (subErr) {
+							return done(endErr)
+						}
+						done(new Error('Suback errors do NOT work'))
+					})
+				})
+			})
+
 			it('should resubscribe even if disconnect is before suback', function _test(t, done) {
 				const client = connect({ reconnectPeriod: 100, ...config })
 				let subscribeCount = 0
