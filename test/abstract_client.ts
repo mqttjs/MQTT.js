@@ -3986,7 +3986,7 @@ export default function abstractTest(server, config, ports) {
 					serverClient.on('subscribe', (packet) => {
 						// Send an unauthorized error
 						serverClient.suback({
-							granted: [ 0x87 ],
+							granted: [0x87],
 							messageId: packet.messageId,
 						})
 					})
