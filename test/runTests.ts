@@ -17,7 +17,7 @@ const start = Date.now()
 
 const testStream = run({
 	files,
-	timeout: 90 * 1000,
+	timeout: 60 * 1000,
 	concurrency: cpus().length,
 })
 
