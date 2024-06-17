@@ -3997,7 +3997,7 @@ export default function abstractTest(server, config, ports) {
 						if (subErr) {
 							assert.strictEqual(
 								subErr.message,
-								'Error: Subscribe error: Not authorized',
+								'Subscribe error: Not authorized',
 							)
 							return done(endErr)
 						}
