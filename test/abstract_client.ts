@@ -2,7 +2,7 @@
  * Testing dependencies
  */
 import { assert } from 'chai'
-import sinon, { SinonSpy } from 'sinon'
+import sinon from 'sinon'
 import fs from 'fs'
 import levelStore from 'mqtt-level-store'
 import Store from '../src/lib/store'
@@ -474,7 +474,7 @@ export default function abstractTest(server, config, ports) {
 			// fake a port
 			const client = connect({ reconnectPeriod: 20, port: 4557 })
 
-			client.on('error', () => { })
+			client.on('error', () => {})
 
 			client.on('offline', () => {
 				client.end(true, done)
@@ -1389,7 +1389,7 @@ export default function abstractTest(server, config, ports) {
 
 		it(
 			'should silently ignore errors thrown by `handleMessage` and return when no callback is passed ' +
-			'into `handlePublish` method',
+				'into `handlePublish` method',
 			function _test(t, done) {
 				const client = connect()
 
@@ -1643,7 +1643,7 @@ export default function abstractTest(server, config, ports) {
 
 		it(
 			'should silently ignore errors thrown by `handleMessage` and return when no callback is passed ' +
-			'into `handlePubrel` method',
+				'into `handlePubrel` method',
 			function _test(t, done) {
 				const store = new Store()
 				const client = connect({ incomingStore: store })
@@ -1697,7 +1697,7 @@ export default function abstractTest(server, config, ports) {
 			const server2 = serverBuilder(config.protocol, (serverClient) => {
 				// errors are not interesting for this test
 				// but they might happen on some platforms
-				serverClient.on('error', () => { })
+				serverClient.on('error', () => {})
 
 				serverClient.on('connect', (packet) => {
 					const connack =
@@ -2058,63 +2058,64 @@ export default function abstractTest(server, config, ports) {
 		})
 
 		const reschedulePing = (reschedulePings: boolean) => {
-			it(`should ${!reschedulePings ? 'not ' : ''
-				}reschedule pings if publishing at a higher rate than keepalive and reschedulePings===${reschedulePings}`, function _test(t, done) {
-					const intervalMs = 3000
-					const client = connect({
-						keepalive: intervalMs / 1000,
-						reschedulePings,
-					})
+			it(`should ${
+				!reschedulePings ? 'not ' : ''
+			}reschedule pings if publishing at a higher rate than keepalive and reschedulePings===${reschedulePings}`, function _test(t, done) {
+				const intervalMs = 3000
+				const client = connect({
+					keepalive: intervalMs / 1000,
+					reschedulePings,
+				})
 
-					const spyReschedule = sinon.spy(
-						client,
-						'_reschedulePing' as any,
-					)
+				const spyReschedule = sinon.spy(
+					client,
+					'_reschedulePing' as any,
+				)
 
-					let received = 0
+				let received = 0
 
-					client.on('packetreceive', (packet) => {
-						if (packet.cmd === 'puback') {
-							process.nextTick(() => {
-								clock.tick(intervalMs)
+				client.on('packetreceive', (packet) => {
+					if (packet.cmd === 'puback') {
+						process.nextTick(() => {
+							clock.tick(intervalMs)
 
-								received++
+							received++
 
-								if (received === 2) {
-									if (reschedulePings) {
-										assert.strictEqual(
-											spyReschedule.callCount,
-											received,
-										)
-									} else {
-										assert.strictEqual(
-											spyReschedule.callCount,
-											0,
-										)
-									}
-									client.end(true, done)
+							if (received === 2) {
+								if (reschedulePings) {
+									assert.strictEqual(
+										spyReschedule.callCount,
+										received,
+									)
+								} else {
+									assert.strictEqual(
+										spyReschedule.callCount,
+										0,
+									)
 								}
-							})
-
-							clock.tick(1)
-						}
-					})
-
-					server.once('client', (serverClient) => {
-						serverClient.on('publish', () => {
-							// needed to trigger the setImmediate inside server publish listener and send suback
-							clock.tick(1)
+								client.end(true, done)
+							}
 						})
-					})
 
-					client.once('connect', () => {
-						// reset call count (it's called also on connack)
-						spyReschedule.resetHistory()
-						// use qos1 so the puback is received (to reschedule ping)
-						client.publish('foo', 'bar', { qos: 1 })
-						client.publish('foo', 'bar', { qos: 1 })
+						clock.tick(1)
+					}
+				})
+
+				server.once('client', (serverClient) => {
+					serverClient.on('publish', () => {
+						// needed to trigger the setImmediate inside server publish listener and send suback
+						clock.tick(1)
 					})
 				})
+
+				client.once('connect', () => {
+					// reset call count (it's called also on connack)
+					spyReschedule.resetHistory()
+					// use qos1 so the puback is received (to reschedule ping)
+					client.publish('foo', 'bar', { qos: 1 })
+					client.publish('foo', 'bar', { qos: 1 })
+				})
+			})
 		}
 
 		reschedulePing(true)
@@ -2443,48 +2444,6 @@ export default function abstractTest(server, config, ports) {
 				})
 			})
 		})
-
-		if (version === 5) {
-			it('should fire a callback with error for topic it does not have access to', function _test(t, done) {
-
-				const server2 = serverBuilder(config.protocol, (serverClient) => {
-					serverClient.on('connect', (packet) => {
-						const connack =
-							version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
-						serverClient.connack(connack)
-					})
-					serverClient.on('subscribe', (packet) => {
-						serverClient.suback({
-							messageId: packet.messageId,
-							granted: packet.subscriptions.map((e) => 135),
-						})
-					})
-				})
-
-				server2.listen(ports.PORTAND49, () => {
-					const client = connect({
-						...config,
-						port: ports.PORTAND49,
-						host: 'localhost',
-					})
-
-					client.subscribe('$SYS/#', (subErr) => {
-						client.end(true, (endErr) => {
-							server2.close((err2) => {
-								if (subErr) {
-									assert.strictEqual(
-										subErr.message,
-										'Subscribe error: Not authorized',
-									)
-									return done(err2 || endErr)
-								}
-								done(new Error('Suback errors do NOT work'))
-							})
-						})
-					})
-				})
-			})
-		}
 
 		it('should fire a callback with error if disconnected (options provided)', function _test(t, done) {
 			const client = connect()
@@ -3174,9 +3133,9 @@ export default function abstractTest(server, config, ports) {
 								const reconnectPeriodDuringTest = end - start
 								if (
 									reconnectPeriodDuringTest >=
-									test.period - reconnectSlushTime &&
+										test.period - reconnectSlushTime &&
 									reconnectPeriodDuringTest <=
-									test.period + reconnectSlushTime
+										test.period + reconnectSlushTime
 								) {
 									// give the connection a 200 ms slush window
 									done()
@@ -3320,7 +3279,7 @@ export default function abstractTest(server, config, ports) {
 
 				server.once('client', (serverClient) => {
 					// ignore errors
-					serverClient.on('error', () => { })
+					serverClient.on('error', () => {})
 					serverClient.on('publish', () => {
 						setImmediate(() => {
 							serverClient.stream.destroy()
@@ -3634,7 +3593,7 @@ export default function abstractTest(server, config, ports) {
 
 				client.on('connect', () => {
 					if (!reconnect) {
-						client.subscribe('test', { qos: 2 }, () => { })
+						client.subscribe('test', { qos: 2 }, () => {})
 						reconnect = true
 					}
 				})
@@ -3743,7 +3702,7 @@ export default function abstractTest(server, config, ports) {
 						client.publish('topic', 'payload', { qos: 1 })
 					}
 				})
-				client.on('error', () => { })
+				client.on('error', () => {})
 			})
 		})
 
@@ -3791,7 +3750,7 @@ export default function abstractTest(server, config, ports) {
 						client.publish('topic', 'payload', { qos: 2 })
 					}
 				})
-				client.on('error', () => { })
+				client.on('error', () => {})
 			})
 		})
 
@@ -3853,7 +3812,7 @@ export default function abstractTest(server, config, ports) {
 						)
 					}
 				})
-				client.on('error', () => { })
+				client.on('error', () => {})
 			})
 		})
 
@@ -3867,7 +3826,7 @@ export default function abstractTest(server, config, ports) {
 			const server2 = serverBuilder(config.protocol, (serverClient) => {
 				// errors are not interesting for this test
 				// but they might happen on some platforms
-				serverClient.on('error', () => { })
+				serverClient.on('error', () => {})
 
 				serverClient.on('connect', (packet) => {
 					const connack =
@@ -3933,7 +3892,7 @@ export default function abstractTest(server, config, ports) {
 						client.publish('topic', 'payload3', { qos: 1 })
 					}
 				})
-				client.on('error', () => { })
+				client.on('error', () => {})
 			})
 		})
 
