@@ -68,3 +68,12 @@ node -r esbuild-register --test --test-name-pattern="should resend in-flight QoS
 ```
 
 You can also run tests in watch mode using the `--watch` flag.
+
+## Lint
+
+You can run and automatically fix linting issues with
+
+```sh
+npm run lint-fix
+```
+

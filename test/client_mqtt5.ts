@@ -1136,6 +1136,40 @@ describe('MQTT 5.0', () => {
 		},
 	)
 
+	it('suback handling error codes', function _test(t, done) {
+		serverThatSendsErrors.listen(ports.PORTAND117)
+
+		serverThatSendsErrors.once('client', (serverClient) => {
+			serverClient.on('subscribe', (packet) => {
+				serverClient.suback({
+					messageId: packet.messageId,
+					granted: packet.subscriptions.map((e) => 135),
+				})
+			})
+		})
+
+		const client = mqtt.connect({
+			protocolVersion: 5,
+			port: ports.PORTAND117,
+			host: 'localhost',
+		})
+
+		client.subscribe('$SYS/#', (subErr) => {
+			client.end(true, (endErr) => {
+				serverThatSendsErrors.close((err2) => {
+					if (subErr) {
+						assert.strictEqual(
+							subErr.message,
+							'Subscribe error: Not authorized',
+						)
+						return done(err2 || endErr)
+					}
+					done(new Error('Suback errors do NOT work'))
+				})
+			})
+		})
+	})
+
 	it(
 		'server side disconnect',
 		{

@@ -54,7 +54,7 @@ const handleAck: PacketHandler = (client, packet) => {
 	const type = packet.cmd
 	let response = null
 	const cb = client.outgoing[messageId] ? client.outgoing[messageId].cb : null
-	let err
+	let err = null
 
 	// Checking `!cb` happens to work, but it's not technically "correct".
 	//
@@ -117,7 +117,11 @@ const handleAck: PacketHandler = (client, packet) => {
 			client.messageIdProvider.deallocate(messageId)
 			const granted = packet.granted as number[]
 			for (let grantedI = 0; grantedI < granted.length; grantedI++) {
-				if ((granted[grantedI] & 0x80) !== 0) {
+				const subackRC = granted[grantedI]
+				if ((subackRC & 0x80) !== 0) {
+					err = new Error(`Subscribe error: ${ReasonCodes[subackRC]}`)
+					err.code = subackRC
+
 					// suback with Failure status
 					const topics = client.messageIdToTopic[messageId]
 					if (topics) {
@@ -129,7 +133,7 @@ const handleAck: PacketHandler = (client, packet) => {
 			}
 			delete client.messageIdToTopic[messageId]
 			client['_invokeStoreProcessingQueue']()
-			cb(null, packet)
+			cb(err, packet)
 			break
 		}
 		case 'unsuback': {

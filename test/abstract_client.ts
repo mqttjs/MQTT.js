@@ -2,7 +2,7 @@
  * Testing dependencies
  */
 import { assert } from 'chai'
-import sinon, { SinonSpy } from 'sinon'
+import sinon from 'sinon'
 import fs from 'fs'
 import levelStore from 'mqtt-level-store'
 import Store from '../src/lib/store'
