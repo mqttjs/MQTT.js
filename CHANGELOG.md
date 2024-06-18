@@ -1,5 +1,12 @@
 
 
+## [5.7.1](https://github.com/mqttjs/MQTT.js/compare/v5.7.0...v5.7.1) (2024-06-18)
+
+
+### Bug Fixes
+
+* suback Error Codes Handling ([#1887](https://github.com/mqttjs/MQTT.js/issues/1887)) ([2a98e5e](https://github.com/mqttjs/MQTT.js/commit/2a98e5e878cad632fe86e738144688ee2b14a7dd))
+
 # [5.7.0](https://github.com/mqttjs/MQTT.js/compare/v5.6.2...v5.7.0) (2024-05-28)
 
 
