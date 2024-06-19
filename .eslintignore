@@ -3,6 +3,7 @@
 /doc/
 /dist/
 /build/
+/electron-test/
 
 *.js
 *.mjs
