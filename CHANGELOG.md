@@ -1,5 +1,12 @@
 
 
+## [5.7.2](https://github.com/mqttjs/MQTT.js/compare/v5.7.1...v5.7.2) (2024-06-19)
+
+
+### Bug Fixes
+
+* **security:** bump ws@8.17.1 and other audit issues ([#1891](https://github.com/mqttjs/MQTT.js/issues/1891)) ([096baaa](https://github.com/mqttjs/MQTT.js/commit/096baaaa882627554efd4bc9985ce8a5f2dfda5e))
+
 ## [5.7.1](https://github.com/mqttjs/MQTT.js/compare/v5.7.0...v5.7.1) (2024-06-18)
 
 
