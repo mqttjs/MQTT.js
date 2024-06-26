@@ -106,7 +106,10 @@ function connect(
 
 	if (opts.unixSocket) {
 		opts.protocol = opts.protocol.replace('+unix', '') as MqttProtocol
-	} else if (!opts.protocol?.startsWith('ws') && !opts.protocol?.startsWith('wx')) {
+	} else if (
+		!opts.protocol?.startsWith('ws') &&
+		!opts.protocol?.startsWith('wx')
+	) {
 		// consider path only with ws protocol or unix socket
 		// url.parse could return path (for example when url ends with a `/`)
 		// that could break the connection. See https://github.com/mqttjs/MQTT.js/pull/1874
