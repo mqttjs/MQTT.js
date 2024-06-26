@@ -1,5 +1,12 @@
 
 
+## [5.7.3](https://github.com/mqttjs/MQTT.js/compare/v5.7.2...v5.7.3) (2024-06-26)
+
+
+### Bug Fixes
+
+* **wechat:** do not ignore path with `wx` protocol ([#1894](https://github.com/mqttjs/MQTT.js/issues/1894)) ([300c0b4](https://github.com/mqttjs/MQTT.js/commit/300c0b4dc5a37d8594a4cb1af5836c095b4d823c)), closes [#1892](https://github.com/mqttjs/MQTT.js/issues/1892)
+
 ## [5.7.2](https://github.com/mqttjs/MQTT.js/compare/v5.7.1...v5.7.2) (2024-06-19)
 
 
