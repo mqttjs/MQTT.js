@@ -25,7 +25,7 @@ const isStandardBrowserEnv = () => {
 	return false
 }
 
-const isTxikijsEnv = () => navigator.userAgent === "txiki.js";
+const isTxikijsEnv = () => navigator.userAgent === 'txiki.js'
 
 const isWebWorkerEnv = () =>
 	Boolean(
@@ -39,7 +39,10 @@ const isReactNativeEnv = () =>
 	typeof navigator !== 'undefined' && navigator.product === 'ReactNative'
 
 const isBrowser =
-	isStandardBrowserEnv() || isWebWorkerEnv() || isReactNativeEnv() || isTxikijsEnv()
+	isStandardBrowserEnv() ||
+	isWebWorkerEnv() ||
+	isReactNativeEnv() ||
+	isTxikijsEnv()
 
 export const isWebWorker = isWebWorkerEnv()
 
