@@ -25,7 +25,8 @@ const isStandardBrowserEnv = () => {
 	return false
 }
 
-const isTxikijsEnv = () => navigator.userAgent === 'txiki.js'
+const isTxikijsEnv = () =>
+	typeof navigator !== 'undefined' && navigator.userAgent === 'txiki.js'
 
 const isWebWorkerEnv = () =>
 	Boolean(
