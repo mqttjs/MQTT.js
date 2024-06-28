@@ -33,9 +33,14 @@ export default class KeepaliveManager {
 		return this._keepalive
 	}
 
-	constructor(client: MqttClient, variant: TimerVariant) {
+	constructor(client: MqttClient, variant: TimerVariant | Timer) {
 		this.client = client
-		this.timer = getTimer(variant)
+		this.timer =
+			typeof variant === 'object' &&
+			'set' in variant &&
+			'clear' in variant
+				? variant
+				: getTimer(variant)
 		this.setKeepalive(client.options.keepalive)
 	}
 
