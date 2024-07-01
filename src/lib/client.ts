@@ -41,6 +41,7 @@ import TopicAliasSend from './topic-alias-send'
 import { TypedEventEmitter } from './TypedEmitter'
 import KeepaliveManager from './KeepaliveManager'
 import isBrowser, { isWebWorker } from './is-browser'
+import { Timer } from './get-timer'
 
 const setImmediate =
 	globalThis.setImmediate ||
@@ -278,8 +279,9 @@ export interface IClientOptions extends ISecureClientOptions {
 	properties?: IConnectPacket['properties']
 	/**
 	 * @description 'auto', set to 'native' or 'worker' if you're having issues with 'auto' detection
+	 * or pass a custom timer object
 	 */
-	timerVariant?: TimerVariant
+	timerVariant?: TimerVariant | Timer
 }
 
 export interface IClientPublishOptions {

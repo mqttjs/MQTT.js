@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, it } from 'node:test'
 import KeepaliveManager from '../src/lib/KeepaliveManager'
 import { assert } from 'chai'
-import { useFakeTimers, spy, mock } from 'sinon'
+import { useFakeTimers, spy, stub } from 'sinon'
 import { MqttClient } from 'src'
 
 function mockedClient(keepalive: number) {
@@ -104,5 +104,23 @@ describe('KeepaliveManager', () => {
 
 		assert.equal(manager.keepalive, 10000)
 		assert.equal(manager.intervalEvery, 5000)
+	})
+
+	it('should use provided Timer object', () => {
+		const keepalive = 10 // seconds
+		const customTimer = {
+			set: stub().returns(123),
+			clear: stub(),
+		}
+		const manager = new KeepaliveManager(
+			mockedClient(keepalive),
+			customTimer,
+		)
+		assert.equal(manager['timer'], customTimer)
+		assert.equal(customTimer.set.callCount, 1)
+		assert.equal(manager['timerId'], 123)
+
+		manager.destroy()
+		assert.equal(customTimer.clear.called, true)
 	})
 })

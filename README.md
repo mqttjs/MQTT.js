@@ -466,7 +466,14 @@ The arguments are:
   - `messageIdProvider`: custom messageId provider. when `new UniqueMessageIdProvider()` is set, then non conflict messageId is provided.
   - `log`: custom log function. Default uses [debug](https://www.npmjs.com/package/debug) package.
   - `manualConnect`: prevents the constructor to call `connect`. In this case after the `mqtt.connect` is called you should call `client.connect` manually.
-  - `timerVariant`: defaults to `auto`, which tries to determine which timer is most appropriate for you environment, if you're having detection issues, you can set it to `worker` or `native`
+  - `timerVariant`: defaults to `auto`, which tries to determine which timer is most appropriate for you environment, if you're having detection issues, you can set it to `worker` or `native`. If none suits you, you can pass a timer object with set and clear properties:
+  ```js 
+  timerVariant: { 
+    set: (func, timer) => setInterval(func, timer),
+    clear: (id) => clearInterval(id)
+  }
+  ```
+
   - `unixSocket`: if you want to connect to a unix socket, set this to true
 
 In case mqtts (mqtt over tls) is required, the `options` object is passed through to [`tls.connect()`](http://nodejs.org/api/tls.html#tls_tls_connect_options_callback). If using a **self-signed certificate**, set `rejectUnauthorized: false`. However, be cautious as this exposes you to potential man in the middle attacks and isn't recommended for production.
