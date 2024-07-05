@@ -1,7 +1,7 @@
 {
   "name": "mqtt",
   "description": "A library for the MQTT protocol",
-  "version": "5.7.3",
+  "version": "5.8.0",
   "contributors": [
     "Adam Rudd <adamvrr@gmail.com>",
     "Matteo Collina <matteo.collina@gmail.com> (https://github.com/mcollina)",

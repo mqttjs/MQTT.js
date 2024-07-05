@@ -1,5 +1,13 @@
 
 
+# [5.8.0](https://github.com/mqttjs/MQTT.js/compare/v5.7.3...v5.8.0) (2024-07-05)
+
+
+### Features
+
+* add compatibility with txiki.js ([#1895](https://github.com/mqttjs/MQTT.js/issues/1895)) ([37b08c9](https://github.com/mqttjs/MQTT.js/commit/37b08c99fead5282e38b851ce1006f09521b038c))
+* allow to pass custom timer for keepalive manager ([#1896](https://github.com/mqttjs/MQTT.js/issues/1896)) ([ee81184](https://github.com/mqttjs/MQTT.js/commit/ee811844d07365ca98721be90c4e1c2c1d8623b9))
+
 ## [5.7.3](https://github.com/mqttjs/MQTT.js/compare/v5.7.2...v5.7.3) (2024-06-26)
 
 
