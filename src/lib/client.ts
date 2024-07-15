@@ -732,6 +732,13 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		this.log('connect :: calling method to clear reconnect')
 		this._clearReconnect()
 
+		if (this.disconnecting && this.disconnected && !this.reconnecting) {
+			this.incomingStore = this.options.incomingStore || new Store()
+			this.outgoingStore = this.options.outgoingStore || new Store()
+			this.disconnecting = false
+			this.disconnected = false
+		}
+
 		this.log(
 			'connect :: using streamBuilder provided to client to create stream',
 		)

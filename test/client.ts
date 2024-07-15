@@ -615,6 +615,85 @@ describe('MqttClient', () => {
 		},
 	)
 
+	describe('connect manually', () => {
+		it(
+			'should not throw an error when publish after second connect',
+			{
+				timeout: 10000,
+			},
+			function _test(t, done) {
+				let wasConnected = false
+				let closeInterval = false
+
+				const publishInterval = (timeout: number) => {
+					const method = () => {
+						return new Promise<void>((resolve, reject) => {
+							client.publish(
+								'test',
+								'test',
+								{
+									qos: 1,
+								},
+								(err) => {
+									const isError =
+										err?.message.toLocaleLowerCase() ===
+										'client disconnecting'
+
+									assert.isFalse(
+										isError,
+										'client disconnecting',
+									)
+
+									if (isError) {
+										closeInterval = true
+										done()
+									}
+								},
+							)
+						})
+					}
+
+					setTimeout(() => {
+						if (closeInterval === false) {
+							method().then(() => {
+								publishInterval(timeout)
+							})
+						}
+					}, timeout)
+				}
+
+				client = mqtt.connect(config)
+
+				client
+					.on('connect', () => {
+						closeInterval = false
+
+						publishInterval(200)
+
+						setTimeout(() => {
+							closeInterval = true
+
+							if (wasConnected) {
+								done()
+							}
+						}, 900)
+
+						if (wasConnected === false) {
+							setTimeout(() => {
+								wasConnected = true
+								client.end()
+							}, 1300)
+						}
+					})
+					.on('close', () => {
+						setTimeout(() => {
+							client.connect()
+						}, 1500)
+					})
+			},
+		)
+	})
+
 	describe('async methods', () => {
 		it(
 			'connect-subscribe-unsubscribe-end',
