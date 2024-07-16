@@ -628,27 +628,29 @@ describe('MqttClient', () => {
 
 					const publishInterval = (timeout: number) => {
 						const method = () => {
-							return new Promise<boolean>(function publishIntervalPromise (resolve) {
-								client.publish(
-									'test',
-									'test',
-									{
-										qos: 1,
-									},
-									(err) => {
-										const isError =
-											err?.message.toLocaleLowerCase() ===
-											'client disconnecting'
+							return new Promise<boolean>(
+								function publishIntervalPromise(resolve) {
+									client.publish(
+										'test',
+										'test',
+										{
+											qos: 1,
+										},
+										(err) => {
+											const isError =
+												err?.message.toLocaleLowerCase() ===
+												'client disconnecting'
 
-										if (isError) {
-											closeInterval = true
-											return resolve(true)
-										}
+											if (isError) {
+												closeInterval = true
+												return resolve(true)
+											}
 
-										return resolve(false)
-									},
-								)
-							})
+											return resolve(false)
+										},
+									)
+								},
+							)
 						}
 
 						if (closeInterval) {
