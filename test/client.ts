@@ -621,75 +621,166 @@ describe('MqttClient', () => {
 			{
 				timeout: 10000,
 			},
-			function _test(t, done) {
-				let wasConnected = false
-				let closeInterval = false
+			function _test(t) {
+				return new Promise<void>((resolveParent) => {
+					let countConnects = 0
+					let closeInterval = false
 
-				const publishInterval = (timeout: number) => {
-					const method = () => {
-						return new Promise<void>((resolve, reject) => {
-							client.publish(
-								'test',
-								'test',
-								{
-									qos: 1,
-								},
-								(err) => {
-									const isError =
-										err?.message.toLocaleLowerCase() ===
-										'client disconnecting'
+					const publishInterval = (timeout: number) => {
+						const method = () => {
+							return new Promise<boolean>(function publishIntervalPromise (resolve) {
+								client.publish(
+									'test',
+									'test',
+									{
+										qos: 1,
+									},
+									(err) => {
+										const isError =
+											err?.message.toLocaleLowerCase() ===
+											'client disconnecting'
 
-									assert.isFalse(
-										isError,
-										'client disconnecting',
-									)
+										if (isError) {
+											closeInterval = true
+											return resolve(true)
+										}
 
-									if (isError) {
-										closeInterval = true
-										done()
-									}
-								},
-							)
-						})
-					}
-
-					setTimeout(() => {
-						if (closeInterval === false) {
-							method().then(() => {
-								publishInterval(timeout)
+										return resolve(false)
+									},
+								)
 							})
 						}
-					}, timeout)
-				}
 
-				client = mqtt.connect(config)
-
-				client
-					.on('connect', () => {
-						closeInterval = false
-
-						publishInterval(200)
-
-						setTimeout(() => {
-							closeInterval = true
-
-							if (wasConnected) {
-								done()
-							}
-						}, 900)
-
-						if (wasConnected === false) {
-							setTimeout(() => {
-								wasConnected = true
-								client.end()
-							}, 1300)
+						if (closeInterval) {
+							return
 						}
-					})
-					.on('close', () => {
+
 						setTimeout(() => {
-							client.connect()
-						}, 1500)
-					})
+							if (closeInterval === false) {
+								method().then((threwError) => {
+									if (threwError) {
+										client.endAsync().then(() => {
+											assert.isFalse(
+												threwError,
+												'disconnecting variable was not reset',
+											)
+										})
+									}
+
+									publishInterval(timeout)
+								})
+							}
+						}, timeout)
+					}
+
+					client = mqtt.connect(config)
+
+					client
+						.on('connect', () => {
+							closeInterval = false
+							++countConnects
+
+							publishInterval(200)
+
+							setTimeout(() => {
+								closeInterval = true
+
+								if (countConnects === 2) {
+									client.endAsync().then(() => {
+										resolveParent()
+									})
+								}
+							}, 900)
+
+							if (countConnects === 1) {
+								setTimeout(() => {
+									client.end()
+								}, 1300)
+							}
+						})
+						.on('close', () => {
+							if (countConnects === 1) {
+								setTimeout(() => {
+									client.connect()
+								}, 1500)
+							}
+						})
+				})
+			},
+		)
+
+		it(
+			'reset disconnecting variable to false after disconnect when option reconnectPeriod=0',
+			{
+				timeout: 10000,
+			},
+			async function _test(t) {
+				client = await mqtt.connectAsync({
+					...config,
+					reconnectPeriod: 0,
+				})
+
+				assert.isFalse(
+					client.disconnecting,
+					'disconnecting should be false after connect',
+				)
+
+				const endPromise = client.endAsync()
+
+				assert.isTrue(
+					client.disconnecting,
+					'disconnecting should be true processing end',
+				)
+
+				await endPromise
+
+				assert.isFalse(
+					client.disconnecting,
+					'disconnecting should be false after end',
+				)
+			},
+		)
+
+		it(
+			'reset disconnecting variable to false after disconnect when option manualConnect=true',
+			{
+				timeout: 10000,
+			},
+			async function _test(t) {
+				client = mqtt.connect({
+					...config,
+					manualConnect: true,
+				})
+
+				await new Promise((resolve, reject) => {
+					client
+						.connect()
+						.on('error', (err) => {
+							reject(err)
+						})
+						.once('connect', () => {
+							resolve(undefined)
+						})
+				})
+
+				assert.isFalse(
+					client.disconnecting,
+					'disconnecting should be false after connect',
+				)
+
+				const endPromise = client.endAsync()
+
+				assert.isTrue(
+					client.disconnecting,
+					'disconnecting should be true processing end',
+				)
+
+				await endPromise
+
+				assert.isFalse(
+					client.disconnecting,
+					'disconnecting should be false after end',
+				)
 			},
 		)
 	})
