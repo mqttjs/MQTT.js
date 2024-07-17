@@ -615,6 +615,172 @@ describe('MqttClient', () => {
 		},
 	)
 
+	describe('connect manually', () => {
+		it(
+			'should not throw an error when publish after second connect',
+			{
+				timeout: 10000,
+			},
+			async function _test(t) {
+				const clock = useFakeTimers({
+					shouldClearNativeTimers: true,
+					toFake: ['setTimeout'],
+				})
+
+				t.after(async () => {
+					clock.restore()
+					if (client) {
+						await client.endAsync(true)
+					}
+				})
+
+				const fail = await new Promise<boolean>((resolveParent) => {
+					let countConnects = 0
+
+					const publishInterval = (
+						repetible: number,
+						timeout: number,
+						callback: (threwError: boolean) => void,
+					): void => {
+						const method = () =>
+							new Promise<boolean>((resolve) => {
+								client.publish('test', 'test', (err) => {
+									if (
+										err?.message.toLocaleLowerCase() ===
+										'client disconnecting'
+									) {
+										resolve(true)
+									} else {
+										resolve(false)
+									}
+								})
+							})
+
+						if (repetible <= 0) {
+							callback(false)
+							return
+						}
+
+						method().then((threwError) => {
+							clock.tick(timeout)
+
+							if (threwError) {
+								callback(true)
+								return
+							}
+
+							publishInterval(repetible - 1, timeout, callback)
+						})
+					}
+
+					client = mqtt.connect(config)
+
+					client.on('connect', () => {
+						++countConnects
+
+						const intervalRepetible = 4
+						const intervalTimeout = 250
+						const connectTimeout =
+							intervalRepetible * intervalTimeout
+
+						publishInterval(
+							intervalRepetible,
+							intervalTimeout,
+							(threwError) => {
+								if (countConnects === 2) {
+									resolveParent(threwError)
+								}
+							},
+						)
+
+						if (countConnects === 1) {
+							clock.setTimeout(() => {
+								client.end(() => client.connect())
+							}, connectTimeout)
+						}
+					})
+				})
+
+				assert.isFalse(fail, 'disconnecting variable was not reset')
+			},
+		)
+
+		it(
+			'reset disconnecting variable to false after disconnect when option reconnectPeriod=0',
+			{
+				timeout: 10000,
+			},
+			async function _test(t) {
+				client = await mqtt.connectAsync({
+					...config,
+					reconnectPeriod: 0,
+				})
+
+				assert.isFalse(
+					client.disconnecting,
+					'disconnecting should be false after connect',
+				)
+
+				const endPromise = client.endAsync()
+
+				assert.isTrue(
+					client.disconnecting,
+					'disconnecting should be true processing end',
+				)
+
+				await endPromise
+
+				assert.isFalse(
+					client.disconnecting,
+					'disconnecting should be false after end',
+				)
+			},
+		)
+
+		it(
+			'reset disconnecting variable to false after disconnect when option manualConnect=true',
+			{
+				timeout: 10000,
+			},
+			async function _test(t) {
+				client = mqtt.connect({
+					...config,
+					manualConnect: true,
+				})
+
+				await new Promise((resolve, reject) => {
+					client
+						.connect()
+						.on('error', (err) => {
+							reject(err)
+						})
+						.once('connect', () => {
+							resolve(undefined)
+						})
+				})
+
+				assert.isFalse(
+					client.disconnecting,
+					'disconnecting should be false after connect',
+				)
+
+				const endPromise = client.endAsync()
+
+				assert.isTrue(
+					client.disconnecting,
+					'disconnecting should be true processing end',
+				)
+
+				await endPromise
+
+				assert.isFalse(
+					client.disconnecting,
+					'disconnecting should be false after end',
+				)
+			},
+		)
+	})
+
 	describe('async methods', () => {
 		it(
 			'connect-subscribe-unsubscribe-end',
