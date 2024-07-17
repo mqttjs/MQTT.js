@@ -630,29 +630,23 @@ describe('MqttClient', () => {
 					})
 
 					const publishInterval = (
-						{
-							repetible,
-							timeout,
-						}: { repetible: number; timeout: number },
+						repetible: number,
+						timeout: number,
 						callback: (threwError: boolean) => void,
 					): void => {
-						const method = () => {
-							return new Promise<boolean>(
-								function publishIntervalPromise(resolve) {
-									client.publish('test', 'test', (err) => {
-										const isError =
-											err?.message.toLocaleLowerCase() ===
-											'client disconnecting'
-
-										if (isError) {
-											return resolve(true)
-										}
-
-										return resolve(false)
-									})
-								},
-							)
-						}
+						const method = () =>
+							new Promise<boolean>((resolve) => {
+								client.publish('test', 'test', (err) => {
+									if (
+										err?.message.toLocaleLowerCase() ===
+										'client disconnecting'
+									) {
+										resolve(true)
+									} else {
+										resolve(false)
+									}
+								})
+							})
 
 						if (repetible <= 0) {
 							callback(false)
@@ -667,10 +661,7 @@ describe('MqttClient', () => {
 								return
 							}
 
-							publishInterval(
-								{ repetible: repetible - 1, timeout },
-								callback,
-							)
+							publishInterval(repetible - 1, timeout, callback)
 						})
 					}
 
@@ -685,10 +676,8 @@ describe('MqttClient', () => {
 							intervalRepetible * intervalTimeout
 
 						publishInterval(
-							{
-								repetible: intervalRepetible,
-								timeout: intervalTimeout,
-							},
+							intervalRepetible,
+							intervalTimeout,
 							(threwError) => {
 								if (countConnects === 2) {
 									clock.restore()
