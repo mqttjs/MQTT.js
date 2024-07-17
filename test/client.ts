@@ -621,93 +621,93 @@ describe('MqttClient', () => {
 			{
 				timeout: 10000,
 			},
-			function _test(t) {
-				return new Promise<void>((resolveParent) => {
+			async function _test(t) {
+				const fail = await new Promise<boolean>((resolveParent) => {
 					let countConnects = 0
-					let closeInterval = false
+					const clock = useFakeTimers({
+						shouldClearNativeTimers: true,
+						toFake: ['setTimeout'],
+					})
 
-					const publishInterval = (timeout: number) => {
+					const publishInterval = (
+						{
+							repetible,
+							timeout,
+						}: { repetible: number; timeout: number },
+						callback: (threwError: boolean) => void,
+					): void => {
 						const method = () => {
 							return new Promise<boolean>(
 								function publishIntervalPromise(resolve) {
-									client.publish(
-										'test',
-										'test',
-										{
-											qos: 1,
-										},
-										(err) => {
-											const isError =
-												err?.message.toLocaleLowerCase() ===
-												'client disconnecting'
+									client.publish('test', 'test', (err) => {
+										const isError =
+											err?.message.toLocaleLowerCase() ===
+											'client disconnecting'
 
-											if (isError) {
-												closeInterval = true
-												return resolve(true)
-											}
+										if (isError) {
+											return resolve(true)
+										}
 
-											return resolve(false)
-										},
-									)
+										return resolve(false)
+									})
 								},
 							)
 						}
 
-						if (closeInterval) {
+						if (repetible <= 0) {
+							callback(false)
 							return
 						}
 
-						setTimeout(() => {
-							if (closeInterval === false) {
-								method().then((threwError) => {
-									if (threwError) {
-										client.endAsync().then(() => {
-											assert.isFalse(
-												threwError,
-												'disconnecting variable was not reset',
-											)
-										})
-									}
+						method().then((threwError) => {
+							clock.tick(timeout)
 
-									publishInterval(timeout)
-								})
+							if (threwError) {
+								callback(true)
+								return
 							}
-						}, timeout)
+
+							publishInterval(
+								{ repetible: repetible - 1, timeout },
+								callback,
+							)
+						})
 					}
 
 					client = mqtt.connect(config)
 
-					client
-						.on('connect', () => {
-							closeInterval = false
-							++countConnects
+					client.on('connect', () => {
+						++countConnects
 
-							publishInterval(200)
+						const intervalRepetible = 4
+						const intervalTimeout = 250
+						const connectTimeout =
+							intervalRepetible * intervalTimeout
 
-							setTimeout(() => {
-								closeInterval = true
-
+						publishInterval(
+							{
+								repetible: intervalRepetible,
+								timeout: intervalTimeout,
+							},
+							(threwError) => {
 								if (countConnects === 2) {
-									client.endAsync().then(() => {
-										resolveParent()
+									clock.restore()
+									client.end(true, () => {
+										resolveParent(threwError)
 									})
 								}
-							}, 900)
+							},
+						)
 
-							if (countConnects === 1) {
-								setTimeout(() => {
-									client.end()
-								}, 1300)
-							}
-						})
-						.on('close', () => {
-							if (countConnects === 1) {
-								setTimeout(() => {
-									client.connect()
-								}, 1500)
-							}
-						})
+						if (countConnects === 1) {
+							clock.setTimeout(() => {
+								client.end(() => client.connect())
+							}, connectTimeout)
+						}
+					})
 				})
+
+				assert.isFalse(fail, 'disconnecting variable was not reset')
 			},
 		)
 
