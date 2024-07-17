@@ -622,12 +622,20 @@ describe('MqttClient', () => {
 				timeout: 10000,
 			},
 			async function _test(t) {
+				const clock = useFakeTimers({
+					shouldClearNativeTimers: true,
+					toFake: ['setTimeout'],
+				})
+
+				t.after(async () => {
+					clock.restore()
+					if (client) {
+						await client.endAsync(true)
+					}
+				})
+
 				const fail = await new Promise<boolean>((resolveParent) => {
 					let countConnects = 0
-					const clock = useFakeTimers({
-						shouldClearNativeTimers: true,
-						toFake: ['setTimeout'],
-					})
 
 					const publishInterval = (
 						repetible: number,
@@ -680,10 +688,7 @@ describe('MqttClient', () => {
 							intervalTimeout,
 							(threwError) => {
 								if (countConnects === 2) {
-									clock.restore()
-									client.end(true, () => {
-										resolveParent(threwError)
-									})
+									resolveParent(threwError)
 								}
 							},
 						)
