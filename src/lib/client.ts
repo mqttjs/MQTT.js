@@ -2109,23 +2109,11 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	/**
 	 * Reschedule the ping interval
 	 */
-	public reschedulePing() {
+	public reschedulePing(force = false) {
 		if (
 			this.keepaliveManager &&
 			this.options.keepalive &&
-			this.options.reschedulePings
-		) {
-			this._reschedulePing()
-		}
-	}
-
-	/**
-	 * Reschedule the ping interval regardless of reschedulePings value
-	 */
-	public reschedulePingForcely() {
-		if (
-			this.keepaliveManager &&
-			this.options.keepalive
+			(force || this.options.reschedulePings)
 		) {
 			this._reschedulePing()
 		}
