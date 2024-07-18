@@ -56,7 +56,7 @@ const handle: PacketHandler = (client, packet, done) => {
 			break
 		case 'pingresp':
 			client.log('_handlePacket :: received pingresp')
-			client.reschedulePingForcely()
+			client.reschedulePing(true)
 			done()
 			break
 		case 'disconnect':
