@@ -2124,16 +2124,14 @@ export default function abstractTest(server, config, ports) {
 		const pingresp = (reschedulePings: boolean) => {
 			it(`should shift ping on pingresp when reschedulePings===${reschedulePings}`, function _test(t, done) {
 				const intervalMs = 3000
-	
-				let client = connect(
-					{
-						keepalive: intervalMs / 1000,
-						reschedulePings,
-					}
-				)
-	
+
+				let client = connect({
+					keepalive: intervalMs / 1000,
+					reschedulePings,
+				})
+
 				const spy = sinon.spy(client, '_reschedulePing' as any)
-	
+
 				client.on('packetreceive', (packet) => {
 					if (packet.cmd === 'pingresp') {
 						process.nextTick(() => {
@@ -2143,17 +2141,17 @@ export default function abstractTest(server, config, ports) {
 						})
 					}
 				})
-	
-				client.on('error', (err) => {			
+
+				client.on('error', (err) => {
 					client.end(true, () => {
 						done(err)
 					})
 				})
-	
+
 				client.once('connect', () => {
 					clock.tick(intervalMs)
 				})
-			})	
+			})
 		}
 		pingresp(true)
 		pingresp(false)
