@@ -1,5 +1,13 @@
 
 
+## [5.8.1](https://github.com/mqttjs/MQTT.js/compare/v5.8.0...v5.8.1) (2024-07-18)
+
+
+### Bug Fixes
+
+* connect after client.end not working ([#1902](https://github.com/mqttjs/MQTT.js/issues/1902)) ([fbe5294](https://github.com/mqttjs/MQTT.js/commit/fbe52949b47378768fd325f01682a766a5965dfe))
+* reschedule pings problem ([#1904](https://github.com/mqttjs/MQTT.js/issues/1904)) ([8e14d3e](https://github.com/mqttjs/MQTT.js/commit/8e14d3eac01f4fcccfc1ee657e0158d0644951ce))
+
 # [5.8.0](https://github.com/mqttjs/MQTT.js/compare/v5.7.3...v5.8.0) (2024-07-05)
 
 
