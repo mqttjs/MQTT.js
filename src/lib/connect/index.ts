@@ -24,7 +24,7 @@ if (!IS_BROWSER) {
 	protocols.ssl = require('./tls').default
 	protocols.tls = protocols.ssl
 	protocols.mqtts = require('./tls').default
-} else {
+  
 	protocols.wx = require('./wx').default
 	protocols.wxs = require('./wx').default
 
