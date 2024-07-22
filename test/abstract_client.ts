@@ -3202,15 +3202,30 @@ export default function abstractTest(server, config, ports) {
 		})
 
 		it('should emit connack timeout error', function _test(t, done) {
-			const client = connect({
-				connectTimeout: 0,
-				reconnectPeriod: 5000,
+			// Use fake timers to simulate the timeout. The setTimeout inside the client connection
+			// will inactive by other tests (maybe) causing this test never ends.
+			const clock = sinon.useFakeTimers({
+				...fakeTimersOptions,
+				toFake: ['setTimeout'],
 			})
 
-			client.on('error', (err) => {
-				assert.equal(err.message, 'connack timeout')
-				client.end(true, done)
+			const connectTimeout = 10
+
+			t.after(() => {
+				clock.restore()
 			})
+
+			const client = connect({
+				connectTimeout,
+				reconnectPeriod: 5000,
+			})
+				.on('connect', () => {
+					clock.tick(connectTimeout)
+				})
+				.on('error', (err) => {
+					assert.equal(err.message, 'connack timeout')
+					client.end(true, done)
+				})
 		})
 
 		it(
