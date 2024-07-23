@@ -220,6 +220,11 @@ function connectAsync(
 	opts?: IClientOptions,
 ): Promise<MqttClient>
 function connectAsync(
+	brokerUrl: string,
+	opts: IClientOptions,
+	allowRetries: boolean,
+): Promise<MqttClient>
+function connectAsync(
 	brokerUrl: string | IClientOptions,
 	opts?: IClientOptions,
 	allowRetries = true,
