@@ -44,7 +44,7 @@ function setDefaultOpts(opts: IClientOptions) {
 	if (!opts.wsOptions) {
 		options.wsOptions = {}
 	}
-	if (!IS_BROWSER && opts.protocol === 'wss') {
+	if (!IS_BROWSER && !opts.forceNativeWebSocket && opts.protocol === 'wss') {
 		// Add cert/key/ca etc options
 		WSS_OPTIONS.forEach((prop) => {
 			if (
@@ -298,4 +298,4 @@ const browserStreamBuilder: StreamBuilder = (client, opts) => {
 	return stream
 }
 
-export default IS_BROWSER ? browserStreamBuilder : streamBuilder
+export { browserStreamBuilder, streamBuilder };

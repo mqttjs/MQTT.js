@@ -282,6 +282,10 @@ export interface IClientOptions extends ISecureClientOptions {
 	 * or pass a custom timer object
 	 */
 	timerVariant?: TimerVariant | Timer
+	/**
+	 * false, set to true to force the use of native WebSocket if you're having issues with the detection
+	 */
+	forceNativeWebSocket?: boolean
 }
 
 export interface IClientPublishOptions {
@@ -512,7 +516,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		} else {
 			this.log(
 				'MqttClient :: environment',
-				isBrowser ? 'browser' : 'node',
+				(options.forceNativeWebSocket || isBrowser) ? 'browser' : 'node',
 			)
 		}
 

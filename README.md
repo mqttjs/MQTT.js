@@ -454,7 +454,7 @@ The arguments are:
       - `messageExpiryInterval`: value is the lifetime of the Will Message in seconds and is sent as the Publication Expiry Interval when the Server publishes the Will Message `number`,
       - `contentType`: describing the content of the Will Message `string`,
       - `responseTopic`: String which is used as the Topic Name for a response message `string`,
-      - `correlationData`: The Correlation Data is used by the sender of the Request Message to identify which request the Response Message is for when it is received `binary`,
+      - `correlationData`: The Correlation Data is used b`y the sender of the Request Message to identify which request the Response Message is for when it is received `binary`,
       - `userProperties`: The User Property is allowed to appear multiple times to represent multiple name, value pairs `object`
   - `transformWsUrl` : optional `(url, options, client) => url` function
     For ws/wss protocols only. Can be used to implement signing
@@ -474,6 +474,7 @@ The arguments are:
   }
   ```
 
+  - `forceNativeWebSocket`: set to true if you're having detection issues (i.e. the `ws does not work in the browser` exception) to force the use of native WebSocket.
   - `unixSocket`: if you want to connect to a unix socket, set this to true
 
 In case mqtts (mqtt over tls) is required, the `options` object is passed through to [`tls.connect()`](http://nodejs.org/api/tls.html#tls_tls_connect_options_callback). If using a **self-signed certificate**, set `rejectUnauthorized: false`. However, be cautious as this exposes you to potential man in the middle attacks and isn't recommended for production.

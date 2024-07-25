@@ -16,25 +16,6 @@ if (typeof process?.nextTick !== 'function') {
 
 const debug = _debug('mqttjs')
 
-const protocols: Record<string, StreamBuilder> = {}
-
-if (!IS_BROWSER) {
-	protocols.mqtt = require('./tcp').default
-	protocols.tcp = require('./tcp').default
-	protocols.ssl = require('./tls').default
-	protocols.tls = protocols.ssl
-	protocols.mqtts = require('./tls').default
-} else {
-	protocols.wx = require('./wx').default
-	protocols.wxs = require('./wx').default
-
-	protocols.ali = require('./ali').default
-	protocols.alis = require('./ali').default
-}
-
-protocols.ws = require('./ws').default
-protocols.wss = require('./ws').default
-
 /**
  * Parse the auth attribute and merge username and password in the options object.
  *
@@ -150,6 +131,28 @@ function connect(
 			// A cert and key was provided, however no protocol was specified, so we will throw an error.
 			throw new Error('Missing secure protocol key')
 		}
+	}
+
+	const protocols: Record<string, StreamBuilder> = {}
+
+	if (!opts.forceNativeWebSocket && !IS_BROWSER) {
+		protocols.ws = require('./ws').streamBuilder
+		protocols.wss = require('./ws').streamBuilder
+
+		protocols.mqtt = require('./tcp').default
+		protocols.tcp = require('./tcp').default
+		protocols.ssl = require('./tls').default
+		protocols.tls = protocols.ssl
+		protocols.mqtts = require('./tls').default
+	} else {
+		protocols.ws = require('./ws').browserStreamBuilder
+		protocols.wss = require('./ws').browserStreamBuilder
+
+		protocols.wx = require('./wx').default
+		protocols.wxs = require('./wx').default
+
+		protocols.ali = require('./ali').default
+		protocols.alis = require('./ali').default
 	}
 
 	if (!protocols[opts.protocol]) {
