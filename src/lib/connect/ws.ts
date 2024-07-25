@@ -298,4 +298,4 @@ const browserStreamBuilder: StreamBuilder = (client, opts) => {
 	return stream
 }
 
-export { browserStreamBuilder, streamBuilder };
+export { browserStreamBuilder, streamBuilder }

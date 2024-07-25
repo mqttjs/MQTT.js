@@ -516,7 +516,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		} else {
 			this.log(
 				'MqttClient :: environment',
-				(options.forceNativeWebSocket || isBrowser) ? 'browser' : 'node',
+				options.forceNativeWebSocket || isBrowser ? 'browser' : 'node',
 			)
 		}
 
