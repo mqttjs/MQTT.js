@@ -21,15 +21,7 @@ const options = {
         polyfillNode({
             polyfills: [
                 'readable-stream'
-            ],
-            globals: {
-                global: false,
-                __dirname: false,
-                __filename: false,
-                buffer: true,
-                process: true,
-                navigator: true, // Needed for WeChat, ref #1789
-            }
+            ]
         }),
         {
             name: 'resolve-package-json',
