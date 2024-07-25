@@ -6,7 +6,7 @@ import MqttClient, {
 	MqttClientEventCallbacks,
 	MqttProtocol,
 } from '../client'
-import IS_BROWSER from '../is-browser'
+import isBrowser from '../is-browser'
 import { StreamBuilder } from '../shared'
 
 // Handling the process.nextTick is not a function error in react-native applications.
@@ -135,7 +135,7 @@ function connect(
 
 	const protocols: Record<string, StreamBuilder> = {}
 
-	if (!opts.forceNativeWebSocket && !IS_BROWSER) {
+	if (!opts.forceNativeWebSocket && !isBrowser) {
 		protocols.ws = require('./ws').streamBuilder
 		protocols.wss = require('./ws').streamBuilder
 

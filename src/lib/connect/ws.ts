@@ -3,7 +3,7 @@ import { Buffer } from 'buffer'
 import Ws, { ClientOptions } from 'ws'
 import _debug from 'debug'
 import { DuplexOptions, Transform } from 'readable-stream'
-import IS_BROWSER from '../is-browser'
+import isBrowser from '../is-browser'
 import MqttClient, { IClientOptions } from '../client'
 import { BufferedDuplex, writev } from '../BufferedDuplex'
 
@@ -44,7 +44,7 @@ function setDefaultOpts(opts: IClientOptions) {
 	if (!opts.wsOptions) {
 		options.wsOptions = {}
 	}
-	if (!IS_BROWSER && !opts.forceNativeWebSocket && opts.protocol === 'wss') {
+	if (!isBrowser && !opts.forceNativeWebSocket && opts.protocol === 'wss') {
 		// Add cert/key/ca etc options
 		WSS_OPTIONS.forEach((prop) => {
 			if (
