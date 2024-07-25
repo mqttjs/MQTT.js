@@ -905,6 +905,7 @@ Supports [WeChat Mini Program](https://mp.weixin.qq.com/). Use the `wxs` protoco
 
 ```js
 import 'abortcontroller-polyfill/dist/abortcontroller-polyfill-only' // import before mqtt.
+import 'esbuild-plugin-polyfill-node/polyfills/navigator'
 const mqtt = require("mqtt");
 const client = mqtt.connect("wxs://test.mosquitto.org", {
   timerVariant: 'native' // more info ref issue: #1797
