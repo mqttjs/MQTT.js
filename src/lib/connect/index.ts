@@ -16,6 +16,8 @@ if (typeof process?.nextTick !== 'function') {
 
 const debug = _debug('mqttjs')
 
+let protocols: Record<string, StreamBuilder> = null
+
 /**
  * Parse the auth attribute and merge username and password in the options object.
  *
@@ -133,26 +135,28 @@ function connect(
 		}
 	}
 
-	const protocols: Record<string, StreamBuilder> = {}
+	// only loads the protocols once
+	if (!protocols) {
+		protocols = {}
+		if (!isBrowser && !opts.forceNativeWebSocket) {
+			protocols.ws = require('./ws').streamBuilder
+			protocols.wss = require('./ws').streamBuilder
 
-	if (!opts.forceNativeWebSocket && !isBrowser) {
-		protocols.ws = require('./ws').streamBuilder
-		protocols.wss = require('./ws').streamBuilder
+			protocols.mqtt = require('./tcp').default
+			protocols.tcp = require('./tcp').default
+			protocols.ssl = require('./tls').default
+			protocols.tls = protocols.ssl
+			protocols.mqtts = require('./tls').default
+		} else {
+			protocols.ws = require('./ws').browserStreamBuilder
+			protocols.wss = require('./ws').browserStreamBuilder
 
-		protocols.mqtt = require('./tcp').default
-		protocols.tcp = require('./tcp').default
-		protocols.ssl = require('./tls').default
-		protocols.tls = protocols.ssl
-		protocols.mqtts = require('./tls').default
-	} else {
-		protocols.ws = require('./ws').browserStreamBuilder
-		protocols.wss = require('./ws').browserStreamBuilder
+			protocols.wx = require('./wx').default
+			protocols.wxs = require('./wx').default
 
-		protocols.wx = require('./wx').default
-		protocols.wxs = require('./wx').default
-
-		protocols.ali = require('./ali').default
-		protocols.alis = require('./ali').default
+			protocols.ali = require('./ali').default
+			protocols.alis = require('./ali').default
+		}
 	}
 
 	if (!protocols[opts.protocol]) {
