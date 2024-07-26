@@ -6,7 +6,7 @@ import MqttClient, {
 	MqttClientEventCallbacks,
 	MqttProtocol,
 } from '../client'
-import IS_BROWSER from '../is-browser'
+import isBrowser from '../is-browser'
 import { StreamBuilder } from '../shared'
 
 // Handling the process.nextTick is not a function error in react-native applications.
@@ -16,24 +16,7 @@ if (typeof process?.nextTick !== 'function') {
 
 const debug = _debug('mqttjs')
 
-const protocols: Record<string, StreamBuilder> = {}
-
-if (!IS_BROWSER) {
-	protocols.mqtt = require('./tcp').default
-	protocols.tcp = require('./tcp').default
-	protocols.ssl = require('./tls').default
-	protocols.tls = protocols.ssl
-	protocols.mqtts = require('./tls').default
-} else {
-	protocols.wx = require('./wx').default
-	protocols.wxs = require('./wx').default
-
-	protocols.ali = require('./ali').default
-	protocols.alis = require('./ali').default
-}
-
-protocols.ws = require('./ws').default
-protocols.wss = require('./ws').default
+let protocols: Record<string, StreamBuilder> = null
 
 /**
  * Parse the auth attribute and merge username and password in the options object.
@@ -149,6 +132,30 @@ function connect(
 		} else {
 			// A cert and key was provided, however no protocol was specified, so we will throw an error.
 			throw new Error('Missing secure protocol key')
+		}
+	}
+
+	// only loads the protocols once
+	if (!protocols) {
+		protocols = {}
+		if (!isBrowser && !opts.forceNativeWebSocket) {
+			protocols.ws = require('./ws').streamBuilder
+			protocols.wss = require('./ws').streamBuilder
+
+			protocols.mqtt = require('./tcp').default
+			protocols.tcp = require('./tcp').default
+			protocols.ssl = require('./tls').default
+			protocols.tls = protocols.ssl
+			protocols.mqtts = require('./tls').default
+		} else {
+			protocols.ws = require('./ws').browserStreamBuilder
+			protocols.wss = require('./ws').browserStreamBuilder
+
+			protocols.wx = require('./wx').default
+			protocols.wxs = require('./wx').default
+
+			protocols.ali = require('./ali').default
+			protocols.alis = require('./ali').default
 		}
 	}
 
