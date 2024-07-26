@@ -1,5 +1,18 @@
 
 
+# [5.9.0](https://github.com/mqttjs/MQTT.js/compare/v5.8.1...v5.9.0) (2024-07-26)
+
+
+### Bug Fixes
+
+* tets hang up ([#1906](https://github.com/mqttjs/MQTT.js/issues/1906)) ([c462530](https://github.com/mqttjs/MQTT.js/commit/c462530d2ec0b61a20cc43f188254bf2b403787a))
+* **types:** add connectAsync overload signature with allowRetries ([#1909](https://github.com/mqttjs/MQTT.js/issues/1909)) ([6b278dc](https://github.com/mqttjs/MQTT.js/commit/6b278dca5a5b82b07835344f3c129ddd5b73e6e8))
+
+
+### Features
+
+* add `forceNativeWebSocket` client option ([#1910](https://github.com/mqttjs/MQTT.js/issues/1910)) ([103d172](https://github.com/mqttjs/MQTT.js/commit/103d1721d68952e536a3704a05a569c95f0a1987)), closes [#1796](https://github.com/mqttjs/MQTT.js/issues/1796) [#1895](https://github.com/mqttjs/MQTT.js/issues/1895)
+
 ## [5.8.1](https://github.com/mqttjs/MQTT.js/compare/v5.8.0...v5.8.1) (2024-07-18)
 
 
