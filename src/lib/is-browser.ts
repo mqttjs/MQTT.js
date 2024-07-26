@@ -25,9 +25,6 @@ const isStandardBrowserEnv = () => {
 	return false
 }
 
-const isTxikijsEnv = () =>
-	typeof navigator !== 'undefined' && navigator.userAgent === 'txiki.js'
-
 const isWebWorkerEnv = () =>
 	Boolean(
 		// eslint-disable-next-line no-restricted-globals
@@ -40,10 +37,7 @@ const isReactNativeEnv = () =>
 	typeof navigator !== 'undefined' && navigator.product === 'ReactNative'
 
 const isBrowser =
-	isStandardBrowserEnv() ||
-	isWebWorkerEnv() ||
-	isReactNativeEnv() ||
-	isTxikijsEnv()
+	isStandardBrowserEnv() || isWebWorkerEnv() || isReactNativeEnv()
 
 export const isWebWorker = isWebWorkerEnv()
 

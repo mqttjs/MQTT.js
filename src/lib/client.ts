@@ -282,6 +282,10 @@ export interface IClientOptions extends ISecureClientOptions {
 	 * or pass a custom timer object
 	 */
 	timerVariant?: TimerVariant | Timer
+	/**
+	 * false, set to true to force the use of native WebSocket if you're having issues with the detection
+	 */
+	forceNativeWebSocket?: boolean
 }
 
 export interface IClientPublishOptions {

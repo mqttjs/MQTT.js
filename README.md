@@ -467,13 +467,13 @@ The arguments are:
   - `log`: custom log function. Default uses [debug](https://www.npmjs.com/package/debug) package.
   - `manualConnect`: prevents the constructor to call `connect`. In this case after the `mqtt.connect` is called you should call `client.connect` manually.
   - `timerVariant`: defaults to `auto`, which tries to determine which timer is most appropriate for you environment, if you're having detection issues, you can set it to `worker` or `native`. If none suits you, you can pass a timer object with set and clear properties:
-  ```js 
-  timerVariant: { 
-    set: (func, timer) => setInterval(func, timer),
-    clear: (id) => clearInterval(id)
-  }
-  ```
-
+    ```js
+    timerVariant: {
+      set: (func, timer) => setInterval(func, timer),
+      clear: (id) => clearInterval(id)
+    }
+    ```
+  - `forceNativeWebSocket`: set to true if you're having detection issues (i.e. the `ws does not work in the browser` exception) to force the use of native WebSocket. It is important to note that if set to true for the first client created, then all the clients will use native WebSocket. And conversely, if not set or set to false, all will use the detection result.
   - `unixSocket`: if you want to connect to a unix socket, set this to true
 
 In case mqtts (mqtt over tls) is required, the `options` object is passed through to [`tls.connect()`](http://nodejs.org/api/tls.html#tls_tls_connect_options_callback). If using a **self-signed certificate**, set `rejectUnauthorized: false`. However, be cautious as this exposes you to potential man in the middle attacks and isn't recommended for production.
@@ -905,6 +905,7 @@ Supports [WeChat Mini Program](https://mp.weixin.qq.com/). Use the `wxs` protoco
 
 ```js
 import 'abortcontroller-polyfill/dist/abortcontroller-polyfill-only' // import before mqtt.
+import 'esbuild-plugin-polyfill-node/polyfills/navigator'
 const mqtt = require("mqtt");
 const client = mqtt.connect("wxs://test.mosquitto.org", {
   timerVariant: 'native' // more info ref issue: #1797
