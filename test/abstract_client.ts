@@ -89,7 +89,8 @@ class CleanBeforeMethod {
 
 		for (const result of results) {
 			if (result.status === 'rejected') {
-				Promise.reject(result.reason)
+				if (result.reason instanceof Error) throw result.reason
+				else throw new Error(result.reason)
 			}
 		}
 	}
@@ -702,17 +703,19 @@ export default function abstractTest(server, config, ports) {
 		it('should not interrupt messages', function _test(t, done) {
 			cleanBeforeMethod.add(async () => {
 				if (client) {
-					await new Promise<void>((resolve) => {
-						client.end(true, () => {
-							resolve()
+					await new Promise<void>((resolve, reject) => {
+						client.end(true, (err) => {
+							if (err) reject(err)
+							else resolve()
 						})
 					})
 				}
 
-				if (server2) {
-					await new Promise<void>((resolve) => {
-						server2.close(() => {
-							resolve()
+				if (server2?.listening) {
+					await new Promise<void>((resolve, reject) => {
+						server2.close((err) => {
+							if (err) reject(err)
+							else resolve()
 						})
 					})
 				}
@@ -788,17 +791,19 @@ export default function abstractTest(server, config, ports) {
 		it('should not overtake the messages stored in the level-db-store', function _test(t, done) {
 			cleanBeforeMethod.add(async () => {
 				if (client) {
-					await new Promise<void>((resolve) => {
-						client.end(true, () => {
-							resolve()
+					await new Promise<void>((resolve, reject) => {
+						client.end(true, (err) => {
+							if (err) reject(err)
+							else resolve()
 						})
 					})
 				}
 
-				if (server2) {
-					await new Promise<void>((resolve) => {
-						server2.close(() => {
-							resolve()
+				if (server2?.listening) {
+					await new Promise<void>((resolve, reject) => {
+						server2.close((err) => {
+							if (err) reject(err)
+							else resolve()
 						})
 					})
 				}
@@ -1199,17 +1204,19 @@ export default function abstractTest(server, config, ports) {
 		it('should fire a callback (qos 1) on error', function _test(t, done) {
 			cleanBeforeMethod.add(async () => {
 				if (client) {
-					await new Promise<void>((resolve) => {
-						client.end(true, () => {
-							resolve()
+					await new Promise<void>((resolve, reject) => {
+						client.end(true, (err) => {
+							if (err) reject(err)
+							else resolve()
 						})
 					})
 				}
 
-				if (server2) {
-					await new Promise<void>((resolve) => {
-						server2.close(() => {
-							resolve()
+				if (server2?.listening) {
+					await new Promise<void>((resolve, reject) => {
+						server2.close((err) => {
+							if (err) reject(err)
+							else resolve()
 						})
 					})
 				}
@@ -1290,17 +1297,19 @@ export default function abstractTest(server, config, ports) {
 		it('should fire a callback (qos 2) on error', function _test(t, done) {
 			cleanBeforeMethod.add(async () => {
 				if (client) {
-					await new Promise<void>((resolve) => {
-						client.end(true, () => {
-							resolve()
+					await new Promise<void>((resolve, reject) => {
+						client.end(true, (err) => {
+							if (err) reject(err)
+							else resolve()
 						})
 					})
 				}
 
-				if (server2) {
-					await new Promise<void>((resolve) => {
-						server2.close(() => {
-							resolve()
+				if (server2?.listening) {
+					await new Promise<void>((resolve, reject) => {
+						server2.close((err) => {
+							if (err) reject(err)
+							else resolve()
 						})
 					})
 				}
@@ -1825,17 +1834,19 @@ export default function abstractTest(server, config, ports) {
 		it('should keep message order', function _test(t, done) {
 			cleanBeforeMethod.add(async () => {
 				if (client) {
-					await new Promise<void>((resolve) => {
-						client.end(true, () => {
-							resolve()
+					await new Promise<void>((resolve, reject) => {
+						client.end(true, (err) => {
+							if (err) reject(err)
+							else resolve()
 						})
 					})
 				}
 
-				if (server2) {
-					await new Promise<void>((resolve) => {
-						server2.close(() => {
-							resolve()
+				if (server2?.listening) {
+					await new Promise<void>((resolve, reject) => {
+						server2.close((err) => {
+							if (err) reject(err)
+							else resolve()
 						})
 					})
 				}
@@ -3687,17 +3698,19 @@ export default function abstractTest(server, config, ports) {
 		it('should not resubscribe when reconnecting if suback is error', function _test(t, done) {
 			cleanBeforeMethod.add(async () => {
 				if (client) {
-					await new Promise<void>((resolve) => {
-						client.end(true, () => {
-							resolve()
+					await new Promise<void>((resolve, reject) => {
+						client.end(true, (err) => {
+							if (err) reject(err)
+							else resolve()
 						})
 					})
 				}
 
-				if (server2) {
-					await new Promise<void>((resolve) => {
-						server2.close(() => {
-							resolve()
+				if (server2?.listening) {
+					await new Promise<void>((resolve, reject) => {
+						server2.close((err) => {
+							if (err) reject(err)
+							else resolve()
 						})
 					})
 				}
@@ -3761,17 +3774,19 @@ export default function abstractTest(server, config, ports) {
 		it('should preserved incomingStore after disconnecting if clean is false', function _test(t, done) {
 			cleanBeforeMethod.add(async () => {
 				if (client) {
-					await new Promise<void>((resolve) => {
-						client.end(true, () => {
-							resolve()
+					await new Promise<void>((resolve, reject) => {
+						client.end(true, (err) => {
+							if (err) reject(err)
+							else resolve()
 						})
 					})
 				}
 
-				if (server2) {
-					await new Promise<void>((resolve) => {
-						server2.close(() => {
-							resolve()
+				if (server2?.listening) {
+					await new Promise<void>((resolve, reject) => {
+						server2.close((err) => {
+							if (err) reject(err)
+							else resolve()
 						})
 					})
 				}
@@ -3843,17 +3858,19 @@ export default function abstractTest(server, config, ports) {
 		it('should clear outgoing if close from server', function _test(t, done) {
 			cleanBeforeMethod.add(async () => {
 				if (client) {
-					await new Promise<void>((resolve) => {
-						client.end(true, () => {
-							resolve()
+					await new Promise<void>((resolve, reject) => {
+						client.end(true, (err) => {
+							if (err) reject(err)
+							else resolve()
 						})
 					})
 				}
 
-				if (server2) {
-					await new Promise<void>((resolve) => {
-						server2.close(() => {
-							resolve()
+				if (server2?.listening) {
+					await new Promise<void>((resolve, reject) => {
+						server2.close((err) => {
+							if (err) reject(err)
+							else resolve()
 						})
 					})
 				}
@@ -3915,17 +3932,19 @@ export default function abstractTest(server, config, ports) {
 		it('should resend in-flight QoS 1 publish messages from the client if clean is false', function _test(t, done) {
 			cleanBeforeMethod.add(async () => {
 				if (client) {
-					await new Promise<void>((resolve) => {
-						client.end(true, () => {
-							resolve()
+					await new Promise<void>((resolve, reject) => {
+						client.end(true, (err) => {
+							if (err) reject(err)
+							else resolve()
 						})
 					})
 				}
 
-				if (server2) {
-					await new Promise<void>((resolve) => {
-						server2.close(() => {
-							resolve()
+				if (server2?.listening) {
+					await new Promise<void>((resolve, reject) => {
+						server2.close((err) => {
+							if (err) reject(err)
+							else resolve()
 						})
 					})
 				}
@@ -3979,17 +3998,19 @@ export default function abstractTest(server, config, ports) {
 		it('should resend in-flight QoS 2 publish messages from the client if clean is false', function _test(t, done) {
 			cleanBeforeMethod.add(async () => {
 				if (client) {
-					await new Promise<void>((resolve) => {
-						client.end(true, () => {
-							resolve()
+					await new Promise<void>((resolve, reject) => {
+						client.end(true, (err) => {
+							if (err) reject(err)
+							else resolve()
 						})
 					})
 				}
 
-				if (server2) {
-					await new Promise<void>((resolve) => {
-						server2.close(() => {
-							resolve()
+				if (server2?.listening) {
+					await new Promise<void>((resolve, reject) => {
+						server2.close((err) => {
+							if (err) reject(err)
+							else resolve()
 						})
 					})
 				}
@@ -4043,17 +4064,19 @@ export default function abstractTest(server, config, ports) {
 		it('should resend in-flight QoS 2 pubrel messages from the client if clean is false', function _test(t, done) {
 			cleanBeforeMethod.add(async () => {
 				if (client) {
-					await new Promise<void>((resolve) => {
-						client.end(true, () => {
-							resolve()
+					await new Promise<void>((resolve, reject) => {
+						client.end(true, (err) => {
+							if (err) reject(err)
+							else resolve()
 						})
 					})
 				}
 
-				if (server2) {
-					await new Promise<void>((resolve) => {
-						server2.close(() => {
-							resolve()
+				if (server2?.listening) {
+					await new Promise<void>((resolve, reject) => {
+						server2.close((err) => {
+							if (err) reject(err)
+							else resolve()
 						})
 					})
 				}
@@ -4121,17 +4144,19 @@ export default function abstractTest(server, config, ports) {
 		it('should resend in-flight publish messages by published order', function _test(t, done) {
 			cleanBeforeMethod.add(async () => {
 				if (client) {
-					await new Promise<void>((resolve) => {
-						client.end(true, () => {
-							resolve()
+					await new Promise<void>((resolve, reject) => {
+						client.end(true, (err) => {
+							if (err) reject(err)
+							else resolve()
 						})
 					})
 				}
 
-				if (server2) {
-					await new Promise<void>((resolve) => {
-						server2.close(() => {
-							resolve()
+				if (server2?.listening) {
+					await new Promise<void>((resolve, reject) => {
+						server2.close((err) => {
+							if (err) reject(err)
+							else resolve()
 						})
 					})
 				}
