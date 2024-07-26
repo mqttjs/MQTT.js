@@ -1,6 +1,6 @@
 // Other Socket Errors: EADDRINUSE, ECONNRESET, ENOTFOUND, ETIMEDOUT.
 
-import { PacketHandler } from '../shared'
+import { PacketHandler, ErrorWithReasonCode } from '../shared'
 
 export const ReasonCodes = {
 	0: '',
@@ -82,8 +82,10 @@ const handleAck: PacketHandler = (client, packet) => {
 			const pubackRC = packet.reasonCode
 			// Callback - we're done
 			if (pubackRC && pubackRC > 0 && pubackRC !== 16) {
-				err = new Error(`Publish error: ${ReasonCodes[pubackRC]}`)
-				err.code = pubackRC
+				err = new ErrorWithReasonCode(
+					`Publish error: ${ReasonCodes[pubackRC]}`,
+					pubackRC,
+				)
 				client['_removeOutgoingAndStoreMessage'](messageId, () => {
 					cb(err, packet)
 				})
@@ -102,8 +104,10 @@ const handleAck: PacketHandler = (client, packet) => {
 			const pubrecRC = packet.reasonCode
 
 			if (pubrecRC && pubrecRC > 0 && pubrecRC !== 16) {
-				err = new Error(`Publish error: ${ReasonCodes[pubrecRC]}`)
-				err.code = pubrecRC
+				err = new ErrorWithReasonCode(
+					`Publish error: ${ReasonCodes[pubrecRC]}`,
+					pubrecRC,
+				)
 				client['_removeOutgoingAndStoreMessage'](messageId, () => {
 					cb(err, packet)
 				})

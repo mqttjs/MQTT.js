@@ -385,7 +385,10 @@ export type OnMessageCallback = (
 export type OnPacketCallback = (packet: Packet) => void
 export type OnCloseCallback = () => void
 export type OnErrorCallback = (error: Error | ErrorWithReasonCode) => void
-export type PacketCallback = (error?: Error, packet?: Packet) => any
+export type PacketCallback = (
+	error?: Error | ErrorWithReasonCode,
+	packet?: Packet,
+) => any
 export type CloseCallback = (error?: Error) => void
 
 export interface MqttClientEventCallbacks {
