@@ -64,6 +64,7 @@ export default function abstractTest(server, config, ports) {
 	async function beforeEachExec() {
 		await cleanMethod.closeClientAndServer()
 		await cleanMethod.executeAllMethods()
+		cleanMethod.reset({ method: { removeOnce: true } })
 	}
 
 	async function afterExec() {
@@ -720,6 +721,7 @@ export default function abstractTest(server, config, ports) {
 					outgoingStore,
 					queueQoSZero: true,
 				})
+				cleanMethod.setClient(client)
 				client.on('packetreceive', (packet) => {
 					if (packet.cmd === 'connack') {
 						setImmediate(() => {
@@ -730,7 +732,6 @@ export default function abstractTest(server, config, ports) {
 				})
 				client.publish('test', 'payload1', { qos: 2 })
 				client.publish('test', 'payload2', { qos: 2 })
-				cleanMethod.setClient(client)
 			})
 		})
 
@@ -800,6 +801,8 @@ export default function abstractTest(server, config, ports) {
 			server2.listen(ports.PORTAND72, () => {
 				client = connect(clientOptions)
 
+				cleanMethod.setClient(client)
+
 				client.once('close', () => {
 					client.once('connect', () => {
 						client.publish('test', 'payload2', { qos: 1 }, () => {
@@ -820,7 +823,6 @@ export default function abstractTest(server, config, ports) {
 					})
 				})
 
-				cleanMethod.setClient(client)
 			})
 		})
 
@@ -1170,6 +1172,8 @@ export default function abstractTest(server, config, ports) {
 					reconnectPeriod: 0,
 				})
 
+				cleanMethod.setClient(client)
+
 				client.once('connect', () => {
 					client.publish(
 						'a',
@@ -1193,8 +1197,6 @@ export default function abstractTest(server, config, ports) {
 						},
 					)
 				})
-
-				cleanMethod.setClient(client)
 			})
 		})
 
@@ -1250,6 +1252,8 @@ export default function abstractTest(server, config, ports) {
 					reconnectPeriod: 0,
 				})
 
+				cleanMethod.setClient(client)
+
 				client.once('connect', () => {
 					client.publish(
 						'a',
@@ -1273,8 +1277,6 @@ export default function abstractTest(server, config, ports) {
 						},
 					)
 				})
-
-				cleanMethod.setClient(client)
 			})
 		})
 
@@ -1787,6 +1789,8 @@ export default function abstractTest(server, config, ports) {
 					outgoingStore,
 				})
 
+				cleanMethod.setClient(client)
+
 				client.on('connect', () => {
 					if (!reconnect) {
 						client.publish('topic', 'payload1', { qos: 1 })
@@ -1806,8 +1810,6 @@ export default function abstractTest(server, config, ports) {
 						reconnect = true
 					}
 				})
-
-				cleanMethod.setClient(client)
 			})
 		})
 
@@ -3608,6 +3610,8 @@ export default function abstractTest(server, config, ports) {
 					reconnectPeriod: 100,
 				})
 
+				cleanMethod.setClient(client)
+
 				client.on('reconnect', () => {
 					reconnectEvent = true
 				})
@@ -3633,8 +3637,6 @@ export default function abstractTest(server, config, ports) {
 						done()
 					}
 				})
-
-				cleanMethod.setClient(client)
 			})
 		})
 
@@ -3691,6 +3693,8 @@ export default function abstractTest(server, config, ports) {
 					outgoingStore,
 				})
 
+				cleanMethod.setClient(client)
+
 				client.on('connect', () => {
 					if (!reconnect) {
 						client.subscribe('test', { qos: 2 }, () => {})
@@ -3701,8 +3705,6 @@ export default function abstractTest(server, config, ports) {
 					assert.strictEqual(topic, 'topic')
 					assert.strictEqual(message.toString(), 'payload')
 				})
-
-				cleanMethod.setClient(client)
 			})
 		})
 
@@ -3739,6 +3741,8 @@ export default function abstractTest(server, config, ports) {
 					reconnectPeriod: 0,
 				})
 
+				cleanMethod.setClient(client)
+
 				client.on('connect', () => {
 					client.subscribe('test', { qos: 2 }, (e) => {
 						if (!e) {
@@ -3759,8 +3763,6 @@ export default function abstractTest(server, config, ports) {
 						client.reconnect()
 					}
 				})
-
-				cleanMethod.setClient(client)
 			})
 		})
 
@@ -3803,14 +3805,14 @@ export default function abstractTest(server, config, ports) {
 					outgoingStore,
 				})
 
+				cleanMethod.setClient(client)
+
 				client.on('connect', () => {
 					if (!reconnect) {
 						client.publish('topic', 'payload', { qos: 1 })
 					}
 				})
 				client.on('error', () => {})
-
-				cleanMethod.setClient(client)
 			})
 		})
 
@@ -3853,14 +3855,14 @@ export default function abstractTest(server, config, ports) {
 					outgoingStore,
 				})
 
+				cleanMethod.setClient(client)
+
 				client.on('connect', () => {
 					if (!reconnect) {
 						client.publish('topic', 'payload', { qos: 2 })
 					}
 				})
 				client.on('error', () => {})
-
-				cleanMethod.setClient(client)
 			})
 		})
 
@@ -3908,6 +3910,8 @@ export default function abstractTest(server, config, ports) {
 					outgoingStore,
 				})
 
+				cleanMethod.setClient(client)
+
 				client.on('connect', () => {
 					if (!reconnect) {
 						client.publish(
@@ -3923,8 +3927,6 @@ export default function abstractTest(server, config, ports) {
 					}
 				})
 				client.on('error', () => {})
-
-				cleanMethod.setClient(client)
 			})
 		})
 
@@ -3995,6 +3997,8 @@ export default function abstractTest(server, config, ports) {
 					outgoingStore,
 				})
 
+				cleanMethod.setClient(client)
+
 				client['nextId'] = 65535
 
 				client.on('connect', () => {
@@ -4005,8 +4009,6 @@ export default function abstractTest(server, config, ports) {
 					}
 				})
 				client.on('error', () => {})
-
-				cleanMethod.setClient(client)
 			})
 		})
 
