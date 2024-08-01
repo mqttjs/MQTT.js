@@ -568,7 +568,7 @@ export default function abstractTest(server, config, ports) {
 					}
 					assert.isArray(granted2)
 					assert.isEmpty(granted2)
-					client.end((err) => done(err))
+					client.end((err3) => done(err3))
 				})
 			})
 		})
