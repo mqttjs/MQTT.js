@@ -8,7 +8,7 @@ import levelStore from 'mqtt-level-store'
 import Store from '../src/lib/store'
 import serverBuilder from './server_helpers_for_client_tests'
 import handlePubrel from '../src/lib/handlers/pubrel'
-import CleanMethod from './helpers/clean_method'
+import TeardownHelper from './helpers/TeardownHelper'
 import handle from '../src/lib/handlers/index'
 import handlePublish from '../src/lib/handlers/publish'
 import mqtt, {
@@ -59,18 +59,16 @@ export default function abstractTest(server, config, ports) {
 		return mqtt.connect(opts)
 	}
 
-	const cleanMethod = new CleanMethod()
+	const teardownHelper = new TeardownHelper()
 
 	async function beforeEachExec() {
-		await cleanMethod.closeClientAndServer()
-		await cleanMethod.executeAllMethods()
-		cleanMethod.reset({ method: { removeOnce: true } })
+		await teardownHelper.runAll()
+		teardownHelper.reset({ removeOnce: true })
 	}
 
 	async function afterExec() {
-		await cleanMethod.closeClientAndServer()
-		await cleanMethod.executeAllMethods()
-		cleanMethod.reset()
+		await teardownHelper.runAll()
+		teardownHelper.reset()
 	}
 
 	after(afterExec)
@@ -708,7 +706,7 @@ export default function abstractTest(server, config, ports) {
 				})
 			})
 
-			cleanMethod.setServer(server2)
+			teardownHelper.addServer(server2)
 
 			server2.listen(ports.PORTAND50, () => {
 				client = connect({
@@ -721,7 +719,7 @@ export default function abstractTest(server, config, ports) {
 					outgoingStore,
 					queueQoSZero: true,
 				})
-				cleanMethod.setClient(client)
+				teardownHelper.addClient(client)
 				client.on('packetreceive', (packet) => {
 					if (packet.cmd === 'connack') {
 						setImmediate(() => {
@@ -736,7 +734,7 @@ export default function abstractTest(server, config, ports) {
 		})
 
 		it('should not overtake the messages stored in the level-db-store', function _test(t, done) {
-			cleanMethod.add({ executeOnce: true }, async () => {
+			teardownHelper.add({ executeOnce: true }, async () => {
 				await new Promise<void>((resolve) => {
 					fs.rm(storePath, { recursive: true }, () => {
 						resolve()
@@ -785,7 +783,7 @@ export default function abstractTest(server, config, ports) {
 				})
 			})
 
-			cleanMethod.setServer(server2)
+			teardownHelper.addServer(server2)
 
 			const clientOptions = {
 				port: ports.PORTAND72,
@@ -801,7 +799,7 @@ export default function abstractTest(server, config, ports) {
 			server2.listen(ports.PORTAND72, () => {
 				client = connect(clientOptions)
 
-				cleanMethod.setClient(client)
+				teardownHelper.addClient(client)
 
 				client.once('close', () => {
 					client.once('connect', () => {
@@ -1160,7 +1158,7 @@ export default function abstractTest(server, config, ports) {
 				})
 			})
 
-			cleanMethod.setServer(server2)
+			teardownHelper.addServer(server2)
 
 			server2.listen(ports.PORTAND72, () => {
 				client = connect({
@@ -1171,7 +1169,7 @@ export default function abstractTest(server, config, ports) {
 					reconnectPeriod: 0,
 				})
 
-				cleanMethod.setClient(client)
+				teardownHelper.addClient(client)
 
 				client.once('connect', () => {
 					client.publish(
@@ -1240,7 +1238,7 @@ export default function abstractTest(server, config, ports) {
 				})
 			})
 
-			cleanMethod.setServer(server2)
+			teardownHelper.addServer(server2)
 
 			server2.listen(ports.PORTAND103, () => {
 				client = connect({
@@ -1251,7 +1249,7 @@ export default function abstractTest(server, config, ports) {
 					reconnectPeriod: 0,
 				})
 
-				cleanMethod.setClient(client)
+				teardownHelper.addClient(client)
 
 				client.once('connect', () => {
 					client.publish(
@@ -1775,7 +1773,7 @@ export default function abstractTest(server, config, ports) {
 				})
 			})
 
-			cleanMethod.setServer(server2)
+			teardownHelper.addServer(server2)
 
 			server2.listen(ports.PORTAND50, () => {
 				client = connect({
@@ -1788,7 +1786,7 @@ export default function abstractTest(server, config, ports) {
 					outgoingStore,
 				})
 
-				cleanMethod.setClient(client)
+				teardownHelper.addClient(client)
 
 				client.on('connect', () => {
 					if (!reconnect) {
@@ -3600,7 +3598,7 @@ export default function abstractTest(server, config, ports) {
 				})
 			})
 
-			cleanMethod.setServer(server2)
+			teardownHelper.addServer(server2)
 
 			server2.listen(ports.PORTAND49, () => {
 				client = connect({
@@ -3609,7 +3607,7 @@ export default function abstractTest(server, config, ports) {
 					reconnectPeriod: 100,
 				})
 
-				cleanMethod.setClient(client)
+				teardownHelper.addClient(client)
 
 				client.on('reconnect', () => {
 					reconnectEvent = true
@@ -3679,7 +3677,7 @@ export default function abstractTest(server, config, ports) {
 				})
 			})
 
-			cleanMethod.setServer(server2)
+			teardownHelper.addServer(server2)
 
 			server2.listen(ports.PORTAND50, () => {
 				client = connect({
@@ -3692,7 +3690,7 @@ export default function abstractTest(server, config, ports) {
 					outgoingStore,
 				})
 
-				cleanMethod.setClient(client)
+				teardownHelper.addClient(client)
 
 				client.on('connect', () => {
 					if (!reconnect) {
@@ -3728,7 +3726,7 @@ export default function abstractTest(server, config, ports) {
 				})
 			})
 
-			cleanMethod.setServer(server2)
+			teardownHelper.addServer(server2)
 
 			server2.listen(ports.PORTAND50, () => {
 				client = connect({
@@ -3740,7 +3738,7 @@ export default function abstractTest(server, config, ports) {
 					reconnectPeriod: 0,
 				})
 
-				cleanMethod.setClient(client)
+				teardownHelper.addClient(client)
 
 				client.on('connect', () => {
 					client.subscribe('test', { qos: 2 }, (e) => {
@@ -3791,7 +3789,7 @@ export default function abstractTest(server, config, ports) {
 				})
 			})
 
-			cleanMethod.setServer(server2)
+			teardownHelper.addServer(server2)
 
 			server2.listen(ports.PORTAND50, () => {
 				client = connect({
@@ -3804,7 +3802,7 @@ export default function abstractTest(server, config, ports) {
 					outgoingStore,
 				})
 
-				cleanMethod.setClient(client)
+				teardownHelper.addClient(client)
 
 				client.on('connect', () => {
 					if (!reconnect) {
@@ -3841,7 +3839,7 @@ export default function abstractTest(server, config, ports) {
 				})
 			})
 
-			cleanMethod.setServer(server2)
+			teardownHelper.addServer(server2)
 
 			server2.listen(ports.PORTAND50, () => {
 				client = connect({
@@ -3854,7 +3852,7 @@ export default function abstractTest(server, config, ports) {
 					outgoingStore,
 				})
 
-				cleanMethod.setClient(client)
+				teardownHelper.addClient(client)
 
 				client.on('connect', () => {
 					if (!reconnect) {
@@ -3896,7 +3894,7 @@ export default function abstractTest(server, config, ports) {
 				})
 			})
 
-			cleanMethod.setServer(server2)
+			teardownHelper.addServer(server2)
 
 			server2.listen(ports.PORTAND50, () => {
 				client = connect({
@@ -3909,7 +3907,7 @@ export default function abstractTest(server, config, ports) {
 					outgoingStore,
 				})
 
-				cleanMethod.setClient(client)
+				teardownHelper.addClient(client)
 
 				client.on('connect', () => {
 					if (!reconnect) {
@@ -3983,7 +3981,7 @@ export default function abstractTest(server, config, ports) {
 				})
 			})
 
-			cleanMethod.setServer(server2)
+			teardownHelper.addServer(server2)
 
 			server2.listen(ports.PORTAND50, () => {
 				client = connect({
@@ -3996,7 +3994,7 @@ export default function abstractTest(server, config, ports) {
 					outgoingStore,
 				})
 
-				cleanMethod.setClient(client)
+				teardownHelper.addClient(client)
 
 				client['nextId'] = 65535
 

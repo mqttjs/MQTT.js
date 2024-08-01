@@ -98,11 +98,7 @@ type ResetOptions = {
  * })
  * ```
  */
-class CleanMethod {
-	#client: MqttClient | null
-
-	#server: ServerBuilderInstance | null
-
+class TeardownHelper {
 	#methods: Map<
 		string,
 		{
@@ -113,25 +109,23 @@ class CleanMethod {
 	>
 
 	constructor() {
-		this.#client = null
-		this.#server = null
 		this.#methods = new Map()
 	}
 
 	/**
 	 * @description
-	 * Set the client to be used as default to close.
+	 * Add a client to close.
 	 */
-	setClient(client: MqttClient | null) {
-		this.#client = client
+	addClient(client: MqttClient) {
+		this.add({}, this.closeClient, client)
 	}
 
 	/**
 	 * @description
-	 * Set the server to be used as default to close.
+	 * Add a server to close.
 	 */
-	setServer(server: ServerBuilderInstance | null) {
-		this.#server = server
+	addServer(server: ServerBuilderInstance) {
+		this.add({}, this.closeServer, server)
 	}
 
 	/**
@@ -159,23 +153,10 @@ class CleanMethod {
 	}
 
 	/**
-	 *
-	 * @description
-	 * Restart the class to its initial state.
-	 * Set the client and server to `null` and remove all methods stored.
-	 */
-	reset(options?: ResetOptions) {
-		this.#client = null
-		this.#server = null
-
-		this.resetMethods(options?.method)
-	}
-
-	/**
 	 * @description
 	 * Remove all methods stored.
 	 */
-	resetMethods(options?: ResetMethodOptions) {
+	reset(options?: ResetMethodOptions) {
 		if (options?.removeOnce) {
 			for (const [id, { options: methodOptions }] of this.#methods) {
 				if (methodOptions.executeOnce) {
@@ -194,12 +175,10 @@ class CleanMethod {
 	 * @default
 	 * Use the `client` set in the class.
 	 */
-	async closeClient(client?: MqttClient | null) {
-		const clientToClean = client ?? this.#client
-
-		if (clientToClean) {
+	async closeClient(client: MqttClient) {
+		if (client) {
 			await new Promise<void>((resolve, reject) => {
-				clientToClean.end(true, (err) => {
+				client.end(true, (err) => {
 					if (err) reject(err)
 					else resolve()
 				})
@@ -214,32 +193,15 @@ class CleanMethod {
 	 * @default
 	 * Use the `server` set in the class.
 	 */
-	async closeServer(server?: ServerBuilderInstance | null) {
-		const serverToClean = server ?? this.#server
-
-		if (serverToClean?.listening) {
+	async closeServer(server: ServerBuilderInstance) {
+		if (server?.listening) {
 			await new Promise<void>((resolve, reject) => {
-				serverToClean.close((err) => {
+				server.close((err) => {
 					if (err) reject(err)
 					else resolve()
 				})
 			})
 		}
-	}
-
-	/**
-	 * @description
-	 * Close the `client` and `server` connections.
-	 *
-	 * @default
-	 * Use the `client` and `server` set in the class.
-	 */
-	async closeClientAndServer(options?: {
-		client?: MqttClient | null
-		server?: ServerBuilderInstance | null
-	}) {
-		await this.closeClient(options?.client)
-		await this.closeServer(options?.server)
 	}
 
 	/**
@@ -249,7 +211,7 @@ class CleanMethod {
 	 * Execute a method stored by its id
 	 * If the method has the option `executeOnce` set to `true`, it will be removed after execution.
 	 */
-	async executeMethod(id: string) {
+	async run(id: string) {
 		const method = this.#methods.get(id)
 
 		if (!method) {
@@ -272,7 +234,7 @@ class CleanMethod {
 	 * Execute all methods stored.
 	 * If a method has the option `executeOnce` set to `true`, it will be removed after execution.
 	 */
-	async executeAllMethods() {
+	async runAll() {
 		if (this.#methods.size === 0) {
 			return
 		}
@@ -308,4 +270,4 @@ class CleanMethod {
 	}
 }
 
-export default CleanMethod
+export default TeardownHelper
