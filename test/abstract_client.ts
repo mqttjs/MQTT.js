@@ -8,6 +8,7 @@ import levelStore from 'mqtt-level-store'
 import Store from '../src/lib/store'
 import serverBuilder from './server_helpers_for_client_tests'
 import handlePubrel from '../src/lib/handlers/pubrel'
+import TeardownHelper from './helpers/TeardownHelper'
 import handle from '../src/lib/handlers/index'
 import handlePublish from '../src/lib/handlers/publish'
 import mqtt, {
@@ -20,7 +21,7 @@ import mqtt, {
 import { IPublishPacket, IPubrelPacket, ISubackPacket, QoS } from 'mqtt-packet'
 import { DoneCallback, ErrorWithReasonCode } from 'src/lib/shared'
 import { fail } from 'assert'
-import { describe, it, beforeEach, afterEach } from 'node:test'
+import { describe, it, beforeEach, afterEach, after } from 'node:test'
 
 /**
  * These tests try to be consistent with names for servers (brokers) and clients,
@@ -57,6 +58,20 @@ export default function abstractTest(server, config, ports) {
 		opts = { ...config, ...opts } as IClientOptions
 		return mqtt.connect(opts)
 	}
+
+	const teardownHelper = new TeardownHelper()
+
+	async function beforeEachExec() {
+		await teardownHelper.runAll()
+		teardownHelper.reset({ removeOnce: true })
+	}
+
+	async function afterExec() {
+		await teardownHelper.runAll()
+		teardownHelper.reset()
+	}
+
+	after(afterExec)
 
 	describe('closing', () => {
 		it('should emit close if stream closes', function _test(t, done) {
@@ -601,6 +616,9 @@ export default function abstractTest(server, config, ports) {
 	})
 
 	describe('offline messages', () => {
+		beforeEach(beforeEachExec)
+		after(afterExec)
+
 		it('should queue message until connected', function _test(t, done) {
 			const client = connect()
 
@@ -645,7 +663,7 @@ export default function abstractTest(server, config, ports) {
 		})
 
 		it('should not interrupt messages', function _test(t, done) {
-			let client = null
+			let client: mqtt.MqttClient | null = null
 			let publishCount = 0
 			const incomingStore = new mqtt.Store({ clean: false })
 			const outgoingStore = new mqtt.Store({ clean: false })
@@ -683,12 +701,12 @@ export default function abstractTest(server, config, ports) {
 								packet.payload.toString(),
 								'payload4',
 							)
-							client.end((err1) => {
-								server2.close((err2) => done(err1 || err2))
-							})
+							client.end(false, done)
 					}
 				})
 			})
+
+			teardownHelper.addServer(server2)
 
 			server2.listen(ports.PORTAND50, () => {
 				client = connect({
@@ -701,6 +719,7 @@ export default function abstractTest(server, config, ports) {
 					outgoingStore,
 					queueQoSZero: true,
 				})
+				teardownHelper.addClient(client)
 				client.on('packetreceive', (packet) => {
 					if (packet.cmd === 'connack') {
 						setImmediate(() => {
@@ -715,13 +734,20 @@ export default function abstractTest(server, config, ports) {
 		})
 
 		it('should not overtake the messages stored in the level-db-store', function _test(t, done) {
+			teardownHelper.add({ executeOnce: true }, async () => {
+				await new Promise<void>((resolve) => {
+					fs.rm(storePath, { recursive: true }, () => {
+						resolve()
+					})
+				})
+			})
+
 			const storePath = fs.mkdtempSync('test-store_')
 			const store = levelStore(storePath)
-			let client = null
+			let client: mqtt.MqttClient | null = null
 			const incomingStore = store.incoming
 			const outgoingStore = store.outgoing
 			let publishCount = 0
-
 			const server2 = serverBuilder(config.protocol, (serverClient) => {
 				serverClient.on('connect', () => {
 					const connack =
@@ -751,15 +777,13 @@ export default function abstractTest(server, config, ports) {
 								packet.payload.toString(),
 								'payload3',
 							)
-
-							server2.close((err) => {
-								fs.rmSync(storePath, { recursive: true })
-								done(err)
-							})
+							client.end(false, done)
 							break
 					}
 				})
 			})
+
+			teardownHelper.addServer(server2)
 
 			const clientOptions = {
 				port: ports.PORTAND72,
@@ -775,11 +799,12 @@ export default function abstractTest(server, config, ports) {
 			server2.listen(ports.PORTAND72, () => {
 				client = connect(clientOptions)
 
+				teardownHelper.addClient(client)
+
 				client.once('close', () => {
 					client.once('connect', () => {
-						client.publish('test', 'payload2', { qos: 1 })
-						client.publish('test', 'payload3', { qos: 1 }, () => {
-							client.end(false)
+						client.publish('test', 'payload2', { qos: 1 }, () => {
+							client.publish('test', 'payload3', { qos: 1 })
 						})
 					})
 					// reconecting
@@ -883,6 +908,9 @@ export default function abstractTest(server, config, ports) {
 	})
 
 	describe('publishing', () => {
+		beforeEach(beforeEachExec)
+		after(afterExec)
+
 		it('should publish a message (offline)', function _test(t, done) {
 			const client = connect()
 			const payload = 'test'
@@ -1107,8 +1135,8 @@ export default function abstractTest(server, config, ports) {
 		it('should fire a callback (qos 1) on error', function _test(t, done) {
 			// 145 = Packet Identifier in use
 			const pubackReasonCode = 145
-			const pubOpts = { qos: 1 }
-			let client = null
+			const pubOpts: IClientPublishOptions = { qos: 1 }
+			let client: mqtt.MqttClient | null = null
 
 			const server2 = serverBuilder(config.protocol, (serverClient) => {
 				serverClient.on('connect', () => {
@@ -1130,6 +1158,8 @@ export default function abstractTest(server, config, ports) {
 				})
 			})
 
+			teardownHelper.addServer(server2)
+
 			server2.listen(ports.PORTAND72, () => {
 				client = connect({
 					port: ports.PORTAND72,
@@ -1139,6 +1169,8 @@ export default function abstractTest(server, config, ports) {
 					reconnectPeriod: 0,
 				})
 
+				teardownHelper.addClient(client)
+
 				client.once('connect', () => {
 					client.publish(
 						'a',
@@ -1147,15 +1179,18 @@ export default function abstractTest(server, config, ports) {
 						(err, packet?: mqtt.Packet) => {
 							assert.exists(packet)
 							if (version === 5) {
-								assert.strictEqual(err.code, pubackReasonCode)
+								if (err instanceof ErrorWithReasonCode) {
+									assert.strictEqual(
+										err.code,
+										pubackReasonCode,
+									)
+								} else {
+									assert.instanceOf(err, ErrorWithReasonCode)
+								}
 							} else {
 								assert.ifError(err)
 							}
-							setImmediate(() => {
-								client.end(() => {
-									server2.close(done)
-								})
-							})
+							done()
 						},
 					)
 				})
@@ -1177,9 +1212,8 @@ export default function abstractTest(server, config, ports) {
 		it('should fire a callback (qos 2) on error', function _test(t, done) {
 			// 145 = Packet Identifier in use
 			const pubrecReasonCode = 145
-			const pubOpts = { qos: 2 }
-			let client = null
-
+			const pubOpts: IClientPublishOptions = { qos: 2 }
+			let client: mqtt.MqttClient | null = null
 			const server2 = serverBuilder(config.protocol, (serverClient) => {
 				serverClient.on('connect', () => {
 					const connack =
@@ -1204,6 +1238,8 @@ export default function abstractTest(server, config, ports) {
 				})
 			})
 
+			teardownHelper.addServer(server2)
+
 			server2.listen(ports.PORTAND103, () => {
 				client = connect({
 					port: ports.PORTAND103,
@@ -1213,6 +1249,8 @@ export default function abstractTest(server, config, ports) {
 					reconnectPeriod: 0,
 				})
 
+				teardownHelper.addClient(client)
+
 				client.once('connect', () => {
 					client.publish(
 						'a',
@@ -1221,15 +1259,18 @@ export default function abstractTest(server, config, ports) {
 						(err, packet?: mqtt.Packet) => {
 							assert.exists(packet)
 							if (version === 5) {
-								assert.strictEqual(err.code, pubrecReasonCode)
+								if (err instanceof ErrorWithReasonCode) {
+									assert.strictEqual(
+										err.code,
+										pubrecReasonCode,
+									)
+								} else {
+									assert.instanceOf(err, ErrorWithReasonCode)
+								}
 							} else {
 								assert.ifError(err)
 							}
-							setImmediate(() => {
-								client.end(true, () => {
-									server2.close(done)
-								})
-							})
+							done()
 						},
 					)
 				})
@@ -1725,14 +1766,14 @@ export default function abstractTest(server, config, ports) {
 									packet.payload.toString(),
 									'payload3',
 								)
-								client.end((err1) => {
-									server2.close((err2) => done(err1 || err2))
-								})
+								done()
 								break
 						}
 					}
 				})
 			})
+
+			teardownHelper.addServer(server2)
 
 			server2.listen(ports.PORTAND50, () => {
 				client = connect({
@@ -1744,6 +1785,8 @@ export default function abstractTest(server, config, ports) {
 					incomingStore,
 					outgoingStore,
 				})
+
+				teardownHelper.addClient(client)
 
 				client.on('connect', () => {
 					if (!reconnect) {
@@ -3009,6 +3052,9 @@ export default function abstractTest(server, config, ports) {
 	})
 
 	describe('auto reconnect', () => {
+		beforeEach(beforeEachExec)
+		after(afterExec)
+
 		it('should mark the client disconnecting if #end called', function _test(t, done) {
 			const client = connect()
 
@@ -3534,6 +3580,7 @@ export default function abstractTest(server, config, ports) {
 		it('should not resubscribe when reconnecting if suback is error', function _test(t, done) {
 			let tryReconnect = true
 			let reconnectEvent = false
+			let client: mqtt.MqttClient | null = null
 			const server2 = serverBuilder(config.protocol, (serverClient) => {
 				serverClient.on('connect', (packet) => {
 					const connack =
@@ -3551,12 +3598,16 @@ export default function abstractTest(server, config, ports) {
 				})
 			})
 
+			teardownHelper.addServer(server2)
+
 			server2.listen(ports.PORTAND49, () => {
-				const client = connect({
+				client = connect({
 					port: ports.PORTAND49,
 					host: 'localhost',
 					reconnectPeriod: 100,
 				})
+
+				teardownHelper.addClient(client)
 
 				client.on('reconnect', () => {
 					reconnectEvent = true
@@ -3580,9 +3631,7 @@ export default function abstractTest(server, config, ports) {
 							Object.keys(client['_resubscribeTopics']).length,
 							0,
 						)
-						client.end(true, (err1) => {
-							server2.close((err2) => done(err1 || err2))
-						})
+						done()
 					}
 				})
 			})
@@ -3590,7 +3639,7 @@ export default function abstractTest(server, config, ports) {
 
 		it('should preserved incomingStore after disconnecting if clean is false', function _test(t, done) {
 			let reconnect = false
-			let client: mqtt.MqttClient
+			let client: mqtt.MqttClient | null = null
 			const incomingStore = new mqtt.Store({ clean: false })
 			const outgoingStore = new mqtt.Store({ clean: false })
 			const server2 = serverBuilder(config.protocol, (serverClient) => {
@@ -3624,11 +3673,11 @@ export default function abstractTest(server, config, ports) {
 					})
 				})
 				serverClient.on('pubcomp', (packet) => {
-					client.end(true, (err1) => {
-						server2.close((err2) => done(err1 || err2))
-					})
+					done()
 				})
 			})
+
+			teardownHelper.addServer(server2)
 
 			server2.listen(ports.PORTAND50, () => {
 				client = connect({
@@ -3640,6 +3689,8 @@ export default function abstractTest(server, config, ports) {
 					incomingStore,
 					outgoingStore,
 				})
+
+				teardownHelper.addClient(client)
 
 				client.on('connect', () => {
 					if (!reconnect) {
@@ -3656,7 +3707,7 @@ export default function abstractTest(server, config, ports) {
 
 		it('should clear outgoing if close from server', function _test(t, done) {
 			let reconnect = false
-			let client: mqtt.MqttClient
+			let client: mqtt.MqttClient | null = null
 			const server2 = serverBuilder(config.protocol, (serverClient) => {
 				serverClient.on('connect', (packet) => {
 					const connack =
@@ -3675,6 +3726,8 @@ export default function abstractTest(server, config, ports) {
 				})
 			})
 
+			teardownHelper.addServer(server2)
+
 			server2.listen(ports.PORTAND50, () => {
 				client = connect({
 					port: ports.PORTAND50,
@@ -3684,6 +3737,8 @@ export default function abstractTest(server, config, ports) {
 					keepalive: 1,
 					reconnectPeriod: 0,
 				})
+
+				teardownHelper.addClient(client)
 
 				client.on('connect', () => {
 					client.subscribe('test', { qos: 2 }, (e) => {
@@ -3695,7 +3750,7 @@ export default function abstractTest(server, config, ports) {
 
 				client.on('close', () => {
 					if (reconnect) {
-						server2.close((err) => done(err))
+						done()
 					} else {
 						assert.strictEqual(
 							Object.keys(client.outgoing).length,
@@ -3710,7 +3765,7 @@ export default function abstractTest(server, config, ports) {
 
 		it('should resend in-flight QoS 1 publish messages from the client if clean is false', function _test(t, done) {
 			let reconnect = false
-			let client: mqtt.MqttClient
+			let client: mqtt.MqttClient | null = null
 			const incomingStore = new mqtt.Store({ clean: false })
 			const outgoingStore = new mqtt.Store({ clean: false })
 			const server2 = serverBuilder(config.protocol, (serverClient) => {
@@ -3721,9 +3776,7 @@ export default function abstractTest(server, config, ports) {
 				})
 				serverClient.on('publish', (packet) => {
 					if (reconnect) {
-						client.end(true, (err1) => {
-							server2.close((err2) => done(err1 || err2))
-						})
+						done()
 					} else {
 						client.end(true, () => {
 							client.reconnect({
@@ -3736,6 +3789,8 @@ export default function abstractTest(server, config, ports) {
 				})
 			})
 
+			teardownHelper.addServer(server2)
+
 			server2.listen(ports.PORTAND50, () => {
 				client = connect({
 					port: ports.PORTAND50,
@@ -3746,6 +3801,8 @@ export default function abstractTest(server, config, ports) {
 					incomingStore,
 					outgoingStore,
 				})
+
+				teardownHelper.addClient(client)
 
 				client.on('connect', () => {
 					if (!reconnect) {
@@ -3758,7 +3815,7 @@ export default function abstractTest(server, config, ports) {
 
 		it('should resend in-flight QoS 2 publish messages from the client if clean is false', function _test(t, done) {
 			let reconnect = false
-			let client: mqtt.MqttClient
+			let client: mqtt.MqttClient | null = null
 			const incomingStore = new mqtt.Store({ clean: false })
 			const outgoingStore = new mqtt.Store({ clean: false })
 			const server2 = serverBuilder(config.protocol, (serverClient) => {
@@ -3769,9 +3826,7 @@ export default function abstractTest(server, config, ports) {
 				})
 				serverClient.on('publish', (packet) => {
 					if (reconnect) {
-						client.end(true, (err1) => {
-							server2.close((err2) => done(err1 || err2))
-						})
+						done()
 					} else {
 						client.end(true, () => {
 							client.reconnect({
@@ -3784,6 +3839,8 @@ export default function abstractTest(server, config, ports) {
 				})
 			})
 
+			teardownHelper.addServer(server2)
+
 			server2.listen(ports.PORTAND50, () => {
 				client = connect({
 					port: ports.PORTAND50,
@@ -3794,6 +3851,8 @@ export default function abstractTest(server, config, ports) {
 					incomingStore,
 					outgoingStore,
 				})
+
+				teardownHelper.addClient(client)
 
 				client.on('connect', () => {
 					if (!reconnect) {
@@ -3806,7 +3865,7 @@ export default function abstractTest(server, config, ports) {
 
 		it('should resend in-flight QoS 2 pubrel messages from the client if clean is false', function _test(t, done) {
 			let reconnect = false
-			let client: mqtt.MqttClient
+			let client: mqtt.MqttClient | null = null
 			const incomingStore = new mqtt.Store({ clean: false })
 			const outgoingStore = new mqtt.Store({ clean: false })
 			const server2 = serverBuilder(config.protocol, (serverClient) => {
@@ -3835,6 +3894,8 @@ export default function abstractTest(server, config, ports) {
 				})
 			})
 
+			teardownHelper.addServer(server2)
+
 			server2.listen(ports.PORTAND50, () => {
 				client = connect({
 					port: ports.PORTAND50,
@@ -3846,6 +3907,8 @@ export default function abstractTest(server, config, ports) {
 					outgoingStore,
 				})
 
+				teardownHelper.addClient(client)
+
 				client.on('connect', () => {
 					if (!reconnect) {
 						client.publish(
@@ -3855,9 +3918,7 @@ export default function abstractTest(server, config, ports) {
 							(err) => {
 								assert(reconnect)
 								assert.ifError(err)
-								client.end(true, (err1) => {
-									server2.close((err2) => done(err1 || err2))
-								})
+								done()
 							},
 						)
 					}
@@ -3870,7 +3931,7 @@ export default function abstractTest(server, config, ports) {
 			let publishCount = 0
 			let reconnect = false
 			let disconnectOnce = true
-			let client: mqtt.MqttClient
+			let client: mqtt.MqttClient | null = null
 			const incomingStore = new mqtt.Store({ clean: false })
 			const outgoingStore = new mqtt.Store({ clean: false })
 			const server2 = serverBuilder(config.protocol, (serverClient) => {
@@ -3904,9 +3965,7 @@ export default function abstractTest(server, config, ports) {
 									packet.payload.toString(),
 									'payload3',
 								)
-								client.end(true, (err1) => {
-									server2.close((err2) => done(err1 || err2))
-								})
+								done()
 								break
 						}
 					} else if (disconnectOnce) {
@@ -3922,6 +3981,8 @@ export default function abstractTest(server, config, ports) {
 				})
 			})
 
+			teardownHelper.addServer(server2)
+
 			server2.listen(ports.PORTAND50, () => {
 				client = connect({
 					port: ports.PORTAND50,
@@ -3932,6 +3993,8 @@ export default function abstractTest(server, config, ports) {
 					incomingStore,
 					outgoingStore,
 				})
+
+				teardownHelper.addClient(client)
 
 				client['nextId'] = 65535
 
