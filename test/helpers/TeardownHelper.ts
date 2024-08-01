@@ -14,7 +14,7 @@ type AddOptions = {
 	executeOnce?: boolean
 }
 
-type ResetMethodOptions = {
+type ResetOptions = {
 	/**
 	 * @description
 	 * If `true`, only the methods that have the option `executeOnce` set to `true` will be removed.
@@ -22,10 +22,6 @@ type ResetMethodOptions = {
 	 * @default false
 	 */
 	removeOnce?: boolean
-}
-
-type ResetOptions = {
-	method?: ResetMethodOptions
 }
 
 /**
@@ -39,22 +35,22 @@ type ResetOptions = {
  * import { describe, it } from 'node:test'
  * import mqtt from './src'
  * import serverBuilder from './test/server_helpers_for_client_tests'
- * import CleanMethod from './test/helpers/clean_method'
+ * import TeardownHelper from './test/helpers/TeardownHelper'
  *
  *
  * describe('Test', () => {
- *     const cleanMethod = new CleanMethod()
+ *     const teardownHelper = new TeardownHelper()
  *
  *     it('should clean the client and server', (t, done) => {
  *         t.after(async () => {
- *             await cleanMethod.closeClientAndServer()
+ *             await teardownHelper.runAll()
  *         })
  *
  *         const server = serverBuilder('8883')
  *         const client = mqtt.connect('mqtt://localhost')
  *
- *         cleanMethod.setServer(server)
- *         cleanMethod.setClient(client)
+ *         teardownHelper.addServer(server)
+ *         teardownHelper.addClient(client)
  *     })
  * })
  * ```
@@ -64,15 +60,15 @@ type ResetOptions = {
  * import { describe, it, after } from 'node:test'
  * import mqtt from './src'
  * import serverBuilder from './test/server_helpers_for_client_tests'
- * import CleanMethod from './test/helpers/clean_method'
+ * import TeardownHelper from './test/helpers/TeardownHelper'
  *
  *
  * describe('Test', () => {
  *
- *     const cleanMethod = new CleanMethod()
+ *     const teardownHelper = new TeardownHelper()
  *     let server = serverBuilder('8883')
  *
- *     cleanMethod.add({}, async () => {
+ *     teardownHelper.add({}, async () => {
  *         if (server?.listening) {
  *             await new Promise<void>((resolve, reject) => {
  *                 server.close((err) => {
@@ -84,14 +80,14 @@ type ResetOptions = {
  *     })
  *
  *     after(async () => {
- *         await cleanMethod.closeAllMethods()
+ *         await teardownHelper.runAll()
  *     })
  *
  *     it('should clean the client and server', (t, done) => {
  *         server = serverBuilder('8883')
  *         const client = mqtt.connect('mqtt://localhost')
  *
- *         cleanMethod.setClient(client)
+ *         teardownHelper.addClient(client)
  *         done()
  *     })
  *
@@ -156,7 +152,7 @@ class TeardownHelper {
 	 * @description
 	 * Remove all methods stored.
 	 */
-	reset(options?: ResetMethodOptions) {
+	reset(options?: ResetOptions) {
 		if (options?.removeOnce) {
 			for (const [id, { options: methodOptions }] of this.#methods) {
 				if (methodOptions.executeOnce) {
@@ -208,7 +204,7 @@ class TeardownHelper {
 	 * @param id Method id to be executed.
 	 *
 	 * @description
-	 * Execute a method stored by its id
+	 * Execute a method stored by its id.
 	 * If the method has the option `executeOnce` set to `true`, it will be removed after execution.
 	 */
 	async run(id: string) {
