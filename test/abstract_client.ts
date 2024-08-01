@@ -6,7 +6,7 @@ import sinon from 'sinon'
 import fs from 'fs'
 import levelStore from 'mqtt-level-store'
 import Store from '../src/lib/store'
-import serverBuilder from './server_helpers_for_client_tests'
+import serverBuilderFn from './server_helpers_for_client_tests'
 import handlePubrel from '../src/lib/handlers/pubrel'
 import TeardownHelper from './helpers/TeardownHelper'
 import handle from '../src/lib/handlers/index'
@@ -50,16 +50,23 @@ const fakeTimersOptions = {
 
 export default function abstractTest(server, config, ports) {
 	const version = config.protocolVersion || 4
+	const teardownHelper = new TeardownHelper()
 
 	function connect(opts?: IClientOptions | string) {
 		if (typeof opts === 'string') {
 			opts = { host: opts }
 		}
 		opts = { ...config, ...opts } as IClientOptions
-		return mqtt.connect(opts)
+		const instance = mqtt.connect(opts)
+		teardownHelper.addClient(instance)
+		return instance
 	}
 
-	const teardownHelper = new TeardownHelper()
+	function serverBuilder(...args: Parameters<typeof serverBuilderFn>) {
+		const instance = serverBuilderFn(...args)
+		teardownHelper.addServer(instance)
+		return instance
+	}
 
 	async function beforeEachExec() {
 		await teardownHelper.runAll()
@@ -74,6 +81,9 @@ export default function abstractTest(server, config, ports) {
 	after(afterExec)
 
 	describe('closing', () => {
+		beforeEach(beforeEachExec)
+		after(afterExec)
+
 		it('should emit close if stream closes', function _test(t, done) {
 			const client = connect()
 
@@ -298,6 +308,9 @@ export default function abstractTest(server, config, ports) {
 	})
 
 	describe('connecting', () => {
+		beforeEach(beforeEachExec)
+		after(afterExec)
+
 		it('should connect to the broker', function _test(t, done) {
 			const client = connect()
 			client.on('error', done)
@@ -326,7 +339,7 @@ export default function abstractTest(server, config, ports) {
 			server.once('client', (serverClient) => {
 				serverClient.once('connect', (packet) => {
 					assert.strictEqual(packet.clean, true)
-					done()
+					client.end((err) => done(err))
 				})
 			})
 		})
@@ -384,7 +397,7 @@ export default function abstractTest(server, config, ports) {
 			server.once('client', (serverClient) => {
 				serverClient.once('connect', (packet) => {
 					assert.include(packet.clientId, 'testclient')
-					done()
+					client.end((err) => done(err))
 				})
 			})
 		})
@@ -473,6 +486,9 @@ export default function abstractTest(server, config, ports) {
 	})
 
 	describe('handling offline states', () => {
+		beforeEach(beforeEachExec)
+		after(afterExec)
+
 		it('should emit offline event once when the client transitions from connected states to disconnected ones', function _test(t, done) {
 			const client = connect({ reconnectPeriod: 20 })
 
@@ -498,6 +514,9 @@ export default function abstractTest(server, config, ports) {
 	})
 
 	describe('topic validations when subscribing', () => {
+		beforeEach(beforeEachExec)
+		after(afterExec)
+
 		it('should be ok for well-formated topics', function _test(t, done) {
 			const client = connect()
 			client.subscribe(
@@ -549,7 +568,7 @@ export default function abstractTest(server, config, ports) {
 					}
 					assert.isArray(granted2)
 					assert.isEmpty(granted2)
-					done()
+					client.end((err) => done(err))
 				})
 			})
 		})
@@ -706,8 +725,6 @@ export default function abstractTest(server, config, ports) {
 				})
 			})
 
-			teardownHelper.addServer(server2)
-
 			server2.listen(ports.PORTAND50, () => {
 				client = connect({
 					port: ports.PORTAND50,
@@ -719,7 +736,6 @@ export default function abstractTest(server, config, ports) {
 					outgoingStore,
 					queueQoSZero: true,
 				})
-				teardownHelper.addClient(client)
 				client.on('packetreceive', (packet) => {
 					if (packet.cmd === 'connack') {
 						setImmediate(() => {
@@ -783,8 +799,6 @@ export default function abstractTest(server, config, ports) {
 				})
 			})
 
-			teardownHelper.addServer(server2)
-
 			const clientOptions = {
 				port: ports.PORTAND72,
 				host: 'localhost',
@@ -798,8 +812,6 @@ export default function abstractTest(server, config, ports) {
 
 			server2.listen(ports.PORTAND72, () => {
 				client = connect(clientOptions)
-
-				teardownHelper.addClient(client)
 
 				client.once('close', () => {
 					client.once('connect', () => {
@@ -1158,8 +1170,6 @@ export default function abstractTest(server, config, ports) {
 				})
 			})
 
-			teardownHelper.addServer(server2)
-
 			server2.listen(ports.PORTAND72, () => {
 				client = connect({
 					port: ports.PORTAND72,
@@ -1168,8 +1178,6 @@ export default function abstractTest(server, config, ports) {
 					clientId: 'cid1',
 					reconnectPeriod: 0,
 				})
-
-				teardownHelper.addClient(client)
 
 				client.once('connect', () => {
 					client.publish(
@@ -1238,8 +1246,6 @@ export default function abstractTest(server, config, ports) {
 				})
 			})
 
-			teardownHelper.addServer(server2)
-
 			server2.listen(ports.PORTAND103, () => {
 				client = connect({
 					port: ports.PORTAND103,
@@ -1248,8 +1254,6 @@ export default function abstractTest(server, config, ports) {
 					clientId: 'cid1',
 					reconnectPeriod: 0,
 				})
-
-				teardownHelper.addClient(client)
 
 				client.once('connect', () => {
 					client.publish(
@@ -1773,8 +1777,6 @@ export default function abstractTest(server, config, ports) {
 				})
 			})
 
-			teardownHelper.addServer(server2)
-
 			server2.listen(ports.PORTAND50, () => {
 				client = connect({
 					port: ports.PORTAND50,
@@ -1785,8 +1787,6 @@ export default function abstractTest(server, config, ports) {
 					incomingStore,
 					outgoingStore,
 				})
-
-				teardownHelper.addClient(client)
 
 				client.on('connect', () => {
 					if (!reconnect) {
@@ -1877,6 +1877,9 @@ export default function abstractTest(server, config, ports) {
 	})
 
 	describe('unsubscribing', () => {
+		beforeEach(beforeEachExec)
+		after(afterExec)
+
 		it('should send an unsubscribe packet (offline)', function _test(t, done) {
 			const client = connect()
 			let received = false
@@ -2010,13 +2013,16 @@ export default function abstractTest(server, config, ports) {
 		let clock: sinon.SinonFakeTimers
 
 		// eslint-disable-next-line
-		beforeEach(() => {
+		beforeEach(async () => {
 			clock = sinon.useFakeTimers(fakeTimersOptions)
+			await beforeEachExec()
 		})
 
 		afterEach(() => {
 			clock.restore()
 		})
+
+		after(afterExec)
 
 		it('should send ping at keepalive interval', function _test(t, done) {
 			const interval = 3000
@@ -2201,6 +2207,9 @@ export default function abstractTest(server, config, ports) {
 	})
 
 	describe('pinging', () => {
+		beforeEach(beforeEachExec)
+		after(afterExec)
+
 		it('should setup keepalive manager', function _test(t, done) {
 			const client = connect({ keepalive: 3 })
 			client.once('connect', () => {
@@ -2306,6 +2315,9 @@ export default function abstractTest(server, config, ports) {
 	})
 
 	describe('subscribing', () => {
+		beforeEach(beforeEachExec)
+		after(afterExec)
+
 		it('should send a subscribe message (offline)', function _test(t, done) {
 			const client = connect()
 
@@ -2313,7 +2325,7 @@ export default function abstractTest(server, config, ports) {
 
 			server.once('client', (serverClient) => {
 				serverClient.once('subscribe', () => {
-					done()
+					client.end((err) => done(err))
 				})
 			})
 		})
@@ -2338,7 +2350,7 @@ export default function abstractTest(server, config, ports) {
 						result.rh = 0
 					}
 					assert.include(packet.subscriptions[0], result)
-					done()
+					client.end((err) => done(err))
 				})
 			})
 		})
@@ -2353,7 +2365,7 @@ export default function abstractTest(server, config, ports) {
 
 			client.on('packetsend', (packet) => {
 				if (packet.cmd === 'subscribe') {
-					done()
+					client.end((err) => done(err))
 				}
 			})
 		})
@@ -2368,7 +2380,7 @@ export default function abstractTest(server, config, ports) {
 
 			client.on('packetreceive', (packet) => {
 				if (packet.cmd === 'suback') {
-					done()
+					client.end((err) => done(err))
 				}
 			})
 		})
@@ -2464,7 +2476,7 @@ export default function abstractTest(server, config, ports) {
 					}
 
 					assert.deepStrictEqual(packet.subscriptions, expected)
-					done()
+					client.end((err) => done(err))
 				})
 			})
 		})
@@ -2579,6 +2591,9 @@ export default function abstractTest(server, config, ports) {
 	})
 
 	describe('receiving messages', () => {
+		beforeEach(beforeEachExec)
+		after(afterExec)
+
 		it('should fire the message event', function _test(t, done) {
 			const client = connect()
 			const testPacket = {
@@ -2758,6 +2773,9 @@ export default function abstractTest(server, config, ports) {
 	})
 
 	describe('qos handling', () => {
+		beforeEach(beforeEachExec)
+		after(afterExec)
+
 		it('should follow qos 0 semantics (trivial)', function _test(t, done) {
 			const client = connect()
 			const testTopic = 'test'
@@ -3157,8 +3175,7 @@ export default function abstractTest(server, config, ports) {
 			const client = connect()
 
 			client.on('connect', () => {
-				client.end()
-				done() // it will raise an exception if called two times
+				client.end((err) => done(err))
 			})
 		})
 
@@ -3598,16 +3615,12 @@ export default function abstractTest(server, config, ports) {
 				})
 			})
 
-			teardownHelper.addServer(server2)
-
 			server2.listen(ports.PORTAND49, () => {
 				client = connect({
 					port: ports.PORTAND49,
 					host: 'localhost',
 					reconnectPeriod: 100,
 				})
-
-				teardownHelper.addClient(client)
 
 				client.on('reconnect', () => {
 					reconnectEvent = true
@@ -3677,8 +3690,6 @@ export default function abstractTest(server, config, ports) {
 				})
 			})
 
-			teardownHelper.addServer(server2)
-
 			server2.listen(ports.PORTAND50, () => {
 				client = connect({
 					port: ports.PORTAND50,
@@ -3689,8 +3700,6 @@ export default function abstractTest(server, config, ports) {
 					incomingStore,
 					outgoingStore,
 				})
-
-				teardownHelper.addClient(client)
 
 				client.on('connect', () => {
 					if (!reconnect) {
@@ -3726,8 +3735,6 @@ export default function abstractTest(server, config, ports) {
 				})
 			})
 
-			teardownHelper.addServer(server2)
-
 			server2.listen(ports.PORTAND50, () => {
 				client = connect({
 					port: ports.PORTAND50,
@@ -3737,8 +3744,6 @@ export default function abstractTest(server, config, ports) {
 					keepalive: 1,
 					reconnectPeriod: 0,
 				})
-
-				teardownHelper.addClient(client)
 
 				client.on('connect', () => {
 					client.subscribe('test', { qos: 2 }, (e) => {
@@ -3789,8 +3794,6 @@ export default function abstractTest(server, config, ports) {
 				})
 			})
 
-			teardownHelper.addServer(server2)
-
 			server2.listen(ports.PORTAND50, () => {
 				client = connect({
 					port: ports.PORTAND50,
@@ -3801,8 +3804,6 @@ export default function abstractTest(server, config, ports) {
 					incomingStore,
 					outgoingStore,
 				})
-
-				teardownHelper.addClient(client)
 
 				client.on('connect', () => {
 					if (!reconnect) {
@@ -3839,8 +3840,6 @@ export default function abstractTest(server, config, ports) {
 				})
 			})
 
-			teardownHelper.addServer(server2)
-
 			server2.listen(ports.PORTAND50, () => {
 				client = connect({
 					port: ports.PORTAND50,
@@ -3851,8 +3850,6 @@ export default function abstractTest(server, config, ports) {
 					incomingStore,
 					outgoingStore,
 				})
-
-				teardownHelper.addClient(client)
 
 				client.on('connect', () => {
 					if (!reconnect) {
@@ -3894,8 +3891,6 @@ export default function abstractTest(server, config, ports) {
 				})
 			})
 
-			teardownHelper.addServer(server2)
-
 			server2.listen(ports.PORTAND50, () => {
 				client = connect({
 					port: ports.PORTAND50,
@@ -3906,8 +3901,6 @@ export default function abstractTest(server, config, ports) {
 					incomingStore,
 					outgoingStore,
 				})
-
-				teardownHelper.addClient(client)
 
 				client.on('connect', () => {
 					if (!reconnect) {
@@ -3981,8 +3974,6 @@ export default function abstractTest(server, config, ports) {
 				})
 			})
 
-			teardownHelper.addServer(server2)
-
 			server2.listen(ports.PORTAND50, () => {
 				client = connect({
 					port: ports.PORTAND50,
@@ -3993,8 +3984,6 @@ export default function abstractTest(server, config, ports) {
 					incomingStore,
 					outgoingStore,
 				})
-
-				teardownHelper.addClient(client)
 
 				client['nextId'] = 65535
 
@@ -4076,9 +4065,10 @@ export default function abstractTest(server, config, ports) {
 			const connack =
 				version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
 
-			beforeEach(() => {
+			beforeEach(async () => {
 				cachedClientListeners = server.listeners('client')
 				server.removeAllListeners('client')
+				await beforeEachExec()
 			})
 
 			afterEach(() => {
@@ -4087,6 +4077,8 @@ export default function abstractTest(server, config, ports) {
 					server.on('client', listener)
 				})
 			})
+
+			after(afterExec)
 
 			it('should resubscribe even if disconnect is before suback', function _test(t, done) {
 				const client = connect({ reconnectPeriod: 100, ...config })
@@ -4150,6 +4142,9 @@ export default function abstractTest(server, config, ports) {
 	})
 
 	describe('message id to subscription topic mapping', () => {
+		beforeEach(beforeEachExec)
+		after(afterExec)
+
 		it('should not create a mapping if resubscribe is disabled', function _test(t, done) {
 			const client = connect({ resubscribe: false })
 			client.subscribe('test1')
