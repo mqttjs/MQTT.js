@@ -260,7 +260,9 @@ const browserStreamBuilder: StreamBuilder = (client, opts) => {
 		let { data } = event
 		if (data instanceof ArrayBuffer) data = Buffer.from(data)
 		else data = Buffer.from(data as string, 'utf8')
-		proxy.push(data)
+		if (proxy && !proxy.destroyed) {
+			proxy.push(data)
+		}
 	}
 
 	function socketWriteBrowser(

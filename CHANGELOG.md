@@ -1,5 +1,14 @@
 
 
+## [5.9.1](https://github.com/mqttjs/MQTT.js/compare/v5.9.0...v5.9.1) (2024-08-01)
+
+
+### Bug Fixes
+
+* **browser:** ensure proxy is defined ([ffc9805](https://github.com/mqttjs/MQTT.js/commit/ffc9805a51adf88bded6a1af1c0f66004e9e0f08))
+* **browser:** prevent error `stream.push() after EOF` ([#1915](https://github.com/mqttjs/MQTT.js/issues/1915)) ([b5cc835](https://github.com/mqttjs/MQTT.js/commit/b5cc835fed9bd624c20d5f4f42b15c3cfa4b3fbe)), closes [#1914](https://github.com/mqttjs/MQTT.js/issues/1914)
+* **test:** close open connections ([#1911](https://github.com/mqttjs/MQTT.js/issues/1911)) ([053a7be](https://github.com/mqttjs/MQTT.js/commit/053a7be91f93a0a27c63ca5ed488d9206fdec960))
+
 # [5.9.0](https://github.com/mqttjs/MQTT.js/compare/v5.8.1...v5.9.0) (2024-07-26)
 
 

@@ -56,7 +56,9 @@ export class BufferedDuplex extends Duplex {
 		this.isSocketOpen = false
 
 		this.proxy.on('data', (chunk) => {
-			this.push(chunk)
+			if (!this.destroyed) {
+				this.push(chunk)
+			}
 		})
 	}
 
