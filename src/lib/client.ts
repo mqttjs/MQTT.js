@@ -1402,11 +1402,11 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	): Promise<Packet | undefined>
 	public unsubscribeAsync(
 		topic: string | string[],
-		opts?: IClientSubscribeOptions,
+		opts?: IClientUnsubscribeProperties,
 	): Promise<Packet | undefined>
 	public unsubscribeAsync(
 		topic: string | string[],
-		opts?: IClientSubscribeOptions,
+		opts?: IClientUnsubscribeProperties,
 	): Promise<Packet | undefined> {
 		return new Promise((resolve, reject) => {
 			this.unsubscribe(topic, opts, (err, packet) => {
