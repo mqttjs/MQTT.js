@@ -264,14 +264,19 @@ export default function abstractTest(server, config, ports) {
 
 		it('should emit end even on a failed connection', function _test(t, done) {
 			const client = connect({ host: 'this_hostname_should_not_exist' })
+			let timeoutEmitted = false
 
 			const timeout = setTimeout(() => {
+				timeoutEmitted = true
 				done(new Error('Disconnected client has failed to emit end'))
 			}, 500)
 
 			client.once('end', () => {
-				clearTimeout(timeout)
-				done()
+				// Prevent hanging test if `end` is not emitted before timeout
+				if (!timeoutEmitted) {
+					clearTimeout(timeout)
+					done()
+				}
 			})
 
 			// after 200ms manually invoke client.end
@@ -374,17 +379,24 @@ export default function abstractTest(server, config, ports) {
 		})
 
 		it('should require a clientId with clean=false', function _test(t, done) {
+			let errorCaught = false
+
 			try {
 				const client = connect({ clean: false })
 				client.on('error', (err) => {
 					done(err)
 				})
 			} catch (err) {
+				errorCaught = true
 				assert.strictEqual(
 					err.message,
 					'Missing clientId for unclean clients',
 				)
 				done()
+			} finally {
+				if (!errorCaught) {
+					done(new Error('Client should have thrown an error'))
+				}
 			}
 		})
 
