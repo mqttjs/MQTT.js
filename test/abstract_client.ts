@@ -2186,7 +2186,7 @@ export default function abstractTest(server, config, ports) {
 			it(`should shift ping on pingresp when reschedulePings===${reschedulePings}`, function _test(t, done) {
 				const intervalMs = 3000
 
-				let client = connect({
+				const client = connect({
 					keepalive: intervalMs / 1000,
 					reschedulePings,
 				})
@@ -2254,7 +2254,7 @@ export default function abstractTest(server, config, ports) {
 					reconnectPeriod: 5000,
 				}
 
-				let client = connect(options)
+				const client = connect(options)
 
 				client.once('connect', () => {
 					client.once('error', (err) => {
@@ -2288,7 +2288,7 @@ export default function abstractTest(server, config, ports) {
 					clock.restore()
 				})
 
-				let client = connect({ keepalive: 10 })
+				const client = connect({ keepalive: 10 })
 				client.once('close', () => {
 					done(new Error('Client closed connection'))
 				})
@@ -3299,7 +3299,7 @@ export default function abstractTest(server, config, ports) {
 				timeout: 4000,
 			},
 			function _test(t, done) {
-				let client = connect({ reconnectPeriod: 200 })
+				const client = connect({ reconnectPeriod: 200 })
 				let serverPublished = false
 				let clientCalledBack = false
 
@@ -3374,7 +3374,7 @@ export default function abstractTest(server, config, ports) {
 				timeout: 4000,
 			},
 			function _test(t, done) {
-				let client = connect({ reconnectPeriod: 200 })
+				const client = connect({ reconnectPeriod: 200 })
 				let serverPublished = false
 				let clientCalledBack = false
 
@@ -3411,7 +3411,7 @@ export default function abstractTest(server, config, ports) {
 		)
 
 		it('should not resend in-flight QoS 1 removed publish messages from the client', function _test(t, done) {
-			let client = connect({ reconnectPeriod: 100 })
+			const client = connect({ reconnectPeriod: 100 })
 			let clientCalledBack = false
 
 			server.once('client', (serverClient) => {
