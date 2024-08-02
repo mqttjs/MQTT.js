@@ -371,10 +371,10 @@ export type ISubscriptionMap = {
 }
 
 export interface IClientUnsubscribeProperties {
-  /*
-   *  MQTT 5.0 properties object for unsubscribe
-   * */
-  properties?: IUnsubscribePacket['properties']
+	/*
+	 *  MQTT 5.0 properties object for unsubscribe
+	 * */
+	properties?: IUnsubscribePacket['properties']
 }
 
 export { IConnackPacket, IDisconnectPacket, IPublishPacket, Packet }
