@@ -2198,7 +2198,6 @@ export default function abstractTest(server, config, ports) {
 						process.nextTick(() => {
 							assert.strictEqual(spy.callCount, 1)
 							client.end(true, done)
-							client = null
 						})
 					}
 				})
@@ -2248,10 +2247,6 @@ export default function abstractTest(server, config, ports) {
 
 				t.after(() => {
 					clock.restore()
-					if (client) {
-						client.end(true)
-						throw new Error('Test timed out')
-					}
 				})
 
 				const options: IClientOptions = {
@@ -2267,7 +2262,6 @@ export default function abstractTest(server, config, ports) {
 						client.once('connect', () => {
 							client.end(true, done)
 							clock.tick(100)
-							client = null
 						})
 					})
 
@@ -2292,9 +2286,6 @@ export default function abstractTest(server, config, ports) {
 
 				t.after(() => {
 					clock.restore()
-					if (client) {
-						client.end(true)
-					}
 				})
 
 				let client = connect({ keepalive: 10 })
@@ -2316,7 +2307,6 @@ export default function abstractTest(server, config, ports) {
 							client.removeAllListeners('close')
 							client.end(true, done)
 							clock.tick(100)
-							client = null
 						}
 					})
 
@@ -3309,12 +3299,6 @@ export default function abstractTest(server, config, ports) {
 				timeout: 4000,
 			},
 			function _test(t, done) {
-				t.after(() => {
-					// close client if not closed
-					if (client) {
-						client.end(true)
-					}
-				})
 				let client = connect({ reconnectPeriod: 200 })
 				let serverPublished = false
 				let clientCalledBack = false
@@ -3352,7 +3336,6 @@ export default function abstractTest(server, config, ports) {
 						setImmediate(() => {
 							assert.isTrue(clientCalledBack)
 							client.end(true, done)
-							client = null
 						})
 					}
 				})
@@ -3391,13 +3374,6 @@ export default function abstractTest(server, config, ports) {
 				timeout: 4000,
 			},
 			function _test(t, done) {
-				t.after(() => {
-					// close client if not closed
-					if (client) {
-						client.end(true)
-					}
-				})
-
 				let client = connect({ reconnectPeriod: 200 })
 				let serverPublished = false
 				let clientCalledBack = false
@@ -3428,7 +3404,6 @@ export default function abstractTest(server, config, ports) {
 						setImmediate(() => {
 							assert.isTrue(clientCalledBack)
 							client.end(true, done)
-							client = null
 						})
 					}
 				})
@@ -3436,13 +3411,6 @@ export default function abstractTest(server, config, ports) {
 		)
 
 		it('should not resend in-flight QoS 1 removed publish messages from the client', function _test(t, done) {
-			t.after(() => {
-				// close client if not closed
-				if (client) {
-					client.end(true)
-				}
-			})
-
 			let client = connect({ reconnectPeriod: 100 })
 			let clientCalledBack = false
 
@@ -3477,7 +3445,6 @@ export default function abstractTest(server, config, ports) {
 			assert.isTrue(clientCalledBack)
 			client.end(true, (err) => {
 				done(err)
-				client = null
 			})
 		})
 
