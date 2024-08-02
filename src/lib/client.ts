@@ -376,7 +376,7 @@ export type OnDisconnectCallback = (packet: IDisconnectPacket) => void
 export type ClientSubscribeCallback = (
 	err: Error | null,
 	granted?: ISubscriptionGrant[],
-  packet?: ISubackPacket
+	packet?: ISubackPacket,
 ) => void
 export type OnMessageCallback = (
 	topic: string,
