@@ -323,7 +323,7 @@ export interface IClientReconnectOptions {
 }
 export interface IClientSubscribeProperties {
 	/*
-	 *  MQTT 5.0 properies object of subscribe
+	 *  MQTT 5.0 properties object of subscribe
 	 * */
 	properties?: ISubscribePacket['properties']
 }
@@ -368,6 +368,13 @@ export type ISubscriptionMap = {
 	[topic: string]: IClientSubscribeOptions
 } & {
 	resubscribe?: boolean
+}
+
+export interface IClientUnsubscribeProperties {
+  /*
+   *  MQTT 5.0 properties object for unsubscribe
+   * */
+  properties?: IUnsubscribePacket['properties']
 }
 
 export { IConnackPacket, IDisconnectPacket, IPublishPacket, Packet }
@@ -1300,7 +1307,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	public unsubscribe(topic: string | string[]): MqttClient
 	public unsubscribe(
 		topic: string | string[],
-		opts?: IClientSubscribeOptions,
+		opts?: IClientUnsubscribeProperties,
 	): MqttClient
 	public unsubscribe(
 		topic: string | string[],
@@ -1308,12 +1315,12 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	): MqttClient
 	public unsubscribe(
 		topic: string | string[],
-		opts?: IClientSubscribeOptions,
+		opts?: IClientUnsubscribeProperties,
 		callback?: PacketCallback,
 	): MqttClient
 	public unsubscribe(
 		topic: string | string[],
-		opts?: IClientSubscribeOptions | PacketCallback,
+		opts?: IClientUnsubscribeProperties | PacketCallback,
 		callback?: PacketCallback,
 	): MqttClient {
 		if (typeof topic === 'string') {
