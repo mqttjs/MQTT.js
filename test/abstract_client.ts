@@ -2128,6 +2128,19 @@ export default function abstractTest(server, config, ports) {
 					reschedulePings,
 				})
 
+				// Just in case `connect` event is emmited before setting up the other listeners
+				// move `connect` event at the top
+				client.once('connect', () => {
+					// Prevent publishing before setting up the listeners
+					process.nextTick(() => {
+						// reset call count (it's called also on connack)
+						spyReschedule.resetHistory()
+						// use qos1 so the puback is received (to reschedule ping)
+						client.publish('foo', 'bar', { qos: 1 })
+						client.publish('foo', 'bar', { qos: 1 })
+					}, 1)
+				})
+
 				const spyReschedule = sinon.spy(
 					client,
 					'_reschedulePing' as any,
@@ -2169,13 +2182,8 @@ export default function abstractTest(server, config, ports) {
 					})
 				})
 
-				client.once('connect', () => {
-					// reset call count (it's called also on connack)
-					spyReschedule.resetHistory()
-					// use qos1 so the puback is received (to reschedule ping)
-					client.publish('foo', 'bar', { qos: 1 })
-					client.publish('foo', 'bar', { qos: 1 })
-				})
+				// After setting up the listeners, publish the packages
+				clock.tick(1)
 			})
 		}
 
