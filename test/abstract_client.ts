@@ -2501,7 +2501,7 @@ export default function abstractTest(server, config, ports) {
 			const topic = 'test'
 
 			client.once('connect', () => {
-				client.subscribe(topic, { qos: 2 }, (err, granted) => {
+				client.subscribe(topic, { qos: 2 }, (err, granted, suback) => {
 					if (err) {
 						done(err)
 					} else {
@@ -2517,6 +2517,8 @@ export default function abstractTest(server, config, ports) {
 							expectedResult.properties = undefined
 						}
 						assert.include(granted[0], expectedResult)
+						assert.exists(suback, 'suback not given')
+						assert.deepStrictEqual(suback.granted, [2])
 						client.end((err2) => done(err2))
 					}
 				})
