@@ -2026,8 +2026,8 @@ export default function abstractTest(server, config, ports) {
 
 		// eslint-disable-next-line
 		beforeEach(async () => {
-			clock = sinon.useFakeTimers(fakeTimersOptions)
 			await beforeEachExec()
+			clock = sinon.useFakeTimers(fakeTimersOptions)
 		})
 
 		afterEach(() => {
@@ -2119,64 +2119,79 @@ export default function abstractTest(server, config, ports) {
 		})
 
 		const reschedulePing = (reschedulePings: boolean) => {
-			it(`should ${
-				!reschedulePings ? 'not ' : ''
-			}reschedule pings if publishing at a higher rate than keepalive and reschedulePings===${reschedulePings}`, function _test(t, done) {
-				const intervalMs = 3000
-				const client = connect({
-					keepalive: intervalMs / 1000,
-					reschedulePings,
-				})
+			it(
+				`should ${
+					!reschedulePings ? 'not ' : ''
+				}reschedule pings if publishing at a higher rate than keepalive and reschedulePings===${reschedulePings}`,
+				{
+					timeout: 4000,
+				},
+				function _test(t, done) {
+					clock.restore()
 
-				const spyReschedule = sinon.spy(
-					client,
-					'_reschedulePing' as any,
-				)
-
-				let received = 0
-
-				client.on('packetreceive', (packet) => {
-					if (packet.cmd === 'puback') {
-						process.nextTick(() => {
-							clock.tick(intervalMs)
-
-							received++
-
-							if (received === 2) {
-								if (reschedulePings) {
-									assert.strictEqual(
-										spyReschedule.callCount,
-										received,
-									)
-								} else {
-									assert.strictEqual(
-										spyReschedule.callCount,
-										0,
-									)
-								}
-								client.end((err) => done(err))
+					teardownHelper.add(
+						{
+							executeOnce: true,
+							order: 1,
+						},
+						() => {
+							if (locaClock) {
+								locaClock.restore()
 							}
-						})
+						},
+					)
 
-						clock.tick(1)
-					}
-				})
-
-				server.once('client', (serverClient) => {
-					serverClient.on('publish', () => {
-						// needed to trigger the setImmediate inside server publish listener and send suback
-						clock.tick(1)
+					const locaClock = sinon.useFakeTimers({
+						...fakeTimersOptions,
+						toFake: ['setTimeout'],
 					})
-				})
+					const intervalMs = 3000
+					const client = connect({
+						keepalive: intervalMs / 1000,
+						reschedulePings,
+					})
 
-				client.once('connect', () => {
-					// reset call count (it's called also on connack)
-					spyReschedule.resetHistory()
-					// use qos1 so the puback is received (to reschedule ping)
-					client.publish('foo', 'bar', { qos: 1 })
-					client.publish('foo', 'bar', { qos: 1 })
-				})
-			})
+					const spyReschedule = sinon.spy(
+						client,
+						'_reschedulePing' as any,
+					)
+
+					let received = 0
+
+					client.on('packetreceive', (packet) => {
+						if (packet.cmd === 'puback') {
+							process.nextTick(() => {
+								locaClock.tick(intervalMs)
+
+								++received
+
+								if (received === 2) {
+									if (reschedulePings) {
+										assert.strictEqual(
+											spyReschedule.callCount,
+											received,
+										)
+									} else {
+										assert.strictEqual(
+											spyReschedule.callCount,
+											0,
+										)
+									}
+									client.end((err) => done(err))
+								}
+							})
+						}
+					})
+
+					client.once('connect', () => {
+						// reset call count (it's called also on connack)
+						spyReschedule.resetHistory()
+						// use qos1 so the puback is received (to reschedule ping)
+						client.publish('foo', 'bar', { qos: 1 })
+						client.publish('foo', 'bar', { qos: 1 })
+					})
+				},
+			)
 		}
 
 		reschedulePing(true)
@@ -4045,9 +4060,9 @@ export default function abstractTest(server, config, ports) {
 				version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
 
 			beforeEach(async () => {
+				await beforeEachExec()
 				cachedClientListeners = server.listeners('client')
 				server.removeAllListeners('client')
-				await beforeEachExec()
 			})
 
 			afterEach(() => {
