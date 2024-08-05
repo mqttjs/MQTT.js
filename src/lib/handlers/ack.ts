@@ -144,7 +144,7 @@ const handleAck: PacketHandler = (client, packet) => {
 			delete client.outgoing[messageId]
 			client.messageIdProvider.deallocate(messageId)
 			client['_invokeStoreProcessingQueue']()
-			cb(null)
+			cb(null, packet)
 			break
 		}
 		default:

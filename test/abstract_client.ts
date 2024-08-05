@@ -1989,7 +1989,7 @@ export default function abstractTest(server, config, ports) {
 			client.once('connect', () => {
 				// callback args can be typed
 				client.unsubscribe(topic, (_, packet?: mqtt.Packet) => {
-					assert.isUndefined(packet)
+					assert.isDefined(packet)
 					client.end(true, done)
 				})
 			})
