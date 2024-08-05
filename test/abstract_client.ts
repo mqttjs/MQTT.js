@@ -2154,7 +2154,7 @@ export default function abstractTest(server, config, ports) {
 										0,
 									)
 								}
-								client.end(true, done)
+								client.end((err) => done(err))
 							}
 						})
 
