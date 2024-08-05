@@ -660,9 +660,7 @@ export default function abstractTest(server, config, ports) {
 
 			client.once('connect', () => {
 				assert.strictEqual(client.queue.length, 0)
-				setTimeout(() => {
-					client.end(true, done)
-				}, 10)
+				client.end((err) => done(err))
 			})
 		})
 
@@ -672,9 +670,7 @@ export default function abstractTest(server, config, ports) {
 			client.publish('test', 'test', { qos: 0 })
 			assert.strictEqual(client.queue.length, 0)
 			client.on('connect', () => {
-				setTimeout(() => {
-					client.end(true, done)
-				}, 10)
+				client.end((err) => done(err))
 			})
 		})
 
@@ -687,9 +683,7 @@ export default function abstractTest(server, config, ports) {
 			client.unsubscribe('test')
 			assert.strictEqual(client.queue.length, 2)
 			client.on('connect', () => {
-				setTimeout(() => {
-					client.end(true, done)
-				}, 10)
+				client.end((err) => done(err))
 			})
 		})
 
@@ -857,9 +851,7 @@ export default function abstractTest(server, config, ports) {
 
 			client.on('connect', () => {
 				assert.isTrue(called)
-				setTimeout(() => {
-					client.end(true, done)
-				}, 10)
+				client.end((err) => done(err))
 			})
 		})
 
@@ -1356,6 +1348,17 @@ export default function abstractTest(server, config, ports) {
 		})
 
 		function testQosHandleMessage(qos, done) {
+			teardownHelper.add({ executeOnce: true, order: 1 }, () => {
+				if (clock) {
+					clock.restore()
+				}
+			})
+
+			const clock = sinon.useFakeTimers({
+				...fakeTimersOptions,
+				toFake: ['setTimeout'],
+			})
+
 			const client = connect()
 
 			let messageEventCount = 0
@@ -1369,10 +1372,14 @@ export default function abstractTest(server, config, ports) {
 					if (handleMessageCount === 10) {
 						setTimeout(() => {
 							client.end(true, done)
-						})
+						}, 10)
+
+						clock.tick(10)
 					}
 					callback()
 				}, 10)
+
+				clock.tick(10)
 			}
 
 			client.on('message', (topic, message, packet) => {
@@ -3270,15 +3277,33 @@ export default function abstractTest(server, config, ports) {
 		})
 
 		it('should always cleanup successfully on reconnection', function _test(t, done) {
+			teardownHelper.add({ executeOnce: true, order: 1 }, () => {
+				if (clock) {
+					clock.restore()
+				}
+			})
+
+			const clock = sinon.useFakeTimers({
+				...fakeTimersOptions,
+				toFake: ['setTimeout'],
+			})
+
 			const client = connect({
 				host: 'this_hostname_should_not_exist',
 				connectTimeout: 0,
 				reconnectPeriod: 1,
 			})
+
 			// bind client.end so that when it is called it is automatically passed in the done callback
 			setTimeout(() => {
-				client.end(done)
-			}, 100)
+				setTimeout(() => {
+					client.end(done)
+				}, 10)
+
+				clock.tick(10)
+			}, 10)
+
+			clock.tick(10)
 		})
 
 		it('should emit connack timeout error', function _test(t, done) {
@@ -4023,6 +4048,17 @@ export default function abstractTest(server, config, ports) {
 		})
 
 		it('should be able to pub/sub if reconnect() is called at out of close handler', function _test(t, done) {
+			teardownHelper.add({ executeOnce: true, order: 1 }, () => {
+				if (clock) {
+					clock.restore()
+				}
+			})
+
+			const clock = sinon.useFakeTimers({
+				...fakeTimersOptions,
+				toFake: ['setTimeout'],
+			})
+
 			const client = connect({ reconnectPeriod: 0 })
 			let tryReconnect = true
 			let reconnectEvent = false
@@ -4033,6 +4069,8 @@ export default function abstractTest(server, config, ports) {
 					setTimeout(() => {
 						client.reconnect()
 					}, 100)
+
+					clock.tick(100)
 				} else {
 					assert.isTrue(reconnectEvent)
 					done()
