@@ -383,6 +383,7 @@ export type OnDisconnectCallback = (packet: IDisconnectPacket) => void
 export type ClientSubscribeCallback = (
 	err: Error | null,
 	granted?: ISubscriptionGrant[],
+	packet?: ISubackPacket,
 ) => void
 export type OnMessageCallback = (
 	topic: string,
@@ -1248,7 +1249,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 						}
 					}
 
-					callback(err, subs)
+					callback(err, subs, packet2)
 				},
 			}
 			this.log('subscribe :: call _sendPacket')
