@@ -1,5 +1,6 @@
 import type { MqttClient } from 'src'
 import { randomUUID } from 'node:crypto'
+import { isAsyncFunction } from 'node:util/types'
 import serverBuilder from '../server_helpers_for_client_tests'
 
 type ServerBuilderInstance = ReturnType<typeof serverBuilder>
@@ -12,6 +13,14 @@ type AddOptions = {
 	 * @default true
 	 */
 	executeOnce?: boolean
+	/**
+	 * @description
+	 * The order in which the method will be executed.
+	 * If `order===0` the method will be executed after all methods before it that were added.
+	 *
+	 * @default 0
+	 */
+	order?: number
 }
 
 type ResetOptions = {
@@ -23,6 +32,11 @@ type ResetOptions = {
 	 */
 	removeOnce?: boolean
 }
+
+type Method =
+	| Promise<any>
+	| ((...args: any[]) => Promise<any>)
+	| ((...args: any[]) => any)
 
 /**
  * @description
@@ -99,7 +113,7 @@ class TeardownHelper {
 		string,
 		{
 			options: AddOptions
-			method: Promise<any> | ((...args: any[]) => Promise<any>)
+			method: Method
 			args: any[]
 		}
 	>
@@ -132,17 +146,17 @@ class TeardownHelper {
 	 * @description
 	 * Add a method to be executed
 	 */
-	add<T extends (...args: any[]) => Promise<void>>(
+	add<T extends any[] = []>(
 		options: AddOptions | undefined,
-		method: Promise<void> | T,
-		...args: Parameters<T>
+		method: Method,
+		...args: T
 	): string {
 		const id = randomUUID()
 
 		this.#methods.set(id, {
 			method,
 			args,
-			options: { executeOnce: true, ...options },
+			options: { executeOnce: true, order: 0, ...options },
 		})
 
 		return id
@@ -235,12 +249,21 @@ class TeardownHelper {
 			return
 		}
 
+		const methodStored: (AddOptions & { key: string })[] = []
+
+		for (const [key, { options }] of this.#methods) {
+			methodStored.push({ ...options, key })
+		}
+
+		methodStored.sort((a, b) => b.order - a.order)
 		const methods: Array<Promise<any>> = []
 
-		for (const [id, { method, options, args }] of this.#methods) {
+		for (const { key, ...options } of methodStored) {
+			const { method, args } = this.#methods.get(key)
+
 			if (method instanceof Promise) {
 				methods.push(method)
-			} else {
+			} else if (isAsyncFunction(method)) {
 				const promise = new Promise<any>((resolve, reject) => {
 					method(...args)
 						.then(resolve)
@@ -248,10 +271,21 @@ class TeardownHelper {
 				})
 
 				methods.push(promise)
+			} else {
+				const promise = new Promise<any>((resolve, reject) => {
+					try {
+						const result = method(...args)
+						resolve(result)
+					} catch (error) {
+						reject(error)
+					}
+				})
+
+				methods.push(promise)
 			}
 
 			if (options.executeOnce) {
-				this.#methods.delete(id)
+				this.#methods.delete(key)
 			}
 		}
 
