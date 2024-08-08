@@ -2142,13 +2142,13 @@ export default function abstractTest(server, config, ports) {
 							order: 1,
 						},
 						() => {
-							if (locaClock) {
-								locaClock.restore()
+							if (localClock) {
+								localClock.restore()
 							}
 						},
 					)
 
-					const locaClock = sinon.useFakeTimers({
+					const localClock = sinon.useFakeTimers({
 						...fakeTimersOptions,
 						toFake: ['setTimeout'],
 					})
@@ -2168,7 +2168,7 @@ export default function abstractTest(server, config, ports) {
 					client.on('packetreceive', (packet) => {
 						if (packet.cmd === 'puback') {
 							process.nextTick(() => {
-								locaClock.tick(intervalMs)
+								localClock.tick(intervalMs)
 
 								++received
 
