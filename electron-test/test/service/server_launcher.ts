@@ -5,13 +5,17 @@ import { start } from 'aedes-cli'
 
 export default class ServerLauncher implements Services.ServiceInstance {
 
-    constructor() { }
+    #aedesBroker: any
+
+    constructor() {
+        this.#aedesBroker = null
+    }
 
     async onPrepare(): Promise<void> {
         const keyPath = pathResolve(__dirname, '../../../test/certs/server-key.pem')
         const certPath = pathResolve(__dirname, '../../../test/certs/server-cert.pem')
 
-        await start({
+        this.#aedesBroker = await start({
             protos: ['tcp', 'tls'],
             port: 1883,
             tlsPort: 8883,
@@ -22,4 +26,22 @@ export default class ServerLauncher implements Services.ServiceInstance {
         })
     }
 
+    async onComplete(): Promise<void> {
+        if (!this.#aedesBroker?.servers) {
+            return
+        }
+
+        for (const server of this.#aedesBroker.servers) {
+            if (server.listening) {
+                await new Promise<void>((resolve, reject) => {
+                    server.close((err) => {
+                        if (err)
+                            reject(err)
+                        else
+                            resolve()
+                    })
+                })
+            }
+        }
+    }
 }
