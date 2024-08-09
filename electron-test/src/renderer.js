@@ -5,7 +5,7 @@ const mqtt = require(path.join(process.cwd(), '../build/mqtt'))
 console.log('start connecting...')
 const client = mqtt.connect({
   protocol: 'mqtt',
-  port: 10400,
+  port: 1883,
 })
 
 client.on('connect', () => {

@@ -23,9 +23,8 @@
     "@wdio/mocha-framework": "^8.38.2",
     "@wdio/spec-reporter": "^8.38.2",
     "@wdio/types": "^8.38.2",
-    "debug": "^4.3.4",
+    "aedes-cli": "^0.8.0",
     "electron": "30.1.0",
-    "mqtt-connection": "^4.1.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.4.5",
     "wdio-electron-service": "^6.6.1"

@@ -1,39 +1,25 @@
 import type { Services } from '@wdio/types'
-import type { IClientOptions } from '../../../src'
-import serverBuilder from '../helper/server_helpers_for_client_tests'
+import { resolve as pathResolve } from 'path'
+import { start } from 'aedes-cli'
 
 
 export default class ServerLauncher implements Services.ServiceInstance {
 
-    private _server: ReturnType<typeof serverBuilder> | undefined
-    private _mqttOptions: IClientOptions
-
-    constructor() {
-        this._mqttOptions = {
-            protocol: 'mqtt',
-            port: 10400,
-        }
-    }
+    constructor() { }
 
     async onPrepare(): Promise<void> {
-        await new Promise<void>((resolve, reject) => {
-            this._server = serverBuilder(this._mqttOptions.protocol)
+        const keyPath = pathResolve(__dirname, '../../../test/certs/server-key.pem')
+        const certPath = pathResolve(__dirname, '../../../test/certs/server-cert.pem')
 
-            this._server.once('listening', () => {
-                resolve()
-            })
-            .once('error', (err) => {
-                reject(err)
-            })
-
-            this._server.listen(this._mqttOptions.port)
+        await start({
+            protos: ['tcp', 'tls'],
+            port: 1883,
+            tlsPort: 8883,
+            key: keyPath,
+            cert: certPath,
+            verbose: true,
+            stats: false,
         })
-    }
-
-    onComplete(): void {
-        if (this._server?.listening) {
-            this._server.close()
-        }
     }
 
 }
