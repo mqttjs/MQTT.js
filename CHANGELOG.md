@@ -1,5 +1,19 @@
 
 
+# [5.10.0](https://github.com/mqttjs/MQTT.js/compare/v5.9.1...v5.10.0) (2024-08-14)
+
+
+### Bug Fixes
+
+* **test:** close all open connections in abstract_client test ([#1917](https://github.com/mqttjs/MQTT.js/issues/1917)) ([661c30a](https://github.com/mqttjs/MQTT.js/commit/661c30aecb8d7531fc052a7770519267067840fb))
+* **types:** unsubscribe options type ([#1921](https://github.com/mqttjs/MQTT.js/issues/1921)) ([18a357c](https://github.com/mqttjs/MQTT.js/commit/18a357ce98c2e7ae053afefaf7c56a0d3a8e62b7))
+
+
+### Features
+
+* add `suback` packet to subscribe callback ([#1923](https://github.com/mqttjs/MQTT.js/issues/1923)) ([93f4482](https://github.com/mqttjs/MQTT.js/commit/93f4482570b6e96d81a5466ea94c3fd7308ff31c))
+* add unsubscribe ack packet to the unsubscribe callback ([#1922](https://github.com/mqttjs/MQTT.js/issues/1922)) ([8bcf304](https://github.com/mqttjs/MQTT.js/commit/8bcf3042a9133acf8d266d73bc67153a69660e05))
+
 ## [5.9.1](https://github.com/mqttjs/MQTT.js/compare/v5.9.0...v5.9.1) (2024-08-01)
 
 
