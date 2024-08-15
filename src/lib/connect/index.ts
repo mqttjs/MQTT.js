@@ -19,24 +19,6 @@ const debug = _debug('mqttjs')
 let protocols: Record<string, StreamBuilder> = null
 
 /**
- * Parse the auth attribute and merge username and password in the options object.
- *
- * @param {Object} [opts] option object
- */
-function parseAuthOptions(opts: IClientOptions) {
-	let matches: RegExpMatchArray | null
-	if (opts.auth) {
-		matches = opts.auth.match(/^(.+):(.+)$/)
-		if (matches) {
-			opts.username = matches[1]
-			opts.password = matches[2]
-		} else {
-			opts.username = opts.auth
-		}
-	}
-}
-
-/**
  * connect - connect to an MQTT broker.
  */
 function connect(brokerUrl: string): MqttClient
@@ -56,21 +38,34 @@ function connect(
 
 	// try to parse the broker url
 	if (brokerUrl && typeof brokerUrl === 'string') {
-		// eslint-disable-next-line
-		const parsedUrl = url.parse(brokerUrl, true)
+		const parsedUrl = new URL(brokerUrl)
 		const parsedOptions: Partial<IClientOptions> = {}
 
 		if (parsedUrl.port != null) {
-			// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-			// @ts-ignore
 			parsedOptions.port = Number(parsedUrl.port)
 		}
 
 		parsedOptions.host = parsedUrl.hostname
-		parsedOptions.query = parsedUrl.query as Record<string, string>
-		parsedOptions.auth = parsedUrl.auth
+		parsedOptions.query = Object.fromEntries(
+			parsedUrl.searchParams,
+		) as Record<string, string>
+
+		if (parsedUrl.username) {
+			parsedOptions.username = parsedUrl.username
+			parsedOptions.auth = parsedOptions.username // TODO: is auth still needed?
+			if (parsedUrl.password) {
+				parsedOptions.password = parsedUrl.password
+				parsedOptions.auth = `${parsedOptions.username}:${parsedOptions.password}` // TODO: is auth still needed?
+			}
+		}
+
 		parsedOptions.protocol = parsedUrl.protocol as MqttProtocol
-		parsedOptions.path = parsedUrl.path
+		parsedOptions.path = parsedUrl.pathname // TODO: See note below
+		// NOTE: new URL().pathname is not the same as url.parse().path. URL.pathname does not include the query string.
+		// To make it compatible with url.parse().path, we need to append the query string to the path.
+		// if (parsedUrl.search) {
+		// 	parsedOptions.path += parsedUrl.search
+		// }
 
 		parsedOptions.protocol = parsedOptions.protocol?.replace(
 			/:$/,
@@ -98,9 +93,6 @@ function connect(
 		// that could break the connection. See https://github.com/mqttjs/MQTT.js/pull/1874
 		delete opts.path
 	}
-
-	// merge in the auth options if supplied
-	parseAuthOptions(opts)
 
 	// support clientId passed in the query string of the url
 	if (opts.query && typeof opts.query.clientId === 'string') {

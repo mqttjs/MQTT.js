@@ -19,7 +19,21 @@ const WSS_OPTIONS = [
 ]
 
 function buildUrl(opts: IClientOptions, client: MqttClient) {
-	let url = `${opts.protocol}://${opts.hostname}:${opts.port}${opts.path}`
+	const urlBuilder = new URL(`${opts.protocol}://${opts.host}`)
+	if (opts.port) {
+		urlBuilder.port = opts.port.toString()
+	}
+	urlBuilder.pathname = opts.path || '/'
+	Object.keys(opts.query || {}).forEach((key) => {
+		urlBuilder.searchParams.append(key, opts.query[key])
+	})
+	if (opts.username) {
+		urlBuilder.username = opts.username
+		if (opts.password) {
+			urlBuilder.password = opts.password.toString()
+		}
+	}
+	let url = urlBuilder.toString()
 	if (typeof opts.transformWsUrl === 'function') {
 		url = opts.transformWsUrl(url, opts, client)
 	}
