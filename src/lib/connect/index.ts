@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 import _debug from 'debug'
-import url from 'url'
 import MqttClient, {
 	IClientOptions,
 	MqttClientEventCallbacks,
