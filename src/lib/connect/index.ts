@@ -61,7 +61,8 @@ function connect(
 		parsedOptions.protocol = parsedUrl.protocol as MqttProtocol
 		parsedOptions.path = parsedUrl.pathname // TODO: See note below
 		// NOTE: new URL().pathname is not the same as url.parse().path. URL.pathname does not include the query string.
-		// To make it compatible with url.parse().path, we need to append the query string to the path.
+		// To make this field align with url.parse().path, we would need to append the query string to the path as below
+		// However I am not sure if this is required or used later in the code.
 		// if (parsedUrl.search) {
 		// 	parsedOptions.path += parsedUrl.search
 		// }
