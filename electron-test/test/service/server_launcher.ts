@@ -1,6 +1,6 @@
 import type { Services } from '@wdio/types'
 import { resolve as pathResolve } from 'path'
-import { start } from 'aedes-cli'
+const { start } = require('aedes-cli')
 
 
 export default class ServerLauncher implements Services.ServiceInstance {
@@ -34,7 +34,7 @@ export default class ServerLauncher implements Services.ServiceInstance {
         for (const server of this.#aedesBroker.servers) {
             if (server.listening) {
                 await new Promise<void>((resolve, reject) => {
-                    server.close((err) => {
+                    server.close((err: any) => {
                         if (err)
                             reject(err)
                         else

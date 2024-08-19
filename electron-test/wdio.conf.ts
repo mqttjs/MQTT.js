@@ -122,7 +122,7 @@ export const config: Options.Testrunner = {
     services: [
         'electron',
         [ServerLauncher, {
-            somsomeOption: true
+            someOption: true
         }]
     ],
 
