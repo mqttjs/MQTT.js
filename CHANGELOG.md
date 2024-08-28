@@ -1,5 +1,12 @@
 
 
+## [5.10.1](https://github.com/mqttjs/MQTT.js/compare/v5.10.0...v5.10.1) (2024-08-28)
+
+
+### Bug Fixes
+
+* **browser:** handle `Blob` payloads ([#1930](https://github.com/mqttjs/MQTT.js/issues/1930)) ([86b7959](https://github.com/mqttjs/MQTT.js/commit/86b795983d86847e1da334fd0d30cbd80f92b540))
+
 # [5.10.0](https://github.com/mqttjs/MQTT.js/compare/v5.9.1...v5.10.0) (2024-08-14)
 
 
