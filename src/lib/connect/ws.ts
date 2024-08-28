@@ -258,9 +258,13 @@ const browserStreamBuilder: StreamBuilder = (client, opts) => {
 	 */
 	async function onMessage(event: MessageEvent) {
 		let { data } = event
-		if (data instanceof ArrayBuffer) data = Buffer.from(data)
-		else if (data instanceof Blob) data = Buffer.from(await new Response(data).arrayBuffer())
-		else data = Buffer.from(data as string, 'utf8')
+		if (data instanceof ArrayBuffer)
+			data = Buffer.from(data)
+		else if (data instanceof Blob)
+			data = Buffer.from(await new Response(data).arrayBuffer())
+		else 
+			data = Buffer.from(data as string, 'utf8')
+			
 		if (proxy && !proxy.destroyed) {
 			proxy.push(data)
 		}
