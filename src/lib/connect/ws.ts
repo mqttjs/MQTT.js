@@ -257,9 +257,10 @@ const browserStreamBuilder: StreamBuilder = (client, opts) => {
 	 * https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/message_event
 	 */
 	async function onMessage(event: MessageEvent) {
-		let { data } = event;
+		let { data } = event
 		if (data instanceof ArrayBuffer) data = Buffer.from(data)
-		else if (data instanceof Blob) data = Buffer.from(await new Response(data).arrayBuffer())
+		else if (data instanceof Blob)
+			data = Buffer.from(await new Response(data).arrayBuffer())
 		else data = Buffer.from(data as string, 'utf8')
 		if (proxy && !proxy.destroyed) {
 			proxy.push(data)
