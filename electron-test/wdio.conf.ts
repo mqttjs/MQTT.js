@@ -1,5 +1,8 @@
 /// <reference types="wdio-electron-service" />
 import type { Options } from '@wdio/types'
+import ServerLauncher from './test/service/server_launcher'
+
+
 export const config: Options.Testrunner = {
     //
     // ====================
@@ -116,7 +119,10 @@ export const config: Options.Testrunner = {
     // Services take over a specific job you don't want to take care of. They enhance
     // your test setup with almost no effort. Unlike plugins, they don't add new
     // commands. Instead, they hook themselves up into the test process.
-    services: ['electron'],
+    services: [
+        'electron',
+        [ServerLauncher, {}]
+    ],
 
     // Framework you want to run your specs with.
     // The following are supported: Mocha, Jasmine, and Cucumber
