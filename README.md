@@ -613,15 +613,16 @@ Publish a message to a topic
     - `subscriptionIdentifier`: representing the identifier of the subscription `number`,
     - `contentType`: String describing the content of the Application Message `string`
   - `cbStorePut` - `function ()`, fired when message is put into `outgoingStore` if QoS is `1` or `2`.
-- `callback` - `function (err)`, fired when the QoS handling completes,
+- `callback` - `function (err, packet)`, fired when the QoS handling completes,
   or at the next tick if QoS 0. An error occurs if client is disconnecting.
 
 <a name="publish-async"></a>
 
 ### mqtt.Client#publishAsync(topic, message, [options])
 
-Async [`publish`](#publish). Returns a `Promise<void>`.
+Async [`publish`](#publish). Returns a `Promise<Packet | undefined>`.
 
+A packet is anything that has a `messageId` property.
 ---
 
 <a name="subscribe"></a>
@@ -653,7 +654,7 @@ Subscribe to a topic or topics
 
 ### mqtt.Client#subscribeAsync(topic/topic array/topic object, [options])
 
-Async [`subscribe`](#subscribe). Returns a `Promise<granted[]>`.
+Async [`subscribe`](#subscribe). Returns a `Promise<ISubscriptionGrant[]>`.
 
 ---
 
