@@ -390,7 +390,7 @@ events.
 The `Client` class wraps a client connection to an
 MQTT broker over an arbitrary transport method (TCP, TLS,
 WebSocket, ecc).
-`Client` is an [EventEmitter](https://nodejs.dev/en/learn/the-nodejs-event-emitter/) that has it's own [events](#events)
+`Client` is an [EventEmitter](https://nodejs.org/en/learn/asynchronous-work/the-nodejs-event-emitter) that has it's own [events](#events)
 
 `Client` automatically handles the following:
 
