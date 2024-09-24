@@ -46,6 +46,7 @@ jobs:
 
     # upload coverage to codecov
     - name: Upload coverage to Codecov
+      if: matrix.node-version == '20.x'
       uses: codecov/codecov-action@v4
       with:
         directory: ./coverage/
