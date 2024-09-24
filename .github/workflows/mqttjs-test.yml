@@ -45,7 +45,14 @@ jobs:
         DEBUG: "${{ runner.debug == '1' && 'mqttjs:*' || '' }}"
 
     # upload coverage to codecov
-    - uses: codecov/codecov-action@v4
-      env:
-        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        directory: ./coverage/
+        env_vars: CI, GITHUB_ACTIONS
+        fail_ci_if_error: true
+        flags: unittests
+        name: codecov-mqttjs
+        token: ${{ secrets.CODECOV_TOKEN }}
+        verbose: true
 
