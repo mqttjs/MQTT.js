@@ -42,6 +42,7 @@ jobs:
       timeout-minutes: 5
       env:
         CI: true
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         DEBUG: "${{ runner.debug == '1' && 'mqttjs:*' || '' }}"
 
   
