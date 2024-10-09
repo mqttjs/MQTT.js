@@ -95,6 +95,9 @@
       }
     }
   },
+  "publishConfig": {
+    "provenance": true
+  },
   "pre-commit": [
     "lint"
   ],
