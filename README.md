@@ -275,6 +275,13 @@ the final connection when it drops.
 The default value is 1000 ms which means it will try to reconnect 1 second
 after losing the connection.
 
+Note that this will only enable reconnects after either a connection timeout, or
+after a successful connection. It will _not_ (by default) enable retrying
+connections that are actively denied with a CONNACK error by the server.
+
+To also enable automatic reconnects for CONNACK errors, set
+`reconnectOnConnackError: true`.
+
 <a name="topicalias"></a>
 
 ## About Topic Alias Management
@@ -415,6 +422,8 @@ The arguments are:
     offline
   - `reconnectPeriod`: `1000` milliseconds, interval between two
     reconnections. Disable auto reconnect by setting to `0`.
+  - `reconnectOnConnackError`: `false`, whether to also reconnect if a CONNACK
+    is received with an error.
   - `connectTimeout`: `30 * 1000` milliseconds, time to wait before a
     CONNACK is received
   - `username`: the username required by your broker, if any

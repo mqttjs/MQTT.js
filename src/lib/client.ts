@@ -163,6 +163,12 @@ export interface IClientOptions extends ISecureClientOptions {
 	 */
 	reconnectPeriod?: number
 	/**
+	 * Set to true to enable the reconnect period to apply if the initial
+	 * connection is denied with an error in the CONNACK packet, such as with an
+	 * authentication error.
+	 */
+	reconnectOnConnackError?: boolean
+	/**
 	 * 30 * 1000 milliseconds, time to wait before a CONNACK is received
 	 */
 	connectTimeout?: number
