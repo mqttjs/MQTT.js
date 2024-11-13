@@ -1,5 +1,12 @@
 
 
+## [5.10.2](https://github.com/mqttjs/MQTT.js/compare/v5.10.1...v5.10.2) (2024-11-13)
+
+
+### Features
+
+* **electron-test:** move third hosted broker to self hosted broker ([#1926](https://github.com/mqttjs/MQTT.js/issues/1926)) ([1ca3f9e](https://github.com/mqttjs/MQTT.js/commit/1ca3f9e37f6ef7fe86307e292042c6542ca35241))
+
 ## [5.10.1](https://github.com/mqttjs/MQTT.js/compare/v5.10.0...v5.10.1) (2024-08-28)
 
 

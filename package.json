@@ -1,7 +1,7 @@
 {
   "name": "mqtt",
   "description": "A library for the MQTT protocol",
-  "version": "5.10.1",
+  "version": "5.10.2",
   "contributors": [
     "Adam Rudd <adamvrr@gmail.com>",
     "Matteo Collina <matteo.collina@gmail.com> (https://github.com/mcollina)",
@@ -95,6 +95,9 @@
       }
     }
   },
+  "publishConfig": {
+    "provenance": true
+  },
   "pre-commit": [
     "lint"
   ],
@@ -116,7 +119,7 @@
     "help-me": "^5.0.0",
     "lru-cache": "^10.0.1",
     "minimist": "^1.2.8",
-    "mqtt-packet": "^9.0.0",
+    "mqtt-packet": "^9.0.1",
     "number-allocator": "^1.0.14",
     "readable-stream": "^4.4.2",
     "reinterval": "^1.1.0",
