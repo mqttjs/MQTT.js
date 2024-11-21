@@ -3346,6 +3346,7 @@ export default function abstractTest(server, config, ports) {
 					serverClient.connack(connack)
 				})
 			})
+			teardownHelper.addServer(server2)
 			server2.listen(ports.PORTAND50, () => {
 				const client = connect({
 					host: 'localhost',
