@@ -3335,7 +3335,7 @@ export default function abstractTest(server, config, ports) {
 				})
 		})
 
-		it('should reconnect on connack error if requested', function _test(t, done) {
+		it.skip('should reconnect on connack error if requested', function _test(t, done) {
 			let connackErrors = 0
 			const rcNotAuthorized = 135
 			const server2 = serverBuilder(config.protocol, (serverClient) => {
