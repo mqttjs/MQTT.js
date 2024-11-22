@@ -45,13 +45,13 @@ jobs:
         DEBUG: "${{ runner.debug == '1' && 'mqttjs:*' || '' }}"
 
     # upload coverage to codecov
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v5
-      with:
-        directory: ./coverage/
-        fail_ci_if_error: false
-        flags: unittests
-        name: codecov-mqttjs
-        # token: ${{ secrets.CODECOV_TOKEN }}
-        verbose: true
+    # - name: Upload coverage to Codecov
+    #   uses: codecov/codecov-action@v5
+    #   with:
+    #     directory: ./coverage/
+    #     fail_ci_if_error: false
+    #     flags: unittests
+    #     name: codecov-mqttjs
+    #     token: ${{ secrets.CODECOV_TOKEN }}
+    #     verbose: true
 
