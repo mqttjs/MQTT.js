@@ -49,9 +49,9 @@ jobs:
       uses: codecov/codecov-action@v5
       with:
         directory: ./coverage/
-        fail_ci_if_error: true
+        fail_ci_if_error: false
         flags: unittests
         name: codecov-mqttjs
-        token: ${{ secrets.CODECOV_TOKEN }}
+        # token: ${{ secrets.CODECOV_TOKEN }}
         verbose: true
 
