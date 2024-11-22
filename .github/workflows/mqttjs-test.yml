@@ -54,4 +54,15 @@ jobs:
         name: codecov-mqttjs
         token: ${{ secrets.CODECOV_TOKEN }}
         verbose: true
+    
+    - name: Upload test results to Codecov
+      if: ${{ !cancelled() }}
+      uses: codecov/test-results-action@v1
+      with:
+        directory: ./coverage/
+        fail_ci_if_error: false
+        flags: unittests
+        name: codecov-mqttjs
+        token: ${{ secrets.CODECOV_TOKEN }}
+        verbose: true
 
