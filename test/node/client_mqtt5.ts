@@ -3,7 +3,7 @@ import abstractClientTests from './abstract_client'
 import { MqttServer } from './server'
 import serverBuilder from './server_helpers_for_client_tests'
 import getPorts from './helpers/port_list'
-import mqtt, { ErrorWithReasonCode } from '../src'
+import mqtt, { ErrorWithReasonCode } from '../../src'
 import { after, describe, it } from 'node:test'
 
 const ports = getPorts(1)

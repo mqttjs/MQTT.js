@@ -63,7 +63,7 @@
     "build:browser": "node esbuild.js",
     "build": "npm run build:ts && npm run build:browser",
     "prepare": "npm run build",
-    "unit-test:node": "node -r esbuild-register --test-concurrency 4 --test-reporter=junit --test-reporter-destination=junit.xml --test-reporter=spec --test-reporter-destination=stdout --test test/*.ts ",
+    "unit-test:node": "node -r esbuild-register --test-concurrency 4 --test-reporter=junit --test-reporter-destination=junit.xml --test-reporter=spec --test-reporter-destination=stdout --test test/node/*.ts ",
     "unit-test:browser": "wtr",
     "test:node": "node_modules/.bin/nyc npm run unit-test:node",
     "test:browser": "npm run build && npm run unit-test:browser",
