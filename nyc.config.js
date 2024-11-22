@@ -17,5 +17,5 @@ module.exports = {
     functions: 89,
     lines: 86,
     statements: 86,
-    'check-coverage': true,
+    'check-coverage': true
 }
