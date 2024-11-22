@@ -11,7 +11,7 @@ module.exports = {
     ],
     reporter: [
         'text',
-        'lcov',
+        'lcov'
     ],
     branches: 80,
     functions: 89,

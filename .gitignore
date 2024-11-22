@@ -19,6 +19,7 @@ test/typescript/*.map
 **/typings/**
 .vscode/
 .npmrc
+junit.xml
 
 /build/
 

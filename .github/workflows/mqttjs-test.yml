@@ -50,7 +50,7 @@ jobs:
       uses: codecov/codecov-action@v5
       with:
         directory: ./coverage/
-        fail_ci_if_error: false
+        fail_ci_if_error: true
         flags: unittests
         name: codecov-mqttjs
         token: ${{ secrets.CODECOV_TOKEN }}
@@ -60,10 +60,10 @@ jobs:
       if: ${{ !cancelled() }}
       uses: codecov/test-results-action@v1
       with:
-        directory: ./coverage/
+        files: ./junit.xml
         fail_ci_if_error: false
-        flags: unittests
-        name: codecov-mqttjs
+        flags: unittests-results
+        name: codecov-mqttjs-test-results
         token: ${{ secrets.CODECOV_TOKEN }}
         verbose: true
 
