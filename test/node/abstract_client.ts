@@ -3335,7 +3335,7 @@ export default function abstractTest(server, config, ports) {
 				})
 		})
 
-		it.skip('should reconnect on connack error if requested', function _test(t, done) {
+		it('should reconnect on connack error if requested', function _test(t, done) {
 			let connackErrors = 0
 			const rcNotAuthorized = 135
 			const server2 = serverBuilder(config.protocol, (serverClient) => {
@@ -3354,20 +3354,20 @@ export default function abstractTest(server, config, ports) {
 					reconnectPeriod: 10,
 					reconnectOnConnackError: true,
 				})
-					.on('error', (err) => {
-						assert.instanceOf(err, ErrorWithReasonCode)
-						assert.equal(
-							(err as ErrorWithReasonCode).code,
-							rcNotAuthorized,
-						)
-						assert.equal(connackErrors, 0)
-						connackErrors++
-					})
-					.on('connect', () => {
-						assert.equal(connackErrors, 1)
-						client.end(true, done)
-						server2.close()
-					})
+				teardownHelper.addClient(client)
+				client.on('error', (err) => {
+					assert.instanceOf(err, ErrorWithReasonCode)
+					assert.equal(
+						(err as ErrorWithReasonCode).code,
+						rcNotAuthorized,
+					)
+					assert.equal(connackErrors, 0)
+					connackErrors++
+				})
+				client.on('connect', () => {
+					assert.equal(connackErrors, 1)
+					done()
+				})
 			})
 		})
 
