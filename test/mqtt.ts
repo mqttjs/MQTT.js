@@ -59,7 +59,7 @@ describe('mqtt', () => {
 
 			c.should.be.instanceOf(mqtt.MqttClient)
 			c.options.should.not.have.property('path')
-			c.options.should.have.property('host', '::1')
+			c.options.should.have.property('host', '[::1]')
 			c.end((err) => done(err))
 		})
 
