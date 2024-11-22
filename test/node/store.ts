@@ -1,4 +1,4 @@
-import Store from '../src/lib/store'
+import Store from '../../src/lib/store'
 import abstractTest from './abstract_store'
 import { describe } from 'node:test'
 

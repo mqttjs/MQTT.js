@@ -1,6 +1,6 @@
 import abstractClientTests from './abstract_client'
 import serverBuilder from './server_helpers_for_client_tests'
-import { UniqueMessageIdProvider, IClientOptions } from '../src'
+import { UniqueMessageIdProvider, IClientOptions } from '../../src'
 import getPorts from './helpers/port_list'
 import { describe, after } from 'node:test'
 

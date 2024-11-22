@@ -5,19 +5,19 @@ import { assert } from 'chai'
 import sinon from 'sinon'
 import fs from 'fs'
 import levelStore from 'mqtt-level-store'
-import Store from '../src/lib/store'
+import Store from '../../src/lib/store'
 import serverBuilderFn from './server_helpers_for_client_tests'
-import handlePubrel from '../src/lib/handlers/pubrel'
+import handlePubrel from '../../src/lib/handlers/pubrel'
 import TeardownHelper from './helpers/TeardownHelper'
-import handle from '../src/lib/handlers/index'
-import handlePublish from '../src/lib/handlers/publish'
+import handle from '../../src/lib/handlers/index'
+import handlePublish from '../../src/lib/handlers/publish'
 import mqtt, {
 	IClientOptions,
 	IClientPublishOptions,
 	IClientSubscribeOptions,
 	ISubscriptionMap,
 	ISubscriptionRequest,
-} from '../src'
+} from '../../src'
 import { IPublishPacket, IPubrelPacket, ISubackPacket, QoS } from 'mqtt-packet'
 import { DoneCallback, ErrorWithReasonCode } from 'src/lib/shared'
 import { fail } from 'assert'
