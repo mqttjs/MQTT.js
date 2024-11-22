@@ -45,6 +45,7 @@ jobs:
         DEBUG: "${{ runner.debug == '1' && 'mqttjs:*' || '' }}"
 
     # upload coverage to Codecov
+    # https://app.codecov.io/gh/mqttjs/MQTT.js
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v5
       with:
