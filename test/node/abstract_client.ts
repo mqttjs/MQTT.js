@@ -3335,6 +3335,42 @@ export default function abstractTest(server, config, ports) {
 				})
 		})
 
+		it('should reconnect on connack error if requested', function _test(t, done) {
+			let connackErrors = 0
+			const rcNotAuthorized = 135
+			const server2 = serverBuilder(config.protocol, (serverClient) => {
+				serverClient.on('connect', () => {
+					const rc = connackErrors === 0 ? rcNotAuthorized : 0
+					const connack =
+						version === 5 ? { reasonCode: rc } : { returnCode: rc }
+					serverClient.connack(connack)
+				})
+			})
+			teardownHelper.addServer(server2)
+			server2.listen(ports.PORTAND50, () => {
+				const client = connect({
+					host: 'localhost',
+					port: ports.PORTAND50,
+					reconnectPeriod: 10,
+					reconnectOnConnackError: true,
+				})
+				teardownHelper.addClient(client)
+				client.on('error', (err) => {
+					assert.instanceOf(err, ErrorWithReasonCode)
+					assert.equal(
+						(err as ErrorWithReasonCode).code,
+						rcNotAuthorized,
+					)
+					assert.equal(connackErrors, 0)
+					connackErrors++
+				})
+				client.on('connect', () => {
+					assert.equal(connackErrors, 1)
+					done()
+				})
+			})
+		})
+
 		it(
 			'should resend in-flight QoS 1 publish messages from the client',
 			{

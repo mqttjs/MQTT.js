@@ -49,6 +49,9 @@ const handleConnack: PacketHandler = (client, packet: IConnackPacket) => {
 			rc,
 		)
 		client.emit('error', err)
+		if (client.options.reconnectOnConnackError) {
+			client['_cleanUp'](true)
+		}
 	}
 }
 
