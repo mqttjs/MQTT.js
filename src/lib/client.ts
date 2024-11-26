@@ -102,10 +102,16 @@ export interface ISecureClientOptions {
 	caPaths?: string | string[]
 
 	rejectUnauthorized?: boolean
+
 	/**
-	 * optional alpn's
+	 * optional alpn's (Application Layer Protocol Negotiation)
 	 */
 	ALPNProtocols?: string[] | Buffer[] | Uint8Array[] | Buffer | Uint8Array
+
+	/**
+	 * optional alpn's (Application Layer Protocol Negotiation)
+	 */
+	alpn?: string
 }
 
 export type AckHandler = (
