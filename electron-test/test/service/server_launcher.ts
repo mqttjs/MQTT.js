@@ -12,8 +12,8 @@ export default class ServerLauncher implements Services.ServiceInstance {
     }
 
     async onPrepare(): Promise<void> {
-        const keyPath = pathResolve(__dirname, '../../../test/certs/server-key.pem')
-        const certPath = pathResolve(__dirname, '../../../test/certs/server-cert.pem')
+        const keyPath = pathResolve(__dirname, '../../../test/browser/certs/server-key.pem')
+        const certPath = pathResolve(__dirname, '../../../test/browser/certs/server-cert.pem')
 
         this.#aedesBroker = await start({
             protos: ['tcp', 'tls'],

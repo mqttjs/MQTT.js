@@ -1,5 +1,5 @@
 import { useFakeTimers } from 'sinon'
-import mqtt from '../src'
+import mqtt from '../../src'
 import { assert } from 'chai'
 import { fork } from 'child_process'
 import path from 'path'
@@ -18,7 +18,7 @@ import { IClientOptions } from 'src/lib/client'
 import { describe, it, after } from 'node:test'
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const pkgJson = require('../package.json')
+const pkgJson = require('../../package.json')
 
 const debug = _debug('mqttjs:client-test')
 

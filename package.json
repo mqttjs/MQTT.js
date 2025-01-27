@@ -1,7 +1,7 @@
 {
   "name": "mqtt",
   "description": "A library for the MQTT protocol",
-  "version": "5.10.1",
+  "version": "5.10.3",
   "contributors": [
     "Adam Rudd <adamvrr@gmail.com>",
     "Matteo Collina <matteo.collina@gmail.com> (https://github.com/mcollina)",
@@ -63,9 +63,9 @@
     "build:browser": "node esbuild.js",
     "build": "npm run build:ts && npm run build:browser",
     "prepare": "npm run build",
-    "unit-test:node": "node_modules/.bin/nyc node -r esbuild-register test/runTests.ts",
+    "unit-test:node": "node -r esbuild-register --test-concurrency 4 --test-reporter=junit --test-reporter-destination=junit.xml --test-reporter=spec --test-reporter-destination=stdout --test test/node/*.ts ",
     "unit-test:browser": "wtr",
-    "test:node": "npm run unit-test:node && codecov",
+    "test:node": "node_modules/.bin/nyc npm run unit-test:node",
     "test:browser": "npm run build && npm run unit-test:browser",
     "test": "npm run test:node",
     "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s && git add CHANGELOG.md",
@@ -95,6 +95,9 @@
       }
     }
   },
+  "publishConfig": {
+    "provenance": true
+  },
   "pre-commit": [
     "lint"
   ],
@@ -116,7 +119,7 @@
     "help-me": "^5.0.0",
     "lru-cache": "^10.0.1",
     "minimist": "^1.2.8",
-    "mqtt-packet": "^9.0.0",
+    "mqtt-packet": "^9.0.1",
     "number-allocator": "^1.0.14",
     "readable-stream": "^4.4.2",
     "reinterval": "^1.1.0",
@@ -139,7 +142,6 @@
     "aedes-cli": "^0.8.0",
     "chai": "^4.3.10",
     "chokidar": "^3.5.3",
-    "codecov": "^3.8.2",
     "conventional-changelog-cli": "^4.1.0",
     "end-of-stream": "^1.4.4",
     "esbuild": "^0.19.5",
