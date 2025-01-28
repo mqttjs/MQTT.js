@@ -571,7 +571,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 				? options.customHandleAcks
 				: (...args) => {
 						args[3](null, 0)
-				  }
+					}
 
 		// Disable pre-generated write cache if requested. Will allocate buffers on-the-fly instead. WARNING: This can affect write performance
 		if (!this.options.writeCache) {
