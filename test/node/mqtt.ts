@@ -264,5 +264,19 @@ describe('mqtt', () => {
 			c.options.should.have.property('clientId', '123')
 			c.end((err) => done(err))
 		})
+
+		it('should return an MqttClient with mqtts protocol when connect is called with mqtts:/ url and protocol (mqtts:) is specified in options', function _test(t, done) {
+			const url = 'mqtts://localhost:1883'
+			const parsedUrl = new URL(url)
+			const protocol = parsedUrl.protocol as 'mqtt' | 'mqtts'
+
+			const c = mqtt.connect(url, {
+				protocol,
+			})
+
+			c.should.be.instanceOf(mqtt.MqttClient)
+			c.options.should.have.property('protocol', 'mqtts')
+			c.end((err) => done(err))
+		})
 	})
 })

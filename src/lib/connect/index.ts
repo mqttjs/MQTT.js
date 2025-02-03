@@ -72,17 +72,14 @@ function connect(
 		parsedOptions.protocol = parsedUrl.protocol as MqttProtocol
 		parsedOptions.path = parsedUrl.path
 
-		parsedOptions.protocol = parsedOptions.protocol?.replace(
-			/:$/,
-			'',
-		) as MqttProtocol
-
 		opts = { ...parsedOptions, ...opts }
 
 		// when parsing an url expect the protocol to be set
 		if (!opts.protocol) {
 			throw new Error('Missing protocol')
 		}
+
+		opts.protocol = opts.protocol.replace(/:$/, '') as MqttProtocol
 	}
 
 	opts.unixSocket = opts.unixSocket || opts.protocol?.includes('+unix')
