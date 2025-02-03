@@ -79,10 +79,7 @@ function connect(
 			throw new Error('Missing protocol')
 		}
 
-    opts.protocol = opts.protocol.replace(
-      /:$/,
-      '',
-    ) as MqttProtocol
+		opts.protocol = opts.protocol.replace(/:$/, '') as MqttProtocol
 	}
 
 	opts.unixSocket = opts.unixSocket || opts.protocol?.includes('+unix')
