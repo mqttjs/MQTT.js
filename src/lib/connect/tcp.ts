@@ -2,6 +2,7 @@ import { StreamBuilder } from '../shared'
 
 import net from 'net'
 import _debug from 'debug'
+import openSocks from './socks'
 
 const debug = _debug('mqttjs:tcp')
 /*
@@ -11,6 +12,10 @@ const debug = _debug('mqttjs:tcp')
 const buildStream: StreamBuilder = (client, opts) => {
 	opts.port = opts.port || 1883
 	opts.hostname = opts.hostname || opts.host || 'localhost'
+
+	if (opts.socks) {
+		return openSocks(opts.hostname, opts.port, opts.socks, opts.socksTimout)
+	}
 
 	const { port, path } = opts
 	const host = opts.hostname

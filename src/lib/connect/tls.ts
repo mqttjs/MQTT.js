@@ -1,9 +1,24 @@
-import tls from 'tls'
+import tls, { TLSSocket } from 'tls'
 import net from 'net'
 import _debug from 'debug'
 import { StreamBuilder } from '../shared'
+import { IClientOptions } from '../client'
+import openSocks from './socks'
 
 const debug = _debug('mqttjs:tls')
+
+function connect(opts: IClientOptions): TLSSocket {
+	const { host, port, socks, ...rest } = opts
+
+	return tls.connect(
+		socks
+			? {
+					...rest,
+					socket: openSocks(host, port, socks, opts.socksTimout),
+				}
+			: opts,
+	)
+}
 
 const buildStream: StreamBuilder = (client, opts) => {
 	opts.port = opts.port || 8883
@@ -24,7 +39,7 @@ const buildStream: StreamBuilder = (client, opts) => {
 		opts.rejectUnauthorized,
 	)
 
-	const connection = tls.connect(opts)
+	const connection = connect(opts)
 	connection.on('secureConnect', () => {
 		if (opts.rejectUnauthorized && !connection.authorized) {
 			connection.emit('error', new Error('TLS not authorized'))
