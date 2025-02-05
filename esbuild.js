@@ -44,6 +44,26 @@ const options = {
                 )
             }
         },
+        {
+            name: 'resolve-socks',
+            setup(build) {
+                // socks is not supported in the browser and adds several 100kb to the build, so stub it
+                build.onResolve({ filter: /socks$/ }, args => {
+                    return {
+                        path: args.path,
+                        namespace: 'socks-stub'
+                    }
+                })
+
+                build.onLoad({ filter: /.*/, namespace: 'socks-stub' }, args => {
+                    return {
+                        contents: 'module.exports = {}',
+                        loader: 'js'
+                    }
+                }
+                )
+            }
+        },
     ],
 }
 
