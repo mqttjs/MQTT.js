@@ -104,12 +104,13 @@ function connect(
 		opts.clientId = opts.query.clientId
 	}
 
-	if (isBrowser) {
+	if (isBrowser || opts.unixSocket) {
 		opts.socks = undefined
 	}
 
 	if (
 		!isBrowser &&
+		!opts.unixSocket &&
 		opts.socks === undefined &&
 		typeof process !== 'undefined'
 	) {
