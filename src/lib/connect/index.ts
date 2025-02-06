@@ -106,12 +106,7 @@ function connect(
 
 	if (isBrowser || opts.unixSocket) {
 		opts.socksProxy = undefined
-	}
-
-	if (
-		!isBrowser &&
-		!opts.unixSocket &&
-		opts.socksProxy === undefined &&
+	} else if(opts.socksProxy === undefined &&
 		typeof process !== 'undefined'
 	) {
 		opts.socksProxy = process.env['MQTTJS_SOCKS_PROXY']
