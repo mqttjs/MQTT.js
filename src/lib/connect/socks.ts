@@ -1,12 +1,96 @@
 import _debug from 'debug'
-import duplexify, { Duplexify } from 'duplexify'
+import { Duplex } from 'stream'
 import { SocksClient, SocksProxy } from 'socks'
 import { lookup } from 'dns'
 import { SocksProxyType } from 'socks/typings/common/constants'
 import { IStream } from '../shared'
 import { promisify } from 'util'
+import { Socket } from 'net'
+import assert from 'assert'
 
 const debug = _debug('mqttjs:socks')
+
+class ProxyStream extends Duplex {
+	private _flowing = false
+
+	private _socket?: Socket
+
+	constructor() {
+		super({ autoDestroy: false })
+
+		this.cork()
+	}
+
+	_start(socket: Socket): void {
+		debug('proxy stream started')
+
+		assert(!this._socket)
+
+		this._socket = socket
+
+		this.uncork()
+
+		if (!this._flowing) socket.pause()
+
+		socket.on('data', this._onData)
+		socket.on('end', this._onEnd)
+		socket.on('error', this._onError)
+		socket.on('close', this._onClose)
+
+		socket.emit('connect')
+	}
+
+	_write(
+		chunk: any,
+		encoding: BufferEncoding,
+		callback: (error?: Error | null) => void,
+	): void {
+		assert(this._socket)
+
+		this._socket.write(chunk, callback)
+	}
+
+	_read(size: number): void {
+		this._flowing = true
+
+		this._socket?.resume?.()
+	}
+
+	_destroy(
+		error: Error | null,
+		callback: (error?: Error | null) => void,
+	): void {
+		this._socket?.destroy?.(error)
+
+		callback(error)
+	}
+
+	_onData = (chunk: any): void => {
+		assert(this._socket)
+
+		this._flowing = this.push(chunk)
+
+		if (!this._flowing) this._socket.pause()
+	}
+
+	_onEnd = (): void => {
+		debug('proxy stream received EOF')
+
+		this.push(null)
+	}
+
+	_onClose = (): void => {
+		debug('proxy stream closed')
+
+		this.destroy()
+	}
+
+	_onError = (err: any): void => {
+		debug('proxy stream died with error %s', err)
+
+		this.destroy(err)
+	}
+}
 
 function fatal<T>(e: T): T {
 	try {
@@ -68,7 +152,7 @@ async function connectSocks(
 	destinationHost: string,
 	destinationPort: number,
 	socksUrl: string,
-	stream: Duplexify,
+	stream: ProxyStream,
 	timeout?: number,
 ): Promise<void> {
 	const [proxy, resolveThroughProxy] = parseSocksUrl(socksUrl)
@@ -103,22 +187,7 @@ async function connectSocks(
 	})
 	socksClient.connect()
 
-	socksClient.on('established', ({ socket }) => {
-		stream.setReadable(socket)
-		stream.setWritable(socket)
-
-		socket.on('close', () => {
-			debug('SOCKS5 socket closed')
-			stream.destroy()
-		})
-
-		socket.on('error', (e) => {
-			debug('SOCKS5 socket error: %s', e)
-			stream.destroy(e)
-		})
-
-		stream.emit('connect')
-	})
+	socksClient.on('established', ({ socket }) => stream._start(socket))
 
 	socksClient.on('error', (e) => {
 		debug('SOCKS5 failed: %s', e)
@@ -139,7 +208,7 @@ export default function openSocks(
 		socksUrl,
 	)
 
-	const stream = duplexify()
+	const stream = new ProxyStream()
 
 	connectSocks(
 		destinationHost,
