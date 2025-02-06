@@ -28,8 +28,6 @@ class ProxyStream extends Duplex {
 
 		this._socket = socket
 
-		this.uncork()
-
 		if (!this._flowing) socket.pause()
 
 		socket.on('data', this._onData)
@@ -38,6 +36,8 @@ class ProxyStream extends Duplex {
 		socket.on('close', this._onClose)
 
 		socket.emit('connect')
+
+		this.uncork()
 	}
 
 	_write(
