@@ -13,8 +13,13 @@ const buildStream: StreamBuilder = (client, opts) => {
 	opts.port = opts.port || 1883
 	opts.hostname = opts.hostname || opts.host || 'localhost'
 
-	if (opts.socks) {
-		return openSocks(opts.hostname, opts.port, opts.socks, opts.socksTimout)
+	if (opts.socksProxy) {
+		return openSocks(
+			opts.hostname,
+			opts.port,
+			opts.socksProxy,
+			opts.socksTimeout,
+		)
 	}
 
 	const { port, path } = opts

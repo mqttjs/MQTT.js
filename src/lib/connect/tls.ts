@@ -8,13 +8,18 @@ import openSocks from './socks'
 const debug = _debug('mqttjs:tls')
 
 function connect(opts: IClientOptions): TLSSocket {
-	const { host, port, socks, ...rest } = opts
+	const { host, port, socksProxy, ...rest } = opts
 
 	return tls.connect(
-		socks
+		socksProxy
 			? {
 					...rest,
-					socket: openSocks(host, port, socks, opts.socksTimout),
+					socket: openSocks(
+						host,
+						port,
+						socksProxy,
+						opts.socksTimeout,
+					),
 				}
 			: opts,
 	)

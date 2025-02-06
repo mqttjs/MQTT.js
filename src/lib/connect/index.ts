@@ -105,16 +105,16 @@ function connect(
 	}
 
 	if (isBrowser || opts.unixSocket) {
-		opts.socks = undefined
+		opts.socksProxy = undefined
 	}
 
 	if (
 		!isBrowser &&
 		!opts.unixSocket &&
-		opts.socks === undefined &&
+		opts.socksProxy === undefined &&
 		typeof process !== 'undefined'
 	) {
-		opts.socks = process.env['MQTTJS_SOCKS_PROXY']
+		opts.socksProxy = process.env['MQTTJS_SOCKS_PROXY']
 	}
 
 	if (opts.cert && opts.key) {

@@ -141,9 +141,9 @@ export interface IClientOptions extends ISecureClientOptions {
 	/** Auth string in the format <username>:<password> */
 	auth?: string
 	/** Optional SOCKS proxy to use for TCP / TLS connections , i.e. socks5://localhost:1333, socks4://localhost:1333, socks5h://localhost:1333 . Default is socks5h. */
-	socks?: string
+	socksProxy?: string
 	/** Timeout for establishing a socks connection */
-	socksTimout?: number
+	socksTimeout?: number
 	/** Custom ack handler */
 	customHandleAcks?: AckHandler
 	/** Broker port */
