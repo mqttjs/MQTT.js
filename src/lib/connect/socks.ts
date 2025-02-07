@@ -65,27 +65,26 @@ class ProxyStream extends Duplex {
 		callback(error)
 	}
 
-	_onData = (chunk: any): void => {
+	private _onData = (chunk: any): void => {
 		assert(this._socket)
 
 		this._flowing = this.push(chunk)
-
 		if (!this._flowing) this._socket.pause()
 	}
 
-	_onEnd = (): void => {
+	private _onEnd = (): void => {
 		debug('proxy stream received EOF')
 
 		this.push(null)
 	}
 
-	_onClose = (): void => {
+	private _onClose = (): void => {
 		debug('proxy stream closed')
 
 		this.destroy()
 	}
 
-	_onError = (err: any): void => {
+	private _onError = (err: any): void => {
 		debug('proxy stream died with error %s', err)
 
 		this.destroy(err)
