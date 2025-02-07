@@ -1,7 +1,7 @@
 import _debug from 'debug'
 import { Duplex } from 'stream'
 import { SocksClient, SocksProxy } from 'socks'
-import { lookup } from 'dns'
+import * as dns from 'dns'
 import { SocksProxyType } from 'socks/typings/common/constants'
 import { IStream } from '../shared'
 import { promisify } from 'util'
@@ -9,6 +9,11 @@ import { Socket } from 'net'
 import assert from 'assert'
 
 const debug = _debug('mqttjs:socks')
+
+export interface SocksConnectionOptions {
+	timeout?: number
+	lookup?: (hostname: string) => Promise<{ address: string }>
+}
 
 class ProxyStream extends Duplex {
 	private _flowing = false
@@ -25,6 +30,11 @@ class ProxyStream extends Duplex {
 		debug('proxy stream started')
 
 		assert(!this._socket)
+
+		if (this.destroyed) {
+			socket.destroy(this.errored)
+			return
+		}
 
 		this._socket = socket
 
@@ -152,15 +162,17 @@ async function connectSocks(
 	destinationPort: number,
 	socksUrl: string,
 	stream: ProxyStream,
-	timeout?: number,
+	options: SocksConnectionOptions = {},
 ): Promise<void> {
+	const lookup = options.lookup ?? promisify(dns.lookup)
+
 	const [proxy, resolveThroughProxy] = parseSocksUrl(socksUrl)
 
 	if (!resolveThroughProxy) {
 		debug('resolving %s locally', destinationHost)
 
 		destinationHost = (
-			await promisify(lookup)(destinationHost, {
+			await lookup(destinationHost, {
 				family: proxy.type === 4 ? 4 : 0,
 			})
 		).address
@@ -182,14 +194,14 @@ async function connectSocks(
 			port: destinationPort,
 		},
 		proxy: { ...proxy },
-		timeout,
+		timeout: options.timeout,
 	})
 	socksClient.connect()
 
 	socksClient.on('established', ({ socket }) => stream._start(socket))
 
 	socksClient.on('error', (e) => {
-		debug('SOCKS5 failed: %s', e)
+		debug('SOCKS failed: %s', e)
 		stream.destroy(fatal(e))
 	})
 }
@@ -198,7 +210,7 @@ export default function openSocks(
 	destinationHost: string,
 	destinationPort: number,
 	socksUrl: string,
-	timeout?: number,
+	options?: SocksConnectionOptions,
 ): IStream {
 	debug(
 		'SOCKS connection to %s:%d via %s',
@@ -214,8 +226,9 @@ export default function openSocks(
 		destinationPort,
 		socksUrl,
 		stream,
-		timeout,
+		options,
 	).catch((e) => {
+		debug('SOCKS failed: %s', e)
 		stream.destroy(e)
 	})
 

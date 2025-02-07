@@ -14,12 +14,9 @@ const buildStream: StreamBuilder = (client, opts) => {
 	opts.hostname = opts.hostname || opts.host || 'localhost'
 
 	if (opts.socksProxy) {
-		return openSocks(
-			opts.hostname,
-			opts.port,
-			opts.socksProxy,
-			opts.socksTimeout,
-		)
+		return openSocks(opts.hostname, opts.port, opts.socksProxy, {
+			timeout: opts.socksTimeout,
+		})
 	}
 
 	const { port, path } = opts

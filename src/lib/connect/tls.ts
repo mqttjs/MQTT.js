@@ -14,12 +14,9 @@ function connect(opts: IClientOptions): TLSSocket {
 		socksProxy
 			? {
 					...rest,
-					socket: openSocks(
-						host,
-						port,
-						socksProxy,
-						opts.socksTimeout,
-					),
+					socket: openSocks(host, port, socksProxy, {
+						timeout: opts.socksTimeout,
+					}),
 				}
 			: opts,
 	)
