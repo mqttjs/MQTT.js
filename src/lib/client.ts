@@ -993,6 +993,11 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			}
 
 			if (options.protocolVersion === 5) {
+				for (const property in properties) {
+					if (properties[property] === undefined) {
+						delete properties[property]
+					}
+				}
 				packet.properties = properties
 			}
 
