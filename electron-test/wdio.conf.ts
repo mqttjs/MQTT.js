@@ -62,8 +62,6 @@ export const config: WebdriverIO.Config = {
         // see https://webdriver.io/docs/desktop-testing/electron/configuration/#service-options
         'wdio:electronServiceOptions': {
             appBinaryPath: electronAppBinaryPath,
-            // custom application args
-            appArgs: [],
         }
     }],
 
@@ -115,8 +113,8 @@ export const config: WebdriverIO.Config = {
     // your test setup with almost no effort. Unlike plugins, they don't add new
     // commands. Instead, they hook themselves up into the test process.
     services: [
+        [ServerLauncher, {}],
         'electron',
-        [ServerLauncher, {}]
     ],
 
     // Framework you want to run your specs with.
