@@ -1,22 +1,16 @@
-/// <reference types="wdio-electron-service" />
-import type { Options } from '@wdio/types'
+import { resolve as pathResolve } from 'node:path';
 import ServerLauncher from './test/service/server_launcher'
 
+const electronAppBinaryPath = pathResolve('./out/electron-test-linux-x64/electron-test');
 
-export const config: Options.Testrunner = {
+export const config: WebdriverIO.Config = {
     //
     // ====================
     // Runner Configuration
     // ====================
     // WebdriverIO supports running e2e tests as well as unit and component tests.
     runner: 'local',
-    autoCompileOpts: {
-        autoCompile: true,
-        tsNodeOpts: {
-            project: './tsconfig.json',
-            transpileOnly: true
-        }
-    },
+    tsConfigPath: './tsconfig.json',
 
     //
     // ==================
@@ -67,8 +61,7 @@ export const config: Options.Testrunner = {
         // Electron service options
         // see https://webdriver.io/docs/desktop-testing/electron/configuration/#service-options
         'wdio:electronServiceOptions': {
-            // custom application args
-            appArgs: [],
+            appBinaryPath: electronAppBinaryPath,
         }
     }],
 
@@ -84,7 +77,7 @@ export const config: Options.Testrunner = {
     // Set specific log levels per logger
     // loggers:
     // - webdriver, webdriverio
-    // - @wdio/browserstack-service, @wdio/devtools-service, @wdio/sauce-service
+    // - @wdio/browserstack-service, @wdio/lighthouse-service, @wdio/sauce-service
     // - @wdio/mocha-framework, @wdio/jasmine-framework
     // - @wdio/local-runner
     // - @wdio/sumologic-reporter
@@ -120,8 +113,8 @@ export const config: Options.Testrunner = {
     // your test setup with almost no effort. Unlike plugins, they don't add new
     // commands. Instead, they hook themselves up into the test process.
     services: [
+        [ServerLauncher, {}],
         'electron',
-        [ServerLauncher, {}]
     ],
 
     // Framework you want to run your specs with.
