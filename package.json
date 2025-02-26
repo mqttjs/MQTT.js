@@ -144,7 +144,7 @@
     "chokidar": "^3.6.0",
     "conventional-changelog-cli": "^4.1.0",
     "end-of-stream": "^1.4.4",
-    "esbuild": "^0.24.2",
+    "esbuild": "^0.25.0",
     "esbuild-plugin-polyfill-node": "^0.3.0",
     "esbuild-register": "^3.6.0",
     "eslint": "^8.57.1",
