@@ -1,5 +1,15 @@
 
 
+## [5.10.4](https://github.com/mqttjs/MQTT.js/compare/v5.10.3...v5.10.4) (2025-02-26)
+
+
+### Bug Fixes
+
+* **browser:** bump readable-stream@4.7.0 to fix BigInt issues ([#1963](https://github.com/mqttjs/MQTT.js/issues/1963)) ([9749891](https://github.com/mqttjs/MQTT.js/commit/9749891137c0eb57f20c13e17196bccbdec1029e))
+* **browser:** prevent error stream.push() after EOF ([#1932](https://github.com/mqttjs/MQTT.js/issues/1932)) ([df2e8fe](https://github.com/mqttjs/MQTT.js/commit/df2e8febcccd4574a046887e612113a85900b86d))
+* **electron-test:** webdriver session not created ([#1972](https://github.com/mqttjs/MQTT.js/issues/1972)) ([57691cf](https://github.com/mqttjs/MQTT.js/commit/57691cf9a088dee69e0dea637ae5742c6dfae833))
+* move protocol "clean" after merge of parsedOptions ([#1965](https://github.com/mqttjs/MQTT.js/issues/1965)) ([1c19ca0](https://github.com/mqttjs/MQTT.js/commit/1c19ca0d0a810ee9a925d17552e9d84f70aa718b))
+
 ## [5.10.3](https://github.com/mqttjs/MQTT.js/compare/v5.10.2...v5.10.3) (2024-11-26)
 
 
