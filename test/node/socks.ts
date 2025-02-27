@@ -36,7 +36,7 @@ class MockServer5 {
 	}
 
 	start(): Promise<number> {
-		this.server.listen(undefined, 'localhost')
+		this.server.listen(PORT, 'localhost')
 
 		this.server.on('connection', this.onConnection)
 
