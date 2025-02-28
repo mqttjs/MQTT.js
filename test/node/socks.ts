@@ -3,8 +3,6 @@ import { AddressInfo, createServer, Server, Socket } from 'net'
 import { describe, it, mock, afterEach, beforeEach } from 'node:test'
 import openSocks from 'src/lib/connect/socks'
 
-const PORT = 6666
-
 type State5 = 'new' | 'id' | 'connect'
 
 class MockServer5 {
@@ -36,7 +34,7 @@ class MockServer5 {
 	}
 
 	start(): Promise<number> {
-		this.server.listen(PORT, 'localhost')
+		this.server.listen(undefined, 'localhost')
 
 		this.server.on('connection', this.onConnection)
 
