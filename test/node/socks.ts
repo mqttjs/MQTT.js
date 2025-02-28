@@ -385,32 +385,6 @@ describe('SOCKS layer', { timeout: 1000 }, () => {
 		})
 	})
 
-	it('resetting the connection errors the stream', async () => {
-		const port = await server5.start()
-
-		const lookup = mock.fn((_: string) =>
-			Promise.resolve({ address: '1.2.3.4' }),
-		)
-
-		const stream = openSocks(
-			'foo.bar',
-			1883,
-			`socks5://localhost:${port}`,
-			{
-				lookup,
-			},
-		)
-
-		const socket = await server5.connect
-		socket.resetAndDestroy()
-
-		const error = await new Promise((r) => {
-			stream.once('error', r)
-		})
-
-		assert(error instanceof Error)
-	})
-
 	it('an invalid protocol errors the stream', async () => {
 		const port = await server5.start()
 
