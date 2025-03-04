@@ -104,6 +104,15 @@ function connect(
 		opts.clientId = opts.query.clientId
 	}
 
+	if (isBrowser || opts.unixSocket) {
+		opts.socksProxy = undefined
+	} else if (
+		opts.socksProxy === undefined &&
+		typeof process !== 'undefined'
+	) {
+		opts.socksProxy = process.env['MQTTJS_SOCKS_PROXY']
+	}
+
 	if (opts.cert && opts.key) {
 		if (opts.protocol) {
 			if (['mqtts', 'wss', 'wxs', 'alis'].indexOf(opts.protocol) === -1) {

@@ -429,6 +429,8 @@ The arguments are:
     CONNACK is received
   - `username`: the username required by your broker, if any
   - `password`: the password required by your broker, if any
+  - `socksProxy`: establish TCP and TLS connections via a socks proxy (URL, supported protocols are `socks5://`, `socks5h://`, `socks4://`, `socks4a://`)
+  - `socksTimeout`: timeout for connecting to the socks proxy
   - `incomingStore`: a [Store](#store) for the incoming packets
   - `outgoingStore`: a [Store](#store) for the outgoing packets
   - `queueQoSZero`: if connection is broken, queue outgoing QoS zero messages (default `true`)
@@ -485,6 +487,8 @@ The arguments are:
     ```
   - `forceNativeWebSocket`: set to true if you're having detection issues (i.e. the `ws does not work in the browser` exception) to force the use of native WebSocket. It is important to note that if set to true for the first client created, then all the clients will use native WebSocket. And conversely, if not set or set to false, all will use the detection result.
   - `unixSocket`: if you want to connect to a unix socket, set this to true
+
+Instead of setting `socksProxy` you can also supple the same parameter via the environment variable `MQTTJS_SOCKS_PROXY`.
 
 In case mqtts (mqtt over tls) is required, the `options` object is passed through to [`tls.connect()`](http://nodejs.org/api/tls.html#tls_tls_connect_options_callback). If using a **self-signed certificate**, set `rejectUnauthorized: false`. However, be cautious as this exposes you to potential man in the middle attacks and isn't recommended for production.
 
