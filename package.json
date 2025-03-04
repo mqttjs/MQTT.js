@@ -119,7 +119,7 @@
     "help-me": "^5.0.0",
     "lru-cache": "^10.4.3",
     "minimist": "^1.2.8",
-    "mqtt-packet": "^9.0.1",
+    "mqtt-packet": "^9.0.2",
     "number-allocator": "^1.0.14",
     "readable-stream": "^4.7.0",
     "reinterval": "^1.1.0",
