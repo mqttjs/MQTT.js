@@ -33,7 +33,7 @@ export function validateTopic(topic: string): boolean {
  * @param {Array} topics - Array of topics
  * @returns {String} If the topics is valid, returns null. Otherwise, returns the invalid one
  */
-export function validateTopics(topics: string[]): string {
+export function validateTopics(topics: string[]): string | null {
 	if (topics.length === 0) {
 		return 'empty_topic_list'
 	}
