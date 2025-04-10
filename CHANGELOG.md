@@ -1,5 +1,17 @@
 
 
+# [5.11.0](https://github.com/mqttjs/MQTT.js/compare/v5.10.4...v5.11.0) (2025-04-10)
+
+
+### Bug Fixes
+
+* correct return type of `validateTopis` to include `null` ([#1979](https://github.com/mqttjs/MQTT.js/issues/1979)) ([935784a](https://github.com/mqttjs/MQTT.js/commit/935784aa8235fd9f38ac17820edf357ed7d5ab75))
+
+
+### Features
+
+* add intrinsic support for SOCKS proxies ([#1966](https://github.com/mqttjs/MQTT.js/issues/1966)) ([ee0fcce](https://github.com/mqttjs/MQTT.js/commit/ee0fcce4bd3e1af318b0144b9e0928c571c02173))
+
 ## [5.10.4](https://github.com/mqttjs/MQTT.js/compare/v5.10.3...v5.10.4) (2025-02-26)
 
 
