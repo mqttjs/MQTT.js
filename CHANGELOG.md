@@ -1,5 +1,12 @@
 
 
+## [5.11.1](https://github.com/mqttjs/MQTT.js/compare/v5.11.0...v5.11.1) (2025-04-23)
+
+
+### Bug Fixes
+
+* **deps:** removed unused 'reinterval' dependency and move two @type/ dependencies to devDependencies. ([bb8c694](https://github.com/mqttjs/MQTT.js/commit/bb8c6947edc4d85d77f13f8c06df7a979a270a7f))
+
 # [5.11.0](https://github.com/mqttjs/MQTT.js/compare/v5.10.4...v5.11.0) (2025-04-10)
 
 
