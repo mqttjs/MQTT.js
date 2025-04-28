@@ -1,5 +1,12 @@
 
 
+# [5.12.0](https://github.com/mqttjs/MQTT.js/compare/v5.11.1...v5.12.0) (2025-04-28)
+
+
+### Features
+
+* **exports:** add react-native entry point to package.json ([#1988](https://github.com/mqttjs/MQTT.js/issues/1988)) ([622d3d8](https://github.com/mqttjs/MQTT.js/commit/622d3d8e7d8149bbb2ee03a01254e0ab9bf42e6c))
+
 ## [5.11.1](https://github.com/mqttjs/MQTT.js/compare/v5.11.0...v5.11.1) (2025-04-23)
 
 
