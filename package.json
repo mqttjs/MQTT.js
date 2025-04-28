@@ -37,6 +37,7 @@
   ],
   "exports": {
     ".": {
+      "react-native": "./dist/mqtt.esm.js",
       "browser": {
         "import": "./dist/mqtt.esm.js",
         "default": "./dist/mqtt.min.js"
