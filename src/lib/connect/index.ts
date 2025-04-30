@@ -99,6 +99,12 @@ function connect(
 	// merge in the auth options if supplied
 	parseAuthOptions(opts)
 
+	// if password is set without username, warn the user
+	// previously would fail silently
+	if (opts.password && !opts.username) {
+		console.warn("'password' option set without 'username' option")
+	}
+
 	// support clientId passed in the query string of the url
 	if (opts.query && typeof opts.query.clientId === 'string') {
 		opts.clientId = opts.query.clientId
