@@ -1,5 +1,9 @@
-import { IPubcompPacket, IPublishPacket, IPubrelPacket } from 'mqtt-packet'
-import { PacketHandler } from '../shared'
+import {
+	type IPubcompPacket,
+	type IPublishPacket,
+	type IPubrelPacket,
+} from 'mqtt-packet'
+import { type PacketHandler } from '../shared'
 
 const handlePubrel: PacketHandler = (client, packet: IPubrelPacket, done) => {
 	client.log('handling pubrel packet')

@@ -47,5 +47,13 @@ module.exports = {
 		'@typescript-eslint/naming-convention': 'off',
 		'@typescript-eslint/dot-notation': 'off',
 		'@typescript-eslint/no-use-before-define': 'off',
+		'@typescript-eslint/consistent-type-imports': [
+			'error',
+			{
+				'prefer': 'type-imports',
+				'fixStyle': 'inline-type-imports',
+				'disallowTypeAnnotations': true
+			}
+		]
 	}
 }

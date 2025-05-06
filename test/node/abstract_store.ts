@@ -1,5 +1,5 @@
-import { IPublishPacket, IPubrelPacket } from 'mqtt-packet'
-import { IStore } from '../../src'
+import { type IPublishPacket, type IPubrelPacket } from 'mqtt-packet'
+import { type IStore } from '../../src'
 import 'should'
 import { it, beforeEach, afterEach } from 'node:test'
 

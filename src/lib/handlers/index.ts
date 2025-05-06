@@ -3,7 +3,7 @@ import handleAuth from './auth'
 import handleConnack from './connack'
 import handleAck from './ack'
 import handlePubrel from './pubrel'
-import { PacketHandler } from '../shared'
+import { type PacketHandler } from '../shared'
 
 const handle: PacketHandler = (client, packet, done) => {
 	const { options } = client

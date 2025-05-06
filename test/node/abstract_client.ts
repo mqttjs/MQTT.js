@@ -12,14 +12,19 @@ import TeardownHelper from './helpers/TeardownHelper'
 import handle from '../../src/lib/handlers/index'
 import handlePublish from '../../src/lib/handlers/publish'
 import mqtt, {
-	IClientOptions,
-	IClientPublishOptions,
-	IClientSubscribeOptions,
-	ISubscriptionMap,
-	ISubscriptionRequest,
+	type IClientOptions,
+	type IClientPublishOptions,
+	type IClientSubscribeOptions,
+	type ISubscriptionMap,
+	type ISubscriptionRequest,
 } from '../../src'
-import { IPublishPacket, IPubrelPacket, ISubackPacket, QoS } from 'mqtt-packet'
-import { DoneCallback, ErrorWithReasonCode } from 'src/lib/shared'
+import {
+	type IPublishPacket,
+	type IPubrelPacket,
+	type ISubackPacket,
+	type QoS,
+} from 'mqtt-packet'
+import { type DoneCallback, ErrorWithReasonCode } from 'src/lib/shared'
 import { fail } from 'assert'
 import { describe, it, beforeEach, afterEach, after } from 'node:test'
 

@@ -1,8 +1,9 @@
-import { StreamBuilder } from '../shared'
+import { type StreamBuilder } from '../shared'
 
 import { Buffer } from 'buffer'
 import { Transform } from 'readable-stream'
-import MqttClient, { IClientOptions } from '../client'
+import { type IClientOptions } from '../client'
+import type MqttClient from '../client'
 import { BufferedDuplex } from '../BufferedDuplex'
 
 /* global wx */

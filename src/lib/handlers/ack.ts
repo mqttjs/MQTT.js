@@ -1,6 +1,6 @@
 // Other Socket Errors: EADDRINUSE, ECONNRESET, ENOTFOUND, ETIMEDOUT.
 
-import { PacketHandler, ErrorWithReasonCode } from '../shared'
+import { type PacketHandler, ErrorWithReasonCode } from '../shared'
 
 export const ReasonCodes = {
 	0: '',
