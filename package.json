@@ -112,6 +112,7 @@
     "net": false
   },
   "dependencies": {
+    "@types/ws": "^8.18.1",
     "commist": "^3.2.0",
     "concat-stream": "^2.0.0",
     "debug": "^4.4.0",
@@ -135,7 +136,6 @@
     "@types/readable-stream": "^4.0.18",
     "@types/sinon": "^17.0.3",
     "@types/tape": "^5.8.1",
-    "@types/ws": "^8.18.1",
     "@typescript-eslint/eslint-plugin": "^6.21.0",
     "@typescript-eslint/parser": "^6.21.0",
     "@web/test-runner": "^0.19.0",
