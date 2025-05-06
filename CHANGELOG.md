@@ -1,5 +1,12 @@
 
 
+## [5.12.1](https://github.com/mqttjs/MQTT.js/compare/v5.12.0...v5.12.1) (2025-05-06)
+
+
+### Bug Fixes
+
+* add `@typescript-eslint/consistent-type-imports` rule and normalised all imports ([640cd3b](https://github.com/mqttjs/MQTT.js/commit/640cd3b9bd7d9a7d8ef59fa3fdd57a3a1c3ba345))
+
 # [5.12.0](https://github.com/mqttjs/MQTT.js/compare/v5.11.1...v5.12.0) (2025-04-28)
 
 
