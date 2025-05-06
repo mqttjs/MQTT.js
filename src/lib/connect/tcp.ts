@@ -1,4 +1,4 @@
-import { StreamBuilder } from '../shared'
+import { type StreamBuilder } from '../shared'
 
 import net from 'net'
 import _debug from 'debug'

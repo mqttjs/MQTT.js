@@ -1,7 +1,8 @@
 import { Buffer } from 'buffer'
 import { Transform } from 'readable-stream'
-import { StreamBuilder } from '../shared'
-import MqttClient, { IClientOptions } from '../client'
+import { type StreamBuilder } from '../shared'
+import { type IClientOptions } from '../client'
+import type MqttClient from '../client'
 import { BufferedDuplex } from '../BufferedDuplex'
 
 let my: any

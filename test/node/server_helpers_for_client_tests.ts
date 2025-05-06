@@ -1,4 +1,4 @@
-import { MqttServer, MqttSecureServer, MqttServerListener } from './server'
+import { MqttServer, MqttSecureServer, type MqttServerListener } from './server'
 import _debug from 'debug'
 
 import path from 'path'
@@ -7,7 +7,7 @@ import fs from 'fs'
 import http from 'http'
 import WebSocket from 'ws'
 import MQTTConnection from 'mqtt-connection'
-import { Server } from 'net'
+import { type Server } from 'net'
 
 const KEY = path.join(__dirname, 'helpers', 'tls-key.pem')
 const CERT = path.join(__dirname, 'helpers', 'tls-cert.pem')

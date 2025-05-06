@@ -3,45 +3,45 @@
  */
 import TopicAliasRecv from './topic-alias-recv'
 import mqttPacket, {
-	IAuthPacket,
+	type IAuthPacket,
 	IConnackPacket,
 	IDisconnectPacket,
 	IPublishPacket,
-	ISubscribePacket,
-	ISubscription,
-	IUnsubscribePacket,
+	type ISubscribePacket,
+	type ISubscription,
+	type IUnsubscribePacket,
 	Packet,
-	QoS,
-	ISubackPacket,
-	IConnectPacket,
+	type QoS,
+	type ISubackPacket,
+	type IConnectPacket,
 } from 'mqtt-packet'
 import DefaultMessageIdProvider, {
-	IMessageIdProvider,
+	type IMessageIdProvider,
 } from './default-message-id-provider'
-import { DuplexOptions, Writable } from 'readable-stream'
+import { type DuplexOptions, Writable } from 'readable-stream'
 import clone from 'rfdc/default'
 import * as validations from './validations'
 import _debug from 'debug'
-import Store, { IStore } from './store'
+import Store, { type IStore } from './store'
 import handlePacket from './handlers'
-import { ClientOptions } from 'ws'
-import { ClientRequestArgs } from 'http'
+import type { ClientOptions } from 'ws'
+import { type ClientRequestArgs } from 'http'
 import {
-	DoneCallback,
-	ErrorWithReasonCode,
-	GenericCallback,
-	IStream,
+	type DoneCallback,
+	type ErrorWithReasonCode,
+	type GenericCallback,
+	type IStream,
 	MQTTJS_VERSION,
-	StreamBuilder,
-	TimerVariant,
-	VoidCallback,
+	type StreamBuilder,
+	type TimerVariant,
+	type VoidCallback,
 	nextTick,
 } from './shared'
-import TopicAliasSend from './topic-alias-send'
+import type TopicAliasSend from './topic-alias-send'
 import { TypedEventEmitter } from './TypedEmitter'
 import KeepaliveManager from './KeepaliveManager'
 import isBrowser, { isWebWorker } from './is-browser'
-import { Timer } from './get-timer'
+import { type Timer } from './get-timer'
 
 const setImmediate =
 	globalThis.setImmediate ||

@@ -1,7 +1,7 @@
 import { ReasonCodes } from './ack'
 import TopicAliasSend from '../topic-alias-send'
-import { ErrorWithReasonCode, PacketHandler } from '../shared'
-import { IConnackPacket } from 'mqtt-packet'
+import { ErrorWithReasonCode, type PacketHandler } from '../shared'
+import { type IConnackPacket } from 'mqtt-packet'
 
 const handleConnack: PacketHandler = (client, packet: IConnackPacket) => {
 	client.log('_handleConnack')

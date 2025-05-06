@@ -1,11 +1,11 @@
 import _debug from 'debug'
 import { Duplex } from 'stream'
-import { SocksClient, SocksProxy } from 'socks'
+import { SocksClient, type SocksProxy } from 'socks'
 import * as dns from 'dns'
-import { SocksProxyType } from 'socks/typings/common/constants'
-import { IStream } from '../shared'
+import { type SocksProxyType } from 'socks/typings/common/constants'
+import { type IStream } from '../shared'
 import { promisify } from 'util'
-import { Socket } from 'net'
+import { type Socket } from 'net'
 import assert from 'assert'
 
 const debug = _debug('mqttjs:socks')

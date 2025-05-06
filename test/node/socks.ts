@@ -1,5 +1,5 @@
 import assert from 'assert'
-import { AddressInfo, createServer, Server, Socket } from 'net'
+import { type AddressInfo, createServer, type Server, type Socket } from 'net'
 import { describe, it, mock, afterEach, beforeEach } from 'node:test'
 import openSocks from 'src/lib/connect/socks'
 

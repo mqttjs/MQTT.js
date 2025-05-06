@@ -1,10 +1,11 @@
-import { StreamBuilder } from '../shared'
+import { type StreamBuilder } from '../shared'
 import { Buffer } from 'buffer'
-import Ws, { ClientOptions } from 'ws'
+import Ws, { type ClientOptions } from 'ws'
 import _debug from 'debug'
-import { DuplexOptions, Transform } from 'readable-stream'
+import { type DuplexOptions, Transform } from 'readable-stream'
 import isBrowser from '../is-browser'
-import MqttClient, { IClientOptions } from '../client'
+import { type IClientOptions } from '../client'
+import type MqttClient from '../client'
 import { BufferedDuplex, writev } from '../BufferedDuplex'
 
 const debug = _debug('mqttjs:ws')

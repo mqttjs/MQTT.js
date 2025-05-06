@@ -14,7 +14,7 @@ import serverBuilder from './server_helpers_for_client_tests'
 import _debug from 'debug'
 import { MqttServer } from './server'
 import abstractClientTests from './abstract_client'
-import { IClientOptions } from 'src/lib/client'
+import { type IClientOptions } from 'src/lib/client'
 import { describe, it, after } from 'node:test'
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
