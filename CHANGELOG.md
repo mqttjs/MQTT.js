@@ -1,5 +1,12 @@
 
 
+# [5.13.0](https://github.com/mqttjs/MQTT.js/compare/v5.12.1...v5.13.0) (2025-05-09)
+
+
+### Features
+
+* add `subscribeBatchSize` option to split subscribe packets for AWS IoT Core ([#1995](https://github.com/mqttjs/MQTT.js/issues/1995)) ([6b719c8](https://github.com/mqttjs/MQTT.js/commit/6b719c8cd11397bb13f06c36b3fa5a3840befacb))
+
 ## [5.12.1](https://github.com/mqttjs/MQTT.js/compare/v5.12.0...v5.12.1) (2025-05-06)
 
 
