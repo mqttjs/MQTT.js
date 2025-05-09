@@ -1,4 +1,4 @@
-import type { Packet } from 'mqtt-packet'
+import type { Packet, ISubackPacket } from 'mqtt-packet'
 import type { Duplex } from 'stream'
 import type MqttClient from './client'
 import type { IClientOptions } from './client'
@@ -39,6 +39,19 @@ export class ErrorWithReasonCode extends Error {
 		// We need to set the prototype explicitly
 		Object.setPrototypeOf(this, ErrorWithReasonCode.prototype)
 		Object.getPrototypeOf(this).name = 'ErrorWithReasonCode'
+	}
+}
+
+export class ErrorWithSubackPacket extends Error {
+	public packet: ISubackPacket
+
+	public constructor(message: string, packet: ISubackPacket) {
+		super(message)
+		this.packet = packet
+
+		// We need to set the prototype explicitly
+		Object.setPrototypeOf(this, ErrorWithSubackPacket.prototype)
+		Object.getPrototypeOf(this).name = 'ErrorWithSubackPacket'
 	}
 }
 

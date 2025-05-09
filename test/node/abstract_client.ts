@@ -2619,6 +2619,48 @@ export default function abstractTest(server, config, ports) {
 				})
 			})
 		})
+
+		it('should send multiple subscribe packets when topic count exceeds batchSize', function _test(t, done) {
+			const client = connect({ subscribeBatchSize: 2 })
+			const subs = ['test1', 'test2', 'test3']
+			client.once('connect', () => {
+				client.subscribe(subs)
+			})
+
+			const spy = sinon.spy()
+			server.once('client', (serverClient) => {
+				serverClient.on('subscribe', spy)
+			})
+			client.on('end', () => {
+				assert.strictEqual(spy.callCount, 2)
+				for (let i = 0; i < 2; i++) {
+					// i.e. [{topic: 'a', qos: 0}, {topic: 'b', qos: 0}]
+					const expected = subs
+						.slice(i * 2, i * 2 + 2)
+						.map((topic) => {
+							const result: ISubscriptionRequest = {
+								topic,
+								qos: 0,
+							}
+							if (version === 5) {
+								result.nl = false
+								result.rap = false
+								result.rh = 0
+							}
+							return result
+						})
+
+					assert.deepStrictEqual(
+						spy.getCall(i).args[0].subscriptions,
+						expected,
+					)
+				}
+				done()
+			})
+			setTimeout(() => {
+				client.end()
+			}, 300)
+		})
 	})
 
 	describe('receiving messages', () => {
