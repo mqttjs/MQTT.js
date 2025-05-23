@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, it } from 'node:test'
 import KeepaliveManager from '../../src/lib/KeepaliveManager'
 import { assert } from 'chai'
 import { useFakeTimers, spy, stub } from 'sinon'
-import { MqttClient } from 'src'
+import { type MqttClient } from 'src'
 
 function mockedClient(keepalive: number) {
 	return {

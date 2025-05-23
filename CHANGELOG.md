@@ -1,5 +1,33 @@
 
 
+# [5.13.0](https://github.com/mqttjs/MQTT.js/compare/v5.12.1...v5.13.0) (2025-05-09)
+
+
+### Features
+
+* add `subscribeBatchSize` option to split subscribe packets for AWS IoT Core ([#1995](https://github.com/mqttjs/MQTT.js/issues/1995)) ([6b719c8](https://github.com/mqttjs/MQTT.js/commit/6b719c8cd11397bb13f06c36b3fa5a3840befacb))
+
+## [5.12.1](https://github.com/mqttjs/MQTT.js/compare/v5.12.0...v5.12.1) (2025-05-06)
+
+
+### Bug Fixes
+
+* add `@typescript-eslint/consistent-type-imports` rule and normalised all imports ([640cd3b](https://github.com/mqttjs/MQTT.js/commit/640cd3b9bd7d9a7d8ef59fa3fdd57a3a1c3ba345))
+
+# [5.12.0](https://github.com/mqttjs/MQTT.js/compare/v5.11.1...v5.12.0) (2025-04-28)
+
+
+### Features
+
+* **exports:** add react-native entry point to package.json ([#1988](https://github.com/mqttjs/MQTT.js/issues/1988)) ([622d3d8](https://github.com/mqttjs/MQTT.js/commit/622d3d8e7d8149bbb2ee03a01254e0ab9bf42e6c))
+
+## [5.11.1](https://github.com/mqttjs/MQTT.js/compare/v5.11.0...v5.11.1) (2025-04-23)
+
+
+### Bug Fixes
+
+* **deps:** removed unused 'reinterval' dependency and move two @type/ dependencies to devDependencies. ([bb8c694](https://github.com/mqttjs/MQTT.js/commit/bb8c6947edc4d85d77f13f8c06df7a979a270a7f))
+
 # [5.11.0](https://github.com/mqttjs/MQTT.js/compare/v5.10.4...v5.11.0) (2025-04-10)
 
 

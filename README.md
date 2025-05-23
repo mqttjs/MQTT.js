@@ -475,6 +475,8 @@ The arguments are:
       For ws/wss protocols only. Can be used to implement a custom websocket subprotocol or implementation.
   - `resubscribe` : if connection is broken and reconnects,
     subscribed topics are automatically subscribed again (default `true`)
+  - `subscribeBatchSize` : optional `number`
+    Maximum number of topics per SUBSCRIBE packet. When the number of topics to subscribe exceeds this value, the client will automatically split them into multiple SUBSCRIBE packets of this size.
   - `messageIdProvider`: custom messageId provider. when `new UniqueMessageIdProvider()` is set, then non conflict messageId is provided.
   - `log`: custom log function. Default uses [debug](https://www.npmjs.com/package/debug) package.
   - `manualConnect`: prevents the constructor to call `connect`. In this case after the `mqtt.connect` is called you should call `client.connect` manually.

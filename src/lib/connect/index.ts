@@ -2,12 +2,12 @@
 import _debug from 'debug'
 import url from 'url'
 import MqttClient, {
-	IClientOptions,
-	MqttClientEventCallbacks,
-	MqttProtocol,
+	type IClientOptions,
+	type MqttClientEventCallbacks,
+	type MqttProtocol,
 } from '../client'
 import isBrowser from '../is-browser'
-import { StreamBuilder } from '../shared'
+import { type StreamBuilder } from '../shared'
 
 // Handling the process.nextTick is not a function error in react-native applications.
 if (typeof process?.nextTick !== 'function') {

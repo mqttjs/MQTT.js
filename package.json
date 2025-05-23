@@ -1,7 +1,7 @@
 {
   "name": "mqtt",
   "description": "A library for the MQTT protocol",
-  "version": "5.11.0",
+  "version": "5.13.0",
   "contributors": [
     "Adam Rudd <adamvrr@gmail.com>",
     "Matteo Collina <matteo.collina@gmail.com> (https://github.com/mcollina)",
@@ -37,6 +37,7 @@
   ],
   "exports": {
     ".": {
+      "react-native": "./dist/mqtt.esm.js",
       "browser": {
         "import": "./dist/mqtt.esm.js",
         "default": "./dist/mqtt.min.js"
@@ -111,8 +112,6 @@
     "net": false
   },
   "dependencies": {
-    "@types/readable-stream": "^4.0.18",
-    "@types/ws": "^8.5.14",
     "commist": "^3.2.0",
     "concat-stream": "^2.0.0",
     "debug": "^4.4.0",
@@ -122,7 +121,6 @@
     "mqtt-packet": "^9.0.2",
     "number-allocator": "^1.0.14",
     "readable-stream": "^4.7.0",
-    "reinterval": "^1.1.0",
     "rfdc": "^1.4.1",
     "socks": "^2.8.3",
     "split2": "^4.2.0",
@@ -134,8 +132,10 @@
     "@release-it/conventional-changelog": "^7.0.2",
     "@types/chai": "^4.3.20",
     "@types/node": "^20.17.16",
+    "@types/readable-stream": "^4.0.18",
     "@types/sinon": "^17.0.3",
     "@types/tape": "^5.8.1",
+    "@types/ws": "^8.18.1",
     "@typescript-eslint/eslint-plugin": "^6.21.0",
     "@typescript-eslint/parser": "^6.21.0",
     "@web/test-runner": "^0.19.0",

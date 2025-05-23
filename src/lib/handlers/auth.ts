@@ -1,5 +1,5 @@
-import { IAuthPacket } from 'mqtt-packet'
-import { ErrorWithReasonCode, PacketHandler } from '../shared'
+import { type IAuthPacket } from 'mqtt-packet'
+import { ErrorWithReasonCode, type PacketHandler } from '../shared'
 import { ReasonCodes } from './ack'
 
 const handleAuth: PacketHandler = (

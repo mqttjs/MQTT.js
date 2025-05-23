@@ -1,7 +1,7 @@
 import net from 'net'
-import tls, { TlsOptions } from 'tls'
+import tls, { type TlsOptions } from 'tls'
 import Connection from 'mqtt-connection'
-import { Duplex } from 'stream'
+import { type Duplex } from 'stream'
 
 export type MqttServerListener = (client: Connection) => void
 
