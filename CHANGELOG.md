@@ -1,5 +1,7 @@
 
 
+## [5.13.1](https://github.com/mqttjs/MQTT.js/compare/v5.13.0...v5.13.1) (2025-06-03)
+
 # [5.13.0](https://github.com/mqttjs/MQTT.js/compare/v5.12.1...v5.13.0) (2025-05-09)
 
 
