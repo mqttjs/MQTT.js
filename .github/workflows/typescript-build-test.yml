@@ -1,0 +1,35 @@
+name: TypeScript Compatibility Test
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+
+jobs:
+  typescript-compat:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Build MQTT.js
+        run: |
+          npm ci
+          npm run build
+
+      - name: Create test TypeScript project
+        run: |
+          mkdir ts-test
+          cd ts-test
+          npm init -y
+          npm install typescript@5.x
+          npm install ../
+          echo "import * as mqtt from 'mqtt'; const client = mqtt.connect('ws://localhost');" > index.ts
+          echo '{ "compilerOptions": { "esModuleInterop": true, "strict": true } }' > tsconfig.json
+          npx tsc -p .
