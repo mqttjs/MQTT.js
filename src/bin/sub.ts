@@ -5,7 +5,7 @@ import fs from 'fs'
 import minimist from 'minimist'
 import help from 'help-me'
 import { connect } from '../mqtt'
-import { IClientOptions } from 'src/lib/client'
+import { type IClientOptions } from 'src/lib/client'
 
 const helpMe = help({
 	dir: path.join(__dirname, '../../', 'help'),

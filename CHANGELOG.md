@@ -1,5 +1,21 @@
 
 
+## [5.13.1](https://github.com/mqttjs/MQTT.js/compare/v5.13.0...v5.13.1) (2025-06-03)
+
+# [5.13.0](https://github.com/mqttjs/MQTT.js/compare/v5.12.1...v5.13.0) (2025-05-09)
+
+
+### Features
+
+* add `subscribeBatchSize` option to split subscribe packets for AWS IoT Core ([#1995](https://github.com/mqttjs/MQTT.js/issues/1995)) ([6b719c8](https://github.com/mqttjs/MQTT.js/commit/6b719c8cd11397bb13f06c36b3fa5a3840befacb))
+
+## [5.12.1](https://github.com/mqttjs/MQTT.js/compare/v5.12.0...v5.12.1) (2025-05-06)
+
+
+### Bug Fixes
+
+* add `@typescript-eslint/consistent-type-imports` rule and normalised all imports ([640cd3b](https://github.com/mqttjs/MQTT.js/commit/640cd3b9bd7d9a7d8ef59fa3fdd57a3a1c3ba345))
+
 # [5.12.0](https://github.com/mqttjs/MQTT.js/compare/v5.11.1...v5.12.0) (2025-04-28)
 
 

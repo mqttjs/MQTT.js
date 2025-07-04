@@ -1,8 +1,8 @@
-import tls, { TLSSocket } from 'tls'
+import tls, { type TLSSocket } from 'tls'
 import net from 'net'
 import _debug from 'debug'
-import { StreamBuilder } from '../shared'
-import { IClientOptions } from '../client'
+import { type StreamBuilder } from '../shared'
+import { type IClientOptions } from '../client'
 import openSocks from './socks'
 
 const debug = _debug('mqttjs:tls')
