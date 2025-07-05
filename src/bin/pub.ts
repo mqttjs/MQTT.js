@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { Writable } from 'readable-stream'
+import { Writable } from 'node:stream'
 import path from 'path'
 import fs from 'fs'
 import concat from 'concat-stream'

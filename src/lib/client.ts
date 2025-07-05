@@ -18,7 +18,7 @@ import mqttPacket, {
 import DefaultMessageIdProvider, {
 	type IMessageIdProvider,
 } from './default-message-id-provider'
-import { type DuplexOptions, Writable } from 'readable-stream'
+import { type DuplexOptions, Writable } from 'node:stream'
 import clone from 'rfdc/default'
 import * as validations from './validations'
 import _debug from 'debug'
