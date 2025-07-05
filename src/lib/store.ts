@@ -1,7 +1,7 @@
 /**
  * Module dependencies
  */
-import { Readable } from 'readable-stream'
+import { Readable } from 'node:stream'
 import { type Packet } from 'mqtt-packet'
 import { type DoneCallback } from './shared'
 

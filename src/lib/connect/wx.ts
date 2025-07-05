@@ -1,7 +1,7 @@
 import { type StreamBuilder } from '../shared'
 
 import { Buffer } from 'buffer'
-import { Transform } from 'readable-stream'
+import { Transform } from 'node:stream'
 import { type IClientOptions } from '../client'
 import type MqttClient from '../client'
 import { BufferedDuplex } from '../BufferedDuplex'
@@ -121,7 +121,7 @@ const buildStream: StreamBuilder = (client, opts) => {
 	}
 
 	const destroyRef = stream.destroy
-	stream.destroy = (err, cb) => {
+	stream.destroy = (err, cb?: (error: Error) => void) => {
 		stream.destroy = destroyRef
 
 		setTimeout(() => {

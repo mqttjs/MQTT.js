@@ -1,5 +1,5 @@
 import { Buffer } from 'buffer'
-import { Transform } from 'readable-stream'
+import { Transform } from 'node:stream'
 import { type StreamBuilder } from '../shared'
 import { type IClientOptions } from '../client'
 import type MqttClient from '../client'
