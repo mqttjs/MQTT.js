@@ -1,5 +1,12 @@
 
 
+## [5.13.2](https://github.com/mqttjs/MQTT.js/compare/v5.13.1...v5.13.2) (2025-07-07)
+
+
+### Bug Fixes
+
+* move back @types/ws from dev to deps ([#2008](https://github.com/mqttjs/MQTT.js/issues/2008)) ([959b132](https://github.com/mqttjs/MQTT.js/commit/959b132a492f43902deb994d119d07f15f955390)), closes [#1991](https://github.com/mqttjs/MQTT.js/issues/1991)
+
 ## [5.13.1](https://github.com/mqttjs/MQTT.js/compare/v5.13.0...v5.13.1) (2025-06-03)
 
 # [5.13.0](https://github.com/mqttjs/MQTT.js/compare/v5.12.1...v5.13.0) (2025-05-09)
