@@ -1,9 +1,9 @@
 import { Buffer } from 'buffer'
 import { Transform } from 'readable-stream'
-import { type StreamBuilder } from '../shared'
-import { type IClientOptions } from '../client'
-import type MqttClient from '../client'
-import { BufferedDuplex } from '../BufferedDuplex'
+import { type StreamBuilder } from '../shared.js'
+import { type IClientOptions } from '../client.js'
+import type MqttClient from '../client.js'
+import { BufferedDuplex } from '../BufferedDuplex.js'
 
 let my: any
 let proxy: Transform
@@ -68,17 +68,29 @@ function bindEventHandler() {
 		stream.socketReady()
 	})
 
-	my.onSocketMessage((res) => {
+	my.onSocketMessage((res: any) => {
 		if (typeof res.data === 'string') {
 			const buffer = Buffer.from(res.data, 'base64')
 			proxy.push(buffer)
 		} else {
 			const reader = new FileReader()
 			reader.addEventListener('load', () => {
-				let data = reader.result
+				let data:
+					| string
+					| ArrayBuffer
+					| Buffer<ArrayBufferLike>
+					| null = reader.result
 
-				if (data instanceof ArrayBuffer) data = Buffer.from(data)
-				else data = Buffer.from(data, 'utf8')
+				// @TODO: @robertsLando We need to handle this situation as if data is null, Buffer.from(null) will throw an Error
+				if (data === null) {
+					throw new Error('')
+				}
+
+				if (data instanceof ArrayBuffer) {
+					data = Buffer.from(data)
+				} else {
+					data = Buffer.from(data, 'utf8')
+				}
 				proxy.push(data)
 			})
 			reader.readAsArrayBuffer(res.data)
@@ -90,7 +102,7 @@ function bindEventHandler() {
 		stream.destroy()
 	})
 
-	my.onSocketError((err) => {
+	my.onSocketError((err: Error) => {
 		stream.destroy(err)
 	})
 }

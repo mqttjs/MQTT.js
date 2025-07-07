@@ -1,4 +1,4 @@
-import * as mqtt from './mqtt'
+import * as mqtt from './mqtt.js'
 
 export default mqtt
-export * from './mqtt'
+export * from './mqtt.js'

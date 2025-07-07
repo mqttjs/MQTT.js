@@ -1,23 +1,24 @@
-import type MqttClient from './client'
-import getTimer, { type Timer } from './get-timer'
-import type { TimerVariant } from './shared'
+import type MqttClient from './client.js'
+import getTimer, { type Timer } from './get-timer.js'
+import type { TimerVariant } from './shared.js'
 
 export default class KeepaliveManager {
+	// @ts-expect-error - @TODO: @robertsLando: You have a situation where _keepalive can be undefined which will lead to cascading problems due to _keepalive being always used directly as a number.
 	private _keepalive: number
 
-	private timerId: number
+	private timerId: number | undefined
 
 	private timer: Timer
 
 	private destroyed = false
 
-	private counter: number
+	private counter: number = 0
 
 	private client: MqttClient
 
-	private _keepaliveTimeoutTimestamp: number
+	private _keepaliveTimeoutTimestamp: number | undefined
 
-	private _intervalEvery: number
+	private _intervalEvery: number | undefined
 
 	/** Timestamp of next keepalive timeout */
 	get keepaliveTimeoutTimestamp() {
@@ -41,13 +42,15 @@ export default class KeepaliveManager {
 			'clear' in variant
 				? variant
 				: getTimer(variant)
-		this.setKeepalive(client.options.keepalive)
+		if (client.options.keepalive !== undefined) {
+			this.setKeepalive(client.options.keepalive)
+		}
 	}
 
 	private clear() {
-		if (this.timerId) {
+		if (this.timerId !== undefined) {
 			this.timer.clear(this.timerId)
-			this.timerId = null
+			this.timerId = undefined
 		}
 	}
 
@@ -88,9 +91,11 @@ export default class KeepaliveManager {
 		this.counter = 0
 
 		// https://docs.oasis-open.org/mqtt/mqtt/v3.1.1/os/mqtt-v3.1.1-os.html#_Figure_3.5_Keep
+		// @TODO: this._keepalive may be undefined. This operation will result in NaN.
 		const keepAliveTimeout = Math.ceil(this._keepalive * 1.5)
 
 		this._keepaliveTimeoutTimestamp = Date.now() + keepAliveTimeout
+		// @TODO: this._keepalive may be undefined. This operation will result in NaN.
 		this._intervalEvery = Math.ceil(this._keepalive / 2)
 
 		this.timerId = this.timer.set(() => {

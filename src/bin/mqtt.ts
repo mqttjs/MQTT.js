@@ -7,10 +7,12 @@
  * See LICENSE for more information
  */
 import path from 'path'
+// @ts-expect-error - There is no types available for this library.
 import Commist from 'commist'
+// @ts-expect-error - There is no types available for this library.
 import help from 'help-me'
-import publish from './pub'
-import subscribe from './sub'
+import publish from './pub.js'
+import subscribe from './sub.js'
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const version = require('../../package.json').version

@@ -1,23 +1,37 @@
 import { Duplex, type Transform } from 'readable-stream'
 import { Buffer } from 'buffer'
-import { type IClientOptions } from './client'
+import { type IClientOptions } from './client.js'
+
+interface WritevChunksParameters {
+	chunk: unknown
+	encoding: string
+}
 
 /**
  * Utils writev function for browser, ensure to write Buffers to socket (convert strings).
  */
 export function writev(
-	chunks: { chunk: any; encoding: string }[],
+	chunks: Array<WritevChunksParameters>,
 	cb: (err?: Error) => void,
 ) {
 	const buffers = new Array(chunks.length)
 	for (let i = 0; i < chunks.length; i++) {
-		if (typeof chunks[i].chunk === 'string') {
-			buffers[i] = Buffer.from(chunks[i].chunk, 'utf8')
-		} else {
-			buffers[i] = chunks[i].chunk
+		const chunk: WritevChunksParameters | undefined = chunks[i]
+
+		if (chunk === undefined) {
+			continue
 		}
+
+		if (typeof chunk.chunk === 'string') {
+			buffers[i] = Buffer.from(chunk.chunk, 'utf8')
+
+			continue
+		}
+
+		buffers[i] = chunk.chunk
 	}
 
+	// @ts-expect-error - @TODO: @SmashingQuasar check where writev is being hijacked.
 	this._write(Buffer.concat(buffers), 'binary', cb)
 }
 
@@ -41,7 +55,11 @@ export class BufferedDuplex extends Duplex {
 		cb: (err?: Error) => void
 	}>
 
-	constructor(opts: IClientOptions, proxy: Transform, socket: WebSocket) {
+	public constructor(
+		opts: IClientOptions,
+		proxy: Transform,
+		socket: WebSocket,
+	) {
 		super({
 			objectMode: true,
 		})
@@ -62,11 +80,15 @@ export class BufferedDuplex extends Duplex {
 		})
 	}
 
-	_read(size?: number): void {
+	public override _read(size?: number): void {
 		this.proxy.read(size)
 	}
 
-	_write(chunk: any, encoding: string, cb: (err?: Error) => void) {
+	public override _write(
+		chunk: any,
+		encoding: string,
+		cb: (err?: Error) => void,
+	) {
 		if (!this.isSocketOpen) {
 			// Buffer the data in a queue
 			this.writeQueue.push({ chunk, encoding, cb })
@@ -75,12 +97,15 @@ export class BufferedDuplex extends Duplex {
 		}
 	}
 
-	_final(callback: (error?: Error) => void): void {
+	public override _final(callback: (error?: Error) => void): void {
 		this.writeQueue = []
 		this.proxy.end(callback)
 	}
 
-	_destroy(err: Error, callback: (error: Error) => void): void {
+	public override _destroy(
+		err: Error,
+		callback: (error: Error) => void,
+	): void {
 		this.writeQueue = []
 		// do not pass error here otherwise we should listen for `error` event on proxy to prevent uncaught exception
 		this.proxy.destroy()
@@ -88,7 +113,7 @@ export class BufferedDuplex extends Duplex {
 	}
 
 	/** Method to call when socket is ready to stop buffering writes */
-	socketReady() {
+	public socketReady() {
 		this.emit('connect')
 		this.isSocketOpen = true
 		this.processWriteQueue()

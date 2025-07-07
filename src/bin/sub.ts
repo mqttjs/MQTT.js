@@ -3,12 +3,13 @@
 import path from 'path'
 import fs from 'fs'
 import minimist from 'minimist'
+// @ts-expect-error - There is no types available for this library.
 import help from 'help-me'
-import { connect } from '../mqtt'
-import { type IClientOptions } from 'src/lib/client'
+import { connect } from '../mqtt.js'
+import { type IClientOptions } from '../lib/client.js'
 
 const helpMe = help({
-	dir: path.join(__dirname, '../../', 'help'),
+	dir: path.join(import.meta.dirname, '../../', 'help'),
 })
 
 export default function start(args: string[]) {
@@ -49,67 +50,71 @@ export default function start(args: string[]) {
 		},
 	})
 
-	if (parsedArgs.help) {
+	if (parsedArgs['help']) {
 		return helpMe.toStdout('subscribe')
 	}
 
-	parsedArgs.topic = parsedArgs.topic || parsedArgs._.shift()
+	parsedArgs['topic'] = parsedArgs['topic'] || parsedArgs._.shift()
 
-	if (!parsedArgs.topic) {
+	if (!parsedArgs['topic']) {
 		console.error('missing topic\n')
 		return helpMe.toStdout('subscribe')
 	}
 
-	if (parsedArgs.key) {
-		parsedArgs.key = fs.readFileSync(parsedArgs.key)
+	if (parsedArgs['key']) {
+		parsedArgs['key'] = fs.readFileSync(parsedArgs['key'])
 	}
 
-	if (parsedArgs.cert) {
-		parsedArgs.cert = fs.readFileSync(parsedArgs.cert)
+	if (parsedArgs['cert']) {
+		parsedArgs['cert'] = fs.readFileSync(parsedArgs['cert'])
 	}
 
-	if (parsedArgs.ca) {
-		parsedArgs.ca = fs.readFileSync(parsedArgs.ca)
+	if (parsedArgs['ca']) {
+		parsedArgs['ca'] = fs.readFileSync(parsedArgs['ca'])
 	}
 
-	if (parsedArgs.key && parsedArgs.cert && !parsedArgs.protocol) {
-		parsedArgs.protocol = 'mqtts'
+	if (parsedArgs['key'] && parsedArgs['cert'] && !parsedArgs['protocol']) {
+		parsedArgs['protocol'] = 'mqtts'
 	}
 
-	if (parsedArgs.insecure) {
-		parsedArgs.rejectUnauthorized = false
+	if (parsedArgs['insecure']) {
+		parsedArgs['rejectUnauthorized'] = false
 	}
 
-	if (parsedArgs.port) {
-		if (typeof parsedArgs.port !== 'number') {
+	if (parsedArgs['port']) {
+		if (typeof parsedArgs['port'] !== 'number') {
 			console.warn(
 				"# Port: number expected, '%s' was given.",
-				typeof parsedArgs.port,
+				typeof parsedArgs['port'],
 			)
 			return
 		}
 	}
 
 	if (parsedArgs['will-topic']) {
-		parsedArgs.will = {}
-		parsedArgs.will.topic = parsedArgs['will-topic']
-		parsedArgs.will.payload = parsedArgs['will-message']
-		parsedArgs.will.qos = parsedArgs['will-qos']
-		parsedArgs.will.retain = parsedArgs['will-retain']
+		parsedArgs['will'] = {}
+		parsedArgs['will'].topic = parsedArgs['will-topic']
+		parsedArgs['will'].payload = parsedArgs['will-message']
+		parsedArgs['will'].qos = parsedArgs['will-qos']
+		parsedArgs['will'].retain = parsedArgs['will-retain']
 	}
 
-	parsedArgs.keepAlive = parsedArgs['keep-alive']
+	parsedArgs['keepAlive'] = parsedArgs['keep-alive']
 
 	const client = connect(parsedArgs as IClientOptions)
 
 	client.on('connect', () => {
 		client.subscribe(
-			parsedArgs.topic,
-			{ qos: parsedArgs.qos },
-			(err, result) => {
+			parsedArgs['topic'],
+			{ qos: parsedArgs['qos'] },
+			(err: unknown, result: unknown) => {
 				if (err) {
 					console.error(err)
 					process.exit(1)
+				}
+
+				if (!Array.isArray(result)) {
+					return
 				}
 
 				result.forEach((sub) => {
@@ -127,15 +132,15 @@ export default function start(args: string[]) {
 		)
 	})
 
-	client.on('message', (topic, payload) => {
-		if (parsedArgs.verbose) {
-			console.log(topic, payload.toString())
+	client.on('message', (topic: unknown, payload: unknown) => {
+		if (parsedArgs['verbose']) {
+			console.log(topic, JSON.stringify(payload))
 		} else {
-			console.log(payload.toString())
+			console.log(JSON.stringify(payload))
 		}
 	})
 
-	client.on('error', (err) => {
+	client.on('error', (err: unknown) => {
 		console.warn(err)
 		client.end()
 	})

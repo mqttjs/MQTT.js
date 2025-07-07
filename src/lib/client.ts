@@ -1,7 +1,7 @@
 /**
  * Module dependencies
  */
-import TopicAliasRecv from './topic-alias-recv'
+import TopicAliasRecv from './topic-alias-recv.js'
 import mqttPacket, {
 	type IAuthPacket,
 	IConnackPacket,
@@ -17,13 +17,13 @@ import mqttPacket, {
 } from 'mqtt-packet'
 import DefaultMessageIdProvider, {
 	type IMessageIdProvider,
-} from './default-message-id-provider'
+} from './default-message-id-provider.js'
 import { type DuplexOptions, Writable } from 'readable-stream'
-import clone from 'rfdc/default'
-import * as validations from './validations'
+import clone from 'rfdc'
+import * as validations from './validations.js'
 import _debug from 'debug'
-import Store, { type IStore } from './store'
-import handlePacket from './handlers'
+import Store, { type IStore } from './store.js'
+import handlePacket from './handlers/index.js'
 import type { ClientOptions } from 'ws'
 import { type ClientRequestArgs } from 'http'
 import {
@@ -37,12 +37,12 @@ import {
 	type TimerVariant,
 	type VoidCallback,
 	nextTick,
-} from './shared'
-import type TopicAliasSend from './topic-alias-send'
-import { TypedEventEmitter } from './TypedEmitter'
-import KeepaliveManager from './KeepaliveManager'
-import isBrowser, { isWebWorker } from './is-browser'
-import { type Timer } from './get-timer'
+} from './shared.js'
+import type TopicAliasSend from './topic-alias-send.js'
+import { TypedEventEmitter } from './TypedEmitter.js'
+import KeepaliveManager from './KeepaliveManager.js'
+import isBrowser, { isWebWorker } from './is-browser.js'
+import { type Timer } from './get-timer.js'
 
 const setImmediate =
 	globalThis.setImmediate ||
@@ -62,7 +62,6 @@ const defaultConnectOptions: IClientOptions = {
 	connectTimeout: 30 * 1000,
 	clean: true,
 	resubscribe: true,
-	subscribeBatchSize: null,
 	writeCache: true,
 	timerVariant: 'auto',
 }
@@ -401,7 +400,7 @@ export { IConnackPacket, IDisconnectPacket, IPublishPacket, Packet }
 export type OnConnectCallback = (packet: IConnackPacket) => void
 export type OnDisconnectCallback = (packet: IDisconnectPacket) => void
 export type ClientSubscribeCallback = (
-	err: Error | null,
+	err: Error | undefined,
 	granted?: ISubscriptionGrant[],
 	packet?: ISubackPacket,
 ) => void
@@ -450,7 +449,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 	public disconnecting: boolean
 
-	public disconnected: boolean
+	public disconnected: boolean = true
 
 	public reconnecting: boolean
 
@@ -461,8 +460,6 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	public options: IClientOptions
 
 	public queueQoSZero: boolean
-
-	public _reconnectCount: number
 
 	public log: (...args: any[]) => void
 
@@ -477,13 +474,13 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 	public noop: (error?: any) => void
 
-	public keepaliveManager: KeepaliveManager
+	public keepaliveManager: KeepaliveManager | undefined
 
 	/**
 	 * The connection to the Broker. In browsers env this also have `socket` property
 	 * set to the `WebSocket` instance.
 	 */
-	public stream: IStream
+	public stream: IStream | undefined
 
 	public queue: { packet: Packet; cb: PacketCallback }[]
 
@@ -494,9 +491,9 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 	private _resubscribeTopics: ISubscriptionMap
 
-	private connackTimer: NodeJS.Timeout
+	private connackTimer: NodeJS.Timeout | undefined
 
-	private reconnectTimer: NodeJS.Timeout
+	private reconnectTimer: NodeJS.Timeout | undefined
 
 	private _storeProcessing: boolean
 
@@ -505,19 +502,19 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 	private _storeProcessingQueue: {
 		invoke: () => any
-		cbStorePut?: DoneCallback
-		callback: GenericCallback<any>
+		cbStorePut?: DoneCallback | undefined
+		callback?: GenericCallback<any> | undefined
 	}[]
 
 	private _firstConnection: boolean
 
-	private topicAliasRecv: TopicAliasRecv
+	private topicAliasRecv: TopicAliasRecv | undefined
 
-	private topicAliasSend: TopicAliasSend
+	private topicAliasSend: TopicAliasSend | undefined
 
-	private _deferredReconnect: () => void
+	private _deferredReconnect: (() => void) | undefined
 
-	private connackPacket: IConnackPacket
+	private connackPacket: IConnackPacket | undefined
 
 	public static defaultId() {
 		return `mqttjs_${Math.random().toString(16).substr(2, 8)}`
@@ -526,15 +523,9 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	constructor(streamBuilder: StreamBuilder, options: IClientOptions) {
 		super()
 
-		this.options = options || {}
-
-		// Defaults
-		for (const k in defaultConnectOptions) {
-			if (typeof this.options[k] === 'undefined') {
-				this.options[k] = defaultConnectOptions[k]
-			} else {
-				this.options[k] = options[k]
-			}
+		this.options = {
+			...defaultConnectOptions,
+			...options,
 		}
 
 		this.log = this.options.log || _debug('mqttjs:client')
@@ -584,7 +575,8 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			options.protocolVersion === 5 && options.customHandleAcks
 				? options.customHandleAcks
 				: (...args) => {
-						args[3](null, 0)
+						// @TODO: This would really need to be made easier to understand. It is difficult to know why the first parameter is Error | number.
+						args[3](0, 0)
 					}
 
 		// Disable pre-generated write cache if requested. Will allocate buffers on-the-fly instead. WARNING: This can affect write performance
@@ -614,7 +606,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		this.messageIdToTopic = {}
 
 		// Keepalive manager, setup in _setupKeepaliveManager
-		this.keepaliveManager = null
+		this.keepaliveManager = undefined
 		// Is the client connected?
 		this.connected = false
 		// Are we disconnecting?
@@ -624,9 +616,9 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		// Packet queue
 		this.queue = []
 		// connack timer
-		this.connackTimer = null
+		this.connackTimer = undefined
 		// Reconnect timer
-		this.reconnectTimer = null
+		this.reconnectTimer = undefined
 		// Is processing store?
 		this._storeProcessing = false
 		// Packet Ids are put into the store during store processing
@@ -640,7 +632,11 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		// True if connection is first time.
 		this._firstConnection = true
 
-		if (options.properties && options.properties.topicAliasMaximum > 0) {
+		// @TODO: This can be refactored in a separate method to make it easier to understand.
+		if (
+			options.properties?.topicAliasMaximum !== undefined &&
+			options.properties.topicAliasMaximum > 0
+		) {
 			if (options.properties.topicAliasMaximum > 0xffff) {
 				this.log(
 					'MqttClient :: options.properties.topicAliasMaximum is out of range',
@@ -722,6 +718,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	 * @return the auth packet to be returned to the broker
 	 * @api public
 	 */
+	// @ts-expect-error - packet is unused. @TODO: This method is seemingly never called.
 	public handleAuth(packet: IAuthPacket, callback: PacketCallback) {
 		callback()
 	}
@@ -734,6 +731,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	 * @param Function callback call when finished
 	 * @api public
 	 */
+	// @ts-expect-error - packet is unused. @TODO: This method is seemingly never called.
 	public handleMessage(packet: IPublishPacket, callback: DoneCallback) {
 		callback()
 	}
@@ -761,8 +759,8 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		const writable = new Writable()
 		const parser = mqttPacket.parser(this.options)
 
-		let completeParse = null
-		const packets = []
+		let completeParse: ((error?: Error | null) => void) | undefined
+		const packets: Array<mqttPacket.Packet> = []
 
 		this.log('connect :: calling method to clear reconnect')
 		this._clearReconnect()
@@ -794,7 +792,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			} else {
 				this.log('work :: no packets in queue')
 				const done = completeParse
-				completeParse = null
+				completeParse = undefined
 				this.log('work :: done flag is %s', !!done)
 				if (done) done()
 			}
@@ -805,11 +803,15 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 				nextTick(work)
 			} else {
 				const done = completeParse
-				completeParse = null
-				done()
+				completeParse = undefined
+
+				if (done !== undefined) {
+					done()
+				}
 			}
 		}
 
+		// @ts-expect-error - enc is seemingly never used. Possibly related to the other case of enc being unused.
 		writable._write = (buf, enc, done) => {
 			completeParse = done
 			this.log('writable stream :: parsing buffer')
@@ -817,17 +819,19 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			work()
 		}
 
-		const streamErrorHandler = (error) => {
+		const streamErrorHandler = (error: Error) => {
 			this.log('streamErrorHandler :: error', error.message)
 			// error.code will only be set on NodeJS env, browser don't allow to detect errors on sockets
 			// also emitting errors on browsers seems to create issues
-			if (error.code) {
+			if (Object.hasOwn(error, 'code')) {
 				// handle error
 				this.log('streamErrorHandler :: emitting error')
 				this.emit('error', error)
-			} else {
-				this.noop(error)
+
+				return
 			}
+
+			this.noop(error)
 		}
 
 		this.log('connect :: pipe stream to writable stream')
@@ -852,11 +856,15 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			protocolId: this.options.protocolId,
 			protocolVersion: this.options.protocolVersion,
 			clean: this.options.clean,
-			clientId: this.options.clientId,
 			keepalive: this.options.keepalive,
 			username: this.options.username,
-			password: this.options.password as Buffer,
+			// @ts-expect-error - @TODO: @robertsLando this is a dangerous situation as this.options.password can never be a Buffer but was forced as a Buffer
+			password: this.options.password,
 			properties: this.options.properties,
+		}
+
+		if (this.options.clientId !== undefined) {
+			connectPacket.clientId = this.options.clientId
 		}
 
 		if (this.options.will) {
@@ -967,19 +975,11 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 		// .publish(topic, payload, cb);
 		if (typeof opts === 'function') {
-			callback = opts as DoneCallback
-			opts = null
+			callback = opts
+			opts = undefined
 		}
 
 		opts = opts || {}
-
-		// default opts
-		const defaultOpts: IClientPublishOptions = {
-			qos: 0,
-			retain: false,
-			dup: false,
-		}
-		opts = { ...defaultOpts, ...opts }
 
 		const { qos, retain, dup, properties, cbStorePut } = opts
 
@@ -988,25 +988,27 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		}
 
 		const publishProc = () => {
-			let messageId = 0
+			let messageId: number = 0
 			if (qos === 1 || qos === 2) {
-				messageId = this._nextId()
-				if (messageId === null) {
+				const nextId: number | null = this._nextId()
+
+				if (nextId === null) {
 					this.log('No messageId left')
 					return false
 				}
+				messageId = nextId
 			}
 			const packet: IPublishPacket = {
 				cmd: 'publish',
 				topic,
 				payload: message,
-				qos,
-				retain,
+				qos: qos ?? 0,
+				retain: retain ?? false,
 				messageId,
-				dup,
+				dup: dup ?? false,
 			}
 
-			if (options.protocolVersion === 5) {
+			if (options.protocolVersion === 5 && properties !== undefined) {
 				packet.properties = properties
 			}
 
@@ -1014,11 +1016,15 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			switch (qos) {
 				case 1:
 				case 2:
-					// Add to callbacks
-					this.outgoing[packet.messageId] = {
-						volatile: false,
-						cb: callback || this.noop,
+					// packet.messageId will never be undefined in our case BUT the mqtt-packet types library declares that it can. This can be solved by better OOP and using guards.
+					if (packet.messageId !== undefined) {
+						// Add to callbacks
+						this.outgoing[packet.messageId] = {
+							volatile: false,
+							cb: callback ?? this.noop,
+						}
 					}
+
 					this.log('MqttClient:publish: packet cmd: %s', packet.cmd)
 					this._sendPacket(packet, undefined, cbStorePut)
 					break
@@ -1121,15 +1127,15 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		// force re-subscribe on reconnect. This is only true
 		// when provided `topicObject` is `this._resubscribeTopics`
 		let resubscribe = false
-		let topicsList = []
+		let topicsList: Array<string> = []
 
+		// @TODO: This can be improved by refactoring it in a dedicated method.
 		if (typeof topicObject === 'string') {
-			topicObject = [topicObject]
-			topicsList = topicObject
+			topicsList.push(topicObject)
 		} else if (Array.isArray(topicObject)) {
 			topicsList = topicObject
-		} else if (typeof topicObject === 'object') {
-			resubscribe = topicObject.resubscribe
+		} else {
+			resubscribe = topicObject.resubscribe ?? false
 			delete topicObject.resubscribe
 			topicsList = Object.keys(topicObject)
 		}
@@ -1150,12 +1156,10 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			qos: 0,
 		}
 
-		if (version === 5) {
-			defaultOpts.nl = false
-			defaultOpts.rap = false
-			defaultOpts.rh = 0
+		opts = {
+			...defaultOpts,
+			...opts,
 		}
-		opts = { ...defaultOpts, ...opts } as IClientSubscribeOptions
 
 		const properties = opts.properties
 
@@ -1165,25 +1169,31 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			topic: string,
 			subOptions?: IClientSubscribeOptions,
 		) => {
+			// @ts-expect-error - TypeScript is complaining about qos here. The solution requires some refactoring that will need to narrow down types better to avoid this situation.
+			const reconciledOptions: IClientSubscribeOptions =
+				subOptions ?? opts
+
 			// subOptions is defined only when providing a subs map, use opts otherwise
-			subOptions = (subOptions || opts) as IClientSubscribeOptions
+			// @TODO: This definitely needs to be made easier to read.
 			if (
 				!Object.prototype.hasOwnProperty.call(
 					this._resubscribeTopics,
 					topic,
 				) ||
-				this._resubscribeTopics[topic].qos < subOptions.qos ||
+				(this._resubscribeTopics[topic]?.qos !== undefined &&
+					this._resubscribeTopics[topic]?.qos <
+						reconciledOptions.qos) ||
 				resubscribe
 			) {
 				const currentOpts: ISubscription & IClientSubscribeProperties =
 					{
 						topic,
-						qos: subOptions.qos,
+						qos: reconciledOptions.qos,
 					}
 				if (version === 5) {
-					currentOpts.nl = subOptions.nl
-					currentOpts.rap = subOptions.rap
-					currentOpts.rh = subOptions.rh
+					currentOpts.nl = reconciledOptions.nl ?? false
+					currentOpts.rap = reconciledOptions.rap ?? false
+					currentOpts.rh = reconciledOptions.rh ?? 0
 					// use opts.properties
 					currentOpts.properties = properties
 				}
@@ -1202,9 +1212,9 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 				this.log('subscribe: array topic %s', topic)
 				parseSub(topic)
 			})
-		} else {
-			// object topic --> subOptions (no properties)
-			Object.keys(topicObject).forEach((topic) => {
+		} else if (typeof topicObject !== 'string') {
+			// object topic --> reconciledOptions (no properties)
+			Object.keys(topicObject).forEach((topic: string) => {
 				this.log(
 					'subscribe: object topic %s, %o',
 					topic,
@@ -1215,7 +1225,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		}
 
 		if (!subs.length) {
-			callback(null, [])
+			callback(undefined, [])
 			return this
 		}
 
@@ -1239,33 +1249,41 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			// subscriptions to resubscribe to in case of disconnect
 			if (this.options.resubscribe) {
 				this.log('subscribe :: resubscribe true')
-				const topics = []
+				const topics: Array<string> = []
 				chunkedSubs.forEach((sub) => {
-					if (this.options.reconnectPeriod > 0) {
-						const topic: IClientSubscribeOptions = { qos: sub.qos }
-						if (version === 5) {
-							topic.nl = sub.nl || false
-							topic.rap = sub.rap || false
-							topic.rh = sub.rh || 0
-							topic.properties = sub.properties
-						}
-						this._resubscribeTopics[sub.topic] = topic
-						topics.push(sub.topic)
+					if (
+						this.options.reconnectPeriod === undefined ||
+						this.options.reconnectPeriod >= 0
+					) {
+						return
 					}
+
+					const topic: IClientSubscribeOptions = { qos: sub.qos }
+
+					if (version === 5) {
+						topic.nl = sub.nl ?? false
+						topic.rap = sub.rap ?? false
+						topic.rh = sub.rh ?? 0
+						topic.properties = sub.properties
+					}
+					this._resubscribeTopics[sub.topic] = topic
+					topics.push(sub.topic)
 				})
-				this.messageIdToTopic[packet.messageId] = topics
+				this.messageIdToTopic[messageId] = topics
 			}
 
 			const promise = new Promise<ISubackPacket>((resolve, reject) => {
-				this.outgoing[packet.messageId] = {
+				this.outgoing[messageId] = {
 					volatile: true,
+					// @ts-expect-error - TypeScript cannot properly handle this situation because the outgoing property should actually be using a subclass and not an anonymous object type.
 					cb(err, packet2: ISubackPacket) {
 						if (!err) {
 							const { granted } = packet2
+
 							for (
 								let grantedI = 0;
 								grantedI < granted.length;
-								grantedI += 1
+								++grantedI
 							) {
 								chunkedSubs[grantedI].qos = granted[
 									grantedI
@@ -1305,7 +1323,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			}
 			Promise.all(subscribePromises)
 				.then((packets) => {
-					callback(null, subs, packets.at(-1))
+					callback(undefined, subs, packets.at(-1))
 				})
 				.catch((err: ErrorWithSubackPacket) => {
 					callback(err, subs, err.packet)

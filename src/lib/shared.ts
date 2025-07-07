@@ -1,7 +1,7 @@
 import type { Packet, ISubackPacket } from 'mqtt-packet'
 import type { Duplex } from 'stream'
-import type MqttClient from './client'
-import type { IClientOptions } from './client'
+import type MqttClient from './client.js'
+import type { IClientOptions } from './client.js'
 
 export type DoneCallback = (error?: Error) => void
 
