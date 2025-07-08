@@ -33,7 +33,6 @@ module.exports = {
 		'no-bitwise': 'off',
 		'class-methods-use-this': 'off',
 		'no-continue': 'off',
-		'prefer-destructuring': 'off',
 		'no-use-before-define': 'off',
 		// Typescript rules
 		'@typescript-eslint/interface-name-prefix': 'off',

@@ -1157,7 +1157,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		}
 		opts = { ...defaultOpts, ...opts } as IClientSubscribeOptions
 
-		const properties = opts.properties
+		const { properties } = opts
 
 		const subs: ISubscriptionRequest[] = []
 

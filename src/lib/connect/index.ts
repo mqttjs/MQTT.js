@@ -28,8 +28,9 @@ function parseAuthOptions(opts: IClientOptions) {
 	if (opts.auth) {
 		matches = opts.auth.match(/^(.+):(.+)$/)
 		if (matches) {
-			opts.username = matches[1]
-			opts.password = matches[2]
+			const [, username, password] = matches
+			opts.username = username
+			opts.password = password
 		} else {
 			opts.username = opts.auth
 		}
