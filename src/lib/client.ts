@@ -1,7 +1,6 @@
 /**
  * Module dependencies
  */
-import TopicAliasRecv from './topic-alias-recv'
 import mqttPacket, {
 	type IAuthPacket,
 	IConnackPacket,
@@ -15,17 +14,18 @@ import mqttPacket, {
 	type ISubackPacket,
 	type IConnectPacket,
 } from 'mqtt-packet'
+import { type DuplexOptions, Writable } from 'readable-stream'
+import clone from 'rfdc/default'
+import _debug from 'debug'
+import type { ClientOptions } from 'ws'
+import { type ClientRequestArgs } from 'http'
+import * as validations from './validations'
+import Store, { type IStore } from './store'
+import handlePacket from './handlers'
 import DefaultMessageIdProvider, {
 	type IMessageIdProvider,
 } from './default-message-id-provider'
-import { type DuplexOptions, Writable } from 'readable-stream'
-import clone from 'rfdc/default'
-import * as validations from './validations'
-import _debug from 'debug'
-import Store, { type IStore } from './store'
-import handlePacket from './handlers'
-import type { ClientOptions } from 'ws'
-import { type ClientRequestArgs } from 'http'
+import TopicAliasRecv from './topic-alias-recv'
 import {
 	type DoneCallback,
 	type ErrorWithReasonCode,

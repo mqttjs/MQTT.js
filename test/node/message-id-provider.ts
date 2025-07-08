@@ -1,6 +1,6 @@
 import { assert } from 'chai'
-import { DefaultMessageIdProvider, UniqueMessageIdProvider } from '../../src'
 import { describe, it } from 'node:test'
+import { DefaultMessageIdProvider, UniqueMessageIdProvider } from '../../src'
 
 describe('message id provider', () => {
 	describe('default', () => {

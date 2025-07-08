@@ -2,11 +2,11 @@ import http from 'http'
 import WebSocket from 'ws'
 import MQTTConnection from 'mqtt-connection'
 import assert from 'assert'
+import { after, describe, it } from 'node:test'
 import abstractClientTests from './abstract_client'
 import getPorts from './helpers/port_list'
 import { MqttServerNoWait } from './server'
 import mqtt, { type IClientOptions } from '../../src'
-import { after, describe, it } from 'node:test'
 
 const ports = getPorts(4)
 

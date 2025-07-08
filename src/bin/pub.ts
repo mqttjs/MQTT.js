@@ -8,9 +8,9 @@ import help from 'help-me'
 
 import minimist, { type ParsedArgs } from 'minimist'
 import split2 from 'split2'
-import { connect } from '../mqtt'
 import { type IClientOptions, type IClientPublishOptions } from 'src/lib/client'
 import { pipeline } from 'stream'
+import { connect } from '../mqtt'
 
 const helpMe = help({
 	dir: path.join(__dirname, '../../', 'help'),

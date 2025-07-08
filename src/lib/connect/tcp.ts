@@ -1,7 +1,6 @@
-import { type StreamBuilder } from '../shared'
-
 import net from 'net'
 import _debug from 'debug'
+import { type StreamBuilder } from '../shared'
 import openSocks from './socks'
 
 const debug = _debug('mqttjs:tcp')

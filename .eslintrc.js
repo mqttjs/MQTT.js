@@ -28,7 +28,6 @@ module.exports = {
 		'no-restricted-syntax': 'off',
 		'default-case': 'off',
 		'consistent-return': 'off',
-		'import/order': 'off',
 		'max-classes-per-file': 'off',
 		'no-plusplus': 'off',
 		'guard-for-in': 'off',

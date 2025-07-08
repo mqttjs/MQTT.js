@@ -1,5 +1,5 @@
-import { Store } from '../../src'
 import { describe, it } from 'node:test'
+import { Store } from '../../src'
 import 'should'
 
 describe('store in lib/connect/index.js (webpack entry point)', () => {

@@ -1,7 +1,7 @@
 import fs from 'fs'
 import path from 'path'
-import mqtt, { type IClientOptions } from '../../src'
 import { describe, it } from 'node:test'
+import mqtt, { type IClientOptions } from '../../src'
 import 'should'
 
 describe('mqtt', () => {
