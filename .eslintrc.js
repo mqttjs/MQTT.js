@@ -33,11 +33,7 @@ module.exports = {
 		'no-bitwise': 'off',
 		'class-methods-use-this': 'off',
 		'no-continue': 'off',
-		'no-use-before-define': 'off',
 		// Typescript rules
-		'@typescript-eslint/interface-name-prefix': 'off',
-		'@typescript-eslint/explicit-function-return-type': 'off',
-		'@typescript-eslint/explicit-module-boundary-types': 'off',
 		'@typescript-eslint/no-explicit-any': 'off',
 		'@typescript-eslint/no-unused-vars': [
 			'error',
