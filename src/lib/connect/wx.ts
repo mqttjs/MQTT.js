@@ -1,10 +1,10 @@
-import { type StreamBuilder } from '../shared'
+import { type StreamBuilder } from '../shared.js'
 
 import { Buffer } from 'buffer'
 import { Transform } from 'readable-stream'
-import { type IClientOptions } from '../client'
-import type MqttClient from '../client'
-import { BufferedDuplex } from '../BufferedDuplex'
+import { type IClientOptions } from '../client.js'
+import type MqttClient from '../client.js'
+import { BufferedDuplex } from '../BufferedDuplex.js'
 
 /* global wx */
 let socketTask: any
@@ -17,13 +17,13 @@ declare global {
 
 function buildProxy() {
 	const _proxy = new Transform()
-	_proxy._write = (chunk, encoding, next) => {
+	_proxy._write = (chunk, _encoding, next) => {
 		socketTask.send({
 			data: chunk.buffer,
 			success() {
 				next()
 			},
-			fail(errMsg) {
+			fail(errMsg: string) {
 				next(new Error(errMsg))
 			},
 		})
@@ -39,7 +39,7 @@ function buildProxy() {
 	return _proxy
 }
 
-function setDefaultOpts(opts) {
+function setDefaultOpts(opts: IClientOptions) {
 	if (!opts.hostname) {
 		opts.hostname = 'localhost'
 	}
@@ -69,6 +69,7 @@ function bindEventHandler() {
 		stream.socketReady()
 	})
 
+	// @ts-expect-error - socketTask is any typed so it's currently impossible to clearly tell how to type res
 	socketTask.onMessage((res) => {
 		let { data } = res
 
@@ -83,6 +84,7 @@ function bindEventHandler() {
 		stream.destroy()
 	})
 
+	// @ts-expect-error - socketTask is any typed so it's currently impossible to clearly tell how to type res
 	socketTask.onError((error) => {
 		const err = new Error(error.errMsg)
 		stream.destroy(err)

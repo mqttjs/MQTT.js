@@ -181,11 +181,11 @@ export interface IClientOptions extends ISecureClientOptions {
 	/**
 	 * a Store for the incoming packets
 	 */
-	incomingStore?: IStore
+	incomingStore?: IStore | undefined
 	/**
 	 * a Store for the outgoing packets
 	 */
-	outgoingStore?: IStore
+	outgoingStore?: IStore | undefined
 
 	/** Enable/Disable queue for QoS 0 packets */
 	queueQoSZero?: boolean
@@ -1285,6 +1285,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 								grantedI < granted.length;
 								++grantedI
 							) {
+								// @ts-expect-error - This needs a bit more in-depth refactoring to properly satisfy typing here.
 								chunkedSubs[grantedI].qos = granted[
 									grantedI
 								] as QoS
@@ -1362,7 +1363,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 				if (err) {
 					reject(err)
 				} else {
-					resolve(granted)
+					resolve(granted ?? [])
 				}
 			})
 		})
@@ -1427,7 +1428,6 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			}
 			const packet: IUnsubscribePacket = {
 				cmd: 'unsubscribe',
-				// qos: 1,
 				messageId,
 				unsubscriptions: [],
 			}
@@ -1448,7 +1448,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 				packet.properties = opts.properties
 			}
 
-			this.outgoing[packet.messageId] = {
+			this.outgoing[messageId] = {
 				volatile: true,
 				cb: callback,
 			}
@@ -1529,7 +1529,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 		if (typeof opts !== 'object') {
 			cb = cb || opts
-			opts = null
+			opts = undefined
 		}
 
 		this.log('end :: cb? %s', !!cb)
@@ -1671,18 +1671,13 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	): MqttClient {
 		this.log('client reconnect')
 		const f = () => {
-			if (opts) {
-				this.options.incomingStore = opts.incomingStore
-				this.options.outgoingStore = opts.outgoingStore
-			} else {
-				this.options.incomingStore = null
-				this.options.outgoingStore = null
-			}
+			this.options.incomingStore = opts?.incomingStore
+			this.options.outgoingStore = opts?.outgoingStore
 			this.incomingStore = this.options.incomingStore || new Store()
 			this.outgoingStore = this.options.outgoingStore || new Store()
 			this.disconnecting = false
 			this.disconnected = false
-			this._deferredReconnect = null
+			this._deferredReconnect = undefined
 			this._reconnect()
 		}
 

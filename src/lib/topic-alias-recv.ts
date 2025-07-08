@@ -8,7 +8,7 @@ export default class TopicAliasRecv {
 
 	public max: number
 
-	public length: number
+	public length: number | undefined
 
 	constructor(max: number) {
 		this.aliasToTopic = {}
@@ -35,8 +35,8 @@ export default class TopicAliasRecv {
 	 * @param {String} [topic] - topic
 	 * @returns {Number} - if mapped topic exists return topic alias, otherwise return undefined
 	 */
-	getTopicByAlias(alias: number): string {
-		return this.aliasToTopic[alias]
+	getTopicByAlias(alias: number): string | undefined {
+		return this.aliasToTopic?.[alias]
 	}
 
 	/**

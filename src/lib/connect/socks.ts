@@ -2,7 +2,10 @@ import _debug from 'debug'
 import { Duplex } from 'stream'
 import { SocksClient, type SocksProxy } from 'socks'
 import * as dns from 'dns'
-import { type SocksProxyType } from 'socks/typings/common/constants'
+import {
+	type SocksClientOptions,
+	type SocksProxyType,
+} from 'socks/typings/common/constants'
 import { type IStream } from '../shared'
 import { promisify } from 'util'
 import { type Socket } from 'net'
@@ -32,7 +35,7 @@ class ProxyStream extends Duplex {
 		assert(!this._socket)
 
 		if (this.destroyed) {
-			socket.destroy(this.errored)
+			socket.destroy(this.errored ?? undefined)
 			return
 		}
 
@@ -50,9 +53,9 @@ class ProxyStream extends Duplex {
 		this.uncork()
 	}
 
-	_write(
+	public override _write(
 		chunk: any,
-		encoding: BufferEncoding,
+		_encoding: BufferEncoding,
 		callback: (error?: Error | null) => void,
 	): void {
 		assert(this._socket)
@@ -60,17 +63,17 @@ class ProxyStream extends Duplex {
 		this._socket.write(chunk, callback)
 	}
 
-	_read(size: number): void {
+	public override _read(_size: number): void {
 		this._flowing = true
 
 		this._socket?.resume?.()
 	}
 
-	_destroy(
+	public override _destroy(
 		error: Error | null,
 		callback: (error?: Error | null) => void,
 	): void {
-		this._socket?.destroy?.(error)
+		this._socket?.destroy?.(error ?? undefined)
 
 		callback(error)
 	}
@@ -187,15 +190,20 @@ async function connectSocks(
 		proxy.port,
 	)
 
-	const socksClient = new SocksClient({
+	const socksClientOptions: SocksClientOptions = {
 		command: 'connect',
 		destination: {
 			host: destinationHost,
 			port: destinationPort,
 		},
 		proxy: { ...proxy },
-		timeout: options.timeout,
-	})
+	}
+
+	if (options.timeout !== undefined) {
+		socksClientOptions.timeout = options.timeout
+	}
+
+	const socksClient = new SocksClient(socksClientOptions)
 	socksClient.connect()
 
 	socksClient.on('established', ({ socket }) => stream._start(socket))

@@ -20,7 +20,7 @@ export function validateTopic(topic: string): boolean {
 			return i === parts.length - 1
 		}
 
-		if (parts[i].indexOf('+') !== -1 || parts[i].indexOf('#') !== -1) {
+		if (parts[i]?.indexOf('+') !== -1 || parts[i]?.indexOf('#') !== -1) {
 			return false
 		}
 	}
@@ -37,10 +37,12 @@ export function validateTopics(topics: string[]): string | null {
 	if (topics.length === 0) {
 		return 'empty_topic_list'
 	}
-	for (let i = 0; i < topics.length; i++) {
-		if (!validateTopic(topics[i])) {
-			return topics[i]
+
+	for (const topic of topics) {
+		if (!validateTopic(topic)) {
+			return topic
 		}
 	}
+
 	return null
 }

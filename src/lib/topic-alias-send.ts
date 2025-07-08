@@ -10,15 +10,15 @@ import { NumberAllocator } from 'number-allocator'
  * @param {Number} [max] - topic alias maximum entries
  */
 export default class TopicAliasSend {
-	private aliasToTopic: LRUCache<number, string>
+	private aliasToTopic: LRUCache<number, string> | undefined
 
-	private topicToAlias: Record<string, number>
+	private topicToAlias: Record<string, number> | undefined
 
-	private max: number
+	private max: number | undefined
 
-	private numberAllocator: NumberAllocator
+	private numberAllocator: NumberAllocator | undefined
 
-	public length: number
+	public length: number | undefined
 
 	constructor(max: number) {
 		if (max > 0) {
@@ -37,17 +37,23 @@ export default class TopicAliasSend {
 	 * @returns {Boolean} - if success return true otherwise false
 	 */
 	put(topic: string, alias: number): boolean {
+		// @ts-expect-error - this.max is possibly undefined here whilst it should be a number
 		if (alias === 0 || alias > this.max) {
 			return false
 		}
-		const entry = this.aliasToTopic.get(alias)
-		if (entry) {
-			delete this.topicToAlias[entry]
+		const entry = this.aliasToTopic?.get(alias)
+
+		if (entry !== undefined) {
+			delete this.topicToAlias?.[entry]
 		}
-		this.aliasToTopic.set(alias, topic)
-		this.topicToAlias[topic] = alias
-		this.numberAllocator.use(alias)
-		this.length = this.aliasToTopic.size
+		this.aliasToTopic?.set(alias, topic)
+
+		// @TODO: topicToAlias should most likely not be possibly undefined
+		if (this.topicToAlias?.[topic] !== undefined) {
+			this.topicToAlias[topic] = alias
+		}
+		this.numberAllocator?.use(alias)
+		this.length = this.aliasToTopic?.size
 		return true
 	}
 
@@ -56,8 +62,8 @@ export default class TopicAliasSend {
 	 * @param {Number} [alias] - topic alias
 	 * @returns {String} - if mapped topic exists return topic, otherwise return undefined
 	 */
-	getTopicByAlias(alias: number): string {
-		return this.aliasToTopic.get(alias)
+	getTopicByAlias(alias: number): string | undefined {
+		return this.aliasToTopic?.get(alias)
 	}
 
 	/**
@@ -66,10 +72,12 @@ export default class TopicAliasSend {
 	 * @returns {Number} - if mapped topic exists return topic alias, otherwise return undefined
 	 */
 	getAliasByTopic(topic: string): number | undefined {
-		const alias = this.topicToAlias[topic]
-		if (typeof alias !== 'undefined') {
-			this.aliasToTopic.get(alias) // LRU update
+		const alias = this.topicToAlias?.[topic]
+
+		if (alias !== undefined) {
+			this.aliasToTopic?.get(alias) // LRU update
 		}
+
 		return alias
 	}
 
@@ -77,9 +85,9 @@ export default class TopicAliasSend {
 	 * Clear all entries
 	 */
 	clear() {
-		this.aliasToTopic.clear()
+		this.aliasToTopic?.clear()
 		this.topicToAlias = {}
-		this.numberAllocator.clear()
+		this.numberAllocator?.clear()
 		this.length = 0
 	}
 
@@ -88,9 +96,10 @@ export default class TopicAliasSend {
 	 * @returns {Number} - if vacant alias exists then return it, otherwise then return LRU alias
 	 */
 	getLruAlias(): number {
-		const alias = this.numberAllocator.firstVacant()
+		const alias = this.numberAllocator?.firstVacant()
 		if (alias) return alias
 		// get last alias (key) from LRU cache
+		// @ts-expect-error - this.aliasToTopic should most likely not be possibly undefined
 		return [...this.aliasToTopic.keys()][this.aliasToTopic.size - 1]
 	}
 }

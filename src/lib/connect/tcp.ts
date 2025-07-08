@@ -2,28 +2,41 @@ import { type StreamBuilder } from '../shared'
 
 import net from 'net'
 import _debug from 'debug'
-import openSocks from './socks'
+import openSocks, { type SocksConnectionOptions } from './socks'
+import { type IClientOptions } from '../client'
 
 const debug = _debug('mqttjs:tcp')
 /*
   variables port and host can be removed since
   you have all required information in opts object
 */
-const buildStream: StreamBuilder = (client, opts) => {
-	opts.port = opts.port || 1883
-	opts.hostname = opts.hostname || opts.host || 'localhost'
+const buildStream: StreamBuilder = (_client, opts) => {
+	const scopedOpts: IClientOptions = opts ?? {}
 
-	if (opts.socksProxy) {
-		return openSocks(opts.hostname, opts.port, opts.socksProxy, {
-			timeout: opts.socksTimeout,
-		})
+	scopedOpts.port = opts?.port ?? 1883
+	// @TODO: Defaulting localhost has a few minor pitfalls. Notably because localhost triggers DNS resolution which might not map to 127.0.0.1 and create problems.
+	scopedOpts.hostname = opts?.hostname ?? opts?.host ?? 'localhost'
+
+	if (scopedOpts.socksProxy) {
+		const socksConnectionOptions: SocksConnectionOptions = {}
+
+		if (scopedOpts.socksTimeout !== undefined) {
+			socksConnectionOptions.timeout = scopedOpts.socksTimeout
+		}
+		return openSocks(
+			scopedOpts.hostname,
+			scopedOpts.port,
+			scopedOpts.socksProxy,
+			socksConnectionOptions,
+		)
 	}
 
-	const { port, path } = opts
-	const host = opts.hostname
-
-	debug('port %d and host %s', port, host)
-	return net.createConnection({ port, host, path })
+	debug('port %d and host %s', scopedOpts.port, scopedOpts.hostname)
+	return net.createConnection({
+		port: scopedOpts.port,
+		host: scopedOpts.hostname,
+		path: scopedOpts.path,
+	})
 }
 
 export default buildStream

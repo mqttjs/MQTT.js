@@ -8,7 +8,7 @@ import { type IMessageIdProvider } from './default-message-id-provider'
 export default class UniqueMessageIdProvider implements IMessageIdProvider {
 	private numberAllocator: NumberAllocator
 
-	private lastId: number
+	private lastId: number | undefined | null
 
 	constructor() {
 		this.numberAllocator = new NumberAllocator(1, 65535)
@@ -32,7 +32,7 @@ export default class UniqueMessageIdProvider implements IMessageIdProvider {
 	 * @return unsigned int
 	 */
 	getLastAllocated() {
-		return this.lastId
+		return this.lastId ?? null
 	}
 
 	/**

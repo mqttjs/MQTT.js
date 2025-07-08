@@ -75,6 +75,7 @@ export default class Store implements IStore {
 	 *
 	 */
 	put(packet: Packet, cb: DoneCallback) {
+		// @ts-expect-error - here the Packet union type declares that messageId can be undefined. This can be resolved by a type guard but will change to logic of the code.
 		this._inflights.set(packet.messageId, packet)
 
 		if (cb) {
@@ -90,11 +91,11 @@ export default class Store implements IStore {
 	 */
 	createStream() {
 		const stream = new Readable(streamsOpts)
-		const values = []
+		const values: Packet[] = []
 		let destroyed = false
 		let i = 0
 
-		this._inflights.forEach((value, key) => {
+		this._inflights.forEach((value) => {
 			values.push(value)
 		})
 
@@ -106,8 +107,9 @@ export default class Store implements IStore {
 			}
 		}
 
-		stream.destroy = (err) => {
+		stream.destroy = (_err: Error | undefined): Readable => {
 			if (destroyed) {
+				// @ts-expect-error - This is problematic as this is a native method hi-jacking that violates the return type of the original method.
 				return
 			}
 
@@ -127,10 +129,12 @@ export default class Store implements IStore {
 	 * deletes a packet from the store.
 	 */
 	del(packet: Pick<Packet, 'messageId'>, cb: PacketCallback) {
+		// @ts-expect-error - here the Packet union type declares that messageId can be undefined. This can be resolved by a type guard but will change to logic of the code.
 		const toDelete = this._inflights.get(packet.messageId)
 		if (toDelete) {
+			// @ts-expect-error - here the Packet union type declares that messageId can be undefined. This can be resolved by a type guard but will change to logic of the code.
 			this._inflights.delete(packet.messageId)
-			cb(null, toDelete)
+			cb(undefined, toDelete)
 		} else if (cb) {
 			cb(new Error('missing packet'))
 		}
@@ -142,9 +146,10 @@ export default class Store implements IStore {
 	 * get a packet from the store.
 	 */
 	get(packet: Pick<Packet, 'messageId'>, cb: PacketCallback) {
+		// @ts-expect-error - here the Packet union type declares that messageId can be undefined. This can be resolved by a type guard but will change to logic of the code.
 		const storedPacket = this._inflights.get(packet.messageId)
 		if (storedPacket) {
-			cb(null, storedPacket)
+			cb(undefined, storedPacket)
 		} else if (cb) {
 			cb(new Error('missing packet'))
 		}
@@ -157,7 +162,7 @@ export default class Store implements IStore {
 	 */
 	close(cb: DoneCallback) {
 		if (this.options.clean) {
-			this._inflights = null
+			this._inflights.clear()
 		}
 		if (cb) {
 			cb()
