@@ -30,7 +30,6 @@ module.exports = {
 		'consistent-return': 'off',
 		'max-classes-per-file': 'off',
 		'no-plusplus': 'off',
-		'guard-for-in': 'off',
 		'no-bitwise': 'off',
 		'class-methods-use-this': 'off',
 		'no-continue': 'off',
