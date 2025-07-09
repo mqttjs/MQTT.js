@@ -13,7 +13,7 @@ import publish from './pub'
 import subscribe from './sub'
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const version = require('../../package.json').version
+const { version } = require('../../package.json')
 
 const helpMe = help({
 	dir: path.join(__dirname, '../../', 'help'),

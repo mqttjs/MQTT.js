@@ -5,6 +5,15 @@ import { assert } from 'chai'
 import sinon from 'sinon'
 import fs from 'fs'
 import levelStore from 'mqtt-level-store'
+import {
+	type IPublishPacket,
+	type IPubrelPacket,
+	type ISubackPacket,
+	type QoS,
+} from 'mqtt-packet'
+import { type DoneCallback, ErrorWithReasonCode } from 'src/lib/shared'
+import { fail } from 'assert'
+import { describe, it, beforeEach, afterEach, after } from 'node:test'
 import Store from '../../src/lib/store'
 import serverBuilderFn from './server_helpers_for_client_tests'
 import handlePubrel from '../../src/lib/handlers/pubrel'
@@ -18,15 +27,6 @@ import mqtt, {
 	type ISubscriptionMap,
 	type ISubscriptionRequest,
 } from '../../src'
-import {
-	type IPublishPacket,
-	type IPubrelPacket,
-	type ISubackPacket,
-	type QoS,
-} from 'mqtt-packet'
-import { type DoneCallback, ErrorWithReasonCode } from 'src/lib/shared'
-import { fail } from 'assert'
-import { describe, it, beforeEach, afterEach, after } from 'node:test'
 
 /**
  * These tests try to be consistent with names for servers (brokers) and clients,
