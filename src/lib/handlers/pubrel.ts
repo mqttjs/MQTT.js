@@ -5,6 +5,7 @@ import {
 } from 'mqtt-packet'
 import { type PacketHandler } from '../shared'
 
+// @ts-expect-error - Types from mqtt-packet are incompatible with what has been declared here.
 const handlePubrel: PacketHandler = (client, packet: IPubrelPacket, done) => {
 	client.log('handling pubrel packet')
 	const callback = typeof done !== 'undefined' ? done : client.noop
@@ -22,10 +23,10 @@ const handlePubrel: PacketHandler = (client, packet: IPubrelPacket, done) => {
 					return callback(err2)
 				}
 				client.incomingStore.del(pub, client.noop)
-				client['_sendPacket'](comp, callback)
+				client._sendPacket(comp, callback)
 			})
 		} else {
-			client['_sendPacket'](comp, callback)
+			client._sendPacket(comp, callback)
 		}
 	})
 }

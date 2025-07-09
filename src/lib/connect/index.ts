@@ -16,7 +16,7 @@ if (typeof process?.nextTick !== 'function') {
 
 const debug = _debug('mqttjs')
 
-let protocols: Record<string, StreamBuilder> = null
+let protocols: Record<string, StreamBuilder> | undefined
 
 /**
  * Parse the auth attribute and merge username and password in the options object.
@@ -24,15 +24,21 @@ let protocols: Record<string, StreamBuilder> = null
  * @param {Object} [opts] option object
  */
 function parseAuthOptions(opts: IClientOptions) {
-	let matches: RegExpMatchArray | null
-	if (opts.auth) {
-		matches = opts.auth.match(/^(.+):(.+)$/)
-		if (matches) {
-			opts.username = matches[1]
-			opts.password = matches[2]
-		} else {
-			opts.username = opts.auth
-		}
+	if (opts.auth === undefined) {
+		return
+	}
+
+	const results: RegExpExecArray | null =
+		/^(?<username>.+):(?<password>.+)$/.exec(opts.auth)
+
+	if (
+		results?.groups?.['username'] !== undefined &&
+		results?.groups?.['password'] !== undefined
+	) {
+		opts.username = results.groups['username']
+		opts.password = results.groups['password']
+	} else {
+		opts.username = opts.auth
 	}
 }
 
@@ -47,30 +53,41 @@ function connect(
 	opts?: IClientOptions,
 ): MqttClient {
 	debug('connecting to an MQTT broker...')
-	if (typeof brokerUrl === 'object' && !opts) {
+	// @robertsLando: This is a dangerous evaluation of brokerUrl as typeof null === 'object' will return true
+	if (typeof brokerUrl === 'object' && opts === undefined) {
 		opts = brokerUrl
 		brokerUrl = ''
 	}
 
-	opts = opts || {}
+	opts = opts ?? {}
 
 	// try to parse the broker url
 	if (brokerUrl && typeof brokerUrl === 'string') {
 		// eslint-disable-next-line
 		const parsedUrl = url.parse(brokerUrl, true)
-		const parsedOptions: Partial<IClientOptions> = {}
+		const parsedOptions: IClientOptions = {}
 
-		if (parsedUrl.port != null) {
-			// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-			// @ts-ignore
-			parsedOptions.port = Number(parsedUrl.port)
+		if (parsedUrl.port !== null) {
+			parsedOptions.port = parseInt(parsedUrl.port, 10)
 		}
 
-		parsedOptions.host = parsedUrl.hostname
-		parsedOptions.query = parsedUrl.query as Record<string, string>
-		parsedOptions.auth = parsedUrl.auth
-		parsedOptions.protocol = parsedUrl.protocol as MqttProtocol
-		parsedOptions.path = parsedUrl.path
+		if (parsedUrl.hostname !== null) {
+			parsedOptions.host = parsedUrl.hostname
+		}
+
+		// @ts-expect-error - This needs to be narrowed using a type guard as we can end up with unexpected record entries.
+		parsedOptions.query = parsedUrl.query
+
+		if (parsedUrl.auth !== null) {
+			parsedOptions.auth = parsedUrl.auth
+		}
+
+		// @ts-expect-error - We need to create a typeguard to ensure a valid mqtt protocol
+		parsedOptions.protocol = parsedUrl.protocol
+
+		if (parsedUrl.path !== null) {
+			parsedOptions.path = parsedUrl.path
+		}
 
 		opts = { ...parsedOptions, ...opts }
 
@@ -79,13 +96,16 @@ function connect(
 			throw new Error('Missing protocol')
 		}
 
-		opts.protocol = opts.protocol.replace(/:$/, '') as MqttProtocol
+		// @ts-expect-error - We need to create a typeguard to ensure a valid mqtt protocol
+		opts.protocol = opts.protocol.replace(/:$/, '')
 	}
 
-	opts.unixSocket = opts.unixSocket || opts.protocol?.includes('+unix')
+	// @ts-expect-error - We need to determine what to do by default here. The most likely case is to default to false.
+	opts.unixSocket = opts.unixSocket ?? opts.protocol?.includes('+unix')
 
 	if (opts.unixSocket) {
-		opts.protocol = opts.protocol.replace('+unix', '') as MqttProtocol
+		// @ts-expect-error - We need to create a typeguard to ensure a valid mqtt protocol
+		opts.protocol = opts.protocol?.replace('+unix', '')
 	} else if (
 		!opts.protocol?.startsWith('ws') &&
 		!opts.protocol?.startsWith('wx')
@@ -100,16 +120,14 @@ function connect(
 	parseAuthOptions(opts)
 
 	// support clientId passed in the query string of the url
-	if (opts.query && typeof opts.query.clientId === 'string') {
-		opts.clientId = opts.query.clientId
+	if (opts.query && typeof opts.query['clientId'] === 'string') {
+		opts.clientId = opts.query['clientId']
 	}
 
 	if (isBrowser || opts.unixSocket) {
-		opts.socksProxy = undefined
-	} else if (
-		opts.socksProxy === undefined &&
-		typeof process !== 'undefined'
-	) {
+		delete opts.socksProxy
+	} else if (opts.socksProxy === undefined && process === undefined) {
+		// @ts-expect-error - process is considered as type never because this code does not import the Node lib which results in process being forbidden.
 		opts.socksProxy = process.env['MQTTJS_SOCKS_PROXY']
 	}
 
@@ -142,30 +160,38 @@ function connect(
 	}
 
 	// only loads the protocols once
-	if (!protocols) {
+	// @TODO: This is very heavy on the runtime, especially when working with CJS, as you may be living in a cache-busted environment which will result in significant IOPS because of the repeated require()
+	// Consider either migrating to ESM, which is immutable and thus immune to cache busting, or simply requiring each file once.
+	// Note: Those situations are very rare, but considering how widespread MQTT is within the IoT world, it might be worth considering
+	if (protocols === undefined) {
 		protocols = {}
 		if (!isBrowser && !opts.forceNativeWebSocket) {
-			protocols.ws = require('./ws').streamBuilder
-			protocols.wss = require('./ws').streamBuilder
+			protocols['ws'] = require('./ws').streamBuilder
+			protocols['wss'] = require('./ws').streamBuilder
 
-			protocols.mqtt = require('./tcp').default
-			protocols.tcp = require('./tcp').default
-			protocols.ssl = require('./tls').default
-			protocols.tls = protocols.ssl
-			protocols.mqtts = require('./tls').default
+			protocols['mqtt'] = require('./tcp').default
+			protocols['tcp'] = require('./tcp').default
+
+			const tlsDefault: StreamBuilder = require('./tls.js').default
+
+			protocols['ssl'] = tlsDefault
+			protocols['tls'] = tlsDefault
+			protocols['mqtts'] = tlsDefault
+			// This case triggers if we are not in browser environment, yet we use require() which definitely constrains end-users to use a bundler as require is a Node.js only syntax.
+			// switching to dynamic await import()
 		} else {
-			protocols.ws = require('./ws').browserStreamBuilder
-			protocols.wss = require('./ws').browserStreamBuilder
+			protocols['ws'] = require('./ws').browserStreamBuilder
+			protocols['wss'] = require('./ws').browserStreamBuilder
 
-			protocols.wx = require('./wx').default
-			protocols.wxs = require('./wx').default
+			protocols['wx'] = require('./wx').default
+			protocols['wxs'] = require('./wx').default
 
-			protocols.ali = require('./ali').default
-			protocols.alis = require('./ali').default
+			protocols['ali'] = require('./ali').default
+			protocols['alis'] = require('./ali').default
 		}
 	}
 
-	if (!protocols[opts.protocol]) {
+	if (opts.protocol !== undefined && protocols[opts.protocol]) {
 		const isSecure = ['mqtts', 'wss'].indexOf(opts.protocol) !== -1
 		// returns the first available protocol based on available protocols (that depends on environment)
 		// if no protocol is specified this will return mqtt on node and ws on browser
@@ -184,6 +210,7 @@ function connect(
 				// Skip insecure protocols when requesting a secure one.
 				return false
 			}
+			// @ts-expect-error - Because this is called within a callback and not within the top level code, TypeScript complains about a possible race condition.
 			return typeof protocols[key] === 'function'
 		})[0] as MqttProtocol
 	}
@@ -246,7 +273,7 @@ function connectAsync(
 		const client = connect(brokerUrl as string, opts)
 
 		const promiseResolutionListeners: Partial<MqttClientEventCallbacks> = {
-			connect: (connack) => {
+			connect: () => {
 				removePromiseResolutionListeners()
 				resolve(client) // Resolve on connect
 			},
@@ -264,6 +291,7 @@ function connectAsync(
 		// If retries are not allowed, reject on close
 		if (allowRetries === false) {
 			promiseResolutionListeners.close = () => {
+				// @ts-expect-error - For now we can accept this error, however TypeScript is right here despite the prior assignation, due to how the event loop functions and the possibility of race condition.
 				promiseResolutionListeners.error(
 					new Error("Couldn't connect to server"),
 				)
@@ -275,6 +303,7 @@ function connectAsync(
 			Object.keys(promiseResolutionListeners).forEach((eventName) => {
 				client.off(
 					eventName as keyof MqttClientEventCallbacks,
+					// @ts-expect-error - Object.keys() does not return a keyof OriginalObject. This is a normal TypeScript behaviour due to possible inheritance or prototype hijacking.
 					promiseResolutionListeners[eventName],
 				)
 			})
@@ -284,6 +313,7 @@ function connectAsync(
 		Object.keys(promiseResolutionListeners).forEach((eventName) => {
 			client.on(
 				eventName as keyof MqttClientEventCallbacks,
+				// @ts-expect-error - Object.keys() does not return a keyof OriginalObject. This is a normal TypeScript behaviour due to possible inheritance or prototype hijacking.
 				promiseResolutionListeners[eventName],
 			)
 		})
