@@ -3,6 +3,7 @@
 	"extends": "@tsconfig/node20/tsconfig.json",
 	"compilerOptions": {
 		"declaration": true,
+    	"lib": ["es2023", "DOM"],
 		"removeComments": true,
 		"emitDecoratorMetadata": true,
 		"experimentalDecorators": true,

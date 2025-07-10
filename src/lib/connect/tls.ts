@@ -15,8 +15,6 @@ function connect(opts: IClientOptions): TLSSocket {
 			timeout: opts.socksTimeout,
 		})
 
-		// @ts-expect-error - There is a type overlap between readable-stream and stream which are used for browsers and node respectively.
-		// We would need to make it clearer what is aimed at browsers and what is aimed at Node.js to resolve this type issue.
 		return tlsConnect({
 			...rest,
 			socket,
