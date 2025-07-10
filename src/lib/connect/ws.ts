@@ -147,7 +147,6 @@ const streamBuilder: StreamBuilder = (client, opts): IStream => {
 	const url = buildUrl(options, client)
 	const socket = createWebSocket(client, url, options)
 	// @ts-expect-error - This is a type confusion because of the overlap between browser oriented code and Node.js oriented code.
-	// Here we are in a Node.js code since the Ws library explictly says it does not work in the browser.
 	const webSocketStream = Ws.createWebSocketStream(socket, options.wsOptions)
 
 	webSocketStream['url'] = url
