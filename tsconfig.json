@@ -1,10 +1,7 @@
 {
 	"$schema": "https://json.schemastore.org/tsconfig",
+	"extends": "@tsconfig/node20/tsconfig.json",
 	"compilerOptions": {
-		"skipLibCheck": true,
-		"module": "NodeNext",
-		"moduleResolution": "NodeNext",
-		"target": "ESNext",
 		"declaration": true,
 		"removeComments": true,
 		"emitDecoratorMetadata": true,
@@ -15,14 +12,17 @@
 		"baseUrl": "./",
 		"incremental": true,
 		"preserveSymlinks": true,
-		"esModuleInterop": true,
 		"resolveJsonModule": true,
-		"typeRoots": [
-			"node_modules/@types"
-		],
-		"types": [
-			"node",
-		],
+		"strict": false,
+		"strictBindCallApply": false,
+		"strictBuiltinIteratorReturn": false,
+		"strictFunctionTypes": false,
+		"strictNullChecks": false,
+		"strictPropertyInitialization": false,
+		"alwaysStrict": false,
+		"noImplicitAny": false,
+		"noImplicitThis": false,
+		"useUnknownInCatchVariables": false
 	},
 	"include": [
 		"src",
