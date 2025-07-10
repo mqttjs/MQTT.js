@@ -1,5 +1,6 @@
 import type { Packet, ISubackPacket } from 'mqtt-packet'
-import type { Duplex } from 'stream'
+import type { Duplex as NativeDuplex } from 'node:stream'
+import type { Duplex } from 'readable-stream'
 import type MqttClient from './client'
 import type { IClientOptions } from './client'
 
@@ -9,7 +10,7 @@ export type GenericCallback<T> = (error?: Error, result?: T) => void
 
 export type VoidCallback = () => void
 
-export type IStream = Duplex & {
+export type IStream = (Duplex | NativeDuplex) & {
 	/** only set on browsers, it's a [WebSocket](https://developer.mozilla.org/en-US/docs/Web/API/WebSocket)  */
 	socket?: any
 }

@@ -1,26 +1,29 @@
 {
+	"$schema": "https://json.schemastore.org/tsconfig",
+	"extends": "@tsconfig/node20/tsconfig.json",
 	"compilerOptions": {
-		"module": "commonjs",
 		"declaration": true,
+    	"lib": ["es2023", "DOM"],
 		"removeComments": true,
 		"emitDecoratorMetadata": true,
 		"experimentalDecorators": true,
 		"allowSyntheticDefaultImports": true,
-		"target": "es2017",
 		"sourceMap": true,
 		"outDir": "./build",
 		"baseUrl": "./",
 		"incremental": true,
-		"skipLibCheck": true,
 		"preserveSymlinks": true,
-		"esModuleInterop": true,
 		"resolveJsonModule": true,
-		"typeRoots": [
-			"node_modules/@types"
-		],
-		"types": [
-			"node",
-		],
+		"strict": false,
+		"strictBindCallApply": false,
+		"strictBuiltinIteratorReturn": false,
+		"strictFunctionTypes": false,
+		"strictNullChecks": false,
+		"strictPropertyInitialization": false,
+		"alwaysStrict": false,
+		"noImplicitAny": false,
+		"noImplicitThis": false,
+		"useUnknownInCatchVariables": false
 	},
 	"include": [
 		"src",
