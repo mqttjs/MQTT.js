@@ -1,4 +1,4 @@
-import tls, { type TLSSocket } from 'tls'
+import { type TLSSocket, connect as tlsConnect } from 'tls'
 import net from 'net'
 import _debug from 'debug'
 import { type StreamBuilder } from '../shared'
@@ -10,16 +10,18 @@ const debug = _debug('mqttjs:tls')
 function connect(opts: IClientOptions): TLSSocket {
 	const { host, port, socksProxy, ...rest } = opts
 
-	return tls.connect(
-		socksProxy
-			? {
-					...rest,
-					socket: openSocks(host, port, socksProxy, {
-						timeout: opts.socksTimeout,
-					}),
-				}
-			: opts,
-	)
+	if (socksProxy !== undefined) {
+		const socket = openSocks(host, port, socksProxy, {
+			timeout: opts.socksTimeout,
+		})
+
+		return tlsConnect({
+			...rest,
+			socket,
+		})
+	}
+
+	return tlsConnect(opts)
 }
 
 const buildStream: StreamBuilder = (client, opts) => {
