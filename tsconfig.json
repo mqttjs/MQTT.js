@@ -3,7 +3,6 @@
 	"extends": "@tsconfig/node20/tsconfig.json",
 	"compilerOptions": {
 		"lib": ["es2023", "DOM"],
-		"skipDefaultLibCheck": true,
 		"pretty": true,
 		"declaration": true,
 		"newLine": "LF",
@@ -12,7 +11,6 @@
 		"sourceMap": true,
 		"allowJs": false,
 		"checkJs": false,
-		"noStrictGenericChecks": false,
 		"forceConsistentCasingInFileNames": true,
 		"experimentalDecorators": false,
 		"emitDecoratorMetadata": false,
