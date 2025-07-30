@@ -15,10 +15,7 @@ import getPorts from './helpers/port_list'
 import serverBuilder from './server_helpers_for_client_tests'
 import { MqttServer } from './server'
 import abstractClientTests from './abstract_client'
-import mqtt from '../../src'
-
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const pkgJson = require('../../package.json')
+import mqtt, { MQTTJS_VERSION } from '../../src'
 
 const debug = _debug('mqttjs:client-test')
 
@@ -43,7 +40,7 @@ describe('MqttClient', () => {
 	})
 
 	it('should have static VERSION set', function _test(t) {
-		assert.equal(mqtt.MqttClient.VERSION, pkgJson.version)
+		assert.equal(mqtt.MqttClient.VERSION, MQTTJS_VERSION)
 	})
 
 	abstractClientTests(server, config, ports)
@@ -71,7 +68,7 @@ describe('MqttClient', () => {
 					{ writeCache: false },
 				)
 				client.end()
-			} catch (err) {
+			} catch {
 				assert.isFalse(mqttPacket.writeToStream.cacheNumbers)
 				done()
 			}
@@ -788,7 +785,6 @@ describe('MqttClient', () => {
 				timeout: 15000,
 			},
 			function _test(t) {
-				// eslint-disable-next-line no-async-promise-executor
 				return new Promise<void>(async (resolve, reject) => {
 					server.once('client', (serverClient) => {
 						serverClient.on('publish', async (packet) => {

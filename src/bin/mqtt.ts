@@ -11,9 +11,7 @@ import Commist from 'commist'
 import help from 'help-me'
 import publish from './pub'
 import subscribe from './sub'
-
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const { version } = require('../../package.json')
+import { MQTTJS_VERSION } from '../mqtt'
 
 const helpMe = help({
 	dir: path.join(__dirname, '../../', 'help'),
@@ -29,7 +27,7 @@ commist.register('subscribe', subscribe)
 commist.register('sub', subscribe)
 
 commist.register('version', () => {
-	console.log('MQTT.js version:', version)
+	console.log('MQTT.js version:', MQTTJS_VERSION)
 })
 commist.register('help', helpMe.toStdout)
 

@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-var-requires */
+/* eslint-disable @typescript-eslint/no-require-imports */
 import _debug from 'debug'
 import url from 'url'
 import MqttClient, {
@@ -57,7 +57,6 @@ function connect(
 
 	// try to parse the broker url
 	if (brokerUrl && typeof brokerUrl === 'string') {
-		// eslint-disable-next-line
 		const parsedUrl = url.parse(brokerUrl, true)
 		const parsedOptions: Partial<IClientOptions> = {}
 

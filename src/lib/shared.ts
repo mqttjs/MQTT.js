@@ -56,7 +56,7 @@ export class ErrorWithSubackPacket extends Error {
 	}
 }
 
-// eslint-disable-next-line @typescript-eslint/ban-types
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export type Constructor<T = {}> = new (...args: any[]) => T
 
 export function applyMixin(
@@ -66,7 +66,7 @@ export function applyMixin(
 ): void {
 	// Figure out the inheritance chain of the mixin
 	const inheritanceChain: Constructor[] = [mixin]
-	// eslint-disable-next-line no-constant-condition
+
 	while (true) {
 		const current = inheritanceChain[0]
 		const base = Object.getPrototypeOf(current)
@@ -97,5 +97,5 @@ export const nextTick =
 				setTimeout(callback, 0)
 			}
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 export const MQTTJS_VERSION = require('../../package.json').version
