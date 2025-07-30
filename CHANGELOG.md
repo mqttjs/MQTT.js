@@ -1,4 +1,6 @@
+# Changelog
 
+# [5.14.0](https://github.com/mqttjs/MQTT.js/compare/v5.13.3...v5.14.0) (2025-07-30)
 
 ## [5.13.3](https://github.com/mqttjs/MQTT.js/compare/v5.13.2...v5.13.3) (2025-07-18)
 
