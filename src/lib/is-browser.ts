@@ -27,9 +27,7 @@ const isStandardBrowserEnv = () => {
 
 const isWebWorkerEnv = () =>
 	Boolean(
-		// eslint-disable-next-line no-restricted-globals
 		typeof self === 'object' &&
-			// eslint-disable-next-line no-restricted-globals
 			self?.constructor?.name?.includes('WorkerGlobalScope'),
 	)
 

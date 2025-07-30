@@ -2036,7 +2036,6 @@ export default function abstractTest(server, config, ports) {
 	describe('keepalive', () => {
 		let clock: sinon.SinonFakeTimers
 
-		// eslint-disable-next-line
 		beforeEach(async () => {
 			await beforeEachExec()
 			clock = sinon.useFakeTimers(fakeTimersOptions)

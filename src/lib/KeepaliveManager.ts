@@ -56,12 +56,7 @@ export default class KeepaliveManager {
 		// keepalive is in seconds
 		value *= 1000
 
-		if (
-			// eslint-disable-next-line no-restricted-globals
-			isNaN(value) ||
-			value <= 0 ||
-			value > 2147483647
-		) {
+		if (isNaN(value) || value <= 0 || value > 2147483647) {
 			throw new Error(
 				`Keepalive value must be an integer between 0 and 2147483647. Provided value is ${value}`,
 			)

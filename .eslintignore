@@ -1,9 +1,0 @@
-/types/
-/examples/
-/doc/
-/dist/
-/build/
-/electron-test/
-
-*.js
-*.mjs
