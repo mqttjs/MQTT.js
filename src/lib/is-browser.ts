@@ -28,7 +28,8 @@ const isStandardBrowserEnv = () => {
 const isWebWorkerEnv = () =>
 	Boolean(
 		typeof self === 'object' &&
-			self?.constructor?.name?.includes('WorkerGlobalScope'),
+    self?.constructor?.name?.includes('WorkerGlobalScope') &&
+    typeof Deno === "undefined",
 	)
 
 const isReactNativeEnv = () =>
