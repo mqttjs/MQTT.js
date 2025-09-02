@@ -1,3 +1,8 @@
+// Global type declaration for Deno
+declare global {
+	const Deno: any
+}
+
 const isStandardBrowserEnv = () => {
 	// window is only defined when it is a browser
 	if (typeof window !== 'undefined') {
@@ -28,8 +33,8 @@ const isStandardBrowserEnv = () => {
 const isWebWorkerEnv = () =>
 	Boolean(
 		typeof self === 'object' &&
-    self?.constructor?.name?.includes('WorkerGlobalScope') &&
-    typeof Deno === "undefined",
+			self?.constructor?.name?.includes('WorkerGlobalScope') &&
+			typeof Deno === 'undefined',
 	)
 
 const isReactNativeEnv = () =>
