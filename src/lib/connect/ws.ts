@@ -256,7 +256,7 @@ const browserStreamBuilder: StreamBuilder = (client, opts) => {
 	 * https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/message_event
 	 */
 	async function onMessage(event: MessageEvent) {
-		if (!proxy || proxy.destroyed || !proxy.readable) {
+		if (!proxy || !proxy.readable || !proxy.writable) {
 			return
 		}
 		let { data } = event
