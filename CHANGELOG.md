@@ -1,5 +1,13 @@
 # Changelog
 
+## [5.14.1](https://github.com/mqttjs/MQTT.js/compare/v5.14.0...v5.14.1) (2025-09-04)
+
+
+### Bug Fixes
+
+* **connect/ws:** ensure proxy stream is writable ([#2024](https://github.com/mqttjs/MQTT.js/issues/2024)) ([fe45405](https://github.com/mqttjs/MQTT.js/commit/fe454056d5b54718b1b3c90611026da4c908faef)), closes [#1914](https://github.com/mqttjs/MQTT.js/issues/1914)
+* isWebWorkerEnv check for Deno environment ([#2023](https://github.com/mqttjs/MQTT.js/issues/2023)) ([a6e74ad](https://github.com/mqttjs/MQTT.js/commit/a6e74add5e41cf9d2a3b62357e0c0531a128e7cd))
+
 # [5.14.0](https://github.com/mqttjs/MQTT.js/compare/v5.13.3...v5.14.0) (2025-07-30)
 
 ## [5.13.3](https://github.com/mqttjs/MQTT.js/compare/v5.13.2...v5.13.3) (2025-07-18)
