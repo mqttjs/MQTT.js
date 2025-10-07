@@ -1,0 +1,25 @@
+{
+  "$schema": "https://unpkg.com/release-it@19/schema/release-it.json",
+  "github": {
+    "release": true
+  },
+  "git": {
+    "tagName": "v${version}",
+    "commitMessage": "chore(release): ${version}",
+    "requireBranch": "main"
+  },
+  "hooks": {
+    "before:init": [
+      "npm run test"
+    ]
+  },
+  "npm": {
+    "publish": true
+  },
+  "plugins": {
+    "@release-it/conventional-changelog": {
+      "preset": "angular",
+      "infile": "CHANGELOG.md"
+    }
+  }
+}
