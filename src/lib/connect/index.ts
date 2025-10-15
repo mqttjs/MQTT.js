@@ -115,7 +115,11 @@ function connect(
 
 	if (opts.cert && opts.key) {
 		if (opts.protocol) {
-			if (['mqtts', 'wss', 'wxs', 'alis'].indexOf(opts.protocol) === -1) {
+			if (
+				['mqtts', 'wss', 'wxs', 'alis', 'quic'].indexOf(
+					opts.protocol,
+				) === -1
+			) {
 				switch (opts.protocol) {
 					case 'mqtt':
 						opts.protocol = 'mqtts'
@@ -153,6 +157,8 @@ function connect(
 			protocols.ssl = require('./tls').default
 			protocols.tls = protocols.ssl
 			protocols.mqtts = require('./tls').default
+
+			protocols.quic = require('./quic').default
 		} else {
 			protocols.ws = require('./ws').browserStreamBuilder
 			protocols.wss = require('./ws').browserStreamBuilder
