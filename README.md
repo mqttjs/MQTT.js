@@ -119,9 +119,41 @@ output:
 Hello mqtt
 ```
 
+### Binary message
+You can publish a binary message by passing a `Buffer` object (or in the browser a `Uint8Array`) to `client.publish()`.
+
+Here is a **browser** example that uses a secure websocket:
+
+```js
+// browser JS
+const mqtt = require("mqtt");
+const client = mqtt.connect("wss://test.mosquitto.org:8081");
+
+client.on("connect", () => {
+  client.subscribe("presence", (err) => {
+    if (!err) {
+      client.publish("presence", new Uint8Array([0x01, 0x02, 0x03]));
+    }
+  });
+});
+
+client.on("message", (topic, message) => {
+  // message inherits from Uint8Array
+  console.log(message.toHex());
+  client.end();
+});
+```
+
+output:
+
+```sh
+010203
+```
+
+
 <a name="example-react-native"></a>
 
-### React Native
+## React Native
 
 MQTT.js can be used in React Native applications. To use it, see the [React Native example](https://github.com/MaximoLiberata/react-native-mqtt.js-example)
 
@@ -614,7 +646,7 @@ By default client connects when constructor is called. To prevent this you can s
 Publish a message to a topic
 
 - `topic` is the topic to publish to, `String`
-- `message` is the message to publish, `Buffer` or `String`
+- `message` is the message to publish, `Buffer` (in browser `Uint8Array`) or `String`
 - `options` is the options to publish with, including:
   - `qos` QoS level, `Number`, default `0`
   - `retain` retain flag, `Boolean`, default `false`
