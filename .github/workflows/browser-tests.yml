@@ -10,16 +10,16 @@ on:
 jobs:
   browser:
     runs-on: ubuntu-latest
-    container: mcr.microsoft.com/playwright:v1.54.1-noble # https://playwright.dev/docs/ci-intro#via-containers
+    container: mcr.microsoft.com/playwright:v1.57.0-noble # https://playwright.dev/docs/ci-intro#via-containers
     strategy:
       matrix:
         node-version: [20.x]
       fail-fast: false
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v6
       with:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
