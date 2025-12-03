@@ -22,14 +22,14 @@ jobs:
         node-version: [22.x]
     steps:
       - name: Checkout main
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: 'main'
           fetch-depth: 0 # fetch all commits history to create the changelog
           token: ${{ secrets.GH_TOKEN }}
 
       - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
