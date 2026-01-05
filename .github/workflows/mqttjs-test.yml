@@ -17,13 +17,13 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [18.x, 20.x]
+        node-version: [22.x, 24.x]
       fail-fast: false
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v6
       with:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
@@ -32,7 +32,7 @@ jobs:
       run: npm ci
     
     - name: Lint
-      if: matrix.node-version == '20.x'
+      if: matrix.node-version == '22.x'
       # only run on latest node version, no reason to run on all
       run: |
         npm run lint
@@ -44,6 +44,26 @@ jobs:
         CI: true
         DEBUG: "${{ runner.debug == '1' && 'mqttjs:*' || '' }}"
 
-  
-
+    # upload coverage to Codecov
+    # https://app.codecov.io/gh/mqttjs/MQTT.js
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v5
+      with:
+        directory: ./coverage/
+        fail_ci_if_error: true
+        flags: unittests
+        name: codecov-mqttjs
+        token: ${{ secrets.CODECOV_TOKEN }}
+        verbose: true
+    
+    - name: Upload test results to Codecov
+      if: ${{ !cancelled() }}
+      uses: codecov/test-results-action@v1
+      with:
+        files: ./junit.xml
+        fail_ci_if_error: false
+        flags: unittests-results
+        name: codecov-mqttjs-test-results
+        token: ${{ secrets.CODECOV_TOKEN }}
+        verbose: true
 

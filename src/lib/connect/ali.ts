@@ -1,7 +1,8 @@
 import { Buffer } from 'buffer'
 import { Transform } from 'readable-stream'
-import { StreamBuilder } from '../shared'
-import MqttClient, { IClientOptions } from '../client'
+import { type IStream, type StreamBuilder } from '../shared'
+import { type IClientOptions } from '../client'
+import type MqttClient from '../client'
 import { BufferedDuplex } from '../BufferedDuplex'
 
 let my: any
@@ -74,11 +75,13 @@ function bindEventHandler() {
 		} else {
 			const reader = new FileReader()
 			reader.addEventListener('load', () => {
-				let data = reader.result
+				if (reader.result instanceof ArrayBuffer) {
+					proxy.push(Buffer.from(reader.result))
 
-				if (data instanceof ArrayBuffer) data = Buffer.from(data)
-				else data = Buffer.from(data, 'utf8')
-				proxy.push(data)
+					return
+				}
+
+				proxy.push(Buffer.from(reader.result, 'utf-8'))
 			})
 			reader.readAsArrayBuffer(res.data)
 		}
@@ -94,7 +97,7 @@ function bindEventHandler() {
 	})
 }
 
-const buildStream: StreamBuilder = (client, opts) => {
+const buildStream: StreamBuilder = (client, opts): IStream => {
 	opts.hostname = opts.hostname || opts.host
 
 	if (!opts.hostname) {

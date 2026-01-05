@@ -2,8 +2,8 @@
  * Module dependencies
  */
 import { Readable } from 'readable-stream'
-import { Packet } from 'mqtt-packet'
-import { DoneCallback } from './shared'
+import { type Packet } from 'mqtt-packet'
+import { type DoneCallback } from './shared'
 
 const streamsOpts = { objectMode: true }
 const defaultStoreOptions = {

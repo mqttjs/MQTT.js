@@ -1,7 +1,7 @@
-import { IPublishPacket, IPubrelPacket } from 'mqtt-packet'
-import { IStore } from '../src'
+import { type IPublishPacket, type IPubrelPacket } from 'mqtt-packet'
 import 'should'
 import { it, beforeEach, afterEach } from 'node:test'
+import { type IStore } from '../../src'
 
 export default function abstractStoreTest(
 	build: (cb: (err?: Error, store?: IStore) => void) => void,

@@ -1,7 +1,7 @@
+import { type IConnackPacket } from 'mqtt-packet'
 import { ReasonCodes } from './ack'
 import TopicAliasSend from '../topic-alias-send'
-import { ErrorWithReasonCode, PacketHandler } from '../shared'
-import { IConnackPacket } from 'mqtt-packet'
+import { ErrorWithReasonCode, type PacketHandler } from '../shared'
 
 const handleConnack: PacketHandler = (client, packet: IConnackPacket) => {
 	client.log('_handleConnack')
@@ -49,6 +49,9 @@ const handleConnack: PacketHandler = (client, packet: IConnackPacket) => {
 			rc,
 		)
 		client.emit('error', err)
+		if (client.options.reconnectOnConnackError) {
+			client['_cleanUp'](true)
+		}
 	}
 }
 

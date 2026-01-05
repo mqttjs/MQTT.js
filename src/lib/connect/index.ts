@@ -1,13 +1,13 @@
-/* eslint-disable @typescript-eslint/no-var-requires */
+/* eslint-disable @typescript-eslint/no-require-imports */
 import _debug from 'debug'
 import url from 'url'
 import MqttClient, {
-	IClientOptions,
-	MqttClientEventCallbacks,
-	MqttProtocol,
+	type IClientOptions,
+	type MqttClientEventCallbacks,
+	type MqttProtocol,
 } from '../client'
 import isBrowser from '../is-browser'
-import { StreamBuilder } from '../shared'
+import { type StreamBuilder } from '../shared'
 
 // Handling the process.nextTick is not a function error in react-native applications.
 if (typeof process?.nextTick !== 'function') {
@@ -28,8 +28,9 @@ function parseAuthOptions(opts: IClientOptions) {
 	if (opts.auth) {
 		matches = opts.auth.match(/^(.+):(.+)$/)
 		if (matches) {
-			opts.username = matches[1]
-			opts.password = matches[2]
+			const [, username, password] = matches
+			opts.username = username
+			opts.password = password
 		} else {
 			opts.username = opts.auth
 		}
@@ -56,7 +57,6 @@ function connect(
 
 	// try to parse the broker url
 	if (brokerUrl && typeof brokerUrl === 'string') {
-		// eslint-disable-next-line
 		const parsedUrl = url.parse(brokerUrl, true)
 		const parsedOptions: Partial<IClientOptions> = {}
 
@@ -72,17 +72,14 @@ function connect(
 		parsedOptions.protocol = parsedUrl.protocol as MqttProtocol
 		parsedOptions.path = parsedUrl.path
 
-		parsedOptions.protocol = parsedOptions.protocol?.replace(
-			/:$/,
-			'',
-		) as MqttProtocol
-
 		opts = { ...parsedOptions, ...opts }
 
 		// when parsing an url expect the protocol to be set
 		if (!opts.protocol) {
 			throw new Error('Missing protocol')
 		}
+
+		opts.protocol = opts.protocol.replace(/:$/, '') as MqttProtocol
 	}
 
 	opts.unixSocket = opts.unixSocket || opts.protocol?.includes('+unix')
@@ -105,6 +102,15 @@ function connect(
 	// support clientId passed in the query string of the url
 	if (opts.query && typeof opts.query.clientId === 'string') {
 		opts.clientId = opts.query.clientId
+	}
+
+	if (isBrowser || opts.unixSocket) {
+		opts.socksProxy = undefined
+	} else if (
+		opts.socksProxy === undefined &&
+		typeof process !== 'undefined'
+	) {
+		opts.socksProxy = process.env['MQTTJS_SOCKS_PROXY']
 	}
 
 	if (opts.cert && opts.key) {

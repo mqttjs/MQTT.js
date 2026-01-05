@@ -1,5 +1,5 @@
-import isBrowser, { isWebWorker, isReactNativeBrowser } from './is-browser'
 import { clearInterval as clearI, setInterval as setI } from 'worker-timers'
+import isBrowser, { isWebWorker, isReactNativeBrowser } from './is-browser'
 import type { TimerVariant } from './shared'
 
 // dont directly assign globals to class props otherwise this throws in web workers: Uncaught TypeError: Illegal invocation

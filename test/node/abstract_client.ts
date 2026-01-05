@@ -5,23 +5,28 @@ import { assert } from 'chai'
 import sinon from 'sinon'
 import fs from 'fs'
 import levelStore from 'mqtt-level-store'
-import Store from '../src/lib/store'
-import serverBuilderFn from './server_helpers_for_client_tests'
-import handlePubrel from '../src/lib/handlers/pubrel'
-import TeardownHelper from './helpers/TeardownHelper'
-import handle from '../src/lib/handlers/index'
-import handlePublish from '../src/lib/handlers/publish'
-import mqtt, {
-	IClientOptions,
-	IClientPublishOptions,
-	IClientSubscribeOptions,
-	ISubscriptionMap,
-	ISubscriptionRequest,
-} from '../src'
-import { IPublishPacket, IPubrelPacket, ISubackPacket, QoS } from 'mqtt-packet'
-import { DoneCallback, ErrorWithReasonCode } from 'src/lib/shared'
+import {
+	type IPublishPacket,
+	type IPubrelPacket,
+	type ISubackPacket,
+	type QoS,
+} from 'mqtt-packet'
+import { type DoneCallback, ErrorWithReasonCode } from 'src/lib/shared'
 import { fail } from 'assert'
 import { describe, it, beforeEach, afterEach, after } from 'node:test'
+import Store from '../../src/lib/store'
+import serverBuilderFn from './server_helpers_for_client_tests'
+import handlePubrel from '../../src/lib/handlers/pubrel'
+import TeardownHelper from './helpers/TeardownHelper'
+import handle from '../../src/lib/handlers/index'
+import handlePublish from '../../src/lib/handlers/publish'
+import mqtt, {
+	type IClientOptions,
+	type IClientPublishOptions,
+	type IClientSubscribeOptions,
+	type ISubscriptionMap,
+	type ISubscriptionRequest,
+} from '../../src'
 
 /**
  * These tests try to be consistent with names for servers (brokers) and clients,
@@ -2031,7 +2036,6 @@ export default function abstractTest(server, config, ports) {
 	describe('keepalive', () => {
 		let clock: sinon.SinonFakeTimers
 
-		// eslint-disable-next-line
 		beforeEach(async () => {
 			await beforeEachExec()
 			clock = sinon.useFakeTimers(fakeTimersOptions)
@@ -2613,6 +2617,48 @@ export default function abstractTest(server, config, ports) {
 					client.end(done)
 				})
 			})
+		})
+
+		it('should send multiple subscribe packets when topic count exceeds batchSize', function _test(t, done) {
+			const client = connect({ subscribeBatchSize: 2 })
+			const subs = ['test1', 'test2', 'test3']
+			client.once('connect', () => {
+				client.subscribe(subs)
+			})
+
+			const spy = sinon.spy()
+			server.once('client', (serverClient) => {
+				serverClient.on('subscribe', spy)
+			})
+			client.on('end', () => {
+				assert.strictEqual(spy.callCount, 2)
+				for (let i = 0; i < 2; i++) {
+					// i.e. [{topic: 'a', qos: 0}, {topic: 'b', qos: 0}]
+					const expected = subs
+						.slice(i * 2, i * 2 + 2)
+						.map((topic) => {
+							const result: ISubscriptionRequest = {
+								topic,
+								qos: 0,
+							}
+							if (version === 5) {
+								result.nl = false
+								result.rap = false
+								result.rh = 0
+							}
+							return result
+						})
+
+					assert.deepStrictEqual(
+						spy.getCall(i).args[0].subscriptions,
+						expected,
+					)
+				}
+				done()
+			})
+			setTimeout(() => {
+				client.end()
+			}, 300)
 		})
 	})
 
@@ -3333,6 +3379,42 @@ export default function abstractTest(server, config, ports) {
 					assert.equal(err.message, 'connack timeout')
 					client.end(true, done)
 				})
+		})
+
+		it('should reconnect on connack error if requested', function _test(t, done) {
+			let connackErrors = 0
+			const rcNotAuthorized = 135
+			const server2 = serverBuilder(config.protocol, (serverClient) => {
+				serverClient.on('connect', () => {
+					const rc = connackErrors === 0 ? rcNotAuthorized : 0
+					const connack =
+						version === 5 ? { reasonCode: rc } : { returnCode: rc }
+					serverClient.connack(connack)
+				})
+			})
+			teardownHelper.addServer(server2)
+			server2.listen(ports.PORTAND50, () => {
+				const client = connect({
+					host: 'localhost',
+					port: ports.PORTAND50,
+					reconnectPeriod: 10,
+					reconnectOnConnackError: true,
+				})
+				teardownHelper.addClient(client)
+				client.on('error', (err) => {
+					assert.instanceOf(err, ErrorWithReasonCode)
+					assert.equal(
+						(err as ErrorWithReasonCode).code,
+						rcNotAuthorized,
+					)
+					assert.equal(connackErrors, 0)
+					connackErrors++
+				})
+				client.on('connect', () => {
+					assert.equal(connackErrors, 1)
+					done()
+				})
+			})
 		})
 
 		it(

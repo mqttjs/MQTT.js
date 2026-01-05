@@ -1,5 +1,6 @@
-import type { Packet } from 'mqtt-packet'
-import type { Duplex } from 'stream'
+import type { Packet, ISubackPacket } from 'mqtt-packet'
+import type { Duplex as NativeDuplex } from 'node:stream'
+import type { Duplex } from 'readable-stream'
 import type MqttClient from './client'
 import type { IClientOptions } from './client'
 
@@ -9,7 +10,7 @@ export type GenericCallback<T> = (error?: Error, result?: T) => void
 
 export type VoidCallback = () => void
 
-export type IStream = Duplex & {
+export type IStream = (Duplex | NativeDuplex) & {
 	/** only set on browsers, it's a [WebSocket](https://developer.mozilla.org/en-US/docs/Web/API/WebSocket)  */
 	socket?: any
 }
@@ -42,7 +43,20 @@ export class ErrorWithReasonCode extends Error {
 	}
 }
 
-// eslint-disable-next-line @typescript-eslint/ban-types
+export class ErrorWithSubackPacket extends Error {
+	public packet: ISubackPacket
+
+	public constructor(message: string, packet: ISubackPacket) {
+		super(message)
+		this.packet = packet
+
+		// We need to set the prototype explicitly
+		Object.setPrototypeOf(this, ErrorWithSubackPacket.prototype)
+		Object.getPrototypeOf(this).name = 'ErrorWithSubackPacket'
+	}
+}
+
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export type Constructor<T = {}> = new (...args: any[]) => T
 
 export function applyMixin(
@@ -52,7 +66,7 @@ export function applyMixin(
 ): void {
 	// Figure out the inheritance chain of the mixin
 	const inheritanceChain: Constructor[] = [mixin]
-	// eslint-disable-next-line no-constant-condition
+
 	while (true) {
 		const current = inheritanceChain[0]
 		const base = Object.getPrototypeOf(current)
@@ -81,7 +95,7 @@ export const nextTick =
 		? process.nextTick
 		: (callback: () => void) => {
 				setTimeout(callback, 0)
-		  }
+			}
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 export const MQTTJS_VERSION = require('../../package.json').version

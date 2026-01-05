@@ -1,4 +1,110 @@
+# Changelog
 
+## [5.14.1](https://github.com/mqttjs/MQTT.js/compare/v5.14.0...v5.14.1) (2025-09-04)
+
+
+### Bug Fixes
+
+* **connect/ws:** ensure proxy stream is writable ([#2024](https://github.com/mqttjs/MQTT.js/issues/2024)) ([fe45405](https://github.com/mqttjs/MQTT.js/commit/fe454056d5b54718b1b3c90611026da4c908faef)), closes [#1914](https://github.com/mqttjs/MQTT.js/issues/1914)
+* isWebWorkerEnv check for Deno environment ([#2023](https://github.com/mqttjs/MQTT.js/issues/2023)) ([a6e74ad](https://github.com/mqttjs/MQTT.js/commit/a6e74add5e41cf9d2a3b62357e0c0531a128e7cd))
+
+# [5.14.0](https://github.com/mqttjs/MQTT.js/compare/v5.13.3...v5.14.0) (2025-07-30)
+
+## [5.13.3](https://github.com/mqttjs/MQTT.js/compare/v5.13.2...v5.13.3) (2025-07-18)
+
+## [5.13.2](https://github.com/mqttjs/MQTT.js/compare/v5.13.1...v5.13.2) (2025-07-07)
+
+
+### Bug Fixes
+
+* move back @types/ws from dev to deps ([#2008](https://github.com/mqttjs/MQTT.js/issues/2008)) ([959b132](https://github.com/mqttjs/MQTT.js/commit/959b132a492f43902deb994d119d07f15f955390)), closes [#1991](https://github.com/mqttjs/MQTT.js/issues/1991)
+
+## [5.13.1](https://github.com/mqttjs/MQTT.js/compare/v5.13.0...v5.13.1) (2025-06-03)
+
+# [5.13.0](https://github.com/mqttjs/MQTT.js/compare/v5.12.1...v5.13.0) (2025-05-09)
+
+
+### Features
+
+* add `subscribeBatchSize` option to split subscribe packets for AWS IoT Core ([#1995](https://github.com/mqttjs/MQTT.js/issues/1995)) ([6b719c8](https://github.com/mqttjs/MQTT.js/commit/6b719c8cd11397bb13f06c36b3fa5a3840befacb))
+
+## [5.12.1](https://github.com/mqttjs/MQTT.js/compare/v5.12.0...v5.12.1) (2025-05-06)
+
+
+### Bug Fixes
+
+* add `@typescript-eslint/consistent-type-imports` rule and normalised all imports ([640cd3b](https://github.com/mqttjs/MQTT.js/commit/640cd3b9bd7d9a7d8ef59fa3fdd57a3a1c3ba345))
+
+# [5.12.0](https://github.com/mqttjs/MQTT.js/compare/v5.11.1...v5.12.0) (2025-04-28)
+
+
+### Features
+
+* **exports:** add react-native entry point to package.json ([#1988](https://github.com/mqttjs/MQTT.js/issues/1988)) ([622d3d8](https://github.com/mqttjs/MQTT.js/commit/622d3d8e7d8149bbb2ee03a01254e0ab9bf42e6c))
+
+## [5.11.1](https://github.com/mqttjs/MQTT.js/compare/v5.11.0...v5.11.1) (2025-04-23)
+
+
+### Bug Fixes
+
+* **deps:** removed unused 'reinterval' dependency and move two @type/ dependencies to devDependencies. ([bb8c694](https://github.com/mqttjs/MQTT.js/commit/bb8c6947edc4d85d77f13f8c06df7a979a270a7f))
+
+# [5.11.0](https://github.com/mqttjs/MQTT.js/compare/v5.10.4...v5.11.0) (2025-04-10)
+
+
+### Bug Fixes
+
+* correct return type of `validateTopis` to include `null` ([#1979](https://github.com/mqttjs/MQTT.js/issues/1979)) ([935784a](https://github.com/mqttjs/MQTT.js/commit/935784aa8235fd9f38ac17820edf357ed7d5ab75))
+
+
+### Features
+
+* add intrinsic support for SOCKS proxies ([#1966](https://github.com/mqttjs/MQTT.js/issues/1966)) ([ee0fcce](https://github.com/mqttjs/MQTT.js/commit/ee0fcce4bd3e1af318b0144b9e0928c571c02173))
+
+## [5.10.4](https://github.com/mqttjs/MQTT.js/compare/v5.10.3...v5.10.4) (2025-02-26)
+
+
+### Bug Fixes
+
+* **browser:** bump readable-stream@4.7.0 to fix BigInt issues ([#1963](https://github.com/mqttjs/MQTT.js/issues/1963)) ([9749891](https://github.com/mqttjs/MQTT.js/commit/9749891137c0eb57f20c13e17196bccbdec1029e))
+* **browser:** prevent error stream.push() after EOF ([#1932](https://github.com/mqttjs/MQTT.js/issues/1932)) ([df2e8fe](https://github.com/mqttjs/MQTT.js/commit/df2e8febcccd4574a046887e612113a85900b86d))
+* **electron-test:** webdriver session not created ([#1972](https://github.com/mqttjs/MQTT.js/issues/1972)) ([57691cf](https://github.com/mqttjs/MQTT.js/commit/57691cf9a088dee69e0dea637ae5742c6dfae833))
+* move protocol "clean" after merge of parsedOptions ([#1965](https://github.com/mqttjs/MQTT.js/issues/1965)) ([1c19ca0](https://github.com/mqttjs/MQTT.js/commit/1c19ca0d0a810ee9a925d17552e9d84f70aa718b))
+
+## [5.10.3](https://github.com/mqttjs/MQTT.js/compare/v5.10.2...v5.10.3) (2024-11-26)
+
+
+### Bug Fixes
+
+* add option to reconnect if connack has an error code ([#1948](https://github.com/mqttjs/MQTT.js/issues/1948)) ([fa19586](https://github.com/mqttjs/MQTT.js/commit/fa19586cf0482b007e136e013cf7c9a423b882eb))
+
+## [5.10.2](https://github.com/mqttjs/MQTT.js/compare/v5.10.1...v5.10.2) (2024-11-13)
+
+
+### Features
+
+* **electron-test:** move third hosted broker to self hosted broker ([#1926](https://github.com/mqttjs/MQTT.js/issues/1926)) ([1ca3f9e](https://github.com/mqttjs/MQTT.js/commit/1ca3f9e37f6ef7fe86307e292042c6542ca35241))
+
+## [5.10.1](https://github.com/mqttjs/MQTT.js/compare/v5.10.0...v5.10.1) (2024-08-28)
+
+
+### Bug Fixes
+
+* **browser:** handle `Blob` payloads ([#1930](https://github.com/mqttjs/MQTT.js/issues/1930)) ([86b7959](https://github.com/mqttjs/MQTT.js/commit/86b795983d86847e1da334fd0d30cbd80f92b540))
+
+# [5.10.0](https://github.com/mqttjs/MQTT.js/compare/v5.9.1...v5.10.0) (2024-08-14)
+
+
+### Bug Fixes
+
+* **test:** close all open connections in abstract_client test ([#1917](https://github.com/mqttjs/MQTT.js/issues/1917)) ([661c30a](https://github.com/mqttjs/MQTT.js/commit/661c30aecb8d7531fc052a7770519267067840fb))
+* **types:** unsubscribe options type ([#1921](https://github.com/mqttjs/MQTT.js/issues/1921)) ([18a357c](https://github.com/mqttjs/MQTT.js/commit/18a357ce98c2e7ae053afefaf7c56a0d3a8e62b7))
+
+
+### Features
+
+* add `suback` packet to subscribe callback ([#1923](https://github.com/mqttjs/MQTT.js/issues/1923)) ([93f4482](https://github.com/mqttjs/MQTT.js/commit/93f4482570b6e96d81a5466ea94c3fd7308ff31c))
+* add unsubscribe ack packet to the unsubscribe callback ([#1922](https://github.com/mqttjs/MQTT.js/issues/1922)) ([8bcf304](https://github.com/mqttjs/MQTT.js/commit/8bcf3042a9133acf8d266d73bc67153a69660e05))
 
 ## [5.9.1](https://github.com/mqttjs/MQTT.js/compare/v5.9.0...v5.9.1) (2024-08-01)
 

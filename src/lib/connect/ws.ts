@@ -1,10 +1,11 @@
-import { StreamBuilder } from '../shared'
 import { Buffer } from 'buffer'
-import Ws, { ClientOptions } from 'ws'
+import Ws, { type ClientOptions } from 'ws'
 import _debug from 'debug'
-import { DuplexOptions, Transform } from 'readable-stream'
+import { Transform } from 'readable-stream'
+import { type IStream, type StreamBuilder } from '../shared'
 import isBrowser from '../is-browser'
-import MqttClient, { IClientOptions } from '../client'
+import { type IClientOptions } from '../client'
+import type MqttClient from '../client'
 import { BufferedDuplex, writev } from '../BufferedDuplex'
 
 const debug = _debug('mqttjs:ws')
@@ -137,7 +138,7 @@ function createBrowserWebSocket(client: MqttClient, opts: IClientOptions) {
 	return socket
 }
 
-const streamBuilder: StreamBuilder = (client, opts) => {
+const streamBuilder: StreamBuilder = (client, opts): IStream => {
 	debug('streamBuilder')
 	const options = setDefaultOpts(opts)
 
@@ -145,10 +146,8 @@ const streamBuilder: StreamBuilder = (client, opts) => {
 
 	const url = buildUrl(options, client)
 	const socket = createWebSocket(client, url, options)
-	const webSocketStream = Ws.createWebSocketStream(
-		socket,
-		options.wsOptions as DuplexOptions,
-	)
+	// @ts-expect-error - This is a type confusion because of the overlap between browser oriented code and Node.js oriented code.
+	const webSocketStream = Ws.createWebSocketStream(socket, options.wsOptions)
 
 	webSocketStream['url'] = url
 	socket.on('close', () => {
@@ -256,13 +255,16 @@ const browserStreamBuilder: StreamBuilder = (client, opts) => {
 	/**
 	 * https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/message_event
 	 */
-	function onMessage(event: MessageEvent) {
+	async function onMessage(event: MessageEvent) {
+		if (!proxy || !proxy.readable || !proxy.writable) {
+			return
+		}
 		let { data } = event
 		if (data instanceof ArrayBuffer) data = Buffer.from(data)
+		else if (data instanceof Blob)
+			data = Buffer.from(await new Response(data).arrayBuffer())
 		else data = Buffer.from(data as string, 'utf8')
-		if (proxy && !proxy.destroyed) {
-			proxy.push(data)
-		}
+		proxy.push(data)
 	}
 
 	function socketWriteBrowser(

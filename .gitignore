@@ -19,6 +19,10 @@ test/typescript/*.map
 **/typings/**
 .vscode/
 .npmrc
+junit.xml
 
 /build/
 
+# macOS stuff
+.DS_Store
+.DS_Store?

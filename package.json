@@ -1,7 +1,7 @@
 {
   "name": "mqtt",
   "description": "A library for the MQTT protocol",
-  "version": "5.9.1",
+  "version": "5.14.1",
   "contributors": [
     "Adam Rudd <adamvrr@gmail.com>",
     "Matteo Collina <matteo.collina@gmail.com> (https://github.com/mcollina)",
@@ -32,11 +32,11 @@
     "CONTRIBUTING.md",
     "LICENSE.md",
     "help/",
-    "build/",
-    "src/"
+    "build/"
   ],
   "exports": {
     ".": {
+      "react-native": "./dist/mqtt.esm.js",
       "browser": {
         "import": "./dist/mqtt.esm.js",
         "default": "./dist/mqtt.min.js"
@@ -63,37 +63,17 @@
     "build:browser": "node esbuild.js",
     "build": "npm run build:ts && npm run build:browser",
     "prepare": "npm run build",
-    "unit-test:node": "node_modules/.bin/nyc node -r esbuild-register test/runTests.ts",
+    "unit-test:node": "node -r esbuild-register --test-concurrency 4 --test-reporter=junit --test-reporter-destination=junit.xml --test-reporter=spec --test-reporter-destination=stdout --test test/node/*.ts ",
     "unit-test:browser": "wtr",
-    "test:node": "npm run unit-test:node && codecov",
+    "test:node": "node_modules/.bin/nyc npm run unit-test:node",
     "test:browser": "npm run build && npm run unit-test:browser",
     "test": "npm run test:node",
     "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s && git add CHANGELOG.md",
     "changelog-init": "conventional-changelog -p angular -i CHANGELOG.md -s -r 0",
     "release": "read -p 'GITHUB_TOKEN: ' GITHUB_TOKEN && export GITHUB_TOKEN=$GITHUB_TOKEN && release-it"
   },
-  "release-it": {
-    "github": {
-      "release": true
-    },
-    "git": {
-      "tagName": "v${version}",
-      "commitMessage": "chore(release): ${version}"
-    },
-    "hooks": {
-      "before:init": [
-        "npm run test"
-      ]
-    },
-    "npm": {
-      "publish": true
-    },
-    "plugins": {
-      "@release-it/conventional-changelog": {
-        "preset": "angular",
-        "infile": "CHANGELOG.md"
-      }
-    }
+  "publishConfig": {
+    "provenance": true
   },
   "pre-commit": [
     "lint"
@@ -108,64 +88,65 @@
     "net": false
   },
   "dependencies": {
-    "@types/readable-stream": "^4.0.5",
-    "@types/ws": "^8.5.9",
+    "@types/readable-stream": "^4.0.21",
+    "@types/ws": "^8.18.1",
     "commist": "^3.2.0",
     "concat-stream": "^2.0.0",
-    "debug": "^4.3.4",
+    "debug": "^4.4.1",
     "help-me": "^5.0.0",
-    "lru-cache": "^10.0.1",
+    "lru-cache": "^10.4.3",
     "minimist": "^1.2.8",
-    "mqtt-packet": "^9.0.0",
+    "mqtt-packet": "^9.0.2",
     "number-allocator": "^1.0.14",
-    "readable-stream": "^4.4.2",
-    "reinterval": "^1.1.0",
-    "rfdc": "^1.3.0",
+    "readable-stream": "^4.7.0",
+    "rfdc": "^1.4.1",
+    "socks": "^2.8.6",
     "split2": "^4.2.0",
-    "worker-timers": "^7.1.4",
-    "ws": "^8.17.1"
+    "worker-timers": "^8.0.23",
+    "ws": "^8.18.3"
   },
   "devDependencies": {
-    "@esm-bundle/chai": "^4.3.4-fix.0",
-    "@release-it/conventional-changelog": "^7.0.2",
-    "@types/chai": "^4.3.10",
-    "@types/node": "^20.9.0",
-    "@types/sinon": "^17.0.1",
-    "@types/tape": "^5.6.4",
-    "@typescript-eslint/eslint-plugin": "^6.10.0",
-    "@typescript-eslint/parser": "^6.10.0",
-    "@web/test-runner": "^0.18.0",
-    "@web/test-runner-playwright": "^0.11.0",
+    "@eslint/eslintrc": "^3.3.1",
+    "@eslint/js": "^9.32.0",
+    "@esm-bundle/chai": "^4.3.4",
+    "@release-it/conventional-changelog": "^10.0.1",
+    "@tsconfig/node20": "^20.1.6",
+    "@types/chai": "^5.2.2",
+    "@types/node": "^20.17.16",
+    "@types/sinon": "^17.0.4",
+    "@types/tape": "^5.8.1",
+    "@typescript-eslint/eslint-plugin": "^8.38.0",
+    "@typescript-eslint/parser": "^8.38.0",
+    "@web/test-runner": "^0.20.2",
+    "@web/test-runner-playwright": "^0.11.1",
     "aedes-cli": "^0.8.0",
-    "chai": "^4.3.10",
-    "chokidar": "^3.5.3",
-    "codecov": "^3.8.2",
-    "conventional-changelog-cli": "^4.1.0",
-    "end-of-stream": "^1.4.4",
-    "esbuild": "^0.19.5",
+    "chai": "^5.2.1",
+    "chokidar": "^4.0.3",
+    "conventional-changelog-cli": "^5.0.0",
+    "end-of-stream": "^1.4.5",
+    "esbuild": "^0.25.8",
     "esbuild-plugin-polyfill-node": "^0.3.0",
-    "esbuild-register": "^3.5.0",
-    "eslint": "^8.53.0",
-    "eslint-config-airbnb-base": "^15.0.0",
-    "eslint-config-airbnb-typescript": "^17.1.0",
-    "eslint-config-prettier": "^9.0.0",
-    "eslint-plugin-import": "^2.29.0",
-    "eslint-plugin-prettier": "^5.0.1",
+    "esbuild-register": "^3.6.0",
+    "eslint": "^9.32.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-prettier": "^5.5.3",
     "global": "^4.4.0",
+    "globals": "^16.3.0",
     "leaked-handles": "^5.2.0",
     "mkdirp": "^3.0.1",
     "mqtt-connection": "^4.1.0",
     "mqtt-level-store": "^3.1.0",
-    "nyc": "^15.1.0",
+    "nyc": "^17.1.0",
     "pre-commit": "^1.2.2",
-    "prettier": "^3.0.3",
-    "release-it": "^16.2.1",
-    "rimraf": "^5.0.5",
+    "prettier": "^3.6.2",
+    "release-it": "^19.0.4",
+    "rimraf": "^6.0.1",
     "should": "^13.2.3",
-    "sinon": "^17.0.1",
+    "sinon": "^17.0.2",
     "snazzy": "^9.0.0",
-    "tape": "^5.7.2",
-    "ts-node": "^10.9.1",
-    "typescript": "^5.2.2"
+    "tape": "^5.9.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
   }
 }

@@ -5,7 +5,8 @@
 [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://github.com/mqttjs/MQTT.js/graphs/commit-activity)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/mqttjs/MQTT.js/pulls)
 
-[![node](https://img.shields.io/node/v/mqtt.svg) ![npm](https://img.shields.io/npm/v/mqtt.svg?logo=npm) ![NPM Downloads](https://img.shields.io/npm/dm/mqtt.svg)](https://www.npmjs.com/package/mqtt)
+[![node](https://img.shields.io/node/v/mqtt.svg) ![npm](https://img.shields.io/npm/v/mqtt.svg?logo=npm)](https://www.npmjs.com/package/mqtt)
+[![NPM Downloads](https://img.shields.io/npm/dm/mqtt.svg)](https://npm-compare.com/mqtt/#timeRange=THREE_YEARS)
 
 MQTT.js is a client library for the [MQTT](http://mqtt.org/) protocol, written
 in JavaScript for node.js and the browser.
@@ -275,6 +276,13 @@ the final connection when it drops.
 The default value is 1000 ms which means it will try to reconnect 1 second
 after losing the connection.
 
+Note that this will only enable reconnects after either a connection timeout, or
+after a successful connection. It will _not_ (by default) enable retrying
+connections that are actively denied with a CONNACK error by the server.
+
+To also enable automatic reconnects for CONNACK errors, set
+`reconnectOnConnackError: true`.
+
 <a name="topicalias"></a>
 
 ## About Topic Alias Management
@@ -390,7 +398,7 @@ events.
 The `Client` class wraps a client connection to an
 MQTT broker over an arbitrary transport method (TCP, TLS,
 WebSocket, ecc).
-`Client` is an [EventEmitter](https://nodejs.dev/en/learn/the-nodejs-event-emitter/) that has it's own [events](#events)
+`Client` is an [EventEmitter](https://nodejs.org/en/learn/asynchronous-work/the-nodejs-event-emitter) that has it's own [events](#events)
 
 `Client` automatically handles the following:
 
@@ -415,10 +423,14 @@ The arguments are:
     offline
   - `reconnectPeriod`: `1000` milliseconds, interval between two
     reconnections. Disable auto reconnect by setting to `0`.
+  - `reconnectOnConnackError`: `false`, whether to also reconnect if a CONNACK
+    is received with an error.
   - `connectTimeout`: `30 * 1000` milliseconds, time to wait before a
     CONNACK is received
   - `username`: the username required by your broker, if any
   - `password`: the password required by your broker, if any
+  - `socksProxy`: establish TCP and TLS connections via a socks proxy (URL, supported protocols are `socks5://`, `socks5h://`, `socks4://`, `socks4a://`)
+  - `socksTimeout`: timeout for connecting to the socks proxy
   - `incomingStore`: a [Store](#store) for the incoming packets
   - `outgoingStore`: a [Store](#store) for the outgoing packets
   - `queueQoSZero`: if connection is broken, queue outgoing QoS zero messages (default `true`)
@@ -463,6 +475,8 @@ The arguments are:
       For ws/wss protocols only. Can be used to implement a custom websocket subprotocol or implementation.
   - `resubscribe` : if connection is broken and reconnects,
     subscribed topics are automatically subscribed again (default `true`)
+  - `subscribeBatchSize` : optional `number`
+    Maximum number of topics per SUBSCRIBE packet. When the number of topics to subscribe exceeds this value, the client will automatically split them into multiple SUBSCRIBE packets of this size.
   - `messageIdProvider`: custom messageId provider. when `new UniqueMessageIdProvider()` is set, then non conflict messageId is provided.
   - `log`: custom log function. Default uses [debug](https://www.npmjs.com/package/debug) package.
   - `manualConnect`: prevents the constructor to call `connect`. In this case after the `mqtt.connect` is called you should call `client.connect` manually.
@@ -475,6 +489,8 @@ The arguments are:
     ```
   - `forceNativeWebSocket`: set to true if you're having detection issues (i.e. the `ws does not work in the browser` exception) to force the use of native WebSocket. It is important to note that if set to true for the first client created, then all the clients will use native WebSocket. And conversely, if not set or set to false, all will use the detection result.
   - `unixSocket`: if you want to connect to a unix socket, set this to true
+
+Instead of setting `socksProxy` you can also supple the same parameter via the environment variable `MQTTJS_SOCKS_PROXY`.
 
 In case mqtts (mqtt over tls) is required, the `options` object is passed through to [`tls.connect()`](http://nodejs.org/api/tls.html#tls_tls_connect_options_callback). If using a **self-signed certificate**, set `rejectUnauthorized: false`. However, be cautious as this exposes you to potential man in the middle attacks and isn't recommended for production.
 
@@ -613,15 +629,16 @@ Publish a message to a topic
     - `subscriptionIdentifier`: representing the identifier of the subscription `number`,
     - `contentType`: String describing the content of the Application Message `string`
   - `cbStorePut` - `function ()`, fired when message is put into `outgoingStore` if QoS is `1` or `2`.
-- `callback` - `function (err)`, fired when the QoS handling completes,
+- `callback` - `function (err, packet)`, fired when the QoS handling completes,
   or at the next tick if QoS 0. An error occurs if client is disconnecting.
 
 <a name="publish-async"></a>
 
 ### mqtt.Client#publishAsync(topic, message, [options])
 
-Async [`publish`](#publish). Returns a `Promise<void>`.
+Async [`publish`](#publish). Returns a `Promise<Packet | undefined>`.
 
+A packet is anything that has a `messageId` property.
 ---
 
 <a name="subscribe"></a>
@@ -653,7 +670,7 @@ Subscribe to a topic or topics
 
 ### mqtt.Client#subscribeAsync(topic/topic array/topic object, [options])
 
-Async [`subscribe`](#subscribe). Returns a `Promise<granted[]>`.
+Async [`subscribe`](#subscribe). Returns a `Promise<ISubscriptionGrant[]>`.
 
 ---
 
