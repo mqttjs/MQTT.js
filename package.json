@@ -73,6 +73,7 @@
     "release": "read -p 'GITHUB_TOKEN: ' GITHUB_TOKEN && export GITHUB_TOKEN=$GITHUB_TOKEN && release-it"
   },
   "publishConfig": {
+    "registry": "https://registry.npmjs.org",
     "provenance": true
   },
   "pre-commit": [
