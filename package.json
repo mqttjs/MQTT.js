@@ -98,7 +98,6 @@
     "lru-cache": "^10.4.3",
     "minimist": "^1.2.8",
     "mqtt-packet": "^9.0.2",
-    "number-allocator": "^1.0.14",
     "readable-stream": "^4.7.0",
     "rfdc": "^1.4.1",
     "socks": "^2.8.6",
