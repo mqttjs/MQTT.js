@@ -235,7 +235,7 @@ export interface IClientOptions extends ISecureClientOptions {
 		url: string,
 		options: IClientOptions,
 		client: MqttClient,
-	) => string
+	) => string | Promise<string>
 
 	/** when defined this function will be called to create the Websocket instance, used to add custom protocols or websocket implementations */
 	createWebsocket?: (
