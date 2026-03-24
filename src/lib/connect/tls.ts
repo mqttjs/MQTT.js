@@ -1,4 +1,8 @@
-import { type TLSSocket, connect as tlsConnect } from 'tls'
+import {
+	type ConnectionOptions,
+	type TLSSocket,
+	connect as tlsConnect,
+} from 'tls'
 import net from 'net'
 import _debug from 'debug'
 import { type StreamBuilder } from '../shared'
@@ -18,10 +22,10 @@ function connect(opts: IClientOptions): TLSSocket {
 		return tlsConnect({
 			...rest,
 			socket,
-		})
+		} as ConnectionOptions)
 	}
 
-	return tlsConnect(opts)
+	return tlsConnect(opts as ConnectionOptions)
 }
 
 const buildStream: StreamBuilder = (client, opts) => {

@@ -106,6 +106,18 @@
     "worker-timers": "^8.0.23",
     "ws": "^8.18.3"
   },
+  "overrides": {
+    "levelup": {
+      "bl": "1.2.3",
+      "semver": "5.7.2"
+    },
+    "pre-commit": {
+      "cross-spawn": "7.0.6"
+    },
+    "release-it": {
+      "undici": "7.24.5"
+    }
+  },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.1",
     "@eslint/js": "^9.32.0",

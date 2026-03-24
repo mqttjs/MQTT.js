@@ -373,8 +373,10 @@ export interface ISubscriptionRequest extends IClientSubscribeOptions {
 	topic: string
 }
 
-export interface ISubscriptionGrant
-	extends Omit<ISubscriptionRequest, 'qos' | 'properties'> {
+export interface ISubscriptionGrant extends Omit<
+	ISubscriptionRequest,
+	'qos' | 'properties'
+> {
 	/**
 	 *  is the granted qos level on it, may return 128 on error
 	 */
