@@ -10,7 +10,7 @@ on:
 jobs:
   browser:
     runs-on: ubuntu-latest
-    container: mcr.microsoft.com/playwright:v1.57.0-noble # https://playwright.dev/docs/ci-intro#via-containers
+    container: mcr.microsoft.com/playwright:v1.58.2-noble # https://playwright.dev/docs/ci-intro#via-containers
     strategy:
       matrix:
         node-version: [22.x]
