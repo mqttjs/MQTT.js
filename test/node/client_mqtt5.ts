@@ -1391,6 +1391,117 @@ describe('MQTT 5.0', () => {
 	)
 
 	it(
+		'should successfully reauthenticate with the broker',
+		{
+			timeout: 15000,
+		},
+		function (t, done) {
+			const port = ports.PORTAND103 + 92
+			const authMethod = 'GS-AUTH'
+
+			const testServer = serverBuilder('mqtt', (serverClient) => {
+				serverClient.on('connect', () => {
+					serverClient.connack({ reasonCode: 0 })
+				})
+
+				serverClient.on('auth', (packet) => {
+					if (packet.properties.authenticationMethod === authMethod) {
+						serverClient.auth({ reasonCode: 0 })
+					}
+				})
+			}).listen(port)
+
+			const client = mqtt.connect({
+				port: port,
+				protocolVersion: 5,
+				properties: {
+					authenticationMethod: authMethod,
+				},
+			})
+
+			client.on('connect', () => {
+				client.reauthenticate({
+					authenticationData: Buffer.from('initial-token'),
+				})
+			})
+
+			client.on('reauth', (packet: any) => {
+				assert.strictEqual(packet.reasonCode, 0)
+				client.end(true, () => testServer.close(done))
+			})
+		},
+	)
+
+	it(
+		'should emit an error if reauthenticate is called on a non-v5 connection',
+		{
+			timeout: 15000,
+		},
+		function (t, done) {
+			const port = ports.PORTAND103 + 90
+			const testServer = serverBuilder('mqtt', (serverClient) => {
+				serverClient.on('connect', () =>
+					serverClient.connack({ returnCode: 0 }),
+				)
+			}).listen(port)
+
+			const client = mqtt.connect({
+				port: port,
+				protocolVersion: 4,
+			})
+
+			client.on('error', (err) => {
+				try {
+					assert.ok(err.message.includes('works only with mqtt-v5'))
+					client.end(true, () => testServer.close(done))
+				} catch (assertErr) {
+					done(assertErr)
+				}
+			})
+
+			client.on('connect', () => {
+				client.reauthenticate({
+					authenticationData: Buffer.from('test'),
+				})
+			})
+		},
+	)
+
+	it(
+		'should emit an error if reauthenticate is called without an initial authenticationMethod',
+		{
+			timeout: 15000,
+		},
+		function (t, done) {
+			const port = ports.PORTAND103 + 91
+			const testServer = serverBuilder('mqtt', (serverClient) => {
+				serverClient.on('connect', () =>
+					serverClient.connack({ reasonCode: 0 }),
+				)
+			}).listen(port)
+
+			const client = mqtt.connect({
+				port: port,
+				protocolVersion: 5,
+				// Missing authenticationMethod
+			})
+
+			client.on('error', (err) => {
+				assert.ok(
+					err.message.includes('authenticationMethod is required'),
+				)
+				client.end(true, () => testServer.close(done))
+			})
+
+			client.on('connect', () => {
+				client.reauthenticate({
+					authenticationData: Buffer.from('test'),
+				})
+			})
+		},
+	)
+
+	it(
 		'pubrec handling custom invalid reason code',
 		{
 			timeout: 15000,

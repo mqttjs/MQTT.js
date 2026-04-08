@@ -433,6 +433,7 @@ export interface MqttClientEventCallbacks {
 	reconnect: VoidCallback
 	offline: VoidCallback
 	outgoingEmpty: VoidCallback
+	reauth: OnPacketCallback
 }
 
 /**
@@ -1675,6 +1676,66 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		} else {
 			f()
 		}
+		return this
+	}
+
+	/**
+	 * reauthenticate - MQTT 5.0 Re-authentication
+	 */
+	public reauthenticate(
+		reAuthOptions: Pick<
+			NonNullable<IAuthPacket['properties']>,
+			'authenticationData' | 'reasonString' | 'userProperties'
+		>,
+		callback?: PacketCallback,
+	): MqttClient {
+		let error: Error | null = null
+
+		if (this.options.protocolVersion !== 5) {
+			error = new Error(
+				'reauthenticate: this feature works only with mqtt-v5',
+			)
+		} else if (!this.connected) {
+			error = new Error('reauthenticate: client is not connected')
+		} else if (!reAuthOptions.authenticationData) {
+			error = new Error('reauthenticate: authenticationData is required')
+		}
+
+		const method = this.options.properties?.authenticationMethod
+
+		if (!error && !method) {
+			error = new Error(
+				'reauthenticate: authenticationMethod is required from initial CONNECT',
+			)
+		}
+
+		if (error) {
+			if (callback) {
+				callback(error)
+			}
+			this.emit('error', error)
+			return this
+		}
+
+		if (
+			reAuthOptions.authenticationData ===
+			this.options.properties.authenticationData
+		) {
+			this.log(
+				'reauthenticate: sending same authenticationData as initial connection',
+			)
+		}
+
+		const authPacket: IAuthPacket = {
+			cmd: 'auth',
+			reasonCode: 0x19,
+			properties: {
+				authenticationMethod: method,
+				...reAuthOptions,
+			},
+		}
+
+		this._sendPacket(authPacket, callback)
 		return this
 	}
 

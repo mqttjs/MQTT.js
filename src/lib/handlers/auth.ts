@@ -30,6 +30,10 @@ const handleAuth: PacketHandler = (
 			if (rc === 24) {
 				client.reconnecting = false
 				client['_sendPacket'](packet2)
+			} else if (rc === 0) {
+				if (client.connected) {
+					client.emit('reauth', packet)
+				}
 			} else {
 				const error = new ErrorWithReasonCode(
 					`Connection refused: ${ReasonCodes[rc]}`,
