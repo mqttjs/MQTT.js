@@ -341,6 +341,7 @@ Also user can manually register topic-alias pair using PUBLISH topic:'some', ta:
 - [`mqtt.Client#endAsync()`](#end-async)
 - [`mqtt.Client#removeOutgoingMessage()`](#removeOutgoingMessage)
 - [`mqtt.Client#reconnect()`](#reconnect)
+- [`mqtt.Client#reauthenticate()`](#client-reauthenticate)
 - [`mqtt.Client#handleMessage()`](#handleMessage)
 - [`mqtt.Client#connected`](#connected)
 - [`mqtt.Client#reconnecting`](#reconnecting)
@@ -599,6 +600,17 @@ and connections
 - `packet` received packet, as defined in
   [mqtt-packet](https://github.com/mcollina/mqtt-packet)
 
+#### Event `'reauth'`
+
+`function (packet) {}`
+
+Emitted when an MQTT 5 re-authentication completes successfully.
+
+- `packet` the AUTH packet received from the broker.
+
+Triggered after calling [`client.reauthenticate()`](#client-reauthenticate).
+
+
 ---
 
 <a name="client-connect"></a>
@@ -739,6 +751,30 @@ After this function is called, the messageId is released and becomes reusable.
 ### mqtt.Client#reconnect()
 
 Connect again using the same options as connect()
+
+---
+
+<a name="client-reauthenticate"></a>
+
+### mqtt.Client#reauthenticate(reauthOptions, [callback])
+
+Start an MQTT 5 re-authentication exchange.
+
+- `reauthOptions`:
+  - `authenticationData` (`Buffer`)
+  - `reasonString` (`string`, optional)
+  - `userProperties` (`object`, optional)
+
+- `callback` - `function (err, packet)`
+  - called when the AUTH exchange completes or fails
+
+Errors:
+- client is not connected
+- MQTT version is not 5
+- `authenticationData` is missing
+- `authenticationMethod` is missing from the initial CONNECT
+
+Emits `'reauth'` on successful completion.
 
 ---
 
