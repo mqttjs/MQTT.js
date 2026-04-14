@@ -1683,6 +1683,31 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	}
 
 	/**
+	 * reauthenticateAsync - MQTT 5.0 Re-authentication (Promise-based)
+	 * @param {Object} reauthOptions - Re-authentication properties
+	 * @param {Buffer} [reauthOptions.authenticationData] - Binary data for auth exchange
+	 * @param {string} [reauthOptions.reasonString] - Human-readable reason for re-auth
+	 * @param {Object} [reauthOptions.userProperties] - Custom user properties
+	 * @returns {Promise<IAuthPacket>} - Resolves with the AUTH packet from the broker
+	 */
+	public reauthenticateAsync(
+		reauthOptions: Pick<
+			NonNullable<IAuthPacket['properties']>,
+			'authenticationData' | 'reasonString' | 'userProperties'
+		>,
+	): Promise<IAuthPacket> {
+		return new Promise((resolve, reject) => {
+			this.reauthenticate(reauthOptions, (err, packet) => {
+				if (err) {
+					reject(err)
+				} else {
+					resolve(packet as IAuthPacket)
+				}
+			})
+		})
+	}
+
+	/**
 	 * reauthenticate - MQTT 5.0 Re-authentication
 	 * @param {Object} reauthOptions - Re-authentication properties
 	 * @param {Buffer} [reauthOptions.authenticationData] - Binary data for auth exchange
