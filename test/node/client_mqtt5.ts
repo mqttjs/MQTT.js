@@ -1548,30 +1548,45 @@ describe('MQTT 5.0', () => {
 			},
 		)
 
-		it('should not crash if reauthenticate is called without a callback', function (t, done) {
-			const port = ports.PORTAND327 + 23
-			const testServer = serverBuilder('mqtt', (serverClient) => {
-				serverClient.on('connect', () =>
-					serverClient.connack({ reasonCode: 0 }),
-				)
-				serverClient.on('auth', () => {
-					serverClient.auth({ reasonCode: 0 })
+		it(
+			'should not crash if reauthenticate is called without a callback',
+			{ timeout: 15000 },
+			function (t, done) {
+				const port = ports.PORTAND327 + 23
+
+				const testServer = serverBuilder('mqtt', (serverClient) => {
+					serverClient.on('connect', () =>
+						serverClient.connack({ reasonCode: 0 }),
+					)
+
+					serverClient.on('auth', (packet) => {
+						assert.strictEqual(packet.reasonCode, 0x19)
+						assert.ok(
+							packet.properties.authenticationData.equals(
+								Buffer.from('test'),
+							),
+						)
+						serverClient.auth({ reasonCode: 0 })
+					})
+				}).listen(port)
+
+				const client = mqtt.connect({
+					port,
+					protocolVersion: 5,
+					properties: { authenticationMethod: 'test' },
+				})
+
+				client.once('reauth', () => {
 					client.end(true, () => testServer.close(done))
 				})
-			}).listen(port)
 
-			const client = mqtt.connect({
-				port,
-				protocolVersion: 5,
-				properties: { authenticationMethod: 'test' },
-			})
-
-			client.on('connect', () => {
-				client.reauthenticate({
-					authenticationData: Buffer.from('test'),
+				client.once('connect', () => {
+					client.reauthenticate({
+						authenticationData: Buffer.from('test'),
+					})
 				})
-			})
-		})
+			},
+		)
 
 		it(
 			'should error if reauthenticate is called without an initial authenticationMethod',
@@ -1623,5 +1638,94 @@ describe('MQTT 5.0', () => {
 				})
 			},
 		)
+
+		it(
+			'should error if broker returns a non-zero reason code',
+			{ timeout: 15000 },
+			function (t, done) {
+				const port = ports.PORTAND327 + 82
+
+				const testServer = serverBuilder('mqtt', (serverClient) => {
+					serverClient.on('connect', () => {
+						serverClient.connack({ reasonCode: 0 })
+					})
+
+					serverClient.on('auth', (packet) => {
+						assert.strictEqual(packet.reasonCode, 0x19)
+						assert.ok(
+							packet.properties.authenticationData.equals(
+								Buffer.from('test'),
+							),
+						)
+
+						setImmediate(() => {
+							if (serverClient.writable) {
+								serverClient.auth({ reasonCode: 0x18 })
+							}
+						})
+					})
+				}).listen(port)
+
+				const client = mqtt.connect({
+					port,
+					protocolVersion: 5,
+					keepalive: 0,
+					properties: { authenticationMethod: 'test' },
+				})
+
+				client.once('connect', () => {
+					client.reauthenticate(
+						{ authenticationData: Buffer.from('test') },
+						(err, packet: IAuthPacket) => {
+							assert.ok(err)
+							assert.ok(packet)
+							assert.strictEqual(packet.reasonCode, 0x18)
+							assert.ok(
+								String(err.message)
+									.toLowerCase()
+									.includes('re-auth failed') ||
+									String(err.message)
+										.toLowerCase()
+										.includes('24'),
+							)
+
+							client.end(true, () => testServer.close(done))
+						},
+					)
+				})
+			},
+		)
+
+		it('should interrupt a pending reauthentication with a new request', function (t, done) {
+			const port = ports.PORTAND327 + 26
+			const testServer = serverBuilder('mqtt', (serverClient) => {
+				serverClient.on('connect', () =>
+					serverClient.connack({ reasonCode: 0 }),
+				)
+			}).listen(port)
+
+			const client = mqtt.connect({
+				port,
+				protocolVersion: 5,
+				properties: { authenticationMethod: 'test' },
+			})
+
+			client.on('connect', () => {
+				client.reauthenticate(
+					{ authenticationData: Buffer.from('first') },
+					(err) => {
+						assert.ok(err)
+						assert.strictEqual(
+							err.message,
+							'reauthenticate: interrupted by new reauthentication request',
+						)
+						client.end(true, () => testServer.close(done))
+					},
+				)
+				client.reauthenticate({
+					authenticationData: Buffer.from('second'),
+				})
+			})
+		})
 	})
 })

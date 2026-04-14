@@ -610,7 +610,6 @@ Emitted when an MQTT 5 re-authentication completes successfully.
 
 Triggered after calling [`client.reauthenticate()`](#client-reauthenticate).
 
-
 ---
 
 <a name="client-connect"></a>

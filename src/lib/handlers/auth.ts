@@ -19,8 +19,8 @@ const handleAuth: PacketHandler = (
 		return
 	}
 
-	if (rc === 0) {
-		client._handleReauthCompleted(null, packet)
+	if (client.connected) {
+		client['_handleReauth'](null, packet)
 		return
 	}
 
@@ -28,8 +28,7 @@ const handleAuth: PacketHandler = (
 		packet,
 		(err: ErrorWithReasonCode, packet2: IAuthPacket) => {
 			if (err) {
-				if (client.connected) client._handleReauthCompleted(err, packet)
-				else client.emit('error', err)
+				client.emit('error', err)
 				return
 			}
 
@@ -37,21 +36,13 @@ const handleAuth: PacketHandler = (
 				client.reconnecting = false
 				client['_sendPacket'](packet2)
 			} else {
-				console.log('### DEBUGGING rc: ', rc, ' ####')
 				const error = new ErrorWithReasonCode(
 					`Connection refused: ${ReasonCodes[rc]}`,
 					rc,
 				)
-				if (client.connected) {
-					client._handleReauthCompleted(error, packet)
-				} else {
-					client.emit('error', error)
-				}
+				client.emit('error', error)
 			}
 		},
-	)
-	console.log(
-		'DEBUG 3: Finished calling handleAuth (but did the callback run?)',
 	)
 }
 

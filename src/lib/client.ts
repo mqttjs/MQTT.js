@@ -27,8 +27,8 @@ import DefaultMessageIdProvider, {
 } from './default-message-id-provider'
 import TopicAliasRecv from './topic-alias-recv'
 import {
+	ErrorWithReasonCode,
 	type DoneCallback,
-	type ErrorWithReasonCode,
 	ErrorWithSubackPacket,
 	type GenericCallback,
 	type IStream,
@@ -522,7 +522,8 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 	private connackPacket: IConnackPacket
 
-	private _reauthCallback: PacketCallback
+	/* @type {PacketCallback} - callback receives IAuthPacket */
+	private _reauthCallback: PacketCallback = null
 
 	public static defaultId() {
 		return `mqttjs_${Math.random().toString(16).substr(2, 8)}`
@@ -1683,7 +1684,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 	/**
 	 * reauthenticate - MQTT 5.0 Re-authentication
-	 * * @param {Object} reauthOptions - Re-authentication properties
+	 * @param {Object} reauthOptions - Re-authentication properties
 	 * @param {Buffer} [reauthOptions.authenticationData] - Binary data for auth exchange
 	 * @param {string} [reauthOptions.reasonString] - Human-readable reason for re-auth
 	 * @param {Object} [reauthOptions.userProperties] - Custom user properties
@@ -1697,54 +1698,31 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		>,
 		callback?: PacketCallback,
 	): MqttClient {
-		let error: Error | null = null
+		const fail = (msg: string) => {
+			const err = new Error(`reauthenticate: ${msg}`)
+			if (callback) callback(err)
+			else this.emit('error', err)
+			return this
+		}
 
 		if (this._reauthCallback) {
-			this._handleReauthCompleted(
+			this._handleReauth(
 				new Error(
 					'reauthenticate: interrupted by new reauthentication request',
 				),
 			)
 		}
 
-		if (this.options.protocolVersion !== 5) {
-			error = new Error(
-				'reauthenticate: this feature works only with mqtt-v5',
-			)
-		} else if (!this.connected) {
-			error = new Error('reauthenticate: client is not connected')
-		} else if (!reauthOptions.authenticationData) {
-			error = new Error('reauthenticate: authenticationData is required')
-		}
+		if (this.options.protocolVersion !== 5)
+			return fail('this feature works only with mqtt-v5')
+		else if (!this.connected) return fail('client is not connected')
+		else if (!reauthOptions.authenticationData)
+			return fail('authenticationData is required')
 
 		const method = this.options.properties?.authenticationMethod
 
-		if (!error && !method) {
-			error = new Error(
-				'reauthenticate: authenticationMethod is required from initial CONNECT',
-			)
-		}
-
-		if (error) {
-			if (callback) {
-				callback(error)
-			} else {
-				this.emit('error', error)
-			}
-			return this
-		}
-
-		if (
-			reauthOptions.authenticationData &&
-			Buffer.isBuffer(this.options.properties.authenticationData) &&
-			reauthOptions.authenticationData.equals(
-				this.options.properties.authenticationData,
-			)
-		) {
-			this.log(
-				'reauthenticate: sending same authenticationData as initial connection',
-			)
-		}
+		if (!method)
+			return fail('authenticationMethod is required from initial CONNECT')
 
 		const authPacket: IAuthPacket = {
 			cmd: 'auth',
@@ -1761,18 +1739,27 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	}
 
 	/**
-	 * _handleReauthCompleted
+	 * _handleReauth
 	 * Internal method to finalize the re-authentication process.
 	 * Clears the pending reauth callback and signals completion via callback or event.
 	 * @param {Error | null} err - The error if the re-authentication failed
 	 * @param {IAuthPacket} [packet] - The AUTH packet received from the broker
 	 * @api private
 	 */
-	public _handleReauthCompleted(err: Error | null, packet?: IAuthPacket) {
+	private _handleReauth(err: Error | null, packet?: IAuthPacket) {
+		if (!err && packet && packet.reasonCode !== 0) {
+			err = new ErrorWithReasonCode(
+				`Re-auth failed: ${packet.reasonCode}`,
+				packet.reasonCode,
+			)
+		}
+
 		if (this._reauthCallback) {
 			const cb = this._reauthCallback
 			this._reauthCallback = null
 			cb(err, packet)
+		} else if (err) {
+			this.emit('error', err)
 		}
 
 		if (!err && packet) {
@@ -1967,7 +1954,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		}
 
 		if (this._reauthCallback) {
-			this._handleReauthCompleted(new Error('client disconnected'))
+			this._handleReauth(new Error('client disconnected'))
 		}
 
 		if (!this.disconnecting && !this.reconnecting) {
