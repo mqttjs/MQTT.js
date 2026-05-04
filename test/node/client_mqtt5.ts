@@ -1636,7 +1636,7 @@ describe('MQTT 5.0', () => {
 			function (t, done) {
 				const port = ports.PORTAND327 + 25
 
-				const FAILING_RC = 0x87
+				const FAILING_RC = 0x19
 				const testServer = serverBuilder('mqtt', (serverClient) => {
 					serverClient.on('connect', () => {
 						serverClient.connack({ reasonCode: 0 })
@@ -1664,7 +1664,7 @@ describe('MQTT 5.0', () => {
 						{ authenticationData: Buffer.from('test') },
 						(err, packet: IAuthPacket) => {
 							assert.ok(err)
-							assert.ok(!packet)
+							assert.strictEqual(packet.reasonCode, FAILING_RC)
 							client.end(true, () => testServer.close(done))
 						},
 					)
@@ -1842,6 +1842,7 @@ describe('MQTT 5.0', () => {
 				})
 			},
 		)
+
 		it(
 			'should error if reauthenticate times out',
 			{ timeout: 5000 },
@@ -1905,6 +1906,96 @@ describe('MQTT 5.0', () => {
 						client.end(true, () => testServer.close(done))
 					})
 				})
+			},
+		)
+
+		it(
+			'reauthenticateAsync resolves with the broker AUTH packet on success',
+			{ timeout: 15000 },
+			async function _test(t) {
+				const port = ports.PORTAND327 + 31
+				const newToken = Buffer.from('async-new-token')
+
+				const testServer = serverBuilder('mqtt', (serverClient) => {
+					serverClient.on('connect', () => {
+						serverClient.connack({ reasonCode: 0 })
+					})
+
+					serverClient.on('auth', (packet) => {
+						assert.strictEqual(packet.reasonCode, 0x19)
+						assert.ok(
+							packet.properties.authenticationData.equals(
+								newToken,
+							),
+						)
+						serverClient.auth({ reasonCode: 0 })
+					})
+				}).listen(port)
+
+				const client = mqtt.connect({
+					port,
+					protocolVersion: 5,
+					properties: { authenticationMethod: 'test' },
+				})
+
+				await new Promise<void>((resolve) =>
+					client.once('connect', () => resolve()),
+				)
+
+				const packet = await client.reauthenticateAsync({
+					authenticationData: newToken,
+				})
+
+				assert.strictEqual(packet.reasonCode, 0)
+
+				await new Promise<void>((resolve) =>
+					client.end(true, () => testServer.close(() => resolve())),
+				)
+			},
+		)
+
+		it(
+			'reauthenticateAsync rejects when broker returns a non-zero reason code',
+			{ timeout: 15000 },
+			async function _test(t) {
+				const port = ports.PORTAND327 + 32
+				const FAILING_RC = 0x19
+
+				const testServer = serverBuilder('mqtt', (serverClient) => {
+					serverClient.on('connect', () => {
+						serverClient.connack({ reasonCode: 0 })
+					})
+
+					serverClient.on('auth', () => {
+						serverClient.auth({ reasonCode: FAILING_RC })
+					})
+				}).listen(port)
+
+				const client = mqtt.connect({
+					port,
+					protocolVersion: 5,
+					properties: { authenticationMethod: 'test' },
+				})
+
+				await new Promise<void>((resolve) =>
+					client.once('connect', () => resolve()),
+				)
+
+				let error = false
+				try {
+					await client.reauthenticateAsync({
+						authenticationData: Buffer.from('test'),
+					})
+				} catch (err) {
+					error = true
+					assert.isTrue(err.message.includes('Re-auth failed'))
+				}
+
+				assert.isTrue(error)
+
+				await new Promise<void>((resolve) =>
+					client.end(true, () => testServer.close(() => resolve())),
+				)
 			},
 		)
 	})

@@ -27,8 +27,8 @@ import DefaultMessageIdProvider, {
 } from './default-message-id-provider'
 import TopicAliasRecv from './topic-alias-recv'
 import {
-	type ErrorWithReasonCode,
 	type DoneCallback,
+	type ErrorWithReasonCode,
 	ErrorWithSubackPacket,
 	type GenericCallback,
 	type IStream,
@@ -180,7 +180,11 @@ export interface IClientOptions extends ISecureClientOptions {
 	 */
 	connectTimeout?: number
 	/**
-	 * 15 * 1000 milliseconds, time to wait for a re-authentication response
+	 * Maximum time (ms) to wait for the broker to complete a re-authentication
+	 * exchange after `reauthenticate()` is called. Covers the entire exchange,
+	 * including any 0x18 Continue Authentication round-trips.
+	 *
+	 * Set to 0 to disable. Default 15000.
 	 */
 	reauthTimeout?: number
 	/**
@@ -424,7 +428,10 @@ export type PacketCallback = (
 	packet?: Packet,
 ) => any
 export type CloseCallback = (error?: Error) => void
-type IAuthPacketCallback = (err?: Error | null, packet?: IAuthPacket) => void
+export type IAuthPacketCallback = (
+	err?: Error | null,
+	packet?: IAuthPacket,
+) => void
 
 export interface MqttClientEventCallbacks {
 	connect: OnConnectCallback
@@ -438,7 +445,7 @@ export interface MqttClientEventCallbacks {
 	reconnect: VoidCallback
 	offline: VoidCallback
 	outgoingEmpty: VoidCallback
-	reauth: OnPacketCallback
+	reauth: (packet: IAuthPacket) => void
 }
 
 /**
@@ -1784,9 +1791,11 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 		this._reauthCallback = callback
 
-		this.reauthTimer = setTimeout(() => {
-			this._finishReauth(new Error('reauthenticate: timed out'))
-		}, this.options.reauthTimeout)
+		if (this.options.reauthTimeout) {
+			this.reauthTimer = setTimeout(() => {
+				this._finishReauth(new Error('reauthenticate: timed out'))
+			}, this.options.reauthTimeout)
+		}
 
 		this._sendPacket(authPacket, (err) => {
 			if (err) this._finishReauth(err)
@@ -1802,7 +1811,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	 *
 	 * @param {Error | null} err - The error if the re-authentication failed
 	 * @param {IAuthPacket} [packet] - The AUTH packet received from the broker
-	 * @api public
+	 * @internal
 	 */
 	public _finishReauth(err: Error | null, packet?: IAuthPacket) {
 		clearTimeout(this.reauthTimer)
@@ -1813,14 +1822,10 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			this._reauthCallback = null
 			cb(err, packet)
 		} else if (err) {
-			if (this.listenerCount('error') > 0) {
-				this.emit('error', err)
-			} else {
-				this.log(
-					'_finishReauth :: unexpected reauth error with no pending callback. Ignoring. Error: %s',
-					err.message,
-				)
-			}
+			this.log(
+				'_finishReauth :: unexpected reauth error with no pending callback. Ignoring. Error: %s',
+				err.message,
+			)
 		}
 
 		if (!err && packet) {
@@ -2173,7 +2178,6 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			this.stream,
 			this.options,
 		)
-
 		this.log('_writePacket :: writeToStream result %s', result)
 		if (!result && cb && cb !== this.noop) {
 			this.log(

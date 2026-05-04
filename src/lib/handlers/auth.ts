@@ -56,6 +56,7 @@ const handleAuth: PacketHandler = (
 			return
 		}
 
+		client.reconnecting = false
 		continueAuth()
 		return
 	}
