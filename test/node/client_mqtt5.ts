@@ -1486,7 +1486,10 @@ describe('MQTT 5.0', () => {
 						(err, packet: IAuthPacket) => {
 							assert.ifError(err)
 							assert.strictEqual(packet.reasonCode, 0)
-							client.end(true, () => testServer.close(done))
+							client.once('reauth', (packet) => {
+								assert.strictEqual(packet.reasonCode, 0)
+								client.end(true, () => testServer.close(done))
+							})
 						},
 					)
 				})
@@ -1672,23 +1675,30 @@ describe('MQTT 5.0', () => {
 			},
 		)
 
-		it('should interrupt a pending reauthentication with a new request', function (t, done) {
+		it('should reject a second reauthentication while the first is in progress', function (t, done) {
 			const port = ports.PORTAND327 + 26
 			let authPacketCount = 0
-			let lastAuthData = null
-			let firstCallbackErr = null
+			let firstCallbackErr: Error | null = null
+			let secondCallbackErr: Error | null = null
+			let firstCallbackPacket: IAuthPacket | null = null
 
 			const testServer = serverBuilder('mqtt', (serverClient) => {
 				serverClient.on('connect', () =>
 					serverClient.connack({ reasonCode: 0 }),
 				)
+
 				serverClient.on('auth', (packet) => {
 					authPacketCount++
-					lastAuthData =
-						packet.properties?.authenticationData?.toString()
-					if (lastAuthData === 'second') {
+
+					assert.strictEqual(
+						packet.properties?.authenticationData?.toString(),
+						'first',
+					)
+
+					// Delay response so first reauth stays in progress
+					setTimeout(() => {
 						serverClient.auth({ reasonCode: 0x00 })
-					}
+					}, 50)
 				})
 			}).listen(port)
 
@@ -1701,39 +1711,34 @@ describe('MQTT 5.0', () => {
 			client.on('connect', () => {
 				client.reauthenticate(
 					{ authenticationData: Buffer.from('first') },
-					(err) => {
+					(err, packet) => {
 						firstCallbackErr = err
+						firstCallbackPacket = packet
 					},
 				)
 
 				client.reauthenticate(
 					{ authenticationData: Buffer.from('second') },
-					(err, packet) => {
-						assert.ok(
-							firstCallbackErr,
-							'first callback should have errored',
-						)
+					(err) => {
+						secondCallbackErr = err
+
+						assert.ok(secondCallbackErr)
 						assert.strictEqual(
-							firstCallbackErr.message,
-							'reauthenticate: interrupted by new reauthentication request',
+							secondCallbackErr.message,
+							'reauthenticate: a re-authentication is already in progress',
 						)
 
-						assert.ifError(err)
-						assert.strictEqual(packet.reasonCode, 0x00)
-
-						assert.strictEqual(
-							authPacketCount,
-							2,
-							'broker should have received both AUTH packets',
-						)
-
-						assert.strictEqual(
-							lastAuthData,
-							'second',
-							'server should receive second AUTH with authenticationData=second',
-						)
-
-						client.end(true, () => testServer.close(done))
+						// Wait long enough for first reauth callback to complete
+						setTimeout(() => {
+							assert.ifError(firstCallbackErr)
+							assert.ok(firstCallbackPacket)
+							assert.strictEqual(
+								firstCallbackPacket.reasonCode,
+								0x00,
+							)
+							assert.strictEqual(authPacketCount, 1)
+							client.end(true, () => testServer.close(done))
+						}, 100)
 					},
 				)
 			})
@@ -1829,8 +1834,54 @@ describe('MQTT 5.0', () => {
 					},
 				})
 
+				client.once('connect', () => {
+					const originalWritePacket = (client as any)._writePacket
+
+					;(client as any)._writePacket = function (_packet, cb) {
+						cb?.(new Error('simulated _writePacket failure'))
+					}
+
+					client.reauthenticate(
+						{ authenticationData: Buffer.from('test') },
+						(err) => {
+							;(client as any)._writePacket = originalWritePacket
+
+							assert.ok(err)
+							assert.strictEqual(
+								err.message,
+								'simulated _writePacket failure',
+							)
+
+							client.end(true, () => testServer.close(done))
+						},
+					)
+				})
+			},
+		)
+
+		it(
+			'should error if reauthenticate is called after client.end()',
+			{ timeout: 15000 },
+			function (t, done) {
+				const port = ports.PORTAND327 + 29
+
+				const testServer = serverBuilder('mqtt', (serverClient) => {
+					serverClient.on('connect', () => {
+						serverClient.connack({ reasonCode: 0 })
+					})
+				}).listen(port)
+
+				const client = mqtt.connect({
+					port,
+					protocolVersion: 5,
+					reconnectPeriod: 0,
+					properties: {
+						authenticationMethod: 'test',
+					},
+				})
+
 				client.on('connect', () => {
-					client.stream.end()
+					client.end()
 
 					client.reauthenticate(
 						{ authenticationData: Buffer.from('test') },
@@ -1847,7 +1898,7 @@ describe('MQTT 5.0', () => {
 			'should error if reauthenticate times out',
 			{ timeout: 5000 },
 			function (t, done) {
-				const port = ports.PORTAND327 + 29
+				const port = ports.PORTAND327 + 30
 
 				const testServer = serverBuilder('mqtt', (serverClient) => {
 					serverClient.on('connect', () => {
@@ -1882,7 +1933,7 @@ describe('MQTT 5.0', () => {
 			'should error if reauthenticate is called with null options',
 			{ timeout: 5000 },
 			function (t, done) {
-				const port = ports.PORTAND327 + 30
+				const port = ports.PORTAND327 + 31
 
 				const testServer = serverBuilder('mqtt', (serverClient) => {
 					serverClient.on('connect', () =>
@@ -1913,7 +1964,7 @@ describe('MQTT 5.0', () => {
 			'reauthenticateAsync resolves with the broker AUTH packet on success',
 			{ timeout: 15000 },
 			async function _test(t) {
-				const port = ports.PORTAND327 + 31
+				const port = ports.PORTAND327 + 32
 				const newToken = Buffer.from('async-new-token')
 
 				const testServer = serverBuilder('mqtt', (serverClient) => {
@@ -1958,7 +2009,7 @@ describe('MQTT 5.0', () => {
 			'reauthenticateAsync rejects when broker returns a non-zero reason code',
 			{ timeout: 15000 },
 			async function _test(t) {
-				const port = ports.PORTAND327 + 32
+				const port = ports.PORTAND327 + 33
 				const FAILING_RC = 0x19
 
 				const testServer = serverBuilder('mqtt', (serverClient) => {

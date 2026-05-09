@@ -737,10 +737,6 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			this._setupReconnect()
 		})
 
-		this.on('error', (err) => {
-			this._cleanupPendingOperations(err)
-		})
-
 		if (!this.options.manualConnect) {
 			this.log('MqttClient :: setting up stream')
 			this.connect()
@@ -1762,23 +1758,24 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		}
 
 		if (!reauthOptions) return fail('reauthOptions is required')
-		else if (this.options.protocolVersion !== 5)
+		if (this.options.protocolVersion !== 5)
 			return fail('this feature works only with mqtt-v5')
-		else if (!this.connected) return fail('client is not connected')
-		else if (!reauthOptions.authenticationData)
+		if (
+			!this.connected ||
+			this.disconnecting ||
+			this.stream.destroyed ||
+			this.stream.writableEnded
+		)
+			return fail('client is not connected')
+		if (!reauthOptions.authenticationData)
 			return fail('authenticationData is required')
 
 		const method = this.options.properties?.authenticationMethod
 		if (!method)
 			return fail('authenticationMethod is required from initial CONNECT')
 
-		if (this._reauthCallback) {
-			this._finishReauth(
-				new Error(
-					'reauthenticate: interrupted by new reauthentication request',
-				),
-			)
-		}
+		if (this._reauthCallback || this.reauthTimer)
+			return fail('a re-authentication is already in progress')
 
 		const authPacket: IAuthPacket = {
 			cmd: 'auth',
@@ -1791,14 +1788,18 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 		this._reauthCallback = callback
 
-		if (this.options.reauthTimeout) {
+		if (this.options.reauthTimeout > 0) {
 			this.reauthTimer = setTimeout(() => {
 				this._finishReauth(new Error('reauthenticate: timed out'))
 			}, this.options.reauthTimeout)
 		}
 
+		// _sendPacket callback reports local write completion/failure only.
+		// The broker's AUTH reply is handled separately in handlers/auth.ts via _reauthCallback.
 		this._sendPacket(authPacket, (err) => {
-			if (err) this._finishReauth(err)
+			if (err) {
+				this._finishReauth(err)
+			}
 		})
 		return this
 	}
@@ -2019,7 +2020,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			})
 		}
 
-		if (this._reauthCallback) {
+		if (this._reauthCallback || this.reauthTimer) {
 			const message = this.disconnecting
 				? 'reauthenticate: cancelled by client.end()'
 				: 'reauthenticate: client disconnected'
@@ -2588,17 +2589,5 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			this.messageIdProvider.deallocate(messageId)
 			this._invokeStoreProcessingQueue()
 		})
-	}
-
-	/**
-	 * _cleanupPendingOperations - clean up any pending operations on error
-	 * @param {Error} err - The error that triggered cleanup
-	 * @api private
-	 */
-	private _cleanupPendingOperations(err: Error) {
-		// Clean up reauth if pending
-		if (this._reauthCallback) {
-			this._finishReauth(err)
-		}
 	}
 }

@@ -33,7 +33,7 @@ const handleAuth: PacketHandler = (
 				client.emit(
 					'error',
 					new ErrorWithReasonCode(
-						'AUTH handler did not return a packet',
+						'Override client.handleAuth() to use MQTT 5 enhanced authentication.',
 						rc,
 					),
 				)
