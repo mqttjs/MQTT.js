@@ -18,6 +18,18 @@ const debug = _debug('mqttjs')
 
 let protocols: Record<string, StreamBuilder> = null
 
+function getDefaultWebSocketProtocol(): MqttProtocol {
+	if (typeof location !== 'undefined') {
+		return location.protocol === 'https:' ? 'wss' : 'ws'
+	}
+
+	if (typeof document !== 'undefined') {
+		return new URL(document.URL).protocol === 'https:' ? 'wss' : 'ws'
+	}
+
+	return 'ws'
+}
+
 /**
  * Parse the auth attribute and merge username and password in the options object.
  *
@@ -59,6 +71,11 @@ function connect(
 	if (brokerUrl && typeof brokerUrl === 'string') {
 		const parsedUrl = url.parse(brokerUrl, true)
 		const parsedOptions: Partial<IClientOptions> = {}
+		const isRelativeWebSocketUrl =
+			!parsedUrl.protocol &&
+			!parsedUrl.hostname &&
+			parsedUrl.path?.startsWith('/') &&
+			(isBrowser || opts.forceNativeWebSocket)
 
 		if (parsedUrl.port != null) {
 			// eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -75,11 +92,13 @@ function connect(
 		opts = { ...parsedOptions, ...opts }
 
 		// when parsing an url expect the protocol to be set
-		if (!opts.protocol) {
+		if (!opts.protocol && !isRelativeWebSocketUrl) {
 			throw new Error('Missing protocol')
 		}
 
-		opts.protocol = opts.protocol.replace(/:$/, '') as MqttProtocol
+		opts.protocol = (
+			opts.protocol || getDefaultWebSocketProtocol()
+		).replace(/:$/, '') as MqttProtocol
 	}
 
 	opts.unixSocket = opts.unixSocket || opts.protocol?.includes('+unix')
