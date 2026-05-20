@@ -44,6 +44,19 @@ describe('mqtt', () => {
 			c.end((err) => done(err))
 		})
 
+		it('should support relative WebSocket URLs when using native WebSocket', function _test(t, done) {
+			const c = mqtt.connect('/mqtt', {
+				forceNativeWebSocket: true,
+				host: 'localhost',
+			})
+
+			c.should.be.instanceOf(mqtt.MqttClient)
+			c.options.should.have.property('protocol', 'ws')
+			c.options.should.have.property('path', '/mqtt')
+			c.on('error', () => {})
+			c.end((err) => done(err))
+		})
+
 		it('should work with unix sockets', function _test(t, done) {
 			const c = mqtt.connect('mqtt+unix:///tmp/mqtt.sock')
 
