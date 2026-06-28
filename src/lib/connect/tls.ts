@@ -32,7 +32,10 @@ const buildStream: StreamBuilder = (client, opts) => {
 	opts.port = opts.port || 8883
 	opts.host = opts.hostname || opts.host || 'localhost'
 
-	if (net.isIP(opts.host) === 0) {
+	// Default SNI to the connect host unless explicitly set, and never for an
+	// IP (RFC 6066). An explicit servername allows verifying the certificate
+	// against a hostname that differs from the connect host.
+	if (net.isIP(opts.host) === 0 && !opts.servername) {
 		opts.servername = opts.host
 	}
 

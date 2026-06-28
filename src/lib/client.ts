@@ -134,7 +134,11 @@ export interface IClientOptions extends ISecureClientOptions {
 	authPacket?: Partial<IAuthPacket>
 	/** Disable/Enable writeToStream.cacheNumbers */
 	writeCache?: boolean
-	/** Should be set to `host` */
+	/**
+	 * SNI servername, also used to verify the certificate. Defaults to `host`
+	 * (except when `host` is an IP). Set explicitly when the connect host
+	 * differs from the certificate's hostname.
+	 */
 	servername?: string
 	/** The default protocol to use when using `servers` and no protocol is specified */
 	defaultProtocol?: MqttProtocol
