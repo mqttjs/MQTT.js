@@ -11,7 +11,7 @@ import getPorts from './helpers/port_list'
 const ports = getPorts(5)
 
 const port = ports.PORT
-const sniPort = ports.PORTAND400
+const sniPort = ports.PORTAND40
 const KEY = path.join(__dirname, 'helpers', 'tls-key.pem')
 const CERT = path.join(__dirname, 'helpers', 'tls-cert.pem')
 const WRONG_CERT = path.join(__dirname, 'helpers', 'wrong-cert.pem')
