@@ -11,9 +11,14 @@ import getPorts from './helpers/port_list'
 const ports = getPorts(5)
 
 const port = ports.PORT
+const sniPort = ports.PORTAND40
 const KEY = path.join(__dirname, 'helpers', 'tls-key.pem')
 const CERT = path.join(__dirname, 'helpers', 'tls-cert.pem')
 const WRONG_CERT = path.join(__dirname, 'helpers', 'wrong-cert.pem')
+// Certificate valid only for `mqtt.example.test` (not localhost / 127.0.0.1).
+const SNI_KEY = path.join(__dirname, 'helpers', 'sni-key.pem')
+const SNI_CERT = path.join(__dirname, 'helpers', 'sni-cert.pem')
+const SNI_HOSTNAME = 'mqtt.example.test'
 
 const serverListener: MqttServerListener = (client) => {
 	// this is the Server's MQTT Client
@@ -80,6 +85,14 @@ const server = new MqttSecureServer(
 	serverListener,
 ).listen(port)
 
+const sniServer = new MqttSecureServer(
+	{
+		key: fs.readFileSync(SNI_KEY),
+		cert: fs.readFileSync(SNI_CERT),
+	},
+	serverListener,
+).listen(sniPort)
+
 describe('MqttSecureClient', () => {
 	const config = { protocol: 'mqtts', port, rejectUnauthorized: false }
 
@@ -87,6 +100,10 @@ describe('MqttSecureClient', () => {
 		// clean up and make sure the server is no longer listening...
 		if (server.listening) {
 			server.close()
+		}
+
+		if (sniServer.listening) {
+			sniServer.close()
 		}
 
 		process.exit(0)
@@ -195,6 +212,83 @@ describe('MqttSecureClient', () => {
 
 			server.once('connect', () => {
 				server.on('secureConnection', server.setupConnection) // reset eventHandler
+				client.end((err) => done(err))
+			})
+		})
+
+		it('should use an explicit servername for SNI over the connect host', function _test(t, done) {
+			const hostname = 'localhost'
+
+			server.removeAllListeners('secureConnection') // clear eventHandler
+			server.once('secureConnection', (tlsSocket) => {
+				// SNI reflects the explicit servername, not the connect host
+				assert.equal((tlsSocket as any).servername, SNI_HOSTNAME)
+				server.setupConnection(tlsSocket)
+			})
+
+			const client = mqtt.connect({
+				protocol: 'mqtts',
+				port,
+				ca: [fs.readFileSync(CERT)],
+				rejectUnauthorized: false,
+				host: hostname,
+				servername: SNI_HOSTNAME,
+			})
+
+			client.on('error', (err) => {
+				done(err)
+			})
+
+			server.once('connect', () => {
+				server.on('secureConnection', server.setupConnection) // reset eventHandler
+				client.end((err) => done(err))
+			})
+		})
+
+		it('should keep an explicit servername when connecting by IP', function _test(t, done) {
+			server.removeAllListeners('secureConnection') // clear eventHandler
+			server.once('secureConnection', (tlsSocket) => {
+				// IP is never used as SNI (RFC 6066); servername is preserved
+				assert.equal((tlsSocket as any).servername, SNI_HOSTNAME)
+				server.setupConnection(tlsSocket)
+			})
+
+			const client = mqtt.connect({
+				protocol: 'mqtts',
+				port,
+				ca: [fs.readFileSync(CERT)],
+				rejectUnauthorized: false,
+				host: '127.0.0.1',
+				servername: SNI_HOSTNAME,
+			})
+
+			client.on('error', (err) => {
+				done(err)
+			})
+
+			server.once('connect', () => {
+				server.on('secureConnection', server.setupConnection) // reset eventHandler
+				client.end((err) => done(err))
+			})
+		})
+
+		it('should validate the certificate against an explicit servername', function _test(t, done) {
+			// Connect host (localhost) mismatches the cert, but servername
+			// (mqtt.example.test) matches, so verification must succeed.
+			const client = mqtt.connect({
+				protocol: 'mqtts',
+				port: sniPort,
+				host: 'localhost',
+				servername: SNI_HOSTNAME,
+				ca: [fs.readFileSync(SNI_CERT)],
+				rejectUnauthorized: true,
+			})
+
+			client.on('error', (err) => {
+				done(err)
+			})
+
+			client.once('connect', () => {
 				client.end((err) => done(err))
 			})
 		})

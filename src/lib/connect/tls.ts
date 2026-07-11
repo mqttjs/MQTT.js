@@ -1,4 +1,8 @@
-import { type TLSSocket, connect as tlsConnect } from 'tls'
+import {
+	type ConnectionOptions,
+	type TLSSocket,
+	connect as tlsConnect,
+} from 'tls'
 import net from 'net'
 import _debug from 'debug'
 import { type StreamBuilder } from '../shared'
@@ -18,17 +22,20 @@ function connect(opts: IClientOptions): TLSSocket {
 		return tlsConnect({
 			...rest,
 			socket,
-		})
+		} as ConnectionOptions)
 	}
 
-	return tlsConnect(opts)
+	return tlsConnect(opts as ConnectionOptions)
 }
 
 const buildStream: StreamBuilder = (client, opts) => {
 	opts.port = opts.port || 8883
 	opts.host = opts.hostname || opts.host || 'localhost'
 
-	if (net.isIP(opts.host) === 0) {
+	// Default SNI to the connect host unless explicitly set, and never for an
+	// IP (RFC 6066). An explicit servername allows verifying the certificate
+	// against a hostname that differs from the connect host.
+	if (net.isIP(opts.host) === 0 && !opts.servername) {
 		opts.servername = opts.host
 	}
 

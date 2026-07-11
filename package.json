@@ -1,7 +1,7 @@
 {
   "name": "mqtt",
   "description": "A library for the MQTT protocol",
-  "version": "5.15.0",
+  "version": "5.15.2",
   "contributors": [
     "Adam Rudd <adamvrr@gmail.com>",
     "Matteo Collina <matteo.collina@gmail.com> (https://github.com/mcollina)",
@@ -104,6 +104,18 @@
     "split2": "^4.2.0",
     "worker-timers": "^8.0.23",
     "ws": "^8.18.3"
+  },
+  "overrides": {
+    "levelup": {
+      "bl": "1.2.3",
+      "semver": "5.7.2"
+    },
+    "pre-commit": {
+      "cross-spawn": "7.0.6"
+    },
+    "release-it": {
+      "undici": "7.24.5"
+    }
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.1",

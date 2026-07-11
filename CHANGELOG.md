@@ -1,5 +1,15 @@
 # Changelog
 
+## [5.15.2](https://github.com/mqttjs/MQTT.js/compare/v5.15.1...v5.15.2) (2026-07-06)
+
+
+### Bug Fixes
+
+* **connect/tls:** don't overwrite an explicit servername (SNI) ([#2051](https://github.com/mqttjs/MQTT.js/issues/2051)) ([cd1d780](https://github.com/mqttjs/MQTT.js/commit/cd1d780f5742852e9bcf46dbd9732e0c5e20823a))
+* support relative WebSocket URLs ([#2049](https://github.com/mqttjs/MQTT.js/issues/2049)) ([c4be563](https://github.com/mqttjs/MQTT.js/commit/c4be5633594b5b839862440aa78125f22021f8e6)), closes [#2035](https://github.com/mqttjs/MQTT.js/issues/2035)
+
+## [5.15.1](https://github.com/mqttjs/MQTT.js/compare/v5.15.0...v5.15.1) (2026-03-24)
+
 # [5.15.0](/compare/v5.14.1...v5.15.0) (2026-02-02)
 
 
