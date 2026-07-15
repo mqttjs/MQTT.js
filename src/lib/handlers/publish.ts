@@ -41,10 +41,26 @@ const handlePublish: PacketHandler = (client, packet: IPublishPacket, done) => {
 			alias = packet.properties.topicAlias
 		}
 		if (typeof alias !== 'undefined') {
+			const topicAliasRecv = client['topicAliasRecv']
+			if (!topicAliasRecv) {
+				// The client never advertised a Topic Alias Maximum (it defaults
+				// to 0), so per MQTT 5 it must not receive any Topic Alias. A
+				// broker sending one is violating the protocol: reject it instead
+				// of dereferencing the uninitialized receiver, which would throw
+				// an uncaught TypeError and crash the process (GHSA-c8jq-r765-cq7g).
+				client.log(
+					'handlePublish :: received unexpected topic alias. alias: %d',
+					alias,
+				)
+				client.emit(
+					'error',
+					new Error('Received Topic Alias is out of range'),
+				)
+				return
+			}
 			if (topic.length === 0) {
 				if (alias > 0 && alias <= 0xffff) {
-					const gotTopic =
-						client['topicAliasRecv'].getTopicByAlias(alias)
+					const gotTopic = topicAliasRecv.getTopicByAlias(alias)
 					if (gotTopic) {
 						topic = gotTopic
 						client.log(
@@ -74,7 +90,7 @@ const handlePublish: PacketHandler = (client, packet: IPublishPacket, done) => {
 					)
 					return
 				}
-			} else if (client['topicAliasRecv'].put(topic, alias)) {
+			} else if (topicAliasRecv.put(topic, alias)) {
 				client.log(
 					'handlePublish :: registered topic: %s - alias: %d',
 					topic,
