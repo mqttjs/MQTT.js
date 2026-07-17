@@ -128,6 +128,25 @@ describe('NumberAllocator', () => {
 			a.free(2)
 			assert.equal(a.firstVacant(), 2)
 		})
+
+		it('should not scan a range saturated via use', () => {
+			const a = new NumberAllocator(1, 3)
+			for (let i = 1; i <= 3; i++) {
+				assert.equal(a.use(i), true)
+			}
+
+			const used = (a as unknown as { used: Set<number> }).used
+			const has = used.has.bind(used)
+			let hasCalls = 0
+			used.has = (num) => {
+				hasCalls++
+				return has(num)
+			}
+
+			assert.equal(a.firstVacant(), null)
+			assert.equal(a.alloc(), null)
+			assert.equal(hasCalls, 0)
+		})
 	})
 
 	describe('clear', () => {

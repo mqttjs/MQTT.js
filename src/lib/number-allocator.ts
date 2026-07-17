@@ -28,6 +28,9 @@ export class NumberAllocator {
 	 * @returns The first vacant number, or null if all are occupied.
 	 */
 	firstVacant(): number | null {
+		if (this.used.size === this.max - this.min + 1) {
+			return null
+		}
 		for (let i = this.lowWaterMark; i <= this.max; i++) {
 			if (!this.used.has(i)) {
 				return i
@@ -41,6 +44,9 @@ export class NumberAllocator {
 	 * @returns The first vacant number, or null if all are occupied.
 	 */
 	alloc(): number | null {
+		if (this.used.size === this.max - this.min + 1) {
+			return null
+		}
 		for (let i = this.lowWaterMark; i <= this.max; i++) {
 			if (!this.used.has(i)) {
 				this.used.add(i)
