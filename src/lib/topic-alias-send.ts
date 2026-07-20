@@ -2,7 +2,7 @@
  * Module dependencies
  */
 import { LRUCache } from 'lru-cache'
-import { NumberAllocator } from 'number-allocator'
+import { NumberAllocator } from './number-allocator'
 
 /**
  * Topic Alias sending manager
