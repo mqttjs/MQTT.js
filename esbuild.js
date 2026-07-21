@@ -79,6 +79,7 @@ async function run() {
 
     options.outfile = `${outdir}/mqtt.esm.js`
     options.format = 'esm'
+    options.entryPoints = ['build/index.esm.js']
 
     await build(options)
 
