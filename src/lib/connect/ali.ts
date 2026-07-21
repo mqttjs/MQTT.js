@@ -54,7 +54,7 @@ function buildUrl(opts: IClientOptions, client: MqttClient) {
 		url = `${protocol}://${opts.hostname}:${opts.port}${opts.path}`
 	}
 	if (typeof opts.transformWsUrl === 'function') {
-		url = opts.transformWsUrl(url, opts, client)
+		return opts.transformWsUrl(url, opts, client)
 	}
 	return url
 }
@@ -111,18 +111,26 @@ const buildStream: StreamBuilder = (client, opts): IStream => {
 
 	setDefaultOpts(opts)
 
-	const url = buildUrl(opts, client)
 	my = opts.my
-	// https://miniprogram.alipay.com/docs/miniprogram/mpdev/api_network_connectsocket
-	my.connectSocket({
-		url,
-		protocols: websocketSubProtocol,
-	})
-
 	proxy = buildProxy()
 	stream = new BufferedDuplex(opts, proxy, my)
 
-	bindEventHandler()
+	const urlOrPromise = buildUrl(opts, client)
+
+	const connectSocket = (url: string) => {
+		// https://miniprogram.alipay.com/docs/miniprogram/mpdev/api_network_connectsocket
+		my.connectSocket({
+			url,
+			protocols: websocketSubProtocol,
+		})
+		bindEventHandler()
+	}
+
+	if (urlOrPromise instanceof Promise) {
+		urlOrPromise.then(connectSocket).catch((err) => stream.destroy(err))
+	} else {
+		connectSocket(urlOrPromise)
+	}
 
 	return stream
 }
