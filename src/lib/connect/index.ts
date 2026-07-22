@@ -226,6 +226,7 @@ function connect(
 
 			opts.host = opts.servers[client._reconnectCount].host
 			opts.port = opts.servers[client._reconnectCount].port
+			opts.path = opts.servers[client._reconnectCount].path
 			opts.protocol = !opts.servers[client._reconnectCount].protocol
 				? opts.defaultProtocol
 				: opts.servers[client._reconnectCount].protocol
