@@ -65,6 +65,7 @@ const defaultConnectOptions: IClientOptions = {
 	subscribeBatchSize: null,
 	writeCache: true,
 	timerVariant: 'auto',
+	reauthTimeout: 15 * 1000,
 }
 
 export type BaseMqttProtocol =
@@ -182,7 +183,14 @@ export interface IClientOptions extends ISecureClientOptions {
 	 * 30 * 1000 milliseconds, time to wait before a CONNACK is received
 	 */
 	connectTimeout?: number
-
+	/**
+	 * Maximum time (ms) to wait for the broker to complete a re-authentication
+	 * exchange after `reauthenticate()` is called. Covers the entire exchange,
+	 * including any 0x18 Continue Authentication round-trips.
+	 *
+	 * Set to 0 to disable. Default 15000.
+	 */
+	reauthTimeout?: number
 	/**
 	 * a Store for the incoming packets
 	 */
@@ -424,6 +432,10 @@ export type PacketCallback = (
 	packet?: Packet,
 ) => any
 export type CloseCallback = (error?: Error) => void
+export type IAuthPacketCallback = (
+	err?: Error | null,
+	packet?: IAuthPacket,
+) => void
 
 export interface MqttClientEventCallbacks {
 	connect: OnConnectCallback
@@ -437,6 +449,7 @@ export interface MqttClientEventCallbacks {
 	reconnect: VoidCallback
 	offline: VoidCallback
 	outgoingEmpty: VoidCallback
+	reauth: (packet: IAuthPacket) => void
 }
 
 /**
@@ -504,6 +517,9 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 	private reconnectTimer: NodeJS.Timeout
 
+	/** Timer for re-authentication timeout */
+	private reauthTimer: NodeJS.Timeout
+
 	private _storeProcessing: boolean
 
 	/** keep a reference of packets that have been successfully processed from outgoing store  */
@@ -524,6 +540,8 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	private _deferredReconnect: () => void
 
 	private connackPacket: IConnackPacket
+
+	private _reauthCallback: IAuthPacketCallback | null = null
 
 	public static defaultId() {
 		return `mqttjs_${Math.random().toString(16).substr(2, 8)}`
@@ -633,6 +651,9 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		this.connackTimer = null
 		// Reconnect timer
 		this.reconnectTimer = null
+		// Reauthenticate timer
+		this.reauthTimer = null
+
 		// Is processing store?
 		this._storeProcessing = false
 		// Packet Ids are put into the store during store processing
@@ -706,6 +727,9 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 			this.log('close :: clearing connackTimer')
 			clearTimeout(this.connackTimer)
+
+			this.log('close :: clearing reauthTimer')
+			clearTimeout(this.reauthTimer)
 
 			this._destroyKeepaliveManager()
 
@@ -1683,6 +1707,138 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	}
 
 	/**
+	 * reauthenticateAsync - MQTT 5.0 Re-authentication (Promise-based)
+	 *
+	 * @param {Object} reauthOptions - Re-authentication properties
+	 * @param {Buffer} reauthOptions.authenticationData - Binary data for auth exchange
+	 * @param {string} [reauthOptions.reasonString] - Human-readable reason for re-auth
+	 * @param {Object} [reauthOptions.userProperties] - Custom user properties
+	 * @returns {Promise<IAuthPacket>} Resolves with the AUTH packet from the broker
+	 * @api public
+	 * @example const packet = await client.reauthenticateAsync({ authenticationData: Buffer.from('token') });
+	 */
+	public reauthenticateAsync(
+		reauthOptions: Pick<
+			NonNullable<IAuthPacket['properties']>,
+			'authenticationData' | 'reasonString' | 'userProperties'
+		>,
+	): Promise<IAuthPacket> {
+		return new Promise((resolve, reject) => {
+			this.reauthenticate(reauthOptions, (err, packet) => {
+				if (err) {
+					reject(err)
+				} else {
+					resolve(packet)
+				}
+			})
+		})
+	}
+
+	/**
+	 * reauthenticate - MQTT 5.0 Re-authentication
+	 *
+	 * @param {Object} reauthOptions - Re-authentication properties
+	 * @param {Buffer} reauthOptions.authenticationData - Binary data for auth exchange
+	 * @param {string} [reauthOptions.reasonString] - Human-readable reason for re-auth
+	 * @param {Object} [reauthOptions.userProperties] - Custom user properties
+	 * @param {IAuthPacketCallback} [callback] - Fired when the AUTH exchange completes or fails
+	 * @returns {MqttClient} this - for chaining
+	 * @api public
+	 * @example client.reauthenticate({ authenticationData: Buffer.from('token') });
+	 * @example client.reauthenticate({ authenticationData: Buffer.from('token') }, console.log);
+	 */
+	public reauthenticate(
+		reauthOptions: Pick<
+			NonNullable<IAuthPacket['properties']>,
+			'authenticationData' | 'reasonString' | 'userProperties'
+		>,
+		callback?: IAuthPacketCallback,
+	): MqttClient {
+		const fail = (msg: string) => {
+			const err = new Error(`reauthenticate: ${msg}`)
+			if (callback) callback(err)
+			else this.emit('error', err)
+			return this
+		}
+
+		if (!reauthOptions) return fail('reauthOptions is required')
+		if (this.options.protocolVersion !== 5)
+			return fail('this feature works only with mqtt-v5')
+		if (
+			!this.connected ||
+			this.disconnecting ||
+			this.stream.destroyed ||
+			this.stream.writableEnded
+		)
+			return fail('client is not connected')
+		if (!reauthOptions.authenticationData)
+			return fail('authenticationData is required')
+
+		const method = this.options.properties?.authenticationMethod
+		if (!method)
+			return fail('authenticationMethod is required from initial CONNECT')
+
+		if (this._reauthCallback || this.reauthTimer)
+			return fail('a re-authentication is already in progress')
+
+		const authPacket: IAuthPacket = {
+			cmd: 'auth',
+			reasonCode: 0x19, // Re-authentication (MQTT 5.0 Spec)
+			properties: {
+				...reauthOptions,
+				authenticationMethod: method,
+			},
+		}
+
+		this._reauthCallback = callback
+
+		if (this.options.reauthTimeout > 0) {
+			this.reauthTimer = setTimeout(() => {
+				this._finishReauth(new Error('reauthenticate: timed out'))
+			}, this.options.reauthTimeout)
+		}
+
+		// _sendPacket callback reports local write completion/failure only.
+		// The broker's AUTH reply is handled separately in handlers/auth.ts via _reauthCallback.
+		this._sendPacket(authPacket, (err) => {
+			if (err) {
+				this._finishReauth(err)
+			}
+		})
+		return this
+	}
+
+	/**
+	 * _finishReauth - finalize the re-authentication process
+	 *
+	 * Internal method that clears the pending reauth timer and callback,
+	 * then signals completion via callback or event.
+	 *
+	 * @param {Error | null} err - The error if the re-authentication failed
+	 * @param {IAuthPacket} [packet] - The AUTH packet received from the broker
+	 * @internal
+	 */
+	public _finishReauth(err: Error | null, packet?: IAuthPacket) {
+		clearTimeout(this.reauthTimer)
+		this.reauthTimer = null
+
+		if (this._reauthCallback) {
+			const cb = this._reauthCallback
+			this._reauthCallback = null
+			cb(err, packet)
+		} else if (err) {
+			this.log(
+				'_finishReauth :: unexpected reauth error with no pending callback. Ignoring. Error: %s',
+				err.message,
+			)
+		}
+
+		if (!err && packet) {
+			this.emit('reauth', packet)
+		}
+	}
+
+	/**
 	 * PRIVATE METHODS
 	 * =====================
 	 * */
@@ -1866,6 +2022,13 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 					})
 				})
 			})
+		}
+
+		if (this._reauthCallback || this.reauthTimer) {
+			const message = this.disconnecting
+				? 'reauthenticate: cancelled by client.end()'
+				: 'reauthenticate: client disconnected'
+			this._finishReauth(new Error(message))
 		}
 
 		if (!this.disconnecting && !this.reconnecting) {

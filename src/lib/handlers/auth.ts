@@ -2,6 +2,9 @@ import { type IAuthPacket } from 'mqtt-packet'
 import { ErrorWithReasonCode, type PacketHandler } from '../shared'
 import { ReasonCodes } from './ack'
 
+const RC_SUCCESS = 0x00
+const RC_CONTINUE = 0x18
+
 const handleAuth: PacketHandler = (
 	client,
 	packet: IAuthPacket & { returnCode: number },
@@ -19,26 +22,61 @@ const handleAuth: PacketHandler = (
 		return
 	}
 
-	client.handleAuth(
-		packet,
-		(err: ErrorWithReasonCode, packet2: IAuthPacket) => {
+	const continueAuth = () => {
+		client.handleAuth(packet, (err, nextPacket) => {
 			if (err) {
 				client.emit('error', err)
 				return
 			}
 
-			if (rc === 24) {
-				client.reconnecting = false
-				client['_sendPacket'](packet2)
-			} else {
-				const error = new ErrorWithReasonCode(
+			if (!nextPacket) {
+				client.emit(
+					'error',
+					new ErrorWithReasonCode(
+						'Override client.handleAuth() to use MQTT 5 enhanced authentication.',
+						rc,
+					),
+				)
+				return
+			}
+
+			client['_sendPacket'](nextPacket)
+		})
+	}
+
+	if (!client.connected) {
+		if (rc !== RC_CONTINUE) {
+			client.emit(
+				'error',
+				new ErrorWithReasonCode(
 					`Connection refused: ${ReasonCodes[rc]}`,
 					rc,
-				)
-				client.emit('error', error)
-			}
-		},
-	)
+				),
+			)
+			return
+		}
+
+		client.reconnecting = false
+		continueAuth()
+		return
+	}
+
+	switch (rc) {
+		case RC_SUCCESS:
+			return client._finishReauth(null, packet)
+
+		case RC_CONTINUE:
+			return continueAuth()
+
+		default:
+			return client._finishReauth(
+				new ErrorWithReasonCode(
+					`Re-auth failed: ${ReasonCodes[rc]}`,
+					rc,
+				),
+				packet,
+			)
+	}
 }
 
 export default handleAuth

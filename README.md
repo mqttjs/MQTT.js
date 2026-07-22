@@ -341,6 +341,8 @@ Also user can manually register topic-alias pair using PUBLISH topic:'some', ta:
 - [`mqtt.Client#endAsync()`](#end-async)
 - [`mqtt.Client#removeOutgoingMessage()`](#removeOutgoingMessage)
 - [`mqtt.Client#reconnect()`](#reconnect)
+- [`mqtt.Client#reauthenticate()`](#client-reauthenticate)
+- [`mqtt.Client#reauthenticateAsync()`](#client-reauthenticate-async)
 - [`mqtt.Client#handleMessage()`](#handleMessage)
 - [`mqtt.Client#connected`](#connected)
 - [`mqtt.Client#reconnecting`](#reconnecting)
@@ -427,6 +429,8 @@ The arguments are:
     is received with an error.
   - `connectTimeout`: `30 * 1000` milliseconds, time to wait before a
     CONNACK is received
+  - `reauthTimeout`: `15 * 1000` milliseconds, time to wait for a
+    re-authentication response from the broker before failing the AUTH exchange
   - `username`: the username required by your broker, if any
   - `password`: the password required by your broker, if any
   - `socksProxy`: establish TCP and TLS connections via a socks proxy (URL, supported protocols are `socks5://`, `socks5h://`, `socks4://`, `socks4a://`)
@@ -599,6 +603,14 @@ and connections
 - `packet` received packet, as defined in
   [mqtt-packet](https://github.com/mcollina/mqtt-packet)
 
+#### Event `'reauth'`
+
+`function (packet) {}`
+
+Emitted when an MQTT 5 re-authentication completes successfully. Triggered after calling [`client.reauthenticate()`](#client-reauthenticate).
+
+- `packet` the AUTH packet received from the broker.
+
 ---
 
 <a name="client-connect"></a>
@@ -739,6 +751,33 @@ After this function is called, the messageId is released and becomes reusable.
 ### mqtt.Client#reconnect()
 
 Connect again using the same options as connect()
+
+---
+
+<a name="client-reauthenticate"></a>
+
+### mqtt.Client#reauthenticate(reauthOptions, [callback])
+
+Start an MQTT 5 re-authentication exchange.
+
+- `reauthOptions`:
+  - `authenticationData` (`Buffer`)
+  - `reasonString` (`string`, optional)
+  - `userProperties` (`object`, optional)
+
+- `callback` - `function (err, packet)`, called when the AUTH exchange completes or fails.
+
+Emits `'reauth'` on successful completion.
+
+---
+
+<a name="client-reauthenticate-async"></a>
+
+### mqtt.Client#reauthenticateAsync(reauthOptions)
+
+Async [`reauthenticate`](#client-reauthenticate). Returns a `Promise<IAuthPacket>`
+that resolves with the AUTH packet from the broker on success, or rejects with
+an error on failure.
 
 ---
 
