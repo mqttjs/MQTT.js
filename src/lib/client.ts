@@ -775,7 +775,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		const writable = new Writable()
 		const parser = mqttPacket.parser(this.options)
 
-		let completeParse = null
+		let processing = false
 		const packets = []
 
 		this.log('connect :: calling method to clear reconnect')
@@ -794,12 +794,23 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		this.stream = this.streamBuilder(this)
 
 		parser.on('packet', (packet) => {
+			// 修复：PINGRESP 直接处理，不放入串行队列
+			// 原代码将所有 packet 放入 packets[] 串行处理，如果前面的 PUBLISH 消息的
+			// handleMessage 回调未调用或耗时很长，PINGRESP 会被阻塞在队列中，
+			// 导致 reschedulePing 不被调用，keepalive 定时器超时，连接断开
+			if (packet.cmd === 'pingresp') {
+				this.log('parser :: received pingresp, handling immediately')
+				this.emit('packetreceive', packet)
+				this.reschedulePing(true)
+				return
+			}
 			this.log('parser :: on packet push to packets array.')
 			packets.push(packet)
 		})
 
 		const work = () => {
 			this.log('work :: getting next packet in queue')
+			processing = true
 			const packet = packets.shift()
 
 			if (packet) {
@@ -807,10 +818,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 				handlePacket(this, packet, nextTickWork)
 			} else {
 				this.log('work :: no packets in queue')
-				const done = completeParse
-				completeParse = null
-				this.log('work :: done flag is %s', !!done)
-				if (done) done()
+				processing = false
 			}
 		}
 
@@ -818,17 +826,21 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			if (packets.length) {
 				nextTick(work)
 			} else {
-				const done = completeParse
-				completeParse = null
-				done()
+				processing = false
 			}
 		}
 
 		writable._write = (buf, enc, done) => {
-			completeParse = done
 			this.log('writable stream :: parsing buffer')
 			parser.parse(buf)
-			work()
+			// 立即调用 done()，允许 stream 继续读取数据
+			// 修复：原代码在 packet 串行处理完成后才调用 done()，导致 stream 背压暂停
+			// 如果 PUBLISH 的 handleMessage 阻塞，PINGRESP 所在的 TCP 包不会被 parser 解析
+			// 导致 keepalive 超时、连接断开
+			done()
+			if (!processing) {
+				work()
+			}
 		}
 
 		const streamErrorHandler = (error) => {
