@@ -2232,7 +2232,9 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	 */
 	private _reschedulePing() {
 		this.log('_reschedulePing :: rescheduling ping')
-		this.keepaliveManager.reschedule()
+		// 修复：收到 PINGRESP 时不 reschedule 定时器，只重置等待状态
+		// 避免 PINGRESP 延迟导致下一次 PINGREQ 发送时间偏移
+		this.keepaliveManager.resetWaitingState()
 	}
 
 	public sendPing() {
