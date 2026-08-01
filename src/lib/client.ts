@@ -65,6 +65,7 @@ const defaultConnectOptions: IClientOptions = {
 	subscribeBatchSize: null,
 	writeCache: true,
 	timerVariant: 'auto',
+	reconnectOnConnackError: true, // 修复：CONNACK 错误码时自动重连
 }
 
 export type BaseMqttProtocol =
@@ -713,6 +714,13 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 				this.topicAliasRecv.clear()
 			}
 
+			// 修复：非主动 end() 导致的 close 时，重置 disconnecting 标志
+			// end() 方法中 closeStores 会设置 disconnected=true
+			// 意外断开时 disconnected=false，此时需要重置 disconnecting 以允许重连
+			if (!this.disconnected) {
+				this.disconnecting = false
+			}
+
 			this.log('close :: calling _setupReconnect')
 			this._setupReconnect()
 		})
@@ -925,6 +933,13 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			)
 			this.emit('error', new Error('connack timeout'))
 			this._cleanUp(true)
+			// 修复：connack timeout 后兜底确保 reconnectTimer 被设置
+			// _cleanUp(true) 中 stream.destroy() 可能因 stream 已关闭而不触发 close 事件
+			// 此处主动检查并设置 reconnectTimer，避免重连永久卡死
+			if (!this.disconnecting && !this.reconnectTimer && this.options.reconnectPeriod > 0) {
+				this.log('connackTimeout :: fallback _setupReconnect')
+				this._setupReconnect()
+			}
 		}, this.options.connectTimeout)
 
 		return this
@@ -1868,9 +1883,12 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			})
 		}
 
-		if (!this.disconnecting && !this.reconnecting) {
+		// 修复：移除 !this.reconnecting 条件
+		// 原代码在自动重连过程中(reconnecting=true)跳过重连设置，依赖 stream.destroy() 触发 close 事件恢复
+		// 但 stream.destroy() 在 stream 已关闭时是 no-op，不会触发 close，导致 reconnectTimer 永久丢失
+		if (!this.disconnecting) {
 			this.log(
-				'_cleanUp :: client not disconnecting/reconnecting. Clearing and resetting reconnect.',
+				'_cleanUp :: client not disconnecting. Clearing and resetting reconnect.',
 			)
 			this._clearReconnect()
 			this._setupReconnect()
@@ -2214,6 +2232,11 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		this.emit('error', new Error('Keepalive timeout'))
 		this.log('onKeepaliveTimeout :: calling _cleanUp with force true')
 		this._cleanUp(true)
+		// 修复：keepalive timeout 后兜底确保 reconnectTimer 被设置
+		if (!this.disconnecting && !this.reconnectTimer && this.options.reconnectPeriod > 0) {
+			this.log('onKeepaliveTimeout :: fallback _setupReconnect')
+			this._setupReconnect()
+		}
 	}
 
 	/**
@@ -2281,6 +2304,10 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		this._setupKeepaliveManager()
 
 		this.connected = true
+		// 修复：connected 后立即触发 connect 事件，不等 outgoingStore 处理完毕
+		// 原代码在 outStore.on('end') 中才触发，若 store 处理卡住，connect 事件永不触发
+		// 导致 Node-RED 等客户端状态不更新（一直显示"连接中"）
+		this.emit('connect', packet)
 
 		/** check if there are packets in outgoing store and stream them */
 		const startStreamProcess = () => {
@@ -2376,7 +2403,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 				if (allProcessed) {
 					clearStoreProcessing()
 					this._invokeAllStoreProcessingQueue()
-					this.emit('connect', packet)
+					// connect 事件已在 connected=true 后立即触发，此处不再重复触发
 				} else {
 					startStreamProcess()
 				}
