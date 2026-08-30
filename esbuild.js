@@ -18,6 +18,20 @@ const options = {
     globalName: 'mqtt',
     sourcemap: false, // this can be enabled while debugging, if we decide to keep this enabled we should also ship the `src` folder to npm
     plugins: [
+        {
+            name: 'browser-process',
+            setup(build) {
+                // mqtt-packet corks the stream and uncorks on process.nextTick.
+                // The default browser process shim drains that queue with
+                // setTimeout(0), which React Native throttles while
+                // backgrounded, so writes stall. Resolve process to a
+                // queueMicrotask-based shim instead (issue #2053).
+                const shim = require('path').resolve(__dirname, 'src/lib/browser-process.ts')
+                build.onResolve({ filter: /^(node:)?process$/ }, () => ({
+                    path: shim,
+                }))
+            }
+        },
         polyfillNode({
             polyfills: [
                 'readable-stream'
