@@ -2,6 +2,7 @@ const { build } = require('esbuild')
 const { polyfillNode } = require('esbuild-plugin-polyfill-node');
 const { rimraf } = require('rimraf')
 const fs = require('fs')
+const path = require('path')
 const { version } = require('./package.json');
 
 const outdir = 'dist'
@@ -18,6 +19,21 @@ const options = {
     globalName: 'mqtt',
     sourcemap: false, // this can be enabled while debugging, if we decide to keep this enabled we should also ship the `src` folder to npm
     plugins: [
+        {
+            name: 'browser-process',
+            setup(build) {
+                // mqtt-packet corks the stream and uncorks on process.nextTick.
+                // The default browser process shim drains that queue with
+                // setTimeout(0), which React Native throttles while
+                // backgrounded, so writes stall. Resolve process to a
+                // queueMicrotask-based shim instead (issue #2053).
+                const shim = path.resolve(__dirname, 'src/lib/browser-process.ts')
+                // readable-stream requires 'process/' (trailing slash).
+                build.onResolve({ filter: /^(node:)?process\/?$/ }, () => ({
+                    path: shim,
+                }))
+            }
+        },
         polyfillNode({
             polyfills: [
                 'readable-stream'
