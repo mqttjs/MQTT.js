@@ -1,10 +1,12 @@
-import { describe, it } from 'node:test'
+import { describe, it, afterEach } from 'node:test'
 import { PassThrough } from 'node:stream'
+import { execFileSync } from 'node:child_process'
 import { assert } from 'chai'
-import { nextTick as nodeNextTick } from '../../src/lib/shared'
-import { nextTick } from '../../src/lib/browser-process'
+import sinon from 'sinon'
+import { nextTick } from '../../scripts/browser-process'
 
 describe('browser process.nextTick', () => {
+	afterEach(() => sinon.restore())
 	it('runs the callback as a microtask, not via setTimeout(0)', async () => {
 		const origSetTimeout = setTimeout
 		let timeoutUsed = false
@@ -91,10 +93,47 @@ describe('browser process.nextTick', () => {
 			globalThis.setTimeout = origSetTimeout
 		}
 	})
-})
 
-describe('Node process.nextTick', () => {
-	it('is what MQTT.js uses outside the browser bundle', () => {
-		assert.equal(nodeNextTick, process.nextTick)
+	it('falls back to a timer when microtasks are unavailable', () => {
+		sinon.stub(globalThis, 'queueMicrotask').value(undefined)
+		const timer = sinon.stub(globalThis, 'setTimeout')
+		let ran = false
+		nextTick(() => {
+			ran = true
+		})
+		assert.isFalse(ran)
+		assert.equal(timer.callCount, 1)
+		;(timer.firstCall.args[0] as () => void)()
+		assert.isTrue(ran)
+	})
+
+	it('resumes remaining and future callbacks after a throwing callback', () => {
+		const tasks: Array<() => void> = []
+		sinon.stub(globalThis, 'queueMicrotask').callsFake((callback) => {
+			tasks.push(callback)
+		})
+		const seen: string[] = []
+		nextTick(() => {
+			throw new Error('boom')
+		})
+		nextTick(() => {
+			seen.push('queued')
+		})
+		assert.throws(tasks.shift(), 'boom')
+		assert.lengthOf(tasks, 1)
+		tasks.shift()()
+		nextTick(() => {
+			seen.push('future')
+		})
+		tasks.shift()()
+		assert.deepEqual(seen, ['queued', 'future'])
+	})
+
+	it('resolves process and process/ to the microtask shim through the real build plugins', async () => {
+		// Run without esbuild-register's tsconfig baseUrl hook, which shadows
+		// the esbuild package with the repository's esbuild.js file.
+		execFileSync(process.execPath, [
+			'scripts/test-browser-process-build.js',
+		])
 	})
 })

@@ -18,6 +18,7 @@ const options = {
     platform: 'browser',
     globalName: 'mqtt',
     sourcemap: false, // this can be enabled while debugging, if we decide to keep this enabled we should also ship the `src` folder to npm
+    metafile: true,
     plugins: [
         {
             name: 'browser-process',
@@ -27,7 +28,7 @@ const options = {
                 // setTimeout(0), which React Native throttles while
                 // backgrounded, so writes stall. Resolve process to a
                 // queueMicrotask-based shim instead (issue #2053).
-                const shim = path.resolve(__dirname, 'src/lib/browser-process.ts')
+                const shim = path.resolve(__dirname, 'scripts/browser-process.ts')
                 // readable-stream requires 'process/' (trailing slash).
                 build.onResolve({ filter: /^(node:)?process\/?$/ }, () => ({
                     path: shim,
@@ -35,9 +36,8 @@ const options = {
             }
         },
         polyfillNode({
-            polyfills: [
-                'readable-stream'
-            ]
+            // Disable the default process polyfill so plugin order cannot replace our shim.
+            polyfills: { process: false, 'readable-stream': true }
         }),
         {
             name: 'resolve-package-json',
@@ -86,17 +86,17 @@ const options = {
 async function run() {
     const start = Date.now()
     await rimraf(outdir)
-    await build(options)
+    await buildWithProcessCheck(options)
 
     options.minify = true
     options.outfile = `${outdir}/mqtt.min.js`
-    await build(options)
+    await buildWithProcessCheck(options)
 
 
     options.outfile = `${outdir}/mqtt.esm.js`
     options.format = 'esm'
 
-    await build(options)
+    await buildWithProcessCheck(options)
 
     console.log(`Build time: ${Date.now() - start}ms`)
     console.log('Build output:')
@@ -109,7 +109,19 @@ async function run() {
     }
 }
 
-run().catch((e) => {
+async function buildWithProcessCheck(options) {
+    const result = await build(options)
+    const inputs = Object.keys(result.metafile.inputs)
+    if (!inputs.some(input => input.endsWith('scripts/browser-process.ts')) ||
+        inputs.some(input => /(?:process\/browser|node\/process)\.(?:js|mjs)$/.test(input))) {
+        throw new Error('Browser bundle did not resolve process exclusively to the microtask shim')
+    }
+    return result
+}
+
+if (require.main === module) run().catch((e) => {
     console.error(e)
     process.exit(1)
 })
+
+module.exports = { options, buildWithProcessCheck }
