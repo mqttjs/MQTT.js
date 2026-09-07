@@ -813,8 +813,9 @@ which completes the exchange and emits the [`'reauth'`](#events) event.
   - `reasonString`: representing the reason associated with this re-authentication `string`,
   - `userProperties`: The User Property is allowed to appear multiple times to represent multiple name, value pairs `object`
 - `callback` - `function (err, packet)`, fired when the exchange completes.
-  `packet` is the final `AUTH` packet received from the broker. When no
-  callback is given, failures are emitted as `'error'` events.
+  `packet` is the final `AUTH` packet received from the broker, and is only
+  passed on success. When no callback is given, failures are emitted as
+  `'error'` events.
 
 The exchange fails with an error when the broker does not answer within
 `reauthTimeout` milliseconds, when the connection is closed in the meantime,

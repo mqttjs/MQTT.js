@@ -1992,7 +1992,8 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	 * given). On success the `'reauth'` event is emitted.
 	 *
 	 * @param {Error | null} err - failure reason, or null on success
-	 * @param {IAuthPacket} [packet] - the final AUTH packet received
+	 * @param {IAuthPacket} [packet] - the final AUTH packet received, only
+	 * reported to the callback on success
 	 */
 	private _finishReauth(err: Error | null, packet?: IAuthPacket) {
 		if (!this._reauthPending) {

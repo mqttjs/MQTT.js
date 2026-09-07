@@ -1797,5 +1797,71 @@ describe('MQTT 5.0', () => {
 				})
 			},
 		)
+
+		it(
+			'should fail the re-authentication on an unexpected AUTH reason code',
+			{ timeout: 5000 },
+			function _test(t, done) {
+				const port = basePort + 11
+				const testServer = buildReauthServer(port, (serverClient) => {
+					// 0x19 (Re-authenticate) may only travel client to broker
+					serverClient.auth({ reasonCode: 0x19 })
+				})
+
+				const client = connectV5(port)
+				client.on('error', done)
+
+				client.once('connect', () => {
+					client.reauthenticate((err) => {
+						assert.ok(err)
+						assert.strictEqual(
+							err.message,
+							'Protocol error: unexpected AUTH reason code 25 received from the broker',
+						)
+						assert.strictEqual(
+							(err as ErrorWithReasonCode).code,
+							0x19,
+						)
+						client.end(true, () => testServer.close(done))
+					})
+				})
+			},
+		)
+
+		it(
+			'should fail when handleAuth continues the exchange without a packet',
+			{ timeout: 5000 },
+			function _test(t, done) {
+				const port = basePort + 12
+				const testServer = buildReauthServer(port, (serverClient) => {
+					serverClient.auth({
+						reasonCode: 0x18,
+						properties: { authenticationMethod: authMethod },
+					})
+				})
+
+				const client = connectV5(port)
+				client.on('error', done)
+
+				client.handleAuth = (packet, callback) => {
+					callback(null, undefined)
+				}
+
+				client.once('connect', () => {
+					client.reauthenticate((err) => {
+						assert.ok(err)
+						assert.match(
+							err.message,
+							/did not provide an AUTH packet/,
+						)
+						assert.strictEqual(
+							(err as ErrorWithReasonCode).code,
+							0x18,
+						)
+						client.end(true, () => testServer.close(done))
+					})
+				})
+			},
+		)
 	})
 })

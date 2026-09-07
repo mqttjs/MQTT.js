@@ -111,13 +111,17 @@ const handleAuth: PacketHandler = (
 			break
 
 		default:
-			client.log('handleAuth :: re-authentication refused by broker')
+			// An AUTH packet can only carry 0x00, 0x18 or 0x19, so this is
+			// always 0x19: a broker must never ask a client to re-authenticate.
+			client.log(
+				'handleAuth :: unexpected AUTH reason code %d from broker',
+				rc,
+			)
 			client['_finishReauth'](
 				new ErrorWithReasonCode(
-					`Re-authentication failed: ${ReasonCodes[rc]}`,
+					`Protocol error: unexpected AUTH reason code ${rc} received from the broker`,
 					rc,
 				),
-				packet,
 			)
 			break
 	}
