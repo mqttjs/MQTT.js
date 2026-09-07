@@ -1863,5 +1863,53 @@ describe('MQTT 5.0', () => {
 				})
 			},
 		)
+		it(
+			'reauthenticateAsync should reject when the exchange fails',
+			{ timeout: 5000 },
+			function _test(t, done) {
+				const port = basePort + 13
+				const testServer = buildReauthServer(port, (serverClient) => {
+					serverClient.auth({ reasonCode: 0x19 })
+				})
+
+				const client = connectV5(port)
+				client.on('error', done)
+
+				client.once('connect', async () => {
+					try {
+						await client.reauthenticateAsync()
+						done(new Error('should have rejected'))
+					} catch (err) {
+						assert.match(err.message, /Protocol error/)
+						client.end(true, () => testServer.close(done))
+					}
+				})
+			},
+		)
+
+		it(
+			'should emit an error when the exchange fails and no callback is given',
+			{ timeout: 5000 },
+			function _test(t, done) {
+				const port = basePort + 14
+				const testServer = buildReauthServer(port, (serverClient) => {
+					serverClient.auth({ reasonCode: 0x19 })
+				})
+
+				const client = connectV5(port)
+
+				client.once('connect', () => {
+					client.once('error', (err) => {
+						assert.match(err.message, /Protocol error/)
+						assert.strictEqual(
+							(err as ErrorWithReasonCode).code,
+							0x19,
+						)
+						client.end(true, () => testServer.close(done))
+					})
+					client.reauthenticate()
+				})
+			},
+		)
 	})
 })
