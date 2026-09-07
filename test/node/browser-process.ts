@@ -8,25 +8,15 @@ import { nextTick } from '../../scripts/browser-process'
 describe('browser process.nextTick', () => {
 	afterEach(() => sinon.restore())
 	it('runs the callback as a microtask, not via setTimeout(0)', async () => {
-		const origSetTimeout = setTimeout
-		let timeoutUsed = false
-		globalThis.setTimeout = ((...args: Parameters<typeof setTimeout>) => {
-			timeoutUsed = true
-			return origSetTimeout(...args)
-		}) as typeof setTimeout
-
-		try {
-			let ran = false
-			nextTick(() => {
-				ran = true
-			})
-			assert.equal(ran, false, 'must not run synchronously')
-			await Promise.resolve()
-			assert.equal(ran, true, 'must run after a microtask')
-			assert.equal(timeoutUsed, false, 'must not schedule setTimeout')
-		} finally {
-			globalThis.setTimeout = origSetTimeout
-		}
+		const timer = sinon.spy(globalThis, 'setTimeout')
+		let ran = false
+		nextTick(() => {
+			ran = true
+		})
+		assert.equal(ran, false, 'must not run synchronously')
+		await Promise.resolve()
+		assert.equal(ran, true, 'must run after a microtask')
+		assert.isFalse(timer.called, 'must not schedule setTimeout')
 	})
 
 	it('forwards extra arguments', async () => {
@@ -65,33 +55,23 @@ describe('browser process.nextTick', () => {
 	})
 
 	it('uncorks a stream without waiting for setTimeout', async () => {
-		const origSetTimeout = setTimeout
-		let timeoutUsed = false
-		globalThis.setTimeout = ((...args: Parameters<typeof setTimeout>) => {
-			timeoutUsed = true
-			return origSetTimeout(...args)
-		}) as typeof setTimeout
+		const timer = sinon.spy(globalThis, 'setTimeout')
+		const stream = new PassThrough()
+		const chunks: Buffer[] = []
+		stream.on('data', (chunk) => {
+			chunks.push(chunk)
+		})
+		stream.cork()
+		stream.write('ping')
+		assert.equal(chunks.length, 0, 'corked writes stay buffered')
 
-		try {
-			const stream = new PassThrough()
-			const chunks: Buffer[] = []
-			stream.on('data', (chunk) => {
-				chunks.push(chunk)
-			})
-			stream.cork()
-			stream.write('ping')
-			assert.equal(chunks.length, 0, 'corked writes stay buffered')
+		nextTick(() => {
+			stream.uncork()
+		})
+		await Promise.resolve()
 
-			nextTick(() => {
-				stream.uncork()
-			})
-			await Promise.resolve()
-
-			assert.equal(Buffer.concat(chunks).toString(), 'ping')
-			assert.equal(timeoutUsed, false)
-		} finally {
-			globalThis.setTimeout = origSetTimeout
-		}
+		assert.equal(Buffer.concat(chunks).toString(), 'ping')
+		assert.isFalse(timer.called)
 	})
 
 	it('falls back to a timer when microtasks are unavailable', () => {
