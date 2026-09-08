@@ -392,8 +392,6 @@ export type ISubscriptionMap = {
 	 * object which has topic names as object keys and as value the options, like {'test1': {qos: 0}, 'test2': {qos: 2}}.
 	 */
 	[topic: string]: IClientSubscribeOptions
-} & {
-	resubscribe?: boolean
 }
 
 export interface IClientUnsubscribeProperties {
@@ -1116,6 +1114,22 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			| ClientSubscribeCallback,
 		callback?: ClientSubscribeCallback,
 	): MqttClient {
+		return this._subscribe(topicObject, opts, callback)
+	}
+
+	/**
+	 * Implementation of {@link subscribe}. `resubscribe` is internal: when true
+	 * the already-subscribed check is bypassed so reconnects re-send every topic.
+	 */
+	private _subscribe(
+		topicObject: string | string[] | ISubscriptionMap,
+		opts?:
+			| IClientSubscribeOptions
+			| IClientSubscribeProperties
+			| ClientSubscribeCallback,
+		callback?: ClientSubscribeCallback,
+		resubscribe = false,
+	): MqttClient {
 		const version = this.options.protocolVersion
 
 		if (typeof opts === 'function') {
@@ -1124,9 +1138,6 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 		callback = callback || this.noop
 
-		// force re-subscribe on reconnect. This is only true
-		// when provided `topicObject` is `this._resubscribeTopics`
-		let resubscribe = false
 		let topicsList = []
 
 		if (typeof topicObject === 'string') {
@@ -1135,8 +1146,6 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		} else if (Array.isArray(topicObject)) {
 			topicsList = topicObject
 		} else if (typeof topicObject === 'object') {
-			resubscribe = topicObject.resubscribe
-			delete topicObject.resubscribe
 			topicsList = Object.keys(topicObject)
 		}
 
@@ -2247,16 +2256,25 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 							this._resubscribeTopics[
 								_resubscribeTopicsKeys[topicI]
 							]
-						resubscribeTopic.resubscribe = true
-						this.subscribe(resubscribeTopic, {
-							properties:
-								resubscribeTopic[_resubscribeTopicsKeys[topicI]]
-									.properties,
-						})
+						this._subscribe(
+							resubscribeTopic,
+							{
+								properties:
+									resubscribeTopic[
+										_resubscribeTopicsKeys[topicI]
+									].properties,
+							},
+							undefined,
+							true,
+						)
 					}
 				} else {
-					this._resubscribeTopics.resubscribe = true
-					this.subscribe(this._resubscribeTopics)
+					this._subscribe(
+						this._resubscribeTopics,
+						undefined,
+						undefined,
+						true,
+					)
 				}
 			} else {
 				this._resubscribeTopics = Object.create(null)

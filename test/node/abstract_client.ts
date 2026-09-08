@@ -3632,42 +3632,48 @@ export default function abstractTest(server, config, ports) {
 			})
 		})
 
-		for (const resetSubscriptions of [false, true]) {
-			it(
-				`should resubscribe to __proto__ ${resetSubscriptions ? 'after resetting subscriptions' : 'when reconnecting'}`,
-				{ timeout: 5000 },
-				async function _test() {
-					const client = connect({ reconnectPeriod: 100 })
-					const topics = ['__proto__', 'hello']
-					await once(client, 'connect')
-					await client.subscribeAsync(topics)
-					if (resetSubscriptions) {
-						client.options.resubscribe = false
-						const reconnected = once(client, 'connect')
-						client.stream.end()
-						await reconnected
-						client.options.resubscribe = true
+		// `__proto__` used to change the prototype of the resubscribe map and
+		// `resubscribe` collided with the internal force-resubscribe flag
+		for (const reservedTopic of ['__proto__', 'resubscribe']) {
+			for (const resetSubscriptions of [false, true]) {
+				it(
+					`should resubscribe to ${reservedTopic} ${resetSubscriptions ? 'after resetting subscriptions' : 'when reconnecting'}`,
+					{ timeout: 5000 },
+					async function _test() {
+						const client = connect({ reconnectPeriod: 100 })
+						const topics = [reservedTopic, 'hello']
+						await once(client, 'connect')
 						await client.subscribeAsync(topics)
-					}
-					const nextSubscribe = new Promise<string[]>((resolve) => {
-						server.once('client', (serverClient) => {
-							serverClient.once('subscribe', (packet) => {
-								resolve(
-									packet.subscriptions.map(
-										(sub) => sub.topic,
-									),
-								)
-							})
-						})
-					})
-					client.stream.end()
-					assert.deepEqual(
-						await nextSubscribe,
-						version === 5 ? ['__proto__'] : topics,
-					)
-					await client.endAsync()
-				},
-			)
+						if (resetSubscriptions) {
+							client.options.resubscribe = false
+							const reconnected = once(client, 'connect')
+							client.stream.end()
+							await reconnected
+							client.options.resubscribe = true
+							await client.subscribeAsync(topics)
+						}
+						const nextSubscribe = new Promise<string[]>(
+							(resolve) => {
+								server.once('client', (serverClient) => {
+									serverClient.once('subscribe', (packet) => {
+										resolve(
+											packet.subscriptions.map(
+												(sub) => sub.topic,
+											),
+										)
+									})
+								})
+							},
+						)
+						client.stream.end()
+						assert.deepEqual(
+							await nextSubscribe,
+							version === 5 ? [reservedTopic] : topics,
+						)
+						await client.endAsync()
+					},
+				)
+			}
 		}
 
 		it('should resubscribe when clean=false and sessionPresent=false', function _test(t, done) {
