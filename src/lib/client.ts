@@ -37,6 +37,7 @@ import {
 	type TimerVariant,
 	type VoidCallback,
 	nextTick,
+	nullProtoMap,
 } from './shared'
 import type TopicAliasSend from './topic-alias-send'
 import { TypedEventEmitter } from './TypedEmitter'
@@ -612,7 +613,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			options.queueQoSZero === undefined ? true : options.queueQoSZero
 
 		// map of subscribed topics to support reconnection
-		this._resubscribeTopics = Object.create(null)
+		this._resubscribeTopics = nullProtoMap<IClientSubscribeOptions>()
 
 		// map of a subscribe messageId and a topic
 		this.messageIdToTopic = {}
@@ -1114,7 +1115,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			| ClientSubscribeCallback,
 		callback?: ClientSubscribeCallback,
 	): MqttClient {
-		return this._subscribe(topicObject, opts, callback)
+		return this._subscribe(topicObject, false, opts, callback)
 	}
 
 	/**
@@ -1123,12 +1124,12 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	 */
 	private _subscribe(
 		topicObject: string | string[] | ISubscriptionMap,
+		resubscribe: boolean,
 		opts?:
 			| IClientSubscribeOptions
 			| IClientSubscribeProperties
 			| ClientSubscribeCallback,
 		callback?: ClientSubscribeCallback,
-		resubscribe = false,
 	): MqttClient {
 		const version = this.options.protocolVersion
 
@@ -1231,6 +1232,20 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 		if (!subs.length) {
 			callback(null, [])
+			return this
+		}
+
+		// a subscription map carries its options per topic, so a missing or
+		// malformed entry only surfaces here - without this the packet layer
+		// gets `qos: undefined` and destroys the connection
+		const invalidQos = subs.find(
+			(sub) => sub.qos !== 0 && sub.qos !== 1 && sub.qos !== 2,
+		)
+		if (invalidQos) {
+			setImmediate(
+				callback,
+				new Error(`Invalid qos for topic ${invalidQos.topic}`),
+			)
 			return this
 		}
 
@@ -2250,34 +2265,24 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 						topicI < _resubscribeTopicsKeys.length;
 						topicI++
 					) {
-						const resubscribeTopic: ISubscriptionMap =
-							Object.create(null)
+						const resubscribeTopic =
+							nullProtoMap<IClientSubscribeOptions>()
 						resubscribeTopic[_resubscribeTopicsKeys[topicI]] =
 							this._resubscribeTopics[
 								_resubscribeTopicsKeys[topicI]
 							]
-						this._subscribe(
-							resubscribeTopic,
-							{
-								properties:
-									resubscribeTopic[
-										_resubscribeTopicsKeys[topicI]
-									].properties,
-							},
-							undefined,
-							true,
-						)
+						this._subscribe(resubscribeTopic, true, {
+							properties:
+								resubscribeTopic[_resubscribeTopicsKeys[topicI]]
+									.properties,
+						})
 					}
 				} else {
-					this._subscribe(
-						this._resubscribeTopics,
-						undefined,
-						undefined,
-						true,
-					)
+					this._subscribe(this._resubscribeTopics, true)
 				}
 			} else {
-				this._resubscribeTopics = Object.create(null)
+				this._resubscribeTopics =
+					nullProtoMap<IClientSubscribeOptions>()
 			}
 		}
 

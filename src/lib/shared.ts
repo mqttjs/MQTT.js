@@ -30,6 +30,15 @@ export type PacketHandler = (
 
 export type TimerVariant = 'auto' | 'worker' | 'native'
 
+/**
+ * Empty map for keys that come from the user or the broker. The null prototype
+ * keeps `__proto__` an ordinary key instead of a prototype assignment, and stops
+ * lookups from inheriting `Object.prototype` members like `constructor`.
+ */
+export function nullProtoMap<V>(): Record<string, V> {
+	return Object.create(null)
+}
+
 export class ErrorWithReasonCode extends Error {
 	public code: number
 

@@ -3,6 +3,7 @@
  */
 import { LRUCache } from 'lru-cache'
 import { NumberAllocator } from './number-allocator'
+import { nullProtoMap } from './shared'
 
 /**
  * Topic Alias sending manager
@@ -23,7 +24,7 @@ export default class TopicAliasSend {
 	constructor(max: number) {
 		if (max > 0) {
 			this.aliasToTopic = new LRUCache<number, string>({ max })
-			this.topicToAlias = Object.create(null)
+			this.topicToAlias = nullProtoMap<number>()
 			this.numberAllocator = new NumberAllocator(1, max)
 			this.max = max
 			this.length = 0
@@ -78,7 +79,7 @@ export default class TopicAliasSend {
 	 */
 	clear() {
 		this.aliasToTopic.clear()
-		this.topicToAlias = Object.create(null)
+		this.topicToAlias = nullProtoMap<number>()
 		this.numberAllocator.clear()
 		this.length = 0
 	}
