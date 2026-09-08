@@ -446,8 +446,14 @@ export type AuthCallback = GenericCallback<IAuthPacket>
  */
 export type ReauthenticateOptions = Pick<
 	NonNullable<IAuthPacket['properties']>,
-	'authenticationData' | 'reasonString' | 'userProperties'
->
+	'reasonString' | 'userProperties'
+> & {
+	/**
+	 * The new credential. `mqtt-packet` types this as a Buffer, but a string is
+	 * accepted too and is written as UTF-8.
+	 */
+	authenticationData?: Buffer | string
+}
 
 export interface MqttClientEventCallbacks {
 	connect: OnConnectCallback
