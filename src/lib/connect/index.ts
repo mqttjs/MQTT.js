@@ -7,7 +7,7 @@ import MqttClient, {
 	type MqttProtocol,
 } from '../client'
 import isBrowser from '../is-browser'
-import { type StreamBuilder } from '../shared'
+import { nullProtoMap, type StreamBuilder } from '../shared'
 
 // Handling the process.nextTick is not a function error in react-native applications.
 if (typeof process?.nextTick !== 'function') {
@@ -162,7 +162,10 @@ function connect(
 
 	// only loads the protocols once
 	if (!protocols) {
-		protocols = {}
+		// keyed by the scheme from the broker URL, so it must not inherit
+		// `Object.prototype` members - `constructor://host` would otherwise skip
+		// the unknown-protocol fallback below and be called as a stream builder
+		protocols = nullProtoMap<StreamBuilder>()
 		if (!isBrowser && !opts.forceNativeWebSocket) {
 			protocols.ws = require('./ws').streamBuilder
 			protocols.wss = require('./ws').streamBuilder

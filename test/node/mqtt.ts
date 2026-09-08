@@ -25,6 +25,26 @@ describe('mqtt', () => {
 			}).should.throw('Missing protocol')
 		})
 
+		// these used to be found on the protocols map through Object.prototype and
+		// called as stream builders instead of falling back to a known protocol.
+		// A URL scheme is lowercased, so `constructor` is the only one reachable
+		// that way; an explicit `protocol` option keeps its casing.
+		it('should fall back to a default protocol for a url scheme named after an Object.prototype member', function _test(t, done) {
+			const c = mqtt.connect('constructor://localhost:1883')
+			c.options.should.have.property('protocol', 'mqtt')
+			c.end((err) => done(err))
+		})
+
+		for (const protocol of ['constructor', 'toString', 'valueOf']) {
+			it(`should fall back to a default protocol when the protocol option is ${protocol}`, function _test(t, done) {
+				const c = mqtt.connect('mqtt://localhost:1883', {
+					protocol: protocol as any,
+				})
+				c.options.should.have.property('protocol', 'mqtt')
+				c.end((err) => done(err))
+			})
+		}
+
 		it('should return an MqttClient with username option set', function _test(t, done) {
 			const c = mqtt.connect('mqtt://user:pass@localhost:1883')
 
