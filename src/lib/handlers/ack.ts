@@ -3,7 +3,7 @@
 import { type PacketHandler, ErrorWithReasonCode } from '../shared'
 
 export const ReasonCodes = {
-	0: '',
+	0: 'Success',
 	1: 'Unacceptable protocol version',
 	2: 'Identifier rejected',
 	3: 'Server unavailable',
@@ -11,6 +11,8 @@ export const ReasonCodes = {
 	5: 'Not authorized',
 	16: 'No matching subscribers',
 	17: 'No subscription existed',
+	24: 'Continue authentication',
+	25: 'Re-authenticate',
 	128: 'Unspecified error',
 	129: 'Malformed Packet',
 	130: 'Protocol Error',
@@ -47,6 +49,13 @@ export const ReasonCodes = {
 	161: 'Subscription Identifiers not supported',
 	162: 'Wildcard Subscriptions not supported',
 }
+
+/**
+ * Human readable text for a reason code, falling back to the numeric value so
+ * an unlisted code still names itself in the error message.
+ */
+export const reasonCodeText = (code: number): string =>
+	ReasonCodes[code] || `Unknown reason code 0x${Number(code).toString(16)}`
 
 const handleAck: PacketHandler = (client, packet) => {
 	/* eslint no-fallthrough: "off" */
