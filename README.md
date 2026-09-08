@@ -342,6 +342,9 @@ Also user can manually register topic-alias pair using PUBLISH topic:'some', ta:
 - [`mqtt.Client#removeOutgoingMessage()`](#removeOutgoingMessage)
 - [`mqtt.Client#reconnect()`](#reconnect)
 - [`mqtt.Client#handleMessage()`](#handleMessage)
+- [`mqtt.Client#handleAuth()`](#handleAuth)
+- [`mqtt.Client#reauthenticate()`](#reauthenticate)
+- [`mqtt.Client#reauthenticateAsync()`](#reauthenticate-async)
 - [`mqtt.Client#connected`](#connected)
 - [`mqtt.Client#reconnecting`](#reconnecting)
 - [`mqtt.Client#getLastMessageId()`](#getLastMessageId)
@@ -427,6 +430,10 @@ The arguments are:
     is received with an error.
   - `connectTimeout`: `30 * 1000` milliseconds, time to wait before a
     CONNACK is received
+  - `reauthTimeout`: `30 * 1000` milliseconds, time to wait for the broker to
+    answer each step of a re-authentication started with `reauthenticate()`
+    (MQTT 5.0 only). Set to `0` to disable the timeout; any other non-positive
+    or non-finite value falls back to the default.
   - `username`: the username required by your broker, if any
   - `password`: the password required by your broker, if any
   - `socksProxy`: establish TCP and TLS connections via a socks proxy (URL, supported protocols are `socks5://`, `socks5h://`, `socks4://`, `socks4a://`)
@@ -599,6 +606,19 @@ and connections
 - `packet` received packet, as defined in
   [mqtt-packet](https://github.com/mcollina/mqtt-packet)
 
+#### Event `'reauth'`
+
+`function (packet) {}`
+
+Emitted when a re-authentication started with
+[`reauthenticate()`](#reauthenticate) completes successfully (MQTT 5.0 only).
+Success here is the broker's assertion: `handleAuth()` only runs for `0x18`
+challenges, so a mutual-authentication method cannot verify the final `0x00`
+through this event.
+
+- `packet` the final `AUTH` packet received from the broker, as defined in
+  [mqtt-packet](https://github.com/mcollina/mqtt-packet)
+
 ---
 
 <a name="client-connect"></a>
@@ -749,6 +769,109 @@ Connect again using the same options as connect()
 Handle messages with backpressure support, one at a time.
 Override at will, but **always call `callback`**, or the client
 will hang.
+
+---
+
+<a name="handleAuth"></a>
+
+### mqtt.Client#handleAuth(packet, callback)
+
+Handle `AUTH` packets of an MQTT 5.0 enhanced authentication exchange
+(reason code `0x18` Continue authentication), both during the connection and
+during a [re-authentication](#reauthenticate). Override at will and
+**always call `callback(err, authPacket)`** with the next `AUTH` packet to send
+to the broker, otherwise the exchange will hang:
+
+```js
+client.handleAuth = (packet, callback) => {
+  // compute the answer to packet.properties.authenticationData
+  callback(null, {
+    cmd: 'auth',
+    reasonCode: 0x18,
+    properties: {
+      authenticationMethod: 'SCRAM-SHA-256',
+      authenticationData: Buffer.from('...'),
+    },
+  })
+}
+```
+
+---
+
+<a name="reauthenticate"></a>
+
+### mqtt.Client#reauthenticate([options], [callback])
+
+Start an MQTT 5.0 re-authentication exchange (section 4.12.1 of the spec),
+for example to provide a refreshed token to the broker without
+disconnecting. Only available with `protocolVersion: 5` and when an
+`authenticationMethod` was set in the CONNECT `properties`. Returns the
+client, so calls can be chained.
+
+The client sends an `AUTH` packet with reason code `0x19` (Re-authenticate).
+The broker can answer with `AUTH` `0x18` (Continue authentication), which is
+forwarded to [`handleAuth()`](#handleAuth), or `AUTH` `0x00` (Success),
+which completes the exchange and emits the [`'reauth'`](#events) event.
+Only one exchange may be in flight at a time.
+
+- `options` is the optional object of properties of the `AUTH` packet. All
+  three are optional, and no other property is sent:
+  - `authenticationData`: Binary Data containing authentication data, a
+    `Buffer` or a `string`,
+  - `reasonString`: representing the reason associated with this re-authentication `string`,
+  - `userProperties`: The User Property is allowed to appear multiple times to represent multiple name, value pairs `object`
+
+  `authenticationMethod` is always the one used in the CONNECT packet and
+  cannot be overridden here: an `AUTH` packet naming a different method is
+  rejected, in either direction.
+- `callback` - `function (err, packet)`, fired when the exchange completes.
+  `packet` is the final `AUTH` packet received from the broker, or the one
+  that carried a broker side failure - its `reasonString` and `userProperties`
+  say why the broker refused. When no callback is given, failures are emitted
+  as `'error'` events. Errors that carry a reason code are
+  `ErrorWithReasonCode`, with the code in `err.code`.
+
+The exchange fails with an error when the broker does not answer a step within
+`reauthTimeout` milliseconds, when the connection is closed in the meantime,
+when the broker answers with an unexpected reason code or authentication
+method, when it drives more than 10 `0x18` rounds, or when `handleAuth()`
+reports an error.
+
+A failed re-authentication does **not** close the connection: the client keeps
+running on the credentials the broker already accepted, and it is the
+application's job to decide whether to retry or call `end()`. `client.lastReauthError`
+holds the reason the last re-authentication failed, or `null`, so a client
+running on refused credentials can be told from a healthy one.
+
+**Breaking change:** an `AUTH` packet received after CONNACK while no
+re-authentication is in progress used to be forwarded to `handleAuth()`. Only
+the client may start a re-authentication ([MQTT-4.12.0-1]), so this is now
+treated as a protocol error: the connection is closed and an `'error'` with
+reason code `0x82` is emitted. Applications that relied on broker-initiated
+mid-session enhanced authentication are affected.
+
+```js
+client.reauthenticate(
+  { authenticationData: Buffer.from(refreshedToken) },
+  (err, packet) => {
+    if (err) {
+      console.error('re-authentication failed', err)
+    } else {
+      console.log('re-authenticated', packet.reasonCode)
+    }
+  },
+)
+```
+
+---
+
+<a name="reauthenticate-async"></a>
+
+### mqtt.Client#reauthenticateAsync([options])
+
+Async [`reauthenticate()`](#reauthenticate). Returns a `Promise` that
+resolves with the final `AUTH` packet received from the broker, or rejects
+with the error.
 
 ---
 

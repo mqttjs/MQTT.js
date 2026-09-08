@@ -1438,4 +1438,1039 @@ describe('MQTT 5.0', () => {
 			})
 		},
 	)
+	describe('re-authentication', () => {
+		const authMethod = 'TEST-AUTH'
+		const basePort = ports.PORTAND327 + 30
+
+		function buildReauthServer(
+			port: number,
+			onAuth: (serverClient: any, packet: any) => void,
+		) {
+			return serverBuilder('mqtt', (serverClient) => {
+				serverClient.on('connect', () =>
+					serverClient.connack({ reasonCode: 0 }),
+				)
+				serverClient.on('auth', (packet) =>
+					onAuth(serverClient, packet),
+				)
+				serverClient.on('pingreq', () => serverClient.pingresp())
+			}).listen(port)
+		}
+
+		function connectV5(port: number, extra: mqtt.IClientOptions = {}) {
+			return mqtt.connect({
+				host: 'localhost',
+				port,
+				protocolVersion: 5,
+				reconnectPeriod: 0,
+				properties: {
+					authenticationMethod: authMethod,
+					authenticationData: Buffer.from('initial'),
+				},
+				...extra,
+			})
+		}
+
+		it(
+			'should send AUTH 0x19 and complete when the broker answers with success',
+			{ timeout: 5000 },
+			function _test(t, done) {
+				const port = basePort
+				const newToken = Buffer.from('refreshed-token')
+				const testServer = buildReauthServer(
+					port,
+					(serverClient, packet) => {
+						assert.strictEqual(packet.reasonCode, 0x19)
+						assert.strictEqual(
+							packet.properties.authenticationMethod,
+							authMethod,
+						)
+						assert.ok(
+							packet.properties.authenticationData.equals(
+								newToken,
+							),
+						)
+						assert.strictEqual(
+							packet.properties.reasonString,
+							'token refresh',
+						)
+						serverClient.auth({
+							reasonCode: 0,
+							properties: {
+								authenticationMethod: authMethod,
+							},
+						})
+					},
+				)
+
+				const client = connectV5(port)
+				let eventPacket: any = null
+
+				client.on('error', done)
+				client.once('reauth', (packet) => {
+					eventPacket = packet
+				})
+
+				client.once('connect', () => {
+					client.reauthenticate(
+						{
+							authenticationData: newToken,
+							reasonString: 'token refresh',
+						},
+						(err, packet) => {
+							assert.ifError(err)
+							assert.strictEqual(packet.cmd, 'auth')
+							assert.strictEqual(packet.reasonCode, 0)
+							// the callback fires before the event
+							assert.isNull(eventPacket)
+							process.nextTick(() => {
+								assert.strictEqual(eventPacket, packet)
+								client.end(true, () => testServer.close(done))
+							})
+						},
+					)
+				})
+			},
+		)
+
+		it(
+			'reauthenticateAsync should resolve with the broker AUTH packet',
+			{ timeout: 5000 },
+			function _test(t, done) {
+				const port = basePort + 1
+				const testServer = buildReauthServer(port, (serverClient) => {
+					serverClient.auth({
+						reasonCode: 0,
+						properties: {
+							authenticationMethod: authMethod,
+						},
+					})
+				})
+
+				const client = connectV5(port)
+				client.on('error', done)
+
+				client.once('connect', async () => {
+					try {
+						const packet = await client.reauthenticateAsync({
+							authenticationData: Buffer.from('refreshed'),
+						})
+						assert.strictEqual(packet.reasonCode, 0)
+						client.end(true, () => testServer.close(done))
+					} catch (err) {
+						done(err)
+					}
+				})
+			},
+		)
+
+		it(
+			'should forward AUTH 0x18 to handleAuth and send the next AUTH packet',
+			{ timeout: 5000 },
+			function _test(t, done) {
+				const port = basePort + 2
+				const challenge = Buffer.from('challenge')
+				const response = Buffer.from('response')
+				const testServer = buildReauthServer(
+					port,
+					(serverClient, packet) => {
+						if (packet.reasonCode === 0x19) {
+							serverClient.auth({
+								reasonCode: 0x18,
+								properties: {
+									authenticationMethod: authMethod,
+									authenticationData: challenge,
+								},
+							})
+						} else {
+							assert.strictEqual(packet.reasonCode, 0x18)
+							assert.ok(
+								packet.properties.authenticationData.equals(
+									response,
+								),
+							)
+							serverClient.auth({
+								reasonCode: 0,
+								properties: {
+									authenticationMethod: authMethod,
+								},
+							})
+						}
+					},
+				)
+
+				const client = connectV5(port)
+				client.on('error', done)
+
+				let handleAuthCalls = 0
+				client.handleAuth = (packet, callback) => {
+					handleAuthCalls++
+					assert.strictEqual(packet.reasonCode, 0x18)
+					assert.ok(
+						packet.properties.authenticationData.equals(challenge),
+					)
+					callback(null, {
+						cmd: 'auth',
+						reasonCode: 0x18,
+						properties: {
+							authenticationMethod: authMethod,
+							authenticationData: response,
+						},
+					})
+				}
+
+				client.once('connect', () => {
+					client.reauthenticate(
+						{ authenticationData: Buffer.from('refreshed') },
+						(err, packet) => {
+							assert.ifError(err)
+							assert.strictEqual(handleAuthCalls, 1)
+							assert.strictEqual(packet.reasonCode, 0)
+							client.end(true, () => testServer.close(done))
+						},
+					)
+				})
+			},
+		)
+
+		it(
+			'should report handleAuth errors to the reauthenticate callback only',
+			{ timeout: 5000 },
+			function _test(t, done) {
+				const port = basePort + 3
+				const testServer = buildReauthServer(port, (serverClient) => {
+					serverClient.auth({
+						reasonCode: 0x18,
+						properties: { authenticationMethod: authMethod },
+					})
+				})
+
+				const client = connectV5(port)
+				client.on('error', done)
+
+				client.handleAuth = (packet, callback) => {
+					callback(new Error('user-auth-failure'))
+				}
+
+				client.once('connect', () => {
+					client.reauthenticate((err) => {
+						assert.strictEqual(err.message, 'user-auth-failure')
+						client.end(true, () => testServer.close(done))
+					})
+				})
+			},
+		)
+
+		it(
+			'should emit an error on an AUTH packet received while no re-authentication is in progress',
+			{ timeout: 5000 },
+			function _test(t, done) {
+				const port = basePort + 5
+				const testServer = serverBuilder('mqtt', (serverClient) => {
+					serverClient.on('connect', () => {
+						serverClient.connack({ reasonCode: 0 })
+						setTimeout(
+							() => serverClient.auth({ reasonCode: 0 }),
+							50,
+						)
+					})
+				}).listen(port)
+
+				const client = connectV5(port)
+				client.once('error', (err) => {
+					assert.match(err.message, /Protocol error/)
+					assert.strictEqual((err as ErrorWithReasonCode).code, 0x82)
+					client.end(true, () => testServer.close(done))
+				})
+			},
+		)
+
+		it(
+			'should fail when the client is not connected',
+			{ timeout: 5000 },
+			function _test(t, done) {
+				const port = basePort + 6
+				const testServer = buildReauthServer(port, () => {})
+				const client = connectV5(port)
+				client.on('error', done)
+
+				client.reauthenticate((err) => {
+					assert.strictEqual(
+						err.message,
+						'reauthenticate: client is not connected',
+					)
+					client.end(true, () => testServer.close(done))
+				})
+			},
+		)
+
+		it(
+			'should fail when the client is disconnecting',
+			{ timeout: 5000 },
+			function _test(t, done) {
+				const port = basePort + 4
+				const testServer = buildReauthServer(port, () => {})
+				const client = connectV5(port)
+				client.on('error', done)
+
+				client.once('connect', () => {
+					client.end(true, () => {
+						client.reauthenticate((err) => {
+							assert.strictEqual(
+								err.message,
+								'client disconnecting',
+							)
+							testServer.close(done)
+						})
+					})
+				})
+			},
+		)
+
+		it(
+			'should fail when the protocol version is not 5',
+			{ timeout: 5000 },
+			function _test(t, done) {
+				const port = basePort + 7
+				const testServer = serverBuilder('mqtt', (serverClient) => {
+					serverClient.on('connect', () =>
+						serverClient.connack({ returnCode: 0 }),
+					)
+				}).listen(port)
+
+				const client = mqtt.connect({
+					host: 'localhost',
+					port,
+					protocolVersion: 4,
+					reconnectPeriod: 0,
+				})
+				client.on('error', done)
+
+				client.once('connect', () => {
+					client.reauthenticate((err) => {
+						assert.strictEqual(
+							err.message,
+							'reauthenticate: re-authentication is only supported in MQTT 5.0',
+						)
+						client.end(true, () => testServer.close(done))
+					})
+				})
+			},
+		)
+
+		it(
+			'should emit an error when no authenticationMethod was set and no callback is given',
+			{ timeout: 5000 },
+			function _test(t, done) {
+				const port = basePort + 8
+				const testServer = buildReauthServer(port, () => {})
+				const client = connectV5(port, { properties: {} })
+
+				client.once('error', (err) => {
+					assert.strictEqual(
+						err.message,
+						'reauthenticate: an authenticationMethod must be set in the CONNECT properties',
+					)
+					client.end(true, () => testServer.close(done))
+				})
+
+				client.once('connect', () => {
+					client.reauthenticate({
+						authenticationData: Buffer.from('refreshed'),
+					})
+				})
+			},
+		)
+
+		it(
+			'should reject a second re-authentication while one is in progress and time out',
+			{ timeout: 5000 },
+			function _test(t, done) {
+				const port = basePort + 9
+				// the broker never answers
+				const testServer = buildReauthServer(port, () => {})
+				const client = connectV5(port, { reauthTimeout: 200 })
+				client.on('error', done)
+
+				client.once('connect', () => {
+					let secondFailed = false
+					client.reauthenticate((err) => {
+						assert.ok(err)
+						assert.match(err.message, /timed out/)
+						assert.isTrue(secondFailed)
+						client.end(true, () => testServer.close(done))
+					})
+					client.reauthenticate((err) => {
+						assert.strictEqual(
+							err.message,
+							'reauthenticate: a re-authentication is already in progress',
+						)
+						secondFailed = true
+					})
+				})
+			},
+		)
+
+		it(
+			'should abort a pending re-authentication when the connection closes',
+			{ timeout: 5000 },
+			function _test(t, done) {
+				const port = basePort + 10
+				const testServer = buildReauthServer(port, (serverClient) => {
+					serverClient.destroy()
+				})
+				const client = connectV5(port)
+				client.on('error', done)
+
+				client.once('connect', () => {
+					client.reauthenticate((err) => {
+						assert.ok(err)
+						assert.match(err.message, /connection closed/)
+						client.end(true, () => testServer.close(done))
+					})
+				})
+			},
+		)
+
+		it(
+			'should fail the re-authentication on an unexpected AUTH reason code',
+			{ timeout: 5000 },
+			function _test(t, done) {
+				const port = basePort + 11
+				const testServer = buildReauthServer(port, (serverClient) => {
+					// 0x19 (Re-authenticate) may only travel client to broker
+					serverClient.auth({
+						reasonCode: 0x19,
+						properties: { authenticationMethod: authMethod },
+					})
+				})
+
+				const client = connectV5(port)
+				client.on('error', done)
+
+				client.once('connect', () => {
+					client.reauthenticate((err) => {
+						assert.ok(err)
+						assert.strictEqual(
+							err.message,
+							'Protocol error: unexpected AUTH reason code 25 received from the broker',
+						)
+						assert.strictEqual(
+							(err as ErrorWithReasonCode).code,
+							0x19,
+						)
+						client.end(true, () => testServer.close(done))
+					})
+				})
+			},
+		)
+
+		it(
+			'should fail when handleAuth continues the exchange without a packet',
+			{ timeout: 5000 },
+			function _test(t, done) {
+				const port = basePort + 12
+				const testServer = buildReauthServer(port, (serverClient) => {
+					serverClient.auth({
+						reasonCode: 0x18,
+						properties: { authenticationMethod: authMethod },
+					})
+				})
+
+				const client = connectV5(port)
+				client.on('error', done)
+
+				client.handleAuth = (packet, callback) => {
+					callback(null, undefined)
+				}
+
+				client.once('connect', () => {
+					client.reauthenticate((err) => {
+						assert.ok(err)
+						assert.match(
+							err.message,
+							/did not provide an AUTH packet/,
+						)
+						assert.strictEqual(
+							(err as ErrorWithReasonCode).code,
+							0x18,
+						)
+						client.end(true, () => testServer.close(done))
+					})
+				})
+			},
+		)
+		it(
+			'reauthenticateAsync should reject when the exchange fails',
+			{ timeout: 5000 },
+			function _test(t, done) {
+				const port = basePort + 13
+				const testServer = buildReauthServer(port, (serverClient) => {
+					serverClient.auth({
+						reasonCode: 0x19,
+						properties: { authenticationMethod: authMethod },
+					})
+				})
+
+				const client = connectV5(port)
+				client.on('error', done)
+
+				client.once('connect', async () => {
+					try {
+						await client.reauthenticateAsync()
+						done(new Error('should have rejected'))
+					} catch (err) {
+						assert.match(err.message, /Protocol error/)
+						client.end(true, () => testServer.close(done))
+					}
+				})
+			},
+		)
+
+		it(
+			'should emit an error when the exchange fails and no callback is given',
+			{ timeout: 5000 },
+			function _test(t, done) {
+				const port = basePort + 14
+				const testServer = buildReauthServer(port, (serverClient) => {
+					serverClient.auth({
+						reasonCode: 0x19,
+						properties: { authenticationMethod: authMethod },
+					})
+				})
+
+				const client = connectV5(port)
+
+				client.once('connect', () => {
+					client.once('error', (err) => {
+						assert.match(err.message, /Protocol error/)
+						assert.strictEqual(
+							(err as ErrorWithReasonCode).code,
+							0x19,
+						)
+						client.end(true, () => testServer.close(done))
+					})
+					client.reauthenticate()
+				})
+			},
+		)
+
+		it(
+			'should run the enhanced authentication exchange before CONNACK',
+			{ timeout: 5000 },
+			function _test(t, done) {
+				const port = basePort + 24
+				const challenge = Buffer.from('challenge')
+				const testServer = serverBuilder('mqtt', (serverClient) => {
+					serverClient.on('connect', () =>
+						serverClient.auth({
+							reasonCode: 0x18,
+							properties: {
+								authenticationMethod: authMethod,
+								authenticationData: challenge,
+							},
+						}),
+					)
+					serverClient.on('auth', (packet) => {
+						assert.strictEqual(packet.reasonCode, 0x18)
+						assert.ok(
+							packet.properties.authenticationData.equals(
+								Buffer.from('response'),
+							),
+						)
+						serverClient.connack({ reasonCode: 0 })
+					})
+				}).listen(port)
+
+				const client = connectV5(port)
+				client.on('error', done)
+
+				client.handleAuth = (packet, callback) => {
+					assert.ok(
+						packet.properties.authenticationData.equals(challenge),
+					)
+					callback(null, {
+						cmd: 'auth',
+						reasonCode: 0x18,
+						properties: {
+							authenticationMethod: authMethod,
+							authenticationData: Buffer.from('response'),
+						},
+					})
+				}
+
+				client.once('connect', () => {
+					client.end(true, () => testServer.close(done))
+				})
+			},
+		)
+
+		it(
+			'should refuse the connection when a pre-CONNACK AUTH is not a challenge',
+			{ timeout: 5000 },
+			function _test(t, done) {
+				const port = basePort + 25
+				const testServer = serverBuilder('mqtt', (serverClient) => {
+					serverClient.on('connect', () =>
+						serverClient.auth({
+							reasonCode: 0x19,
+							properties: {
+								authenticationMethod: authMethod,
+							},
+						}),
+					)
+				}).listen(port)
+
+				const client = connectV5(port)
+				client.once('error', (err) => {
+					assert.strictEqual(
+						err.message,
+						'Connection refused: Re-authenticate',
+					)
+					client.end(true, () => testServer.close(done))
+				})
+			},
+		)
+
+		it(
+			'should reject an AUTH packet carrying a different authentication method',
+			{ timeout: 5000 },
+			function _test(t, done) {
+				const port = basePort + 15
+				const testServer = buildReauthServer(port, (serverClient) => {
+					serverClient.auth({
+						reasonCode: 0x18,
+						properties: { authenticationMethod: 'WEAKER-AUTH' },
+					})
+				})
+
+				const client = connectV5(port)
+				client.on('error', done)
+
+				let handleAuthCalls = 0
+				client.handleAuth = (packet, callback) => {
+					handleAuthCalls++
+					callback(null, packet)
+				}
+
+				client.once('connect', () => {
+					client.reauthenticate((err) => {
+						assert.match(err.message, /Bad authentication method/)
+						assert.strictEqual(
+							(err as ErrorWithReasonCode).code,
+							0x8c,
+						)
+						// the hook must not run under the broker's method
+						assert.strictEqual(handleAuthCalls, 0)
+						client.end(true, () => testServer.close(done))
+					})
+				})
+			},
+		)
+
+		it(
+			'should not let options override the negotiated authenticationMethod',
+			{ timeout: 5000 },
+			function _test(t, done) {
+				const port = basePort + 16
+				const testServer = buildReauthServer(
+					port,
+					(serverClient, packet) => {
+						assert.strictEqual(
+							packet.properties.authenticationMethod,
+							authMethod,
+						)
+						serverClient.auth({
+							reasonCode: 0,
+							properties: {
+								authenticationMethod: authMethod,
+							},
+						})
+					},
+				)
+
+				const client = connectV5(port)
+				client.on('error', done)
+
+				client.once('connect', () => {
+					client.reauthenticate(
+						{ authenticationMethod: 'other' } as any,
+						(err) => {
+							assert.ifError(err)
+							client.end(true, () => testServer.close(done))
+						},
+					)
+				})
+			},
+		)
+
+		it(
+			'should reject an authenticationData that is neither Buffer nor string',
+			{ timeout: 5000 },
+			function _test(t, done) {
+				const port = basePort + 17
+				let authPackets = 0
+				const testServer = buildReauthServer(port, (serverClient) => {
+					authPackets++
+					serverClient.auth({
+						reasonCode: 0,
+						properties: { authenticationMethod: authMethod },
+					})
+				})
+				const client = connectV5(port)
+				client.on('error', done)
+
+				client.once('connect', () => {
+					client.reauthenticate(
+						{ authenticationData: { token: 1 } } as any,
+						(err) => {
+							assert.strictEqual(
+								err.message,
+								'reauthenticate: authenticationData must be a Buffer or a string',
+							)
+							assert.strictEqual(authPackets, 0)
+							// nothing was sent, so the pending state must not be
+							// stuck: a valid exchange still works
+							client.reauthenticate(
+								{ authenticationData: 'refreshed' },
+								(err2) => {
+									assert.ifError(err2)
+									assert.strictEqual(authPackets, 1)
+									client.end(true, () =>
+										testServer.close(done),
+									)
+								},
+							)
+						},
+					)
+				})
+			},
+		)
+
+		it(
+			'should fail when the default handleAuth answers a 0x18 challenge',
+			{ timeout: 5000 },
+			function _test(t, done) {
+				const port = basePort + 18
+				const testServer = buildReauthServer(port, (serverClient) => {
+					serverClient.auth({
+						reasonCode: 0x18,
+						properties: { authenticationMethod: authMethod },
+					})
+				})
+
+				// client.handleAuth is left at its default, which calls back
+				// with no packet
+				const client = connectV5(port)
+				client.on('error', done)
+
+				client.once('connect', () => {
+					client.reauthenticate((err) => {
+						assert.match(
+							err.message,
+							/did not provide an AUTH packet/,
+						)
+						client.end(true, () => testServer.close(done))
+					})
+				})
+			},
+		)
+
+		it(
+			'should stop an exchange the broker will not end',
+			{ timeout: 5000 },
+			function _test(t, done) {
+				const port = basePort + 19
+				const testServer = buildReauthServer(port, (serverClient) => {
+					serverClient.auth({
+						reasonCode: 0x18,
+						properties: { authenticationMethod: authMethod },
+					})
+				})
+
+				const client = connectV5(port, { reauthTimeout: 0 })
+				client.on('error', done)
+
+				client.handleAuth = (packet, callback) => {
+					callback(null, {
+						cmd: 'auth',
+						reasonCode: 0x18,
+						properties: { authenticationMethod: authMethod },
+					})
+				}
+
+				client.once('connect', () => {
+					client.reauthenticate((err) => {
+						// reauthTimeout is disabled, so only the round cap can
+						// break this loop
+						assert.match(err.message, /authentication challenges/)
+						client.end(true, () => testServer.close(done))
+					})
+				})
+			},
+		)
+
+		it(
+			'should abort a pending re-authentication on a graceful end()',
+			{ timeout: 5000 },
+			function _test(t, done) {
+				const port = basePort + 20
+				// the broker never answers and never closes the socket
+				const testServer = buildReauthServer(port, () => {})
+				const client = connectV5(port, { reauthTimeout: 0 })
+				client.on('error', done)
+
+				client.once('connect', () => {
+					client.reauthenticate((err) => {
+						assert.match(err.message, /connection closed/)
+						assert.ok(client.lastReauthError)
+						testServer.close(done)
+					})
+					client.end()
+				})
+			},
+		)
+
+		it(
+			'should clear the pending state across a reconnect',
+			{ timeout: 10000 },
+			function _test(t, done) {
+				const port = basePort + 21
+				let connections = 0
+				const testServer = serverBuilder('mqtt', (serverClient) => {
+					connections++
+					const first = connections === 1
+					serverClient.on('connect', () =>
+						serverClient.connack({ reasonCode: 0 }),
+					)
+					serverClient.on('auth', () => {
+						if (first) {
+							// drop the connection mid-exchange
+							serverClient.destroy()
+						} else {
+							serverClient.auth({
+								reasonCode: 0,
+								properties: {
+									authenticationMethod: authMethod,
+								},
+							})
+						}
+					})
+					serverClient.on('pingreq', () => serverClient.pingresp())
+				}).listen(port)
+
+				const client = connectV5(port, { reconnectPeriod: 100 })
+				client.on('error', () => {})
+
+				client.once('connect', () => {
+					client.reauthenticate((err) => {
+						assert.ok(err)
+						client.once('connect', () => {
+							client.reauthenticate((err2) => {
+								assert.ifError(err2)
+								client.end(true, () => testServer.close(done))
+							})
+						})
+					})
+				})
+			},
+		)
+
+		it(
+			'should fall back to the default reauthTimeout for a non-finite one',
+			{ timeout: 5000 },
+			function _test(t, done) {
+				const port = basePort + 22
+				const testServer = buildReauthServer(port, () => {})
+				const client = connectV5(port, {
+					reauthTimeout: Number.NaN,
+				})
+				assert.strictEqual(client.options.reauthTimeout, 30 * 1000)
+				client.on('error', done)
+				client.once('connect', () =>
+					client.end(true, () => testServer.close(done)),
+				)
+			},
+		)
+
+		it(
+			'should tear the connection down on an unsolicited AUTH packet',
+			{ timeout: 5000 },
+			function _test(t, done) {
+				const port = basePort + 23
+				const testServer = serverBuilder('mqtt', (serverClient) => {
+					serverClient.on('connect', () => {
+						serverClient.connack({ reasonCode: 0 })
+						serverClient.auth({
+							reasonCode: 0,
+							properties: {
+								authenticationMethod: authMethod,
+							},
+						})
+					})
+				}).listen(port)
+
+				// no 'error' listener: a protocol violation must not depend on
+				// the application having one
+				const client = connectV5(port)
+
+				client.once('close', () => {
+					assert.strictEqual(client.connected, false)
+					client.end(true, () => testServer.close(done))
+				})
+			},
+		)
+
+		it(
+			'should reject a reasonString that is not a string',
+			{ timeout: 5000 },
+			function _test(t, done) {
+				const port = basePort + 26
+				let authPackets = 0
+				const testServer = buildReauthServer(port, (serverClient) => {
+					authPackets++
+					serverClient.auth({
+						reasonCode: 0,
+						properties: { authenticationMethod: authMethod },
+					})
+				})
+				const client = connectV5(port)
+				client.on('error', done)
+
+				client.once('connect', () => {
+					client.reauthenticate(
+						{ reasonString: 42 } as any,
+						(err) => {
+							assert.strictEqual(
+								err.message,
+								'reauthenticate: reasonString must be a string',
+							)
+							assert.strictEqual(authPackets, 0)
+							client.end(true, () => testServer.close(done))
+						},
+					)
+				})
+			},
+		)
+
+		it(
+			'should reject userProperties that are not a plain object',
+			{ timeout: 5000 },
+			function _test(t, done) {
+				const port = basePort + 27
+				let received: any = null
+				const testServer = buildReauthServer(
+					port,
+					(serverClient, packet) => {
+						received = packet.properties.userProperties
+						serverClient.auth({
+							reasonCode: 0,
+							properties: { authenticationMethod: authMethod },
+						})
+					},
+				)
+				const client = connectV5(port)
+				client.on('error', done)
+
+				client.once('connect', () => {
+					client.reauthenticate(
+						{ userProperties: ['session'] } as any,
+						(err) => {
+							assert.strictEqual(
+								err.message,
+								'reauthenticate: userProperties must be an object',
+							)
+							assert.isNull(received)
+							// a valid object is forwarded to the broker
+							client.reauthenticate(
+								{ userProperties: { session: 'abc' } },
+								(err2) => {
+									assert.ifError(err2)
+									assert.deepStrictEqual(received, {
+										session: 'abc',
+									})
+									client.end(true, () =>
+										testServer.close(done),
+									)
+								},
+							)
+						},
+					)
+				})
+			},
+		)
+
+		it(
+			'should not strand the exchange when the AUTH packet cannot be serialized',
+			{ timeout: 5000 },
+			function _test(t, done) {
+				const port = basePort + 28
+				let authPackets = 0
+				const testServer = buildReauthServer(port, (serverClient) => {
+					authPackets++
+					serverClient.auth({
+						reasonCode: 0,
+						properties: { authenticationMethod: authMethod },
+					})
+				})
+				const client = connectV5(port)
+				client.on('error', done)
+
+				client.once('connect', () => {
+					// mqtt-packet reads every user property value while it
+					// measures the packet, so a null one throws out of
+					// _writePacket before a byte reaches the stream
+					client.reauthenticate(
+						{ userProperties: { session: null } } as any,
+						(err) => {
+							assert.instanceOf(err, TypeError)
+							assert.strictEqual(authPackets, 0)
+							assert.isFalse(client['_reauthPending'])
+							// the pending state was released, so the next
+							// exchange still runs
+							client.reauthenticate((err2) => {
+								assert.ifError(err2)
+								assert.strictEqual(authPackets, 1)
+								client.end(true, () => testServer.close(done))
+							})
+						},
+					)
+				})
+			},
+		)
+
+		it(
+			'should emit an error when handleAuth fails before CONNACK',
+			{ timeout: 5000 },
+			function _test(t, done) {
+				const port = basePort + 29
+				let authPackets = 0
+				const testServer = serverBuilder('mqtt', (serverClient) => {
+					serverClient.on('connect', () =>
+						serverClient.auth({
+							reasonCode: 0x18,
+							properties: {
+								authenticationMethod: authMethod,
+							},
+						}),
+					)
+					serverClient.on('auth', () => {
+						authPackets++
+					})
+				}).listen(port)
+
+				const client = connectV5(port)
+				client.handleAuth = (packet, callback) => {
+					callback(new Error('token expired') as ErrorWithReasonCode)
+				}
+
+				client.once('error', (err) => {
+					assert.strictEqual(err.message, 'token expired')
+					assert.strictEqual(authPackets, 0)
+					assert.isFalse(client.connected)
+					client.end(true, () => testServer.close(done))
+				})
+			},
+		)
+	})
 })

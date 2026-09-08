@@ -22,6 +22,7 @@ import { type ClientRequestArgs } from 'http'
 import * as validations from './validations'
 import Store, { type IStore } from './store'
 import handlePacket from './handlers'
+import { RC_REAUTHENTICATE } from './handlers/auth'
 import DefaultMessageIdProvider, {
 	type IMessageIdProvider,
 } from './default-message-id-provider'
@@ -53,6 +54,13 @@ const setImmediate =
 		})
 	}) as typeof globalThis.setImmediate)
 
+/**
+ * Upper bound on the AUTH 0x18 challenges a broker may drive in one
+ * re-authentication exchange. Each one runs application `handleAuth()` work
+ * (typically a KDF), so an unbounded exchange is work the broker can force.
+ */
+const MAX_REAUTH_ROUNDS = 10
+
 const defaultConnectOptions: IClientOptions = {
 	keepalive: 60,
 	reschedulePings: true,
@@ -65,6 +73,7 @@ const defaultConnectOptions: IClientOptions = {
 	subscribeBatchSize: null,
 	writeCache: true,
 	timerVariant: 'auto',
+	reauthTimeout: 30 * 1000,
 }
 
 export type BaseMqttProtocol =
@@ -182,6 +191,12 @@ export interface IClientOptions extends ISecureClientOptions {
 	 * 30 * 1000 milliseconds, time to wait before a CONNACK is received
 	 */
 	connectTimeout?: number
+	/**
+	 * 30 * 1000 milliseconds, time to wait for the broker to complete a
+	 * re-authentication exchange started with `reauthenticate()`
+	 * (MQTT 5.0 only). Set to 0 to disable the timeout.
+	 */
+	reauthTimeout?: number
 
 	/**
 	 * a Store for the incoming packets
@@ -424,6 +439,21 @@ export type PacketCallback = (
 	packet?: Packet,
 ) => any
 export type CloseCallback = (error?: Error) => void
+export type AuthCallback = GenericCallback<IAuthPacket>
+/**
+ * Properties of the AUTH packet sent by `reauthenticate()`. The
+ * `authenticationMethod` is always the one used in the CONNECT packet.
+ */
+export type ReauthenticateOptions = Pick<
+	NonNullable<IAuthPacket['properties']>,
+	'reasonString' | 'userProperties'
+> & {
+	/**
+	 * The new credential. `mqtt-packet` types this as a Buffer, but a string is
+	 * accepted too and is written as UTF-8.
+	 */
+	authenticationData?: Buffer | string
+}
 
 export interface MqttClientEventCallbacks {
 	connect: OnConnectCallback
@@ -437,6 +467,7 @@ export interface MqttClientEventCallbacks {
 	reconnect: VoidCallback
 	offline: VoidCallback
 	outgoingEmpty: VoidCallback
+	reauth: (packet: IAuthPacket) => void
 }
 
 /**
@@ -504,6 +535,29 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 	private reconnectTimer: NodeJS.Timeout
 
+	/** Timer used to abort a re-authentication that receives no answer */
+	private reauthTimer: NodeJS.Timeout
+
+	/** True while a re-authentication exchange is in progress */
+	private _reauthPending: boolean
+
+	/** Callback of the pending re-authentication, if any */
+	private _reauthCallback: AuthCallback | null
+
+	/**
+	 * Why the last re-authentication failed, or null when the last one
+	 * succeeded or none has run. A failed re-authentication does not close the
+	 * connection, so this is what tells a healthy client from one still running
+	 * on credentials the broker has refused.
+	 */
+	public lastReauthError: Error | null
+
+	/** number of AUTH 0x18 rounds the broker has driven in the current exchange */
+	private _reauthRounds: number
+
+	/** the `_sendPacket` callback of the current exchange, parked on `drain` when the stream is backed up */
+	private _reauthSendCb: DoneCallback | null
+
 	private _storeProcessing: boolean
 
 	/** keep a reference of packets that have been successfully processed from outgoing store  */
@@ -541,6 +595,19 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			} else {
 				this.options[k] = options[k]
 			}
+		}
+
+		// A non-finite or negative timeout would silently disable the abort
+		// timer, turning every failed re-authentication into a permanent hang.
+		// Only an explicit 0 disables it.
+		const { reauthTimeout } = this.options
+		if (
+			reauthTimeout !== 0 &&
+			(typeof reauthTimeout !== 'number' ||
+				!Number.isFinite(reauthTimeout) ||
+				reauthTimeout < 0)
+		) {
+			this.options.reauthTimeout = defaultConnectOptions.reauthTimeout
 		}
 
 		this.log = this.options.log || _debug('mqttjs:client')
@@ -633,6 +700,13 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		this.connackTimer = null
 		// Reconnect timer
 		this.reconnectTimer = null
+		// Re-authentication state
+		this.reauthTimer = null
+		this._reauthPending = false
+		this._reauthCallback = null
+		this._reauthRounds = 0
+		this._reauthSendCb = null
+		this.lastReauthError = null
 		// Is processing store?
 		this._storeProcessing = false
 		// Packet Ids are put into the store during store processing
@@ -706,6 +780,10 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 			this.log('close :: clearing connackTimer')
 			clearTimeout(this.connackTimer)
+
+			// Backstop only: `_cleanUp` already aborts on the teardown paths
+			// the client controls. This catches a close driven by the peer.
+			this._abortReauth('connection closed before the broker answered')
 
 			this._destroyKeepaliveManager()
 
@@ -1683,6 +1761,198 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	}
 
 	/**
+	 * reauthenticate - start an MQTT 5.0 re-authentication exchange
+	 * (MQTT 5.0 spec, section 4.12.1).
+	 *
+	 * Sends an AUTH packet with reason code 0x19 (Re-authenticate) using the
+	 * `authenticationMethod` of the CONNECT packet. The broker answers with
+	 * AUTH 0x18 (Continue authentication, forwarded to `handleAuth()`) or
+	 * AUTH 0x00 (Success), after which the `'reauth'` event is emitted.
+	 *
+	 * @param {Object} [options] - AUTH packet properties
+	 * @param {Buffer} [options.authenticationData] - Binary Data for the authentication method
+	 * @param {String} [options.reasonString] - Reason String
+	 * @param {Object} [options.userProperties] - User Properties
+	 * @param {Function} [callback] - fired when the exchange completes: `(err, packet)`.
+	 *   When omitted, failures are emitted as `'error'` events.
+	 * @returns {MqttClient} this - for chaining
+	 * @api public
+	 * @example client.reauthenticate({ authenticationData: Buffer.from(newToken) }, (err) => {})
+	 */
+	public reauthenticate(callback?: AuthCallback): MqttClient
+
+	public reauthenticate(
+		options: ReauthenticateOptions,
+		callback?: AuthCallback,
+	): MqttClient
+
+	public reauthenticate(
+		options?: ReauthenticateOptions | AuthCallback,
+		callback?: AuthCallback,
+	): MqttClient {
+		this.log('reauthenticate :: (%s)', this.options.clientId)
+
+		if (typeof options === 'function') {
+			callback = options
+			options = undefined
+		}
+
+		const fail = (message: string) => {
+			this.log('reauthenticate :: %s', message)
+			this._dispatchError(
+				new Error(`reauthenticate: ${message}`),
+				callback,
+			)
+			return this
+		}
+
+		if (this.options.protocolVersion !== 5) {
+			return fail('re-authentication is only supported in MQTT 5.0')
+		}
+
+		if (this._checkDisconnecting(callback)) {
+			return this
+		}
+
+		// `connected` is not enough: a graceful `end()` half-closes the socket,
+		// so a write here would never be answered.
+		if (
+			!this.connected ||
+			this.stream?.destroyed ||
+			(this.stream as any)?.writableEnded
+		) {
+			return fail('client is not connected')
+		}
+
+		const authenticationMethod =
+			this.options.properties?.authenticationMethod
+
+		if (!authenticationMethod) {
+			return fail(
+				'an authenticationMethod must be set in the CONNECT properties',
+			)
+		}
+
+		if (this._reauthPending) {
+			return fail('a re-authentication is already in progress')
+		}
+
+		let properties: IAuthPacket['properties']
+		try {
+			properties = this._buildReauthProperties(
+				options as ReauthenticateOptions,
+				authenticationMethod,
+			)
+		} catch (err) {
+			return fail(err.message)
+		}
+
+		const authPacket: IAuthPacket = {
+			cmd: 'auth',
+			reasonCode: RC_REAUTHENTICATE,
+			properties,
+		}
+
+		this._reauthPending = true
+		this._reauthCallback = callback || null
+		this._reauthRounds = 0
+		this._armReauthTimer()
+
+		this.log('reauthenticate :: sending AUTH packet (reason code 0x19)')
+		const sendCb: DoneCallback = (err) => {
+			if (err) {
+				this.log('reauthenticate :: failed to send AUTH packet')
+				this._finishReauth(err)
+			}
+		}
+		this._reauthSendCb = sendCb
+
+		try {
+			this._sendPacket(authPacket, sendCb)
+		} catch (err) {
+			// `_writePacket` serializes inline, so a malformed packet throws
+			// straight back at us. Without this the pending state would stay
+			// set for the life of the connection.
+			this.log('reauthenticate :: sending the AUTH packet threw')
+			this._finishReauth(err)
+		}
+
+		return this
+	}
+
+	/**
+	 * Build the AUTH properties for `reauthenticate()`. Only the three
+	 * documented properties are copied - an unknown or malformed one would make
+	 * mqtt-packet destroy the connection, with the raw token in the error
+	 * message - and `authenticationMethod` is always the negotiated one.
+	 */
+	private _buildReauthProperties(
+		options: ReauthenticateOptions | undefined,
+		authenticationMethod: string,
+	): IAuthPacket['properties'] {
+		const properties: IAuthPacket['properties'] = { authenticationMethod }
+
+		if (!options) {
+			return properties
+		}
+
+		const { authenticationData, reasonString, userProperties } = options
+
+		if (typeof authenticationData !== 'undefined') {
+			if (
+				!Buffer.isBuffer(authenticationData) &&
+				typeof authenticationData !== 'string'
+			) {
+				throw new Error(
+					'authenticationData must be a Buffer or a string',
+				)
+			}
+			properties.authenticationData = authenticationData as Buffer
+		}
+
+		if (typeof reasonString !== 'undefined') {
+			if (typeof reasonString !== 'string') {
+				throw new Error('reasonString must be a string')
+			}
+			properties.reasonString = reasonString
+		}
+
+		if (typeof userProperties !== 'undefined') {
+			if (
+				typeof userProperties !== 'object' ||
+				userProperties === null ||
+				Array.isArray(userProperties)
+			) {
+				throw new Error('userProperties must be an object')
+			}
+			properties.userProperties = userProperties
+		}
+
+		return properties
+	}
+
+	/**
+	 * reauthenticateAsync - promise wrapper around `reauthenticate()`
+	 *
+	 * @param {Object} [options] - see `reauthenticate()`
+	 * @returns {Promise<IAuthPacket>} resolves with the final AUTH packet of the broker
+	 * @api public
+	 */
+	public reauthenticateAsync(
+		options?: ReauthenticateOptions,
+	): Promise<IAuthPacket> {
+		return new Promise((resolve, reject) => {
+			this.reauthenticate(options, (err, packet) => {
+				if (err) {
+					reject(err)
+				} else {
+					resolve(packet)
+				}
+			})
+		})
+	}
+
+	/**
 	 * PRIVATE METHODS
 	 * =====================
 	 * */
@@ -1756,15 +2026,89 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		}
 	}
 
+	/**
+	 * Report an error to a caller supplied callback, or as an `'error'` event
+	 * when there is none. This is the error contract of `publish`, `subscribe`,
+	 * `unsubscribe` and `reauthenticate`.
+	 */
+	private _dispatchError(err: Error, callback?: GenericCallback<any>) {
+		if (callback && callback !== this.noop) {
+			callback(err)
+		} else {
+			this.emit('error', err)
+		}
+	}
+
 	private _checkDisconnecting(callback?: GenericCallback<any>) {
 		if (this.disconnecting) {
-			if (callback && callback !== this.noop) {
-				callback(new Error('client disconnecting'))
-			} else {
-				this.emit('error', new Error('client disconnecting'))
-			}
+			this._dispatchError(new Error('client disconnecting'), callback)
 		}
 		return this.disconnecting
+	}
+
+	/**
+	 * A protocol violation by the broker is fatal to the connection.
+	 *
+	 * This runs on the packet parsing path, where an `'error'` event with no
+	 * listener - or a listener that throws - would skip the parser's `done()`
+	 * and wedge it while `connected` stays true, so the event is deferred and
+	 * the teardown does not depend on the application having a listener.
+	 */
+	private _onProtocolError(err: ErrorWithReasonCode) {
+		this.log('_onProtocolError :: %s', err.message)
+		setImmediate(() => {
+			if (this.listenerCount('error') > 0) {
+				this.emit('error', err)
+			}
+		})
+		this._cleanUp(true)
+	}
+
+	/** (Re)arm the abort timer of the current re-authentication exchange. */
+	private _armReauthTimer() {
+		clearTimeout(this.reauthTimer)
+		this.reauthTimer = null
+
+		if (this.options.reauthTimeout > 0) {
+			this.reauthTimer = setTimeout(() => {
+				this.log('reauthenticate :: timeout hit, aborting')
+				this._finishReauth(
+					new Error(
+						'reauthenticate: timed out waiting for the broker AUTH response',
+					),
+				)
+			}, this.options.reauthTimeout)
+		}
+	}
+
+	/**
+	 * Account for one broker challenge (AUTH 0x18) of the current exchange.
+	 * Returns false when the exchange has been aborted for exceeding
+	 * `MAX_REAUTH_ROUNDS`; a legitimate round refreshes the deadline.
+	 */
+	private _startReauthRound(): boolean {
+		this._reauthRounds += 1
+
+		if (this._reauthRounds > MAX_REAUTH_ROUNDS) {
+			this.log('reauthenticate :: too many challenges, aborting')
+			this._finishReauth(
+				new Error(
+					`reauthenticate: the broker sent more than ${MAX_REAUTH_ROUNDS} authentication challenges`,
+				),
+			)
+			return false
+		}
+
+		this._armReauthTimer()
+		return true
+	}
+
+	/** Abort a re-authentication that can no longer complete. No-op when none is pending. */
+	private _abortReauth(reason: string) {
+		if (this._reauthPending) {
+			this.log('_abortReauth :: %s', reason)
+			this._finishReauth(new Error(`reauthenticate: ${reason}`))
+		}
 	}
 
 	/**
@@ -1825,10 +2169,67 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	}
 
 	/**
+	 * _finishReauth - complete the pending re-authentication exchange
+	 *
+	 * Clears the timer and the pending state, then reports the outcome to the
+	 * `reauthenticate()` callback (or emits `'error'` when no callback was
+	 * given). On success the `'reauth'` event is emitted.
+	 *
+	 * @param {Error | null} err - failure reason, or null on success
+	 * @param {IAuthPacket} [packet] - the last AUTH packet received, reported to
+	 * the callback on success and on a broker side failure: its `reasonString`
+	 * and `userProperties` are the only record of why the broker refused
+	 */
+	private _finishReauth(err: Error | null, packet?: IAuthPacket) {
+		if (!this._reauthPending) {
+			this.log(
+				'_finishReauth :: no re-authentication in progress, ignoring',
+			)
+			return
+		}
+
+		this.log(
+			'_finishReauth :: %s',
+			err ? `failed: ${err.message}` : 'success',
+		)
+
+		clearTimeout(this.reauthTimer)
+		this.reauthTimer = null
+
+		// The send callback is parked on 'drain' while the stream is backed up;
+		// leaving it there leaks one listener per aborted exchange.
+		if (this._reauthSendCb) {
+			this.stream?.removeListener('drain', this._reauthSendCb)
+			this._reauthSendCb = null
+		}
+
+		const callback = this._reauthCallback
+		this._reauthPending = false
+		this._reauthCallback = null
+		this._reauthRounds = 0
+
+		if (err) {
+			this.lastReauthError = err
+			this._dispatchError(err, callback)
+			return
+		}
+
+		this.lastReauthError = null
+		if (callback) {
+			callback(null, packet)
+		}
+		this.emit('reauth', packet)
+	}
+
+	/**
 	 * _cleanUp - clean up on connection end
 	 * @api private
 	 */
 	private _cleanUp(forced: boolean, done?: DoneCallback, opts = {}) {
+		// Synchronous teardown entry point: a graceful end() only half-closes
+		// the socket, so waiting for 'close' can strand the exchange forever.
+		this._abortReauth('connection closed before the broker answered')
+
 		if (done) {
 			this.log('_cleanUp :: done callback provided for on stream close')
 			this.stream.on('close', done)
