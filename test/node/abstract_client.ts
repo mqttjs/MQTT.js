@@ -3632,31 +3632,43 @@ export default function abstractTest(server, config, ports) {
 			})
 		})
 
-		it(
-			'should resubscribe to __proto__ when reconnecting',
-			{ timeout: 5000 },
-			async function _test() {
-				const client = connect({ reconnectPeriod: 100 })
-				const topics = ['__proto__', 'hello']
-				await once(client, 'connect')
-				await client.subscribeAsync(topics)
-				const nextSubscribe = new Promise<string[]>((resolve) => {
-					server.once('client', (serverClient) => {
-						serverClient.once('subscribe', (packet) => {
-							resolve(
-								packet.subscriptions.map((sub) => sub.topic),
-							)
+		for (const resetSubscriptions of [false, true]) {
+			it(
+				`should resubscribe to __proto__ ${resetSubscriptions ? 'after resetting subscriptions' : 'when reconnecting'}`,
+				{ timeout: 5000 },
+				async function _test() {
+					const client = connect({ reconnectPeriod: 100 })
+					const topics = ['__proto__', 'hello']
+					await once(client, 'connect')
+					await client.subscribeAsync(topics)
+					if (resetSubscriptions) {
+						client.options.resubscribe = false
+						const reconnected = once(client, 'connect')
+						client.stream.end()
+						await reconnected
+						client.options.resubscribe = true
+						await client.subscribeAsync(topics)
+					}
+					const nextSubscribe = new Promise<string[]>((resolve) => {
+						server.once('client', (serverClient) => {
+							serverClient.once('subscribe', (packet) => {
+								resolve(
+									packet.subscriptions.map(
+										(sub) => sub.topic,
+									),
+								)
+							})
 						})
 					})
-				})
-				client.stream.end()
-				assert.deepEqual(
-					await nextSubscribe,
-					version === 5 ? ['__proto__'] : topics,
-				)
-				await client.endAsync()
-			},
-		)
+					client.stream.end()
+					assert.deepEqual(
+						await nextSubscribe,
+						version === 5 ? ['__proto__'] : topics,
+					)
+					await client.endAsync()
+				},
+			)
+		}
 
 		it('should resubscribe when clean=false and sessionPresent=false', function _test(t, done) {
 			const client = connect({
