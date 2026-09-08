@@ -614,7 +614,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			options.queueQoSZero === undefined ? true : options.queueQoSZero
 
 		// map of subscribed topics to support reconnection
-		this._resubscribeTopics = {}
+		this._resubscribeTopics = Object.create(null)
 
 		// map of a subscribe messageId and a topic
 		this.messageIdToTopic = {}
@@ -2241,7 +2241,8 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 						topicI < _resubscribeTopicsKeys.length;
 						topicI++
 					) {
-						const resubscribeTopic: ISubscriptionMap = {}
+						const resubscribeTopic: ISubscriptionMap =
+							Object.create(null)
 						resubscribeTopic[_resubscribeTopicsKeys[topicI]] =
 							this._resubscribeTopics[
 								_resubscribeTopicsKeys[topicI]
@@ -2258,7 +2259,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 					this.subscribe(this._resubscribeTopics)
 				}
 			} else {
-				this._resubscribeTopics = {}
+				this._resubscribeTopics = Object.create(null)
 			}
 		}
 
