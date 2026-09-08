@@ -2320,5 +2320,157 @@ describe('MQTT 5.0', () => {
 				})
 			},
 		)
+
+		it(
+			'should reject a reasonString that is not a string',
+			{ timeout: 5000 },
+			function _test(t, done) {
+				const port = basePort + 26
+				let authPackets = 0
+				const testServer = buildReauthServer(port, (serverClient) => {
+					authPackets++
+					serverClient.auth({
+						reasonCode: 0,
+						properties: { authenticationMethod: authMethod },
+					})
+				})
+				const client = connectV5(port)
+				client.on('error', done)
+
+				client.once('connect', () => {
+					client.reauthenticate(
+						{ reasonString: 42 } as any,
+						(err) => {
+							assert.strictEqual(
+								err.message,
+								'reauthenticate: reasonString must be a string',
+							)
+							assert.strictEqual(authPackets, 0)
+							client.end(true, () => testServer.close(done))
+						},
+					)
+				})
+			},
+		)
+
+		it(
+			'should reject userProperties that are not a plain object',
+			{ timeout: 5000 },
+			function _test(t, done) {
+				const port = basePort + 27
+				let received: any = null
+				const testServer = buildReauthServer(
+					port,
+					(serverClient, packet) => {
+						received = packet.properties.userProperties
+						serverClient.auth({
+							reasonCode: 0,
+							properties: { authenticationMethod: authMethod },
+						})
+					},
+				)
+				const client = connectV5(port)
+				client.on('error', done)
+
+				client.once('connect', () => {
+					client.reauthenticate(
+						{ userProperties: ['session'] } as any,
+						(err) => {
+							assert.strictEqual(
+								err.message,
+								'reauthenticate: userProperties must be an object',
+							)
+							assert.isNull(received)
+							// a valid object is forwarded to the broker
+							client.reauthenticate(
+								{ userProperties: { session: 'abc' } },
+								(err2) => {
+									assert.ifError(err2)
+									assert.deepStrictEqual(received, {
+										session: 'abc',
+									})
+									client.end(true, () =>
+										testServer.close(done),
+									)
+								},
+							)
+						},
+					)
+				})
+			},
+		)
+
+		it(
+			'should not strand the exchange when the AUTH packet cannot be serialized',
+			{ timeout: 5000 },
+			function _test(t, done) {
+				const port = basePort + 28
+				let authPackets = 0
+				const testServer = buildReauthServer(port, (serverClient) => {
+					authPackets++
+					serverClient.auth({
+						reasonCode: 0,
+						properties: { authenticationMethod: authMethod },
+					})
+				})
+				const client = connectV5(port)
+				client.on('error', done)
+
+				client.once('connect', () => {
+					// mqtt-packet reads every user property value while it
+					// measures the packet, so a null one throws out of
+					// _writePacket before a byte reaches the stream
+					client.reauthenticate(
+						{ userProperties: { session: null } } as any,
+						(err) => {
+							assert.instanceOf(err, TypeError)
+							assert.strictEqual(authPackets, 0)
+							assert.isFalse(client['_reauthPending'])
+							// the pending state was released, so the next
+							// exchange still runs
+							client.reauthenticate((err2) => {
+								assert.ifError(err2)
+								assert.strictEqual(authPackets, 1)
+								client.end(true, () => testServer.close(done))
+							})
+						},
+					)
+				})
+			},
+		)
+
+		it(
+			'should emit an error when handleAuth fails before CONNACK',
+			{ timeout: 5000 },
+			function _test(t, done) {
+				const port = basePort + 29
+				let authPackets = 0
+				const testServer = serverBuilder('mqtt', (serverClient) => {
+					serverClient.on('connect', () =>
+						serverClient.auth({
+							reasonCode: 0x18,
+							properties: {
+								authenticationMethod: authMethod,
+							},
+						}),
+					)
+					serverClient.on('auth', () => {
+						authPackets++
+					})
+				}).listen(port)
+
+				const client = connectV5(port)
+				client.handleAuth = (packet, callback) => {
+					callback(new Error('token expired') as ErrorWithReasonCode)
+				}
+
+				client.once('error', (err) => {
+					assert.strictEqual(err.message, 'token expired')
+					assert.strictEqual(authPackets, 0)
+					assert.isFalse(client.connected)
+					client.end(true, () => testServer.close(done))
+				})
+			},
+		)
 	})
 })
