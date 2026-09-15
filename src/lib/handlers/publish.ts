@@ -12,25 +12,36 @@ const validReasonCodes = [0, 16, 128, 131, 135, 144, 145, 151, 153]
 const TOPIC_ALIAS_INVALID = 148
 
 /**
- * Reject a PUBLISH whose Topic Alias breaks the protocol: tell the application,
- * then tear the connection down so the usual reconnect logic runs.
+ * Reject a PUBLISH whose Topic Alias breaks the protocol: tear the connection
+ * down so the usual reconnect logic runs, then tell the application.
  *
- * `done` must be called on every exit. It is the writable stream's packet pump
- * callback; skipping it leaves the socket undrained and the client wedged with
- * `connected === true`, no packets flowing and no `close`/`offline` event, so
- * reconnect never fires. It runs after `_cleanUp` so draining cannot feed more
- * of the broker's buffered data into the parser before the teardown. The pump
- * state is scoped to a single `connect()` call, so this `done` cannot reach the
- * pump of the connection the reconnect creates.
+ * Order matters on all three steps:
+ *
+ * - `_cleanUp` runs before the `emit`. A directly constructed `MqttClient` has
+ *   no default `error` listener (only `mqtt.connect()` attaches one), and an
+ *   application listener may throw; either way the throw would skip the
+ *   teardown and wedge the pump.
+ * - the rest of the chunk is dropped before `done`. `_write` parses the whole
+ *   TCP chunk into the pump's queue before the first packet is handled, so
+ *   without this the pump would keep running the packets of a broker we just
+ *   declared in violation against a destroyed stream: `message` events after
+ *   `close`, `incomingStore.put`, and PUBACK/PUBREC writes that come back as
+ *   `ERR_STREAM_DESTROYED` errors.
+ * - `done` must still be called. It is the pump callback, and with the queue
+ *   emptied it just completes the pending `_write` instead of pumping more
+ *   packets. Skipping it strands that write callback. Both the queue and the
+ *   callback are scoped to one `connect()` call, so neither can reach the
+ *   connection the reconnect creates.
  */
 const rejectTopicAlias = (
 	client: MqttClient,
 	message: string,
 	done: DoneCallback,
 ) => {
-	client.emit('error', new ErrorWithReasonCode(message, TOPIC_ALIAS_INVALID))
 	client['_cleanUp'](true)
+	client['_discardParsedPackets']()
 	done()
+	client.emit('error', new ErrorWithReasonCode(message, TOPIC_ALIAS_INVALID))
 }
 
 /*
@@ -118,7 +129,7 @@ const handlePublish: PacketHandler = (client, packet: IPublishPacket, done) => {
 					)
 					rejectTopicAlias(
 						client,
-						'Received Topic Alias is out of range',
+						`Received Topic Alias ${alias} is outside the valid range 1-65535`,
 						done,
 					)
 					return
@@ -130,13 +141,16 @@ const handlePublish: PacketHandler = (client, packet: IPublishPacket, done) => {
 					alias,
 				)
 			} else {
+				// `put` also rejects alias 0, so this covers both halves of the
+				// advertised range, not just the upper bound
 				client.log(
-					'handlePublish :: topic alias out of range. alias: %d',
+					'handlePublish :: topic alias outside the advertised maximum. alias: %d - max: %d',
 					alias,
+					topicAliasRecv.max,
 				)
 				rejectTopicAlias(
 					client,
-					'Received Topic Alias is out of range',
+					`Received Topic Alias ${alias} is outside the advertised Topic Alias Maximum range 1-${topicAliasRecv.max}`,
 					done,
 				)
 				return

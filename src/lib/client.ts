@@ -523,6 +523,13 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 	private _deferredReconnect: () => void
 
+	/**
+	 * Drops the packets that were parsed out of the chunk currently being
+	 * processed but have not been handled yet. Re-created by every `connect()`
+	 * call, because the packet queue it empties is scoped to one connection.
+	 */
+	private _discardParsedPackets: () => void
+
 	private connackPacket: IConnackPacket
 
 	public static defaultId() {
@@ -769,6 +776,14 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 		let completeParse = null
 		const packets = []
+
+		// A single TCP chunk is parsed in full before the first packet is
+		// handled, so a handler that tears the connection down has to throw the
+		// rest of the chunk away: handling it would run packets of a broker we
+		// just declared in violation against an already destroyed stream.
+		this._discardParsedPackets = () => {
+			packets.length = 0
+		}
 
 		this.log('connect :: calling method to clear reconnect')
 		this._clearReconnect()

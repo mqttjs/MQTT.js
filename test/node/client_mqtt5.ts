@@ -587,7 +587,7 @@ describe('MQTT 5.0', () => {
 			client.on('error', (error) => {
 				assert.strictEqual(
 					error.message,
-					'Received Topic Alias is out of range',
+					'Received Topic Alias 4 is outside the advertised Topic Alias Maximum range 1-3',
 				)
 				client.end(true, (err1) => {
 					server2.close((err2) => {
@@ -633,7 +633,7 @@ describe('MQTT 5.0', () => {
 			client.on('error', (error) => {
 				assert.strictEqual(
 					error.message,
-					'Received Topic Alias is out of range',
+					'Received Topic Alias 0 is outside the advertised Topic Alias Maximum range 1-3',
 				)
 				client.end(true, (err1) => {
 					server2.close((err2) => {
@@ -781,6 +781,109 @@ describe('MQTT 5.0', () => {
 					assert.isFalse(client.disconnecting)
 				})
 				finish()
+			})
+
+			// PORTAND103 is shared with ~20 other tests in this file: if the
+			// guard ever regresses to "wedged" this test times out, and without
+			// this the leaked listener makes all of them fail with EADDRINUSE
+			t.after(() => {
+				if (!finished) {
+					client.end(true)
+					server2.close()
+				}
+			})
+		},
+	)
+
+	// Also GHSA-c8jq-r765-cq7g: `_write` parses the whole TCP chunk into the
+	// pump queue before the first packet is handled, so a teardown that only
+	// called the pump callback kept running the rest of the attacker's chunk
+	// against a destroyed stream.
+	it(
+		'should drop the rest of the chunk after a topic alias teardown',
+		{
+			timeout: 15000,
+		},
+		function _test(t, done) {
+			const client = mqtt.connect({
+				host: 'localhost',
+				port: ports.PORTAND114,
+				protocolVersion: 5,
+				// one connection only: everything asserted here is about the
+				// packets that follow the bad one in the same chunk
+				reconnectPeriod: 0,
+				// deliberately no properties.topicAliasMaximum
+			})
+
+			let finished = false
+
+			const finish = (err?: Error) => {
+				if (finished) return
+				finished = true
+				client.end(true, (err1) => {
+					server2.close((err2) => {
+						done(err || err1 || err2)
+					})
+				})
+			}
+
+			const server2 = new MqttServer((serverClient) => {
+				serverClient.on('connect', () => {
+					serverClient.connack({ reasonCode: 0 })
+					// written back to back so they reach the client as one
+					// chunk: the bad one tears the connection down, the good
+					// one must never be handled
+					serverClient.publish({
+						messageId: 0,
+						topic: 'test',
+						payload: 'Message',
+						qos: 0,
+						properties: { topicAlias: 1 },
+					})
+					serverClient.publish({
+						messageId: 0,
+						topic: 'after-teardown',
+						payload: 'Message',
+						qos: 0,
+					})
+				})
+			}).listen(ports.PORTAND114)
+
+			const errors: Error[] = []
+			const messages: string[] = []
+
+			client.on('error', (err) => errors.push(err))
+			client.on('message', (topic) => messages.push(topic))
+
+			client.on('close', () => {
+				// give the pump the tick it would have used to drain the rest
+				// of the chunk
+				setTimeout(() => {
+					try {
+						assert.deepStrictEqual(
+							messages,
+							[],
+							'no message may be emitted after the teardown',
+						)
+						assert.strictEqual(
+							errors.length,
+							1,
+							`expected exactly one error, got ${errors
+								.map((e) => e.message)
+								.join(', ')}`,
+						)
+					} catch (assertErr) {
+						return finish(assertErr as Error)
+					}
+					finish()
+				}, 100)
+			})
+
+			t.after(() => {
+				if (!finished) {
+					client.end(true)
+					server2.close()
+				}
 			})
 		},
 	)
