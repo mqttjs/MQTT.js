@@ -693,8 +693,12 @@ describe('MQTT 5.0', () => {
 	// Regression test for GHSA-c8jq-r765-cq7g: a broker sending a Topic Alias to
 	// a client that never advertised a Topic Alias Maximum used to dereference an
 	// uninitialized receiver and crash the process with an uncaught TypeError.
+	// The guard must tear the connection down and let it reconnect: returning
+	// without calling the packet pump callback leaves the client wedged
+	// (`connected === true`, no packets, no `close`), and ending the client would
+	// hand the broker a permanent kill switch.
 	it(
-		'should emit a protocol error when the broker sends an unsolicited topic alias',
+		'should tear down and reconnect when the broker sends an unsolicited topic alias',
 		{
 			timeout: 15000,
 		},
@@ -703,6 +707,7 @@ describe('MQTT 5.0', () => {
 				host: 'localhost',
 				port: ports.PORTAND103,
 				protocolVersion: 5,
+				reconnectPeriod: 100,
 				// deliberately no properties.topicAliasMaximum, so the client
 				// does not initialize its topic alias receiver
 			}
@@ -720,6 +725,16 @@ describe('MQTT 5.0', () => {
 				})
 			}
 
+			// assertions run inside event handlers, route failures to `done`
+			// instead of letting them escape the test's stack
+			const check = (fn: () => void) => {
+				try {
+					fn()
+				} catch (assertErr) {
+					finish(assertErr as Error)
+				}
+			}
+
 			const server2 = new MqttServer((serverClient) => {
 				serverClient.on('connect', () => {
 					serverClient.connack({ reasonCode: 0 })
@@ -734,15 +749,37 @@ describe('MQTT 5.0', () => {
 				})
 			}).listen(ports.PORTAND103)
 
-			client.once('error', (err) => {
-				try {
+			let errors = 0
+			let closes = 0
+			let connects = 0
+
+			client.on('error', (err) => {
+				errors++
+				check(() => {
 					assert.strictEqual(
 						err.message,
-						'Received Topic Alias is out of range',
+						'Received a PUBLISH Topic Alias but no Topic Alias Maximum was advertised',
 					)
-				} catch (assertErr) {
-					return finish(assertErr as Error)
+					assert.strictEqual((err as ErrorWithReasonCode).code, 148)
+				})
+			})
+
+			client.on('close', () => {
+				closes++
+			})
+
+			client.on('connect', () => {
+				connects++
+				if (connects < 2) {
+					return
 				}
+				// the first connection was torn down by the guard and the
+				// client came back on its own: not wedged, not terminal
+				check(() => {
+					assert.isAtLeast(errors, 1, 'expected a protocol error')
+					assert.isAtLeast(closes, 1, 'expected the socket to close')
+					assert.isFalse(client.disconnecting)
+				})
 				finish()
 			})
 		},

@@ -1,7 +1,37 @@
 import { type IPublishPacket } from 'mqtt-packet'
-import { type PacketHandler } from '../shared'
+import {
+	ErrorWithReasonCode,
+	type DoneCallback,
+	type PacketHandler,
+} from '../shared'
+import type MqttClient from '../client'
 
 const validReasonCodes = [0, 16, 128, 131, 135, 144, 145, 151, 153]
+
+/** MQTT 5 reason code 0x94, "Topic Alias invalid" */
+const TOPIC_ALIAS_INVALID = 148
+
+/**
+ * Reject a PUBLISH whose Topic Alias breaks the protocol: tell the application,
+ * then tear the connection down so the usual reconnect logic runs.
+ *
+ * `done` must be called on every exit. It is the writable stream's packet pump
+ * callback; skipping it leaves the socket undrained and the client wedged with
+ * `connected === true`, no packets flowing and no `close`/`offline` event, so
+ * reconnect never fires. It runs after `_cleanUp` so draining cannot feed more
+ * of the broker's buffered data into the parser before the teardown. The pump
+ * state is scoped to a single `connect()` call, so this `done` cannot reach the
+ * pump of the connection the reconnect creates.
+ */
+const rejectTopicAlias = (
+	client: MqttClient,
+	message: string,
+	done: DoneCallback,
+) => {
+	client.emit('error', new ErrorWithReasonCode(message, TOPIC_ALIAS_INVALID))
+	client['_cleanUp'](true)
+	done()
+}
 
 /*
   those late 2 case should be rewrite to comply with coding style:
@@ -52,9 +82,10 @@ const handlePublish: PacketHandler = (client, packet: IPublishPacket, done) => {
 					'handlePublish :: received unexpected topic alias. alias: %d',
 					alias,
 				)
-				client.emit(
-					'error',
-					new Error('Received Topic Alias is out of range'),
+				rejectTopicAlias(
+					client,
+					'Received a PUBLISH Topic Alias but no Topic Alias Maximum was advertised',
+					done,
 				)
 				return
 			}
@@ -73,9 +104,10 @@ const handlePublish: PacketHandler = (client, packet: IPublishPacket, done) => {
 							'handlePublish :: unregistered topic alias. alias: %d',
 							alias,
 						)
-						client.emit(
-							'error',
-							new Error('Received unregistered Topic Alias'),
+						rejectTopicAlias(
+							client,
+							'Received unregistered Topic Alias',
+							done,
 						)
 						return
 					}
@@ -84,9 +116,10 @@ const handlePublish: PacketHandler = (client, packet: IPublishPacket, done) => {
 						'handlePublish :: topic alias out of range. alias: %d',
 						alias,
 					)
-					client.emit(
-						'error',
-						new Error('Received Topic Alias is out of range'),
+					rejectTopicAlias(
+						client,
+						'Received Topic Alias is out of range',
+						done,
 					)
 					return
 				}
@@ -101,9 +134,10 @@ const handlePublish: PacketHandler = (client, packet: IPublishPacket, done) => {
 					'handlePublish :: topic alias out of range. alias: %d',
 					alias,
 				)
-				client.emit(
-					'error',
-					new Error('Received Topic Alias is out of range'),
+				rejectTopicAlias(
+					client,
+					'Received Topic Alias is out of range',
+					done,
 				)
 				return
 			}
