@@ -690,6 +690,64 @@ describe('MQTT 5.0', () => {
 		},
 	)
 
+	// Regression test for GHSA-c8jq-r765-cq7g: a broker sending a Topic Alias to
+	// a client that never advertised a Topic Alias Maximum used to dereference an
+	// uninitialized receiver and crash the process with an uncaught TypeError.
+	it(
+		'should emit a protocol error when the broker sends an unsolicited topic alias',
+		{
+			timeout: 15000,
+		},
+		function _test(t, done) {
+			const opts: mqtt.IClientOptions = {
+				host: 'localhost',
+				port: ports.PORTAND103,
+				protocolVersion: 5,
+				// deliberately no properties.topicAliasMaximum, so the client
+				// does not initialize its topic alias receiver
+			}
+			const client = mqtt.connect(opts)
+
+			let finished = false
+
+			const finish = (err?: Error) => {
+				if (finished) return
+				finished = true
+				client.end(true, (err1) => {
+					server2.close((err2) => {
+						done(err || err1 || err2)
+					})
+				})
+			}
+
+			const server2 = new MqttServer((serverClient) => {
+				serverClient.on('connect', () => {
+					serverClient.connack({ reasonCode: 0 })
+					// broker sends a topic alias the client never allowed
+					serverClient.publish({
+						messageId: 0,
+						topic: 'test',
+						payload: 'Message',
+						qos: 0,
+						properties: { topicAlias: 1 },
+					})
+				})
+			}).listen(ports.PORTAND103)
+
+			client.once('error', (err) => {
+				try {
+					assert.strictEqual(
+						err.message,
+						'Received Topic Alias is out of range',
+					)
+				} catch (assertErr) {
+					return finish(assertErr as Error)
+				}
+				finish()
+			})
+		},
+	)
+
 	it(
 		'should throw an error if there is Auth Data with no Auth Method',
 		{
@@ -1435,52 +1493,6 @@ describe('MQTT 5.0', () => {
 			})
 			client.once('connect', () => {
 				client.subscribe('a/b', { qos: 1 })
-			})
-		},
-	)
-
-	// Regression test for GHSA-c8jq-r765-cq7g: a broker sending a Topic Alias to
-	// a client that never advertised a Topic Alias Maximum used to dereference an
-	// uninitialized receiver and crash the process with an uncaught TypeError.
-	it(
-		'should emit a protocol error when the broker sends an unsolicited topic alias',
-		{
-			timeout: 15000,
-		},
-		function _test(t, done) {
-			const opts: mqtt.IClientOptions = {
-				host: 'localhost',
-				port: ports.PORTAND103,
-				protocolVersion: 5,
-				// deliberately no properties.topicAliasMaximum, so the client
-				// does not initialize its topic alias receiver
-			}
-			const client = mqtt.connect(opts)
-
-			const server2 = new MqttServer((serverClient) => {
-				serverClient.on('connect', () => {
-					serverClient.connack({ reasonCode: 0 })
-					// broker sends a topic alias the client never allowed
-					serverClient.publish({
-						messageId: 0,
-						topic: 'test',
-						payload: 'Message',
-						qos: 0,
-						properties: { topicAlias: 1 },
-					})
-				})
-			}).listen(ports.PORTAND103)
-
-			client.once('error', (err) => {
-				assert.strictEqual(
-					err.message,
-					'Received Topic Alias is out of range',
-				)
-				client.end(true, (err1) => {
-					server2.close((err2) => {
-						done(err1 || err2)
-					})
-				})
 			})
 		},
 	)
