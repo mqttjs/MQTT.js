@@ -15,18 +15,23 @@ const TOPIC_ALIAS_INVALID = 148
  * Reject a PUBLISH whose Topic Alias breaks the protocol: tear the connection
  * down so the usual reconnect logic runs, then tell the application.
  *
- * Order matters on all three steps:
+ * The order of all four steps is load-bearing:
  *
+ * - the rest of the chunk is dropped first. `_write` parses the whole TCP
+ *   chunk into the pump's queue before the first packet is handled, so the
+ *   queue still holds packets from a broker we just declared in violation;
+ *   running them against a destroyed stream gives `message` events after
+ *   `close`, `incomingStore.put`, and PUBACK/PUBREC writes that come back as
+ *   `ERR_STREAM_DESTROYED`. It has to come before `_cleanUp`, which
+ *   synchronously emits `offline` and runs user publish callbacks through
+ *   `_flush`: either can re-enter `connect()`, and that replaces
+ *   `_discardParsedPackets` with the new connection's closure, so we would
+ *   empty the new queue while the old one keeps pumping. Dropping first is
+ *   harmless - the queue emptied here is the one we are about to abandon.
  * - `_cleanUp` runs before the `emit`. A directly constructed `MqttClient` has
  *   no default `error` listener (only `mqtt.connect()` attaches one), and an
  *   application listener may throw; either way the throw would skip the
  *   teardown and wedge the pump.
- * - the rest of the chunk is dropped before `done`. `_write` parses the whole
- *   TCP chunk into the pump's queue before the first packet is handled, so
- *   without this the pump would keep running the packets of a broker we just
- *   declared in violation against a destroyed stream: `message` events after
- *   `close`, `incomingStore.put`, and PUBACK/PUBREC writes that come back as
- *   `ERR_STREAM_DESTROYED` errors.
  * - `done` must still be called. It is the pump callback, and with the queue
  *   emptied it just completes the pending `_write` instead of pumping more
  *   packets. Skipping it strands that write callback. Both the queue and the
@@ -38,10 +43,33 @@ const rejectTopicAlias = (
 	message: string,
 	done: DoneCallback,
 ) => {
-	client['_cleanUp'](true)
 	client['_discardParsedPackets']()
+	client['_cleanUp'](true)
 	done()
 	client.emit('error', new ErrorWithReasonCode(message, TOPIC_ALIAS_INVALID))
+}
+
+/**
+ * A user-supplied `customHandleAcks` reported a failure. That is an application
+ * error, not a broker protocol violation: the connection is healthy, so unlike
+ * `rejectTopicAlias` this does not tear it down - the application asked us to
+ * drop one message, not to drop the broker.
+ *
+ * The pump callback still has to run. `done` is what completes the pending
+ * `_write`, so returning without it strands that write callback and every later
+ * packet on a connection that is still live - the same wedge as
+ * GHSA-c8jq-r765-cq7g, reached through the application instead of the broker.
+ * `done` goes first because the `emit` can throw: a directly constructed
+ * `MqttClient` has no default `error` listener, and an application listener may
+ * throw of its own accord.
+ */
+const failCustomAck = (
+	client: MqttClient,
+	error: Error,
+	done: DoneCallback,
+) => {
+	done()
+	client.emit('error', error)
 }
 
 /*
@@ -170,12 +198,13 @@ const handlePublish: PacketHandler = (client, packet: IPublishPacket, done) => {
 						error = null
 					}
 					if (error) {
-						return client.emit('error', error as Error)
+						return failCustomAck(client, error as Error, done)
 					}
 					if (validReasonCodes.indexOf(code) === -1) {
-						return client.emit(
-							'error',
+						return failCustomAck(
+							client,
 							new Error('Wrong reason code for pubrec'),
+							done,
 						)
 					}
 					if (code) {
@@ -207,12 +236,13 @@ const handlePublish: PacketHandler = (client, packet: IPublishPacket, done) => {
 						error = null
 					}
 					if (error) {
-						return client.emit('error', error as Error)
+						return failCustomAck(client, error as Error, done)
 					}
 					if (validReasonCodes.indexOf(code) === -1) {
-						return client.emit(
-							'error',
+						return failCustomAck(
+							client,
 							new Error('Wrong reason code for puback'),
+							done,
 						)
 					}
 					if (!code) {

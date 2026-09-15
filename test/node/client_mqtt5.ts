@@ -714,10 +714,12 @@ describe('MQTT 5.0', () => {
 			const client = mqtt.connect(opts)
 
 			let finished = false
+			let deadline: NodeJS.Timeout
 
 			const finish = (err?: Error) => {
 				if (finished) return
 				finished = true
+				clearTimeout(deadline)
 				client.end(true, (err1) => {
 					server2.close((err2) => {
 						done(err || err1 || err2)
@@ -753,6 +755,21 @@ describe('MQTT 5.0', () => {
 			let closes = 0
 			let connects = 0
 
+			// Without a deadline the only way to fail is the 15s test timeout,
+			// which says nothing about what broke. Each stage arms the one for
+			// the stage that follows it, and the message names the regression
+			// plus the counters that prove it.
+			const armDeadline = (ms: number, regression: string) => {
+				clearTimeout(deadline)
+				deadline = setTimeout(() => {
+					finish(
+						new Error(
+							`${regression} (errors: ${errors}, closes: ${closes}, connects: ${connects})`,
+						),
+					)
+				}, ms)
+			}
+
 			client.on('error', (err) => {
 				errors++
 				check(() => {
@@ -766,11 +783,21 @@ describe('MQTT 5.0', () => {
 
 			client.on('close', () => {
 				closes++
+				if (closes === 1) {
+					armDeadline(
+						2000,
+						'the connection was torn down but never reconnected',
+					)
+				}
 			})
 
 			client.on('connect', () => {
 				connects++
 				if (connects < 2) {
+					armDeadline(
+						3000,
+						'the unsolicited topic alias never tore the connection down: the client is wedged',
+					)
 					return
 				}
 				// the first connection was torn down by the guard and the
@@ -820,6 +847,7 @@ describe('MQTT 5.0', () => {
 			const finish = (err?: Error) => {
 				if (finished) return
 				finished = true
+				clearTimeout(deadline)
 				client.end(true, (err1) => {
 					server2.close((err2) => {
 						done(err || err1 || err2)
@@ -827,7 +855,47 @@ describe('MQTT 5.0', () => {
 				})
 			}
 
+			const errors: Error[] = []
+			const messages: string[] = []
+
+			// the signal below only arrives if the teardown happened at all; a
+			// regression to the original wedge would otherwise hang until the
+			// test timeout with nothing said about why
+			const deadline = setTimeout(() => {
+				finish(
+					new Error(
+						`the connection was never torn down (errors: ${errors.length}, messages: ${messages.length})`,
+					),
+				)
+			}, 2000)
+
 			const server2 = new MqttServer((serverClient) => {
+				// The client's teardown destroys its socket, and the FIN
+				// arriving here is strictly later than anything the pump could
+				// still do with the rest of the chunk: a leaked `message` is
+				// emitted from the nextTick queue, which drains in full before
+				// the event loop ever polls I/O. So this is the deterministic
+				// "the pump has had its chance" signal, in place of a sleep.
+				serverClient.on('close', () => {
+					try {
+						assert.deepStrictEqual(
+							messages,
+							[],
+							'no message may be emitted after the teardown',
+						)
+						assert.strictEqual(
+							errors.length,
+							1,
+							`expected exactly one error, got ${errors
+								.map((e) => e.message)
+								.join(', ')}`,
+						)
+					} catch (assertErr) {
+						return finish(assertErr as Error)
+					}
+					finish()
+				})
+
 				serverClient.on('connect', () => {
 					serverClient.connack({ reasonCode: 0 })
 					// written back to back so they reach the client as one
@@ -849,35 +917,8 @@ describe('MQTT 5.0', () => {
 				})
 			}).listen(ports.PORTAND114)
 
-			const errors: Error[] = []
-			const messages: string[] = []
-
 			client.on('error', (err) => errors.push(err))
 			client.on('message', (topic) => messages.push(topic))
-
-			client.on('close', () => {
-				// give the pump the tick it would have used to drain the rest
-				// of the chunk
-				setTimeout(() => {
-					try {
-						assert.deepStrictEqual(
-							messages,
-							[],
-							'no message may be emitted after the teardown',
-						)
-						assert.strictEqual(
-							errors.length,
-							1,
-							`expected exactly one error, got ${errors
-								.map((e) => e.message)
-								.join(', ')}`,
-						)
-					} catch (assertErr) {
-						return finish(assertErr as Error)
-					}
-					finish()
-				}, 100)
-			})
 
 			t.after(() => {
 				if (!finished) {
@@ -1282,6 +1323,92 @@ describe('MQTT 5.0', () => {
 						done(err1 || err2)
 					})
 				})
+			})
+		},
+	)
+
+	// Also GHSA-c8jq-r765-cq7g, reached through the application instead of the
+	// broker: a `customHandleAcks` that reports an error used to `return
+	// client.emit('error', …)` without calling the pump callback, so the pending
+	// `_write` was never completed and every packet after it was stranded on a
+	// connection that is still live.
+	it(
+		'should keep processing packets after customHandleAcks reports an error',
+		{
+			timeout: 15000,
+		},
+		function _test(t, done) {
+			let finished = false
+
+			const finish = (err?: Error) => {
+				if (finished) return
+				finished = true
+				client.end(true, (err1) => {
+					server2.close((err2) => {
+						done(err || err1 || err2)
+					})
+				})
+			}
+
+			const messages: string[] = []
+			const errors: string[] = []
+
+			const server2 = new MqttServer((serverClient) => {
+				serverClient.on('connect', () => {
+					serverClient.connack({ reasonCode: 0 })
+					// back to back, so the second one is already sitting in the
+					// pump queue when the first one errors
+					serverClient.publish({
+						topic: 'acks/bad',
+						payload: 'payload',
+						qos: 1,
+						messageId: 1,
+					})
+					serverClient.publish({
+						topic: 'acks/good',
+						payload: 'payload',
+						qos: 1,
+						messageId: 2,
+					})
+				})
+
+				// the PUBACK for the second message is the proof, and a
+				// deterministic one: only a pump that resumed after the error,
+				// on a connection the error did not tear down, can write it
+				serverClient.on('puback', (packet) => {
+					try {
+						assert.strictEqual(packet.messageId, 2)
+						assert.deepStrictEqual(messages, ['acks/good'])
+						assert.deepStrictEqual(errors, ['handler said no'])
+					} catch (assertErr) {
+						return finish(assertErr as Error)
+					}
+					finish()
+				})
+			}).listen(ports.PORTAND316)
+
+			const client = mqtt.connect({
+				host: 'localhost',
+				port: ports.PORTAND316,
+				protocolVersion: 5,
+				reconnectPeriod: 0,
+				customHandleAcks(topic, message, packet, cb) {
+					if (topic === 'acks/bad') {
+						cb(new Error('handler said no'))
+						return
+					}
+					cb(0)
+				},
+			})
+
+			client.on('error', (err) => errors.push(err.message))
+			client.on('message', (topic) => messages.push(topic))
+
+			t.after(() => {
+				if (!finished) {
+					client.end(true)
+					server2.close()
+				}
 			})
 		},
 	)
