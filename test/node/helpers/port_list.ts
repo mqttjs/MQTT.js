@@ -29,6 +29,7 @@ export default function getPorts(i = 0) {
 		PORTAND316: PORT + 316,
 		PORTAND326: PORT + 326,
 		PORTAND327: PORT + 327,
+		PORTAND343: PORT + 343,
 		PORTAND400: PORT + 400,
 	}
 

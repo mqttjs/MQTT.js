@@ -827,7 +827,14 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			} else {
 				const done = completeParse
 				completeParse = null
-				done()
+				// Same null check as `work` above: this is the callback handed
+				// to packet handlers, and a handler can hand it on to user code
+				// - `customHandleAcks` and `handleMessage` both take a callback
+				// the application invokes. An application that invokes one of
+				// them twice reaches here twice, and the second time the
+				// pending `_write` is already completed. Absorb it instead of
+				// crashing the pump from the inside.
+				if (done) done()
 			}
 		}
 

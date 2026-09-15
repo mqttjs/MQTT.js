@@ -1413,6 +1413,100 @@ describe('MQTT 5.0', () => {
 		},
 	)
 
+	// A `customHandleAcks` that calls its callback twice is an application bug,
+	// but it must not take the client down with it. Before the pump callback
+	// was null checked the second call reached `nextTickWork` with the pending
+	// `_write` already completed and threw `done is not a function` from inside
+	// the packet pump - an uncaught exception, so the whole process died.
+	it(
+		'should survive a customHandleAcks that calls its callback twice',
+		{
+			timeout: 15000,
+		},
+		function _test(t, done) {
+			let finished = false
+
+			const finish = (err?: Error) => {
+				if (finished) return
+				finished = true
+				client.end(true, (err1) => {
+					server2.close((err2) => {
+						done(err || err1 || err2)
+					})
+				})
+			}
+
+			const messages: string[] = []
+			const errors: string[] = []
+
+			const server2 = new MqttServer((serverClient) => {
+				serverClient.on('connect', () => {
+					serverClient.connack({ reasonCode: 0 })
+					serverClient.publish({
+						topic: 'acks/twice',
+						payload: 'payload',
+						qos: 1,
+						messageId: 1,
+					})
+				})
+
+				serverClient.on('puback', (packet) => {
+					if (packet.messageId === 1) {
+						// the pump survived the double callback; now prove it is
+						// still live by pushing a second packet through it, in a
+						// write of its own
+						serverClient.publish({
+							topic: 'acks/after',
+							payload: 'payload',
+							qos: 1,
+							messageId: 2,
+						})
+						return
+					}
+
+					try {
+						assert.strictEqual(packet.messageId, 2)
+						assert.deepStrictEqual(messages, [
+							'acks/twice',
+							'acks/after',
+						])
+						assert.deepStrictEqual(errors, [
+							'handler called cb twice',
+						])
+					} catch (assertErr) {
+						return finish(assertErr as Error)
+					}
+					finish()
+				})
+			}).listen(ports.PORTAND343)
+
+			const client = mqtt.connect({
+				host: 'localhost',
+				port: ports.PORTAND343,
+				protocolVersion: 5,
+				reconnectPeriod: 0,
+				customHandleAcks(topic, message, packet, cb) {
+					if (topic === 'acks/twice') {
+						// deliberately missing the `return` an application
+						// should have written
+						cb(new Error('handler called cb twice'))
+					}
+					cb(0)
+				},
+			})
+
+			client.on('error', (err) => errors.push(err.message))
+			client.on('message', (topic) => messages.push(topic))
+
+			t.after(() => {
+				if (!finished) {
+					client.end(true)
+					server2.close()
+				}
+			})
+		},
+	)
+
 	it(
 		'puback handling custom reason code',
 		{
@@ -1589,6 +1683,7 @@ describe('MQTT 5.0', () => {
 					const code = 0
 					if (topic === 'a/b') {
 						cb(new Error('a/b is not valid'))
+						return
 					}
 					cb(code)
 				},
@@ -1635,6 +1730,7 @@ describe('MQTT 5.0', () => {
 					const code = 0
 					if (topic === 'a/b') {
 						cb(new Error('a/b is not valid'))
+						return
 					}
 					cb(code)
 				},
