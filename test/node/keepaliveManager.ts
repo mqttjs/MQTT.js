@@ -9,6 +9,8 @@ function mockedClient(keepalive: number) {
 		options: {
 			keepalive,
 		},
+		// keepalive in use on the current connection, see MqttClient.keepalive
+		keepalive,
 		onKeepaliveTimeout: () => {},
 		sendPing: () => {},
 		log: () => {},

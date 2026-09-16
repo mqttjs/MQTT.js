@@ -3,22 +3,70 @@ import handleAuth from './auth'
 import handleConnack from './connack'
 import handleAck from './ack'
 import handlePubrel from './pubrel'
-import { type PacketHandler } from '../shared'
+import { ErrorWithReasonCode, type PacketHandler } from '../shared'
+
+/**
+ * Bytes the Remaining Length of a packet takes on the wire: it is a variable
+ * byte integer, 7 bits of payload per byte (§1.5.5).
+ */
+const remainingLengthBytes = (remainingLength: number) => {
+	if (remainingLength < 128) return 1
+	if (remainingLength < 16384) return 2
+	if (remainingLength < 2097152) return 3
+	return 4
+}
+
+/**
+ * Size of a received packet as `Maximum Packet Size` counts it: the total
+ * number of bytes in the packet (§3.1.2.11.4, §2.1.4). mqtt-packet reports
+ * `packet.length` as the Remaining Length, which by §2.1.4 excludes both the
+ * fixed header byte and the bytes encoding the Remaining Length itself.
+ */
+const totalPacketSize = (remainingLength: number) =>
+	1 + remainingLengthBytes(remainingLength) + remainingLength
 
 const handle: PacketHandler = (client, packet, done, pump) => {
 	const { options } = client
 
+	// only the client advertised limit bounds inbound packets: CONNECT
+	// `Maximum Packet Size` (§3.1.2.11.4) is what *we* accept, while the CONNACK
+	// one (§3.2.2.3.6) is what the broker accepts and bounds what we send
+	const maximumPacketSize = options.properties?.maximumPacketSize
+	const packetSize = totalPacketSize(packet.length)
+
 	if (
 		options.protocolVersion === 5 &&
-		options.properties &&
-		options.properties.maximumPacketSize &&
-		options.properties.maximumPacketSize < packet.length
+		maximumPacketSize &&
+		maximumPacketSize < packetSize
 	) {
-		client.emit('error', new Error(`exceeding packets size ${packet.cmd}`))
-		client.end({
-			reasonCode: 149,
-			properties: { reasonString: 'Maximum packet size was exceeded' },
-		})
+		client.log(
+			'_handlePacket :: %s packet of %d bytes exceeds the advertised maximumPacketSize %d',
+			packet.cmd,
+			packetSize,
+			maximumPacketSize,
+		)
+		// drop the connection without disabling reconnect: a broker must not be
+		// able to kill the client for good by sending one oversized packet.
+		// Tear down before emitting: `emit('error')` throws when nothing listens
+		// - a directly constructed `MqttClient` has no listener, only
+		// `mqtt.connect()` attaches one - and an application handler can throw
+		// too, which would leave the connection up.
+		//
+		// The rest of the chunk this packet came in goes with it, and the pump
+		// is then told the packet is done: the chunk is parsed in full before
+		// its first packet is handled, so what an attacker packed behind the
+		// oversized one must not run against the stream we just destroyed, and
+		// the `_write` callback waiting on it must not be stranded.
+		pump?.discardParsedPackets()
+		client['_cleanUp'](true)
+		done()
+		client.emit(
+			'error',
+			new ErrorWithReasonCode(
+				`exceeding packets size ${packet.cmd}: ${packetSize} bytes, maximumPacketSize is ${maximumPacketSize}`,
+				149,
+			),
+		)
 		return client
 	}
 

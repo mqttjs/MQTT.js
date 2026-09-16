@@ -12,6 +12,12 @@ const handleConnack: PacketHandler = (client, packet: IConnackPacket) => {
 	clearTimeout(client['connackTimer'])
 	delete client['topicAliasSend']
 
+	// Kept for the whole CONNACK, accepted or not: a refusal is where
+	// `reasonString` and `serverReference` show up, and they are the only
+	// explanation the application gets. Never merged into `options`, which
+	// belongs to the caller.
+	client['_serverProperties'] = packet.properties
+
 	if (packet.properties) {
 		if (packet.properties.topicAliasMaximum) {
 			if (packet.properties.topicAliasMaximum > 0xffff) {
@@ -27,23 +33,16 @@ const handleConnack: PacketHandler = (client, packet: IConnackPacket) => {
 				)
 			}
 		}
-		if (packet.properties.serverKeepAlive && options.keepalive) {
-			options.keepalive = packet.properties.serverKeepAlive
-		}
-
-		if (packet.properties.maximumPacketSize) {
-			if (!options.properties) {
-				options.properties = {}
-			}
-			options.properties.maximumPacketSize =
-				packet.properties.maximumPacketSize
-		}
 	}
 
 	if (rc === 0) {
 		client.reconnecting = false
 		client['_onConnect'](packet)
 	} else if (rc > 0) {
+		client.log(
+			'_handleConnack :: connection refused with reason code %d',
+			rc,
+		)
 		const err = new ErrorWithReasonCode(
 			`Connection refused: ${ReasonCodes[rc]}`,
 			rc,
