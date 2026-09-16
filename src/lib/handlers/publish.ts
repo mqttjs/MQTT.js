@@ -12,6 +12,9 @@ const validReasonCodes = [0, 16, 128, 131, 135, 144, 145, 151, 153]
 /** MQTT 5 reason code 0x94, "Topic Alias invalid" */
 const TOPIC_ALIAS_INVALID = 148
 
+/** MQTT 5 reason code 0x82, "Protocol Error" */
+const PROTOCOL_ERROR = 130
+
 /**
  * Reject a PUBLISH whose Topic Alias breaks the protocol: tear the connection
  * down so the usual reconnect logic runs, then tell the application.
@@ -52,6 +55,9 @@ const rejectTopicAlias = (
 	message: string,
 	done: DoneCallback,
 	pump?: PacketPump,
+	// 3.3.4 gives 0x94 for an alias out of range, but 0x82 for a zero length
+	// Topic Name the receiver has no mapping for
+	reasonCode: number = TOPIC_ALIAS_INVALID,
 ) => {
 	pump?.discardParsedPackets()
 	// No pump means the handler was called outside the packet pump, and there
@@ -60,7 +66,7 @@ const rejectTopicAlias = (
 		client['_cleanUp'](true)
 	}
 	done()
-	client.emit('error', new ErrorWithReasonCode(message, TOPIC_ALIAS_INVALID))
+	client.emit('error', new ErrorWithReasonCode(message, reasonCode))
 }
 
 /**
@@ -163,11 +169,16 @@ const handlePublish: PacketHandler = (
 							'handlePublish :: unregistered topic alias. alias: %d',
 							alias,
 						)
+						// 3.3.4 3)a): no mapping for this alias and a zero
+						// length Topic Name is a Protocol Error, which the
+						// spec codes 0x82 - not the 0x94 the out-of-range
+						// cases get.
 						rejectTopicAlias(
 							client,
 							'Received unregistered Topic Alias',
 							done,
 							pump,
+							PROTOCOL_ERROR,
 						)
 						return
 					}

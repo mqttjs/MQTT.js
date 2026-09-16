@@ -676,11 +676,14 @@ describe('MQTT 5.0', () => {
 				})
 			}).listen(ports.PORTAND103)
 
-			client.on('error', (error) => {
+			client.on('error', (error: ErrorWithReasonCode) => {
 				assert.strictEqual(
 					error.message,
 					'Received unregistered Topic Alias',
 				)
+				// 3.3.4 3)a) codes a zero length Topic Name with no mapping as
+				// 0x82 Protocol Error, not the 0x94 the out-of-range cases get
+				assert.strictEqual(error.code, 130)
 				client.end(true, (err1) => {
 					server2.close((err2) => {
 						done(err1 || err2)
