@@ -16,6 +16,11 @@ export interface TypedEventEmitter<
 		event: TEvent,
 		callback: TEvents[TEvent],
 	): this
+	// needed by `events.once(client, ...)`, which requires addListener/removeListener
+	addListener<TEvent extends keyof TEvents>(
+		event: TEvent,
+		callback: TEvents[TEvent],
+	): this
 	once<TEvent extends keyof TEvents>(
 		event: TEvent,
 		callback: TEvents[TEvent],

@@ -39,6 +39,7 @@ import {
 	type TimerVariant,
 	type VoidCallback,
 	nextTick,
+	nullProtoMap,
 } from './shared'
 import type TopicAliasSend from './topic-alias-send'
 import { TypedEventEmitter } from './TypedEmitter'
@@ -400,8 +401,6 @@ export type ISubscriptionMap = {
 	 * object which has topic names as object keys and as value the options, like {'test1': {qos: 0}, 'test2': {qos: 2}}.
 	 */
 	[topic: string]: IClientSubscribeOptions
-} & {
-	resubscribe?: boolean
 }
 
 export interface IClientUnsubscribeProperties {
@@ -713,7 +712,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			options.queueQoSZero === undefined ? true : options.queueQoSZero
 
 		// map of subscribed topics to support reconnection
-		this._resubscribeTopics = {}
+		this._resubscribeTopics = nullProtoMap<IClientSubscribeOptions>()
 
 		// map of a subscribe messageId and a topic
 		this.messageIdToTopic = {}
@@ -1431,6 +1430,22 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			| ClientSubscribeCallback,
 		callback?: ClientSubscribeCallback,
 	): MqttClient {
+		return this._subscribe(topicObject, false, opts, callback)
+	}
+
+	/**
+	 * Implementation of {@link subscribe}. `resubscribe` is internal: when true
+	 * the already-subscribed check is bypassed so reconnects re-send every topic.
+	 */
+	private _subscribe(
+		topicObject: string | string[] | ISubscriptionMap,
+		resubscribe: boolean,
+		opts?:
+			| IClientSubscribeOptions
+			| IClientSubscribeProperties
+			| ClientSubscribeCallback,
+		callback?: ClientSubscribeCallback,
+	): MqttClient {
 		const version = this.options.protocolVersion
 
 		if (typeof opts === 'function') {
@@ -1439,9 +1454,6 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 		callback = callback || this.noop
 
-		// force re-subscribe on reconnect. This is only true
-		// when provided `topicObject` is `this._resubscribeTopics`
-		let resubscribe = false
 		let topicsList = []
 
 		if (typeof topicObject === 'string') {
@@ -1450,8 +1462,6 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		} else if (Array.isArray(topicObject)) {
 			topicsList = topicObject
 		} else if (typeof topicObject === 'object') {
-			resubscribe = topicObject.resubscribe
-			delete topicObject.resubscribe
 			topicsList = Object.keys(topicObject)
 		}
 
@@ -1537,6 +1547,20 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 		if (!subs.length) {
 			callback(null, [])
+			return this
+		}
+
+		// a subscription map carries its options per topic, so a missing or
+		// malformed entry only surfaces here - without this the packet layer
+		// gets `qos: undefined` and destroys the connection
+		const invalidQos = subs.find(
+			(sub) => sub.qos !== 0 && sub.qos !== 1 && sub.qos !== 2,
+		)
+		if (invalidQos) {
+			setImmediate(
+				callback,
+				new Error(`Invalid qos for topic ${invalidQos.topic}`),
+			)
 			return this
 		}
 
@@ -2633,24 +2657,24 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 						topicI < _resubscribeTopicsKeys.length;
 						topicI++
 					) {
-						const resubscribeTopic: ISubscriptionMap = {}
+						const resubscribeTopic =
+							nullProtoMap<IClientSubscribeOptions>()
 						resubscribeTopic[_resubscribeTopicsKeys[topicI]] =
 							this._resubscribeTopics[
 								_resubscribeTopicsKeys[topicI]
 							]
-						resubscribeTopic.resubscribe = true
-						this.subscribe(resubscribeTopic, {
+						this._subscribe(resubscribeTopic, true, {
 							properties:
 								resubscribeTopic[_resubscribeTopicsKeys[topicI]]
 									.properties,
 						})
 					}
 				} else {
-					this._resubscribeTopics.resubscribe = true
-					this.subscribe(this._resubscribeTopics)
+					this._subscribe(this._resubscribeTopics, true)
 				}
 			} else {
-				this._resubscribeTopics = {}
+				this._resubscribeTopics =
+					nullProtoMap<IClientSubscribeOptions>()
 			}
 		}
 
