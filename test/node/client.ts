@@ -207,22 +207,19 @@ describe('MqttClient', () => {
 
 					client.once('error', (err) => {
 						assert.equal(err.message, 'Keepalive timeout')
-						const originalFLush = client['_flush']
-						// flush will be called on _cleanUp because of keepalive timeout
-						client['_flush'] = function _flush() {
-							originalFLush.call(client)
-							client.end((err1) => {
-								assert.strictEqual(
-									pubCallbackCalled &&
-										unsubscribeCallbackCalled,
-									true,
-									'callbacks should be invoked with error',
-								)
-								server2.close((err2) => {
-									done(err1 || err2)
-								})
+						// a keepalive timeout tears the connection down before
+						// it emits, so `_cleanUp` has already flushed the
+						// pending callbacks by the time we get here
+						assert.strictEqual(
+							pubCallbackCalled && unsubscribeCallbackCalled,
+							true,
+							'callbacks should be invoked with error',
+						)
+						client.end((err1) => {
+							server2.close((err2) => {
+								done(err1 || err2)
 							})
-						}
+						})
 					})
 				})
 			},
@@ -609,6 +606,94 @@ describe('MqttClient', () => {
 					client['_checkDisconnecting']()
 				})
 			})
+		},
+	)
+
+	// MQTT 3.1 has no Session Present flag, so `clean` is the only thing that
+	// says whether the session survived. Every other harness runs v4 or v5, so
+	// without this the `protocolVersion < 4` arm of `_onConnect`'s
+	// `sessionResumed` is never executed (GHSA-h8jm-hm87-fqw3).
+	it(
+		'should keep the incoming qos 2 state across a v3.1 reconnect with clean false',
+		{
+			timeout: 15000,
+		},
+		function _test(t, done) {
+			const messageId = 1
+			const staleTopic = 'v31-session'
+			const messages: string[] = []
+			let connections = 0
+			let finished = false
+
+			const finish = (err?: Error) => {
+				if (finished) return
+				finished = true
+				clearTimeout(deadline)
+				client2.end(true, (err1) => {
+					server2.close((err2) => {
+						done(err || err1 || err2)
+					})
+				})
+			}
+
+			const deadline = setTimeout(() => {
+				finish(
+					new Error(
+						`the second session never completed (connections: ${connections}, messages: ${messages.length})`,
+					),
+				)
+			}, 5000)
+
+			const server2 = new MqttServer((serverClient) => {
+				connections += 1
+				const connection = connections
+				serverClient.on('connect', () => {
+					// No sessionPresent to give: the flag does not exist in 3.1.
+					serverClient.connack({ returnCode: 0 })
+					if (connection === 1) {
+						serverClient.publish({
+							messageId,
+							topic: staleTopic,
+							payload: 'Message',
+							qos: 2,
+						})
+					} else {
+						serverClient.pubrel({ messageId })
+					}
+				})
+				serverClient.on('pubrec', () => {
+					// Drop the socket before PUBREL, leaving the message in the
+					// client's incoming store.
+					serverClient.destroy()
+				})
+				serverClient.on('pubcomp', () => {
+					try {
+						assert.deepStrictEqual(
+							messages,
+							[staleTopic],
+							'the session was not clean, so the stored message is still ours to deliver',
+						)
+					} catch (err) {
+						return finish(err as Error)
+					}
+					finish()
+				})
+			}).listen(ports.PORTAND346)
+
+			const client2 = mqtt.connect({
+				host: 'localhost',
+				port: ports.PORTAND346,
+				protocolId: 'MQIsdp',
+				protocolVersion: 3,
+				// an unclean session needs a stable id to come back to
+				clientId: 'v31-unclean-session',
+				clean: false,
+				reconnectPeriod: 100,
+			})
+			client2.on('message', (topic) => messages.push(topic))
+			// Dropping the socket is how the test gets to connection 2, so the
+			// transport errors that follow it are expected noise.
+			client2.on('error', () => {})
 		},
 	)
 
