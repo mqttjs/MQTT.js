@@ -5,7 +5,7 @@ import handleAck from './ack'
 import handlePubrel from './pubrel'
 import { type PacketHandler } from '../shared'
 
-const handle: PacketHandler = (client, packet, done) => {
+const handle: PacketHandler = (client, packet, done, pump) => {
 	const { options } = client
 
 	if (
@@ -28,7 +28,7 @@ const handle: PacketHandler = (client, packet, done) => {
 	switch (packet.cmd) {
 		case 'publish':
 			// DO NOT SHIFT PING HERE, this would lead to https://github.com/mqttjs/MQTT.js/issues/1861
-			handlePublish(client, packet, done)
+			handlePublish(client, packet, done, pump)
 			break
 		case 'puback':
 		case 'pubrec':

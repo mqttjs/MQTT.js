@@ -3,6 +3,7 @@ import {
 	ErrorWithReasonCode,
 	type DoneCallback,
 	type PacketHandler,
+	type PacketPump,
 } from '../shared'
 import type MqttClient from '../client'
 
@@ -15,6 +16,13 @@ const TOPIC_ALIAS_INVALID = 148
  * Reject a PUBLISH whose Topic Alias breaks the protocol: tear the connection
  * down so the usual reconnect logic runs, then tell the application.
  *
+ * Everything here is scoped to the connection the offending packet was parsed
+ * on, never to the client: a handler can resume long after its packet arrived,
+ * because an application that parks inside `handleMessage` or
+ * `customHandleAcks` and answers after a reconnect resumes it on a connection
+ * that is already gone. `pump` is that connection's handle, handed to the
+ * handler by the `connect()` call that parsed the packet.
+ *
  * The order of all four steps is load-bearing:
  *
  * - the rest of the chunk is dropped first. `_write` parses the whole TCP
@@ -24,27 +32,33 @@ const TOPIC_ALIAS_INVALID = 148
  *   `close`, `incomingStore.put`, and PUBACK/PUBREC writes that come back as
  *   `ERR_STREAM_DESTROYED`. It has to come before `_cleanUp`, which
  *   synchronously emits `offline` and runs user publish callbacks through
- *   `_flush`: either can re-enter `connect()`, and that replaces
- *   `_discardParsedPackets` with the new connection's closure, so we would
- *   empty the new queue while the old one keeps pumping. Dropping first is
- *   harmless - the queue emptied here is the one we are about to abandon.
+ *   `_flush`: either can re-enter `connect()`, and the queue we want emptied
+ *   is this connection's, not the one that call would create. Dropping first
+ *   is harmless - the queue emptied here is the one we are about to abandon.
  * - `_cleanUp` runs before the `emit`. A directly constructed `MqttClient` has
  *   no default `error` listener (only `mqtt.connect()` attaches one), and an
  *   application listener may throw; either way the throw would skip the
- *   teardown and wedge the pump.
+ *   teardown and wedge the pump. It is also skipped entirely once the client
+ *   has moved on: `_cleanUp` destroys whatever stream is current, and the
+ *   connection that broke the protocol is not the one that is live now.
  * - `done` must still be called. It is the pump callback, and with the queue
  *   emptied it just completes the pending `_write` instead of pumping more
  *   packets. Skipping it strands that write callback. Both the queue and the
  *   callback are scoped to one `connect()` call, so neither can reach the
- *   connection the reconnect creates.
+ *   connection a reconnect creates.
  */
 const rejectTopicAlias = (
 	client: MqttClient,
 	message: string,
 	done: DoneCallback,
+	pump?: PacketPump,
 ) => {
-	client['_discardParsedPackets']()
-	client['_cleanUp'](true)
+	pump?.discardParsedPackets()
+	// No pump means the handler was called outside the packet pump, and there
+	// is no later connection to protect.
+	if (!pump || pump.isCurrent()) {
+		client['_cleanUp'](true)
+	}
 	done()
 	client.emit('error', new ErrorWithReasonCode(message, TOPIC_ALIAS_INVALID))
 }
@@ -96,7 +110,12 @@ const failCustomAck = (
 
   for now i just suppressed the warnings
   */
-const handlePublish: PacketHandler = (client, packet: IPublishPacket, done) => {
+const handlePublish: PacketHandler = (
+	client,
+	packet: IPublishPacket,
+	done,
+	pump,
+) => {
 	client.log('handlePublish: packet %o', packet)
 	done = typeof done !== 'undefined' ? done : client.noop
 	let topic = packet.topic.toString()
@@ -125,6 +144,7 @@ const handlePublish: PacketHandler = (client, packet: IPublishPacket, done) => {
 					client,
 					'Received a PUBLISH Topic Alias but no Topic Alias Maximum was advertised',
 					done,
+					pump,
 				)
 				return
 			}
@@ -147,6 +167,7 @@ const handlePublish: PacketHandler = (client, packet: IPublishPacket, done) => {
 							client,
 							'Received unregistered Topic Alias',
 							done,
+							pump,
 						)
 						return
 					}
@@ -159,6 +180,7 @@ const handlePublish: PacketHandler = (client, packet: IPublishPacket, done) => {
 						client,
 						`Received Topic Alias ${alias} is outside the valid range 1-65535`,
 						done,
+						pump,
 					)
 					return
 				}
@@ -180,6 +202,7 @@ const handlePublish: PacketHandler = (client, packet: IPublishPacket, done) => {
 					client,
 					`Received Topic Alias ${alias} is outside the advertised Topic Alias Maximum range 1-${topicAliasRecv.max}`,
 					done,
+					pump,
 				)
 				return
 			}

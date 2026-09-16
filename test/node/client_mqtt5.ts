@@ -929,6 +929,199 @@ describe('MQTT 5.0', () => {
 		},
 	)
 
+	// Also GHSA-c8jq-r765-cq7g, one connection later. The packet queue is per
+	// connection, but the discard used to be a field on the client that every
+	// `connect()` reassigned. An application that parks inside `handleMessage`
+	// and answers after a reconnect resumes the *old* connection's pump, and
+	// the violation the pump then found emptied the queue of the connection
+	// that had replaced it and destroyed its stream - a connection that never
+	// did anything wrong.
+	it(
+		'should not let a violation on a closed connection touch the connection that replaced it',
+		{
+			timeout: 15000,
+		},
+		function _test(t, done) {
+			const messages: string[] = []
+			const errors: ErrorWithReasonCode[] = []
+			const parked = new Map<string, () => void>()
+			let connections = 0
+			let finished = false
+			let firstServerClient: any
+			let liveConnectionClosed = false
+
+			const finish = (err?: Error) => {
+				if (finished) return
+				finished = true
+				clearTimeout(deadline)
+				client.end(true, (err1) => {
+					server2.close((err2) => {
+						done(err || err1 || err2)
+					})
+				})
+			}
+
+			// Every stage of this test is driven by a callback the test itself
+			// holds, so a regression stalls rather than fails. Name what is
+			// missing instead of waiting out the test timeout.
+			const deadline = setTimeout(() => {
+				finish(
+					new Error(
+						`the second connection never delivered the rest of its chunk (connections: ${connections}, messages: [${messages.join(
+							', ',
+						)}], errors: ${errors.length})`,
+					),
+				)
+			}, 6000)
+
+			const server2 = new MqttServer((serverClient) => {
+				connections += 1
+				const connection = connections
+				if (connection === 1) {
+					firstServerClient = serverClient
+				} else {
+					// The client destroying its stream sends a FIN, so this is
+					// how the test sees the live connection being torn down by
+					// the dead one's violation.
+					serverClient.on('close', () => {
+						liveConnectionClosed = true
+					})
+				}
+				serverClient.on('connect', () => {
+					serverClient.connack({ reasonCode: 0 })
+					// Both publishes are written back to back so they reach the
+					// client as one chunk: the first one parks the pump, the
+					// second one stays in that connection's queue.
+					if (connection === 1) {
+						serverClient.publish({
+							messageId: 0,
+							topic: 'parked/1',
+							payload: 'Message',
+							qos: 0,
+						})
+						// the violation, judged long after this connection is
+						// gone
+						serverClient.publish({
+							messageId: 0,
+							topic: 'test',
+							payload: 'Message',
+							qos: 0,
+							properties: { topicAlias: 1 },
+						})
+					} else {
+						serverClient.publish({
+							messageId: 0,
+							topic: 'parked/2',
+							payload: 'Message',
+							qos: 0,
+						})
+						serverClient.publish({
+							messageId: 0,
+							topic: 'survivor',
+							payload: 'Message',
+							qos: 0,
+						})
+					}
+				})
+			}).listen(ports.PORTAND345)
+
+			const client = mqtt.connect({
+				host: 'localhost',
+				port: ports.PORTAND345,
+				protocolVersion: 5,
+				reconnectPeriod: 100,
+				// deliberately no properties.topicAliasMaximum, so any topic
+				// alias is a protocol violation
+			})
+
+			client.on('error', (err) => errors.push(err as ErrorWithReasonCode))
+			client.on('message', (topic) => messages.push(topic))
+
+			const staged = new Set<string>()
+
+			client.handleMessage = (packet, callback) => {
+				const topic = packet.topic.toString()
+				// Each topic drives exactly one stage of the test. A repeat
+				// means something reconnected that should not have; let it
+				// through and leave the verdict to the assertions below.
+				if (staged.has(topic)) {
+					callback()
+					return
+				}
+				staged.add(topic)
+				if (topic === 'parked/1') {
+					// Hold the first connection's pump open and drop its
+					// socket, so the client reconnects while the violation
+					// behind this packet is still unhandled.
+					parked.set(topic, () => callback())
+					firstServerClient.destroy()
+					return
+				}
+				if (topic === 'parked/2') {
+					parked.set(topic, () => callback())
+					// The first connection's pump resumes here, finds the
+					// topic alias, and must reach for its own queue - not this
+					// connection's.
+					parked.get('parked/1')()
+					// `nextTick` work from that pump drains before this fires.
+					setImmediate(() => parked.get('parked/2')())
+					return
+				}
+				callback()
+				if (topic !== 'survivor') return
+				try {
+					assert.deepStrictEqual(
+						messages,
+						['parked/1', 'parked/2', 'survivor'],
+						"the live connection's queue must survive the dead one's violation",
+					)
+					const rejections = errors.filter((err) => err.code === 148)
+					assert.strictEqual(
+						rejections.length,
+						1,
+						`expected exactly one topic alias rejection, got ${errors
+							.map((err) => err.message)
+							.join(', ')}`,
+					)
+					assert.strictEqual(
+						rejections[0].message,
+						'Received a PUBLISH Topic Alias but no Topic Alias Maximum was advertised',
+					)
+				} catch (assertErr) {
+					return finish(assertErr as Error)
+				}
+				// The teardown the violation would trigger is a `destroy()` on
+				// the client's stream: its FIN reaches the server within a
+				// poll, and a reconnect would follow 100ms later. Give both
+				// well over their time before calling the live connection
+				// untouched.
+				setTimeout(() => {
+					try {
+						assert.isFalse(
+							liveConnectionClosed,
+							'the live connection must not be torn down by a violation on the connection it replaced',
+						)
+						assert.strictEqual(
+							connections,
+							2,
+							'the live connection must not have been torn down',
+						)
+					} catch (assertErr) {
+						return finish(assertErr as Error)
+					}
+					finish()
+				}, 400)
+			}
+
+			t.after(() => {
+				if (!finished) {
+					client.end(true)
+					server2.close()
+				}
+			})
+		},
+	)
+
 	it(
 		'should throw an error if there is Auth Data with no Auth Method',
 		{

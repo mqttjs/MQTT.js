@@ -33,6 +33,7 @@ import {
 	type GenericCallback,
 	type IStream,
 	MQTTJS_VERSION,
+	type PacketPump,
 	type StreamBuilder,
 	type TimerVariant,
 	type VoidCallback,
@@ -524,11 +525,12 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	private _deferredReconnect: () => void
 
 	/**
-	 * Drops the packets that were parsed out of the chunk currently being
-	 * processed but have not been handled yet. Re-created by every `connect()`
-	 * call, because the packet queue it empties is scoped to one connection.
+	 * The packet pump `connect()` created last. A handler reaches its own pump
+	 * through the arguments it was called with, and compares it against this
+	 * one to tell whether the connection its packet came from is still the
+	 * live connection.
 	 */
-	private _discardParsedPackets: () => void
+	private _currentPump: PacketPump
 
 	private connackPacket: IConnackPacket
 
@@ -781,9 +783,19 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		// handled, so a handler that tears the connection down has to throw the
 		// rest of the chunk away: handling it would run packets of a broker we
 		// just declared in violation against an already destroyed stream.
-		this._discardParsedPackets = () => {
-			packets.length = 0
+		//
+		// Both the queue and the client's current connection are things a
+		// handler must be able to ask about *its own* connection, so they are
+		// scoped to this `connect()` call and travel to the handlers rather
+		// than being read back off the client: a handler can resume long after
+		// the connection it belongs to is gone.
+		const pump: PacketPump = {
+			discardParsedPackets: () => {
+				packets.length = 0
+			},
+			isCurrent: () => this._currentPump === pump,
 		}
+		this._currentPump = pump
 
 		this.log('connect :: calling method to clear reconnect')
 		this._clearReconnect()
@@ -811,7 +823,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 			if (packet) {
 				this.log('work :: packet pulled from queue')
-				handlePacket(this, packet, nextTickWork)
+				handlePacket(this, packet, nextTickWork, pump)
 			} else {
 				this.log('work :: no packets in queue')
 				const done = completeParse
