@@ -41,7 +41,7 @@ export default class KeepaliveManager {
 			'clear' in variant
 				? variant
 				: getTimer(variant)
-		this.setKeepalive(client.options.keepalive)
+		this.setKeepalive(client.keepalive)
 	}
 
 	private clear() {

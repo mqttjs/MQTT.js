@@ -22,17 +22,19 @@ import { type ClientRequestArgs } from 'http'
 import * as validations from './validations'
 import Store, { type IStore } from './store'
 import handlePacket from './handlers'
+import { ReasonCodes, type PendingCommand } from './handlers/ack'
 import DefaultMessageIdProvider, {
 	type IMessageIdProvider,
 } from './default-message-id-provider'
 import TopicAliasRecv from './topic-alias-recv'
 import {
 	type DoneCallback,
-	type ErrorWithReasonCode,
+	ErrorWithReasonCode,
 	ErrorWithSubackPacket,
 	type GenericCallback,
 	type IStream,
 	MQTTJS_VERSION,
+	type PacketPump,
 	type StreamBuilder,
 	type TimerVariant,
 	type VoidCallback,
@@ -53,6 +55,12 @@ const setImmediate =
 			callback(...args)
 		})
 	}) as typeof globalThis.setImmediate)
+
+/** MQTT 5 Receive Maximum is a 16 bit value, and 65535 when not given */
+const MAX_RECEIVE_MAXIMUM = 0xffff
+
+/** MQTT 5 reason code 0x93 */
+const RECEIVE_MAXIMUM_EXCEEDED = 147
 
 const defaultConnectOptions: IClientOptions = {
 	keepalive: 60,
@@ -475,7 +483,16 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 	public outgoing: Record<
 		number,
-		{ volatile: boolean; cb: (err: Error, packet?: Packet) => void }
+		{
+			volatile: boolean
+			/**
+			 * The request this message id is pending on. `outgoing` is keyed by
+			 * message id alone, so this is what lets `handleAck` tell an ack
+			 * that answers the request from one that merely carries its id.
+			 */
+			cmd: PendingCommand
+			cb: (err: Error, packet?: Packet) => void
+		}
 	>
 
 	public messageIdToTopic: Record<number, string[]>
@@ -520,9 +537,64 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 	private topicAliasSend: TopicAliasSend
 
+	/**
+	 * Message ids of the inbound QoS 2 PUBLISH packets held in `incomingStore`.
+	 * It is kept on every protocol version, because it is what tells us which
+	 * store entries belong to a session the broker did not resume; on MQTT 5 it
+	 * additionally enforces the Receive Maximum this client advertised. It
+	 * shares the store's lifetime: an id is added with the store entry and
+	 * dropped with it, so the quota really does bound the store. Resetting it
+	 * per network connection instead would let a broker drop the socket to clear
+	 * the counter while its entries stay behind (GHSA-h8jm-hm87-fqw3).
+	 *
+	 * It is cleared where `incomingStore` is replaced or closed, and together
+	 * with the entries it tracks when the broker does not resume the session
+	 * (see `_discardIncomingQoS2State`). It can still undercount a
+	 * caller-supplied store that survives `close()` already holding entries.
+	 * That is bounded by what was persisted, not by anything a broker can do on
+	 * this connection.
+	 */
+	private _incomingQoS2Ids: Set<number>
+
+	/** `properties.receiveMaximum`, validated and latched at construction */
+	private _receiveMaximum: number
+
 	private _deferredReconnect: () => void
 
+	/**
+	 * The packet pump `connect()` created last. A handler reaches its own pump
+	 * through the arguments it was called with, and compares it against this
+	 * one to tell whether the connection its packet came from is still the
+	 * live connection.
+	 */
+	private _currentPump: PacketPump
+
+	/**
+	 * True once a CONNACK has been handled on the current network connection,
+	 * accepted or refused. [MQTT-3.2.0-2] allows only one per connection.
+	 * Reset in `connect()`, which runs once per network connection.
+	 */
+	private connackReceived: boolean
+
+	/**
+	 * Set while a refused CONNACK is torn down, so neither `_cleanUp` nor the
+	 * `close` handler arms a retry: closing the socket must not by itself
+	 * retry a connection the broker actively denied. `handleConnack` arms the
+	 * retry itself when `reconnectOnConnackError` is on. Reset in `connect()`,
+	 * so an explicit `reconnect()` still works.
+	 */
+	private reconnectSuppressed: boolean
+
+	/**
+	 * The Authentication Method sent in this connection's CONNECT, latched when
+	 * the packet is written. MQTT-4.12.0-3 requires every AUTH of the exchange
+	 * to carry the same one, and `options` can be mutated while it is running.
+	 */
+	private _authenticationMethod: string
+
 	private connackPacket: IConnackPacket
+
+	private _serverProperties: IConnackPacket['properties']
 
 	public static defaultId() {
 		return `mqttjs_${Math.random().toString(16).substr(2, 8)}`
@@ -608,6 +680,33 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		this.outgoingStore = options.outgoingStore || new Store()
 		this.incomingStore = options.incomingStore || new Store()
 
+		// Inbound QoS 2 message ids held in `incomingStore`, for MQTT 5 Receive
+		// Maximum accounting
+		this._incomingQoS2Ids = new Set()
+
+		// Latch the quota now: reading it per packet would let a caller mutating
+		// `options` disable the check, and `receiveMaximum: 0` (rejects every
+		// QoS 2 message) or a non-number (comparisons against NaN are always
+		// false) would break it outright.
+		this._receiveMaximum = MAX_RECEIVE_MAXIMUM
+		const receiveMaximum = options.properties?.receiveMaximum
+		if (receiveMaximum !== undefined) {
+			if (
+				Number.isInteger(receiveMaximum) &&
+				receiveMaximum >= 1 &&
+				receiveMaximum <= MAX_RECEIVE_MAXIMUM
+			) {
+				this._receiveMaximum = receiveMaximum
+			} else {
+				this.log(
+					'MqttClient :: options.properties.receiveMaximum %o is not an integer between 1 and %d, enforcing and advertising %d instead',
+					receiveMaximum,
+					MAX_RECEIVE_MAXIMUM,
+					MAX_RECEIVE_MAXIMUM,
+				)
+			}
+		}
+
 		// Should QoS zero messages be queued when the connection is broken?
 		this.queueQoSZero =
 			options.queueQoSZero === undefined ? true : options.queueQoSZero
@@ -630,6 +729,10 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		this.queue = []
 		// connack timer
 		this.connackTimer = null
+		// No CONNACK seen yet on this network connection
+		this.connackReceived = false
+		// No refused CONNACK has disarmed the retry
+		this.reconnectSuppressed = false
 		// Reconnect timer
 		this.reconnectTimer = null
 		// Is processing store?
@@ -708,6 +811,10 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 			this._destroyKeepaliveManager()
 
+			// the broker properties describe the connection that just went
+			// away, they must not leak into the next one
+			this._serverProperties = undefined
+
 			if (this.topicAliasRecv) {
 				this.topicAliasRecv.clear()
 			}
@@ -760,6 +867,120 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	}
 
 	/**
+	 * Records an inbound QoS 2 PUBLISH about to be put in `incomingStore`, and
+	 * on MQTT 5 takes a Receive Maximum slot for it. A re-delivery of an id
+	 * already in flight reuses its entry, so only distinct ids count against
+	 * the quota.
+	 *
+	 * The bookkeeping is not version specific even though the quota is. The id
+	 * set is also what `_discardIncomingQoS2State` walks to purge the store for
+	 * a session the broker did not resume, and skipping it on 3.1/3.1.1 left
+	 * that store entry behind for the client's lifetime: a later session could
+	 * send a PUBREL with the same id and the client would deliver the previous
+	 * session's message (GHSA-h8jm-hm87-fqw3).
+	 *
+	 * @returns `false` when the quota is exceeded and the connection is going down
+	 */
+	private _trackIncomingQoS2Publish(
+		messageId: number,
+		done: DoneCallback,
+		pump?: PacketPump,
+	): boolean {
+		if (this._incomingQoS2Ids.has(messageId)) {
+			return true
+		}
+
+		// Receive Maximum is an MQTT 5 negotiation. 3.1 and 3.1.1 have no such
+		// limit to enforce, so there is nothing to reject there.
+		if (
+			this.options.protocolVersion === 5 &&
+			this._incomingQoS2Ids.size >= this._receiveMaximum
+		) {
+			this.log(
+				'_trackIncomingQoS2Publish :: inbound QoS 2 messages exceeded receiveMaximum %d',
+				this._receiveMaximum,
+			)
+			// Order matters on all three steps:
+			//
+			// - the rest of the chunk is dropped before `_cleanUp`. `_write`
+			//   parses the whole TCP chunk into the pump's queue before the
+			//   first packet is handled, so without this the pump would keep
+			//   running the packets of a broker we just declared in violation
+			//   against a destroyed stream. It has to happen before `_cleanUp`
+			//   too: `_cleanUp` synchronously emits `offline` and flushes user
+			//   publish callbacks, and any of those re-entering `connect()`
+			//   would replace the client's current pump with the new
+			//   connection's, emptying the new queue while the old one pumps on.
+			//   The handler carries its own pump, so it cannot reach across.
+			// - `_cleanUp` runs before the `emit`. A directly constructed
+			//   `MqttClient` has no default `error` listener (only
+			//   `mqtt.connect()` attaches one), and an application listener may
+			//   throw; either way the throw would skip the teardown and wedge
+			//   the pump.
+			// - `done` must still be called. It is the pump callback, and with
+			//   the queue emptied it just completes the pending `_write`
+			//   instead of pumping more packets. Skipping it strands that write
+			//   callback. Both the queue and the callback are scoped to one
+			//   `connect()` call, so neither can reach the connection the
+			//   reconnect creates.
+			//
+			// Tear down but leave reconnect alone: `end()` sets `disconnecting`
+			// and clears the reconnect timer, which would hand a hostile broker a
+			// permanent kill switch.
+			pump?.discardParsedPackets()
+			if (!pump || pump.isCurrent()) {
+				this._cleanUp(true)
+			}
+			done()
+			this.emit(
+				'error',
+				new ErrorWithReasonCode(
+					// `size` is the count before this PUBLISH; report the count
+					// it would have brought the client to, so the numbers read
+					// as the excess they are.
+					`${ReasonCodes[RECEIVE_MAXIMUM_EXCEEDED]}: ${this._incomingQoS2Ids.size + 1} inbound QoS 2 messages in flight, receiveMaximum is ${this._receiveMaximum}`,
+					RECEIVE_MAXIMUM_EXCEEDED,
+				),
+			)
+			return false
+		}
+
+		this._incomingQoS2Ids.add(messageId)
+		return true
+	}
+
+	/** Releases the slot taken above, once the store entry is gone. */
+	private _releaseIncomingQoS2Publish(messageId: number): void {
+		this._incomingQoS2Ids.delete(messageId)
+	}
+
+	/**
+	 * Drops the inbound QoS 2 messages kept for a session the broker did not
+	 * resume, store entries and Receive Maximum slots together.
+	 *
+	 * Their PUBRELs are never coming: the broker threw the session away, so
+	 * MQTT-4.1.0-1 has us throw ours away too. Keeping them would pin both the
+	 * entries and their slots for the client's lifetime, and once the slots run
+	 * out every further inbound QoS 2 PUBLISH tears the connection down
+	 * (GHSA-h8jm-hm87-fqw3).
+	 */
+	private _discardIncomingQoS2State(): void {
+		if (this._incomingQoS2Ids.size === 0) {
+			return
+		}
+
+		this.log(
+			'_discardIncomingQoS2State :: session not resumed, dropping %d inbound QoS 2 message(s)',
+			this._incomingQoS2Ids.size,
+		)
+
+		for (const messageId of this._incomingQoS2Ids) {
+			this.incomingStore.del({ messageId }, this.noop)
+		}
+		this._incomingQoS2Ids.clear()
+	}
+
+	/**
 	 * Setup the event handlers in the inner stream, sends `connect` and `auth` packets
 	 */
 	public connect() {
@@ -769,12 +990,43 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		let completeParse = null
 		const packets = []
 
+		// A single TCP chunk is parsed in full before the first packet is
+		// handled, so a handler that tears the connection down has to throw the
+		// rest of the chunk away: handling it would run packets of a broker we
+		// just declared in violation against an already destroyed stream.
+		//
+		// Both the queue and the client's current connection are things a
+		// handler must be able to ask about *its own* connection, so they are
+		// scoped to this `connect()` call and travel to the handlers rather
+		// than being read back off the client: a handler can resume long after
+		// the connection it belongs to is gone.
+		const pump: PacketPump = {
+			discardParsedPackets: () => {
+				packets.length = 0
+			},
+			isCurrent: () => this._currentPump === pump,
+		}
+		this._currentPump = pump
+
+		// A new network connection, so the broker may send one CONNACK again.
+		// This runs for both the first connect and every reconnect, and before
+		// the stream exists, so no CONNACK can slip in ahead of it.
+		this.connackReceived = false
+		this.reconnectSuppressed = false
+
 		this.log('connect :: calling method to clear reconnect')
 		this._clearReconnect()
+
+		// A refused CONNACK emits no `close` with the default
+		// `reconnectOnConnackError: false`, so without this the properties of a
+		// connection that is gone would still be readable while the next one is
+		// being negotiated.
+		this._serverProperties = undefined
 
 		if (this.disconnected && !this.reconnecting) {
 			this.incomingStore = this.options.incomingStore || new Store()
 			this.outgoingStore = this.options.outgoingStore || new Store()
+			this._incomingQoS2Ids.clear()
 			this.disconnecting = false
 			this.disconnected = false
 		}
@@ -791,11 +1043,33 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 		const work = () => {
 			this.log('work :: getting next packet in queue')
+
+			// Once the client has moved on to a later connection, whatever is
+			// still queued here was parsed on a stream that is gone. Handling
+			// it would run one connection's packets against another: the
+			// CONNACK of a connection that has been replaced still passes the
+			// duplicate gate, because `connect()` resets `connackReceived` for
+			// the new one, and `_onConnect` would then resubscribe and reset
+			// the message id state of a session it never belonged to. Acks for
+			// these packets cannot be sent either -- the stream they answer is
+			// destroyed. Dropping the queue is the only safe reading of it.
+			//
+			// A handler that tears its own connection down does not reach here:
+			// `_cleanUp` destroys the stream but creates no pump, so this trips
+			// only once `connect()` has actually installed a later one.
+			if (this._currentPump !== pump) {
+				this.log(
+					'work :: pump superseded, dropping %d queued packets',
+					packets.length,
+				)
+				packets.length = 0
+			}
+
 			const packet = packets.shift()
 
 			if (packet) {
 				this.log('work :: packet pulled from queue')
-				handlePacket(this, packet, nextTickWork)
+				handlePacket(this, packet, nextTickWork, pump)
 			} else {
 				this.log('work :: no packets in queue')
 				const done = completeParse
@@ -811,7 +1085,14 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			} else {
 				const done = completeParse
 				completeParse = null
-				done()
+				// Same null check as `work` above: this is the callback handed
+				// to packet handlers, and a handler can hand it on to user code
+				// - `customHandleAcks` and `handleMessage` both take a callback
+				// the application invokes. An application that invokes one of
+				// them twice reaches here twice, and the second time the
+				// pending `_write` is already completed. Absorb it instead of
+				// crashing the pump from the inside.
+				if (done) done()
 			}
 		}
 
@@ -861,7 +1142,20 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			keepalive: this.options.keepalive,
 			username: this.options.username,
 			password: this.options.password as Buffer,
-			properties: this.options.properties,
+			// Shallow copy: everything below writes the values this client will
+			// actually use, and writing them into `this.options.properties` would
+			// mutate the object the caller passed in.
+			properties: this.options.properties
+				? { ...this.options.properties }
+				: undefined,
+		}
+
+		if (connectPacket.properties?.receiveMaximum !== undefined) {
+			// Advertise the quota that is enforced, not the one that was asked
+			// for. They differ when the option failed validation, and a rejected
+			// `receiveMaximum: 0` on the wire is itself a protocol error
+			// (MQTT 5 §3.2.2.3.3) that the broker would blame us for.
+			connectPacket.properties.receiveMaximum = this._receiveMaximum
 		}
 
 		if (this.options.will) {
@@ -880,6 +1174,9 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 					this.topicAliasRecv.max
 			}
 		}
+		this._authenticationMethod =
+			connectPacket.properties?.authenticationMethod
+
 		// avoid message queue
 		this._writePacket(connectPacket)
 
@@ -918,15 +1215,32 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		this.stream.setMaxListeners(1000)
 
 		clearTimeout(this.connackTimer)
-		this.connackTimer = setTimeout(() => {
-			this.log(
-				'!!connectTimeout hit!! Calling _cleanUp with force `true`',
-			)
-			this.emit('error', new Error('connack timeout'))
-			this._cleanUp(true)
-		}, this.options.connectTimeout)
+		this.connackTimer = setTimeout(
+			() => this._onConnackTimeout(),
+			this.options.connectTimeout,
+		)
 
 		return this
+	}
+
+	/**
+	 * The broker accepted the network connection but never answered the
+	 * CONNECT. Named rather than inlined in the timer so it can be driven
+	 * from a test on the caller's own stack.
+	 * @api private
+	 */
+	private _onConnackTimeout() {
+		this.log('!!connectTimeout hit!! Calling _cleanUp with force `true`')
+		// Tear down before emitting, the same order as the CONNACK handlers.
+		// `emit('error')` throws synchronously when nothing is listening --
+		// `mqtt.connect()` attaches a no-op listener but a directly constructed
+		// `MqttClient` has none -- and an application handler may throw too.
+		// Either way the teardown would be skipped, and this timer has already
+		// fired: the socket would stay open with the keepalive manager alive
+		// and no reconnect ever armed, wedged for good by a broker that simply
+		// never answers the CONNECT.
+		this._cleanUp(true)
+		this.emit('error', new Error('connack timeout'))
 	}
 
 	/**
@@ -1022,6 +1336,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 					// Add to callbacks
 					this.outgoing[packet.messageId] = {
 						volatile: false,
+						cmd: 'publish',
 						cb: callback || this.noop,
 					}
 					this.log('MqttClient:publish: packet cmd: %s', packet.cmd)
@@ -1289,27 +1604,62 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			const promise = new Promise<ISubackPacket>((resolve, reject) => {
 				this.outgoing[packet.messageId] = {
 					volatile: true,
-					cb(err, packet2: ISubackPacket) {
-						if (!err) {
-							const { granted } = packet2
-							for (
-								let grantedI = 0;
-								grantedI < granted.length;
-								grantedI += 1
-							) {
-								chunkedSubs[grantedI].qos = granted[
-									grantedI
-								] as QoS
-							}
-						}
-
-						if (!err) {
-							resolve(packet2)
-						} else {
+					// `handleAck` will only hand this callback a suback: see
+					// `acksForPendingCmd` in `handlers/ack.ts`
+					cmd: 'subscribe',
+					// an arrow, so the protocol-violation teardown below can
+					// reach the client
+					cb: (err, packet2: ISubackPacket) => {
+						if (err) {
 							reject(
 								new ErrorWithSubackPacket(err.message, packet2),
 							)
+							return
 						}
+
+						const { granted } = packet2
+
+						// A SUBACK carries exactly one reason code per topic
+						// filter sent (MQTT-3.8.4-6, MQTT-3.8.4-5 in 3.1.1), so
+						// the count must match. Extra codes used to index past
+						// the end of chunkedSubs and throw an uncaught
+						// TypeError, missing ones used to leave the unanswered
+						// topics reported as granted at the qos asked for,
+						// hiding a subscription that never was.
+						if (granted.length !== chunkedSubs.length) {
+							// Reject before tearing down: `_cleanUp` fails
+							// every volatile outgoing entry with "Connection
+							// closed", this one included, and the first
+							// rejection is the one the caller sees. Losing the
+							// race would replace the reason with a symptom.
+							reject(
+								new ErrorWithSubackPacket(
+									`Protocol error: suback granted ${granted.length} reason code(s) for ${chunkedSubs.length} subscription(s)`,
+									packet2,
+								),
+							)
+							// A count mismatch is a protocol violation, and
+							// 3.1.1 makes closing mandatory: "if either the
+							// Server or Client encounters a protocol
+							// violation, it MUST close the Network Connection
+							// on which it received that Control Packet"
+							// [MQTT-4.8.0-1]. MQTT 5 only recommends it
+							// (4.13.1), so one teardown satisfies both. Not
+							// `end()`: that would clear the reconnect timer and
+							// make a broker bug permanent.
+							this._cleanUp(true)
+							return
+						}
+
+						for (
+							let grantedI = 0;
+							grantedI < granted.length;
+							grantedI += 1
+						) {
+							chunkedSubs[grantedI].qos = granted[grantedI] as QoS
+						}
+
+						resolve(packet2)
 					},
 				}
 			})
@@ -1462,6 +1812,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 			this.outgoing[packet.messageId] = {
 				volatile: true,
+				cmd: 'unsubscribe',
 				cb: callback,
 			}
 
@@ -1553,6 +1904,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		const closeStores = () => {
 			this.log('end :: closeStores: closing incoming and outgoing stores')
 			this.disconnected = true
+			this._incomingQoS2Ids.clear()
 			this.incomingStore.close((e1) => {
 				this.outgoingStore.close((e2) => {
 					this.log('end :: closeStores: emitting end')
@@ -1692,6 +2044,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			}
 			this.incomingStore = this.options.incomingStore || new Store()
 			this.outgoingStore = this.options.outgoingStore || new Store()
+			this._incomingQoS2Ids.clear()
 			this.disconnecting = false
 			this.disconnected = false
 			this._deferredReconnect = null
@@ -1815,6 +2168,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	private _setupReconnect() {
 		if (
 			!this.disconnecting &&
+			!this.reconnectSuppressed &&
 			!this.reconnectTimer &&
 			this.options.reconnectPeriod > 0
 		) {
@@ -2184,15 +2538,48 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	}
 
 	/**
+	 * Properties the broker sent in the CONNACK of the current connection, or
+	 * `undefined` when there is none. A refused CONNACK counts: `reasonString`
+	 * and `serverReference` are only ever sent there. They are read only: they
+	 * are kept here per connection and never merged into `options`, which
+	 * belongs to the caller.
+	 */
+	public get serverProperties(): IConnackPacket['properties'] {
+		return this._serverProperties
+	}
+
+	/**
+	 * Effective keepalive (in seconds): the `Server Keep Alive` the broker sent
+	 * in the CONNACK that opened the current connection when there is one, the
+	 * configured `keepalive` otherwise (so also while the client is not
+	 * connected).
+	 */
+	public get keepalive(): number {
+		// Only an accepted CONNACK opens a connection to keep alive. A refused
+		// one is still kept in `_serverProperties` - it is where `reasonString`
+		// lives - but with the default `reconnectOnConnackError: false` no
+		// `close` ever follows it, so its `serverKeepAlive` would be reported
+		// for good while `connected` stays false.
+		const serverKeepAlive = this.connected
+			? this._serverProperties?.serverKeepAlive
+			: undefined
+		// a configured keepalive of 0 disables it and the broker cannot turn it
+		// back on, a `serverKeepAlive` of 0 is the broker declining to set one
+		return serverKeepAlive && this.options.keepalive
+			? serverKeepAlive
+			: this.options.keepalive
+	}
+
+	/**
 	 * _setupKeepaliveManager - setup the keepalive manager
 	 */
 	private _setupKeepaliveManager() {
 		this.log(
 			'_setupKeepaliveManager :: keepalive %d (seconds)',
-			this.options.keepalive,
+			this.keepalive,
 		)
 
-		if (!this.keepaliveManager && this.options.keepalive) {
+		if (!this.keepaliveManager && this.keepalive) {
 			this.keepaliveManager = new KeepaliveManager(
 				this,
 				this.options.timerVariant,
@@ -2214,7 +2601,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	public reschedulePing(force = false) {
 		if (
 			this.keepaliveManager &&
-			this.options.keepalive &&
+			this.keepalive &&
 			(force || this.options.reschedulePings)
 		) {
 			this._reschedulePing()
@@ -2235,9 +2622,14 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	}
 
 	public onKeepaliveTimeout() {
-		this.emit('error', new Error('Keepalive timeout'))
 		this.log('onKeepaliveTimeout :: calling _cleanUp with force true')
+		// Tear down before emitting: `emit('error')` throws when nothing listens
+		// - a directly constructed `MqttClient` has no listener, only
+		// `mqtt.connect()` attaches one - and an application handler can throw
+		// too. Either one used to skip the teardown, leaving the socket of a
+		// broker that simply went silent open with no reconnect armed.
 		this._cleanUp(true)
+		this.emit('error', new Error('Keepalive timeout'))
 	}
 
 	/**
@@ -2301,10 +2693,36 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		}
 
 		this.connackPacket = packet
-		this.messageIdProvider.clear()
-		this._setupKeepaliveManager()
 
+		// A session is resumed only if we asked to keep one and the broker kept
+		// it. Both halves are load-bearing:
+		//
+		// - a clean start discards the previous session locally, unconditionally,
+		//   whatever the broker then says (MQTT-3.1.2-6, MQTT-3.1.2-4 in v5). A
+		//   broker answering Session Present 1 to a clean start is already in
+		//   violation (MQTT-3.2.2-2), and believing it would keep the previous
+		//   session's incoming store entries alive for a PUBREL on the new
+		//   session to replay (GHSA-h8jm-hm87-fqw3).
+		// - with `clean: false` the broker's Session Present decides
+		//   (MQTT-3.2.2-2 / MQTT-3.2.2-4). MQTT 3.1 has no such flag, so there
+		//   `clean` is the only thing we have to go on.
+		//
+		// Negated, this is the same "session not resumed" test `_resubscribe`
+		// makes: `clean || (protocolVersion >= 4 && !sessionPresent)`.
+		const sessionResumed =
+			!this.options.clean &&
+			(this.options.protocolVersion < 4 || packet.sessionPresent === true)
+		if (!sessionResumed) {
+			this._discardIncomingQoS2State()
+		}
+
+		this.messageIdProvider.clear()
+
+		// before `_setupKeepaliveManager`: `keepalive` only reports the broker
+		// `serverKeepAlive` once the connection is up, see the getter
 		this.connected = true
+
+		this._setupKeepaliveManager()
 
 		/** check if there are packets in outgoing store and stream them */
 		const startStreamProcess = () => {
@@ -2364,6 +2782,9 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 						: null
 					this.outgoing[packet2.messageId] = {
 						volatile: false,
+						// the outgoing store holds publishes and pubrels, and
+						// the two are waiting for different acks
+						cmd: packet2.cmd as PendingCommand,
 						cb(err, status) {
 							// Ensure that the original callback passed in to publish gets invoked
 							if (cb) {

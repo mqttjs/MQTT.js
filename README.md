@@ -343,6 +343,8 @@ Also user can manually register topic-alias pair using PUBLISH topic:'some', ta:
 - [`mqtt.Client#reconnect()`](#reconnect)
 - [`mqtt.Client#handleMessage()`](#handleMessage)
 - [`mqtt.Client#connected`](#connected)
+- [`mqtt.Client#keepalive`](#keepalive)
+- [`mqtt.Client#serverProperties`](#serverProperties)
 - [`mqtt.Client#reconnecting`](#reconnecting)
 - [`mqtt.Client#getLastMessageId()`](#getLastMessageId)
 - [`mqtt.Store()`](#store)
@@ -757,6 +759,77 @@ will hang.
 ### mqtt.Client#connected
 
 Boolean : set to `true` if the client is connected. `false` otherwise.
+
+---
+
+<a name="keepalive"></a>
+
+### mqtt.Client#keepalive
+
+Number : the effective keepalive, in seconds. It is the `Server Keep Alive` the
+broker sent in the CONNACK that opened the current connection when there is one,
+the configured `keepalive` option otherwise, so while the client is not connected
+it is always the configured value.
+
+Three cases make the broker value irrelevant:
+
+- `keepalive: 0` disables keepalive, and a broker cannot turn it back on.
+- a `Server Keep Alive` of `0` is the broker declining to set one, so the
+  configured `keepalive` stays in use.
+- a refused CONNACK opens no connection to keep alive, so its `Server Keep Alive`
+  is ignored here. [`client.serverProperties`](#serverProperties) still reports
+  it.
+
+---
+
+<a name="serverProperties"></a>
+
+### mqtt.Client#serverProperties
+
+Object : the MQTT 5.0 properties the broker sent in the CONNACK of the current
+connection, `undefined` when there is none. Read only, and reset both when the
+connection closes and when the next connection attempt starts.
+
+A refused CONNACK counts, which is the only place `reasonString` and
+`serverReference` ever appear. With the default `reconnectOnConnackError: false`
+no `close` follows a refusal, so those stay readable until the next connection
+attempt - but they describe a connection that was never opened, which is why
+[`client.keepalive`](#keepalive) ignores their `serverKeepAlive`.
+
+Broker values are kept here and are never written back into the options object
+given to `mqtt.connect()`.
+
+#### Migrating from 5.x
+
+The broker no longer overwrites the options object:
+
+- `client.options.keepalive` stays the configured value after connecting. Read
+  [`client.keepalive`](#keepalive) for the one in use on the current connection.
+- `client.options.properties.maximumPacketSize` stays the configured value, and
+  is the only limit applied to inbound packets. Read
+  `client.serverProperties.maximumPacketSize` for the broker's limit.
+
+The broker's `maximumPacketSize` is still not applied to outbound packets: it is
+up to the application not to publish more than the broker accepts.
+
+Two things changed in how an inbound packet larger than
+`properties.maximumPacketSize` is treated:
+
+- the limit now counts the whole packet. The fixed header byte and the bytes
+  encoding the Remaining Length count toward it, as MQTT 5.0 requires
+  (§3.1.2.11.4 with §2.1.4); 5.x compared the limit against the Remaining
+  Length alone. The same configured limit therefore rejects packets 2 to 5 bytes
+  smaller than it used to - 2 bytes for packets under 128 bytes, one more for
+  every further step of the Remaining Length. A limit set right at the size of
+  the largest packet expected needs raising by that much.
+- an oversized packet no longer ends the client. 5.x called
+  `end({ reasonCode: 149 })`: it sent a DISCONNECT and stopped the client for
+  good. The connection is now dropped like any other failure, no DISCONNECT is
+  sent, and the client reconnects. This was deliberate - one oversized packet
+  was a kill switch any broker could pull permanently - but it cuts both ways: a
+  broker holding a retained message that is always too large becomes a reconnect
+  loop where 5.x stopped after the first one. Applications that want the old
+  stop can call `end()` from the `error` handler on reason code 149.
 
 ---
 

@@ -22,10 +22,32 @@ export type StreamBuilder = (
 
 export type Callback = () => void
 
+/**
+ * The handle a packet handler gets on the connection its packet was parsed
+ * from. `MqttClient.connect()` creates one per connection and hands it to
+ * every handler alongside `done`, because a handler can outlive its
+ * connection: an application that parks inside `handleMessage` or
+ * `customHandleAcks` and answers after a reconnect resumes a handler whose
+ * connection is already gone.
+ */
+export interface PacketPump {
+	/**
+	 * Drops the packets that were parsed out of the same chunk as this one but
+	 * have not been handled yet.
+	 */
+	discardParsedPackets(): void
+	/**
+	 * `false` once the client has moved on to a later connection, so a handler
+	 * can tell a live connection from the one it was parsed on.
+	 */
+	isCurrent(): boolean
+}
+
 export type PacketHandler = (
 	client: MqttClient,
 	packet: Packet,
 	done?: DoneCallback,
+	pump?: PacketPump,
 ) => void
 
 export type TimerVariant = 'auto' | 'worker' | 'native'
