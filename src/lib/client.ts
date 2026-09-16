@@ -22,6 +22,7 @@ import { type ClientRequestArgs } from 'http'
 import * as validations from './validations'
 import Store, { type IStore } from './store'
 import handlePacket from './handlers'
+import { type PendingCommand } from './handlers/ack'
 import DefaultMessageIdProvider, {
 	type IMessageIdProvider,
 } from './default-message-id-provider'
@@ -477,7 +478,16 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 	public outgoing: Record<
 		number,
-		{ volatile: boolean; cb: (err: Error, packet?: Packet) => void }
+		{
+			volatile: boolean
+			/**
+			 * The request this message id is pending on. `outgoing` is keyed by
+			 * message id alone, so this is what lets `handleAck` tell an ack
+			 * that answers the request from one that merely carries its id.
+			 */
+			cmd: PendingCommand
+			cb: (err: Error, packet?: Packet) => void
+		}
 	>
 
 	public messageIdToTopic: Record<number, string[]>
@@ -1057,6 +1067,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 					// Add to callbacks
 					this.outgoing[packet.messageId] = {
 						volatile: false,
+						cmd: 'publish',
 						cb: callback || this.noop,
 					}
 					this.log('MqttClient:publish: packet cmd: %s', packet.cmd)
@@ -1299,27 +1310,62 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			const promise = new Promise<ISubackPacket>((resolve, reject) => {
 				this.outgoing[packet.messageId] = {
 					volatile: true,
-					cb(err, packet2: ISubackPacket) {
-						if (!err) {
-							const { granted } = packet2
-							for (
-								let grantedI = 0;
-								grantedI < granted.length;
-								grantedI += 1
-							) {
-								chunkedSubs[grantedI].qos = granted[
-									grantedI
-								] as QoS
-							}
-						}
-
-						if (!err) {
-							resolve(packet2)
-						} else {
+					// `handleAck` will only hand this callback a suback: see
+					// `acksForPendingCmd` in `handlers/ack.ts`
+					cmd: 'subscribe',
+					// an arrow, so the protocol-violation teardown below can
+					// reach the client
+					cb: (err, packet2: ISubackPacket) => {
+						if (err) {
 							reject(
 								new ErrorWithSubackPacket(err.message, packet2),
 							)
+							return
 						}
+
+						const { granted } = packet2
+
+						// A SUBACK carries exactly one reason code per topic
+						// filter sent (MQTT-3.8.4-6, MQTT-3.8.4-5 in 3.1.1), so
+						// the count must match.
+						// Extra codes used to index past the end of chunkedSubs
+						// and throw an uncaught TypeError, missing ones used to
+						// leave the unanswered topics reported as granted at the
+						// qos asked for, hiding a subscription that never was.
+						if (granted.length !== chunkedSubs.length) {
+							// Reject before tearing down: `_cleanUp` fails
+							// every volatile outgoing entry with "Connection
+							// closed", this one included, and the first
+							// rejection is the one the caller sees. Losing the
+							// race would replace the reason with a symptom.
+							reject(
+								new ErrorWithSubackPacket(
+									`Protocol error: suback granted ${granted.length} reason code(s) for ${chunkedSubs.length} subscription(s)`,
+									packet2,
+								),
+							)
+							// A count mismatch is a protocol violation, and
+							// 3.1.1 makes closing mandatory: "if either the
+							// Server or Client encounters a protocol
+							// violation, it MUST close the Network Connection
+							// on which it received that Control Packet"
+							// [MQTT-4.8.0-1]. MQTT 5 only recommends it
+							// (4.13.1), so one teardown satisfies both. Not
+							// `end()`: that would clear the reconnect timer and
+							// make a broker bug permanent.
+							this._cleanUp(true)
+							return
+						}
+
+						for (
+							let grantedI = 0;
+							grantedI < granted.length;
+							grantedI += 1
+						) {
+							chunkedSubs[grantedI].qos = granted[grantedI] as QoS
+						}
+
+						resolve(packet2)
 					},
 				}
 			})
@@ -1472,6 +1518,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 			this.outgoing[packet.messageId] = {
 				volatile: true,
+				cmd: 'unsubscribe',
 				cb: callback,
 			}
 
@@ -2374,6 +2421,9 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 						: null
 					this.outgoing[packet2.messageId] = {
 						volatile: false,
+						// the outgoing store holds publishes and pubrels, and
+						// the two are waiting for different acks
+						cmd: packet2.cmd as PendingCommand,
 						cb(err, status) {
 							// Ensure that the original callback passed in to publish gets invoked
 							if (cb) {

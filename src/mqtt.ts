@@ -26,4 +26,7 @@ export * from './lib/client'
 export * from './lib/shared'
 export * from './lib/validations'
 export { ReasonCodes } from './lib/handlers/ack'
+// `client.outgoing` is public and its entries carry `cmd`, so callers need to
+// be able to name its type
+export type { PendingCommand } from './lib/handlers/ack'
 export type { Timer } from './lib/get-timer'
