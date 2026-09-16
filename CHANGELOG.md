@@ -1,5 +1,16 @@
 # Changelog
 
+# [5.16.0](https://github.com/mqttjs/MQTT.js/compare/v5.15.2...v5.16.0) (2026-09-16)
+
+### Bug Fixes
+
+* bounds-check the suback granted array against subscriptions sent (GHSA-rj8f-4655-cgg2) ([#2061](https://github.com/mqttjs/MQTT.js/issues/2061)) ([46ee23f](https://github.com/mqttjs/MQTT.js/commit/46ee23f3f1d4a8ef21e5c2b26ea24818f1b2dce3)), closes [#2060](https://github.com/mqttjs/MQTT.js/issues/2060)
+* enforce MQTT 5 Receive Maximum for inbound QoS 2 messages (GHSA-h8jm-hm87-fqw3) ([#2065](https://github.com/mqttjs/MQTT.js/issues/2065)) ([ec5bf3e](https://github.com/mqttjs/MQTT.js/commit/ec5bf3ea16e960313d670f280b0eac91dac35fe2)), closes [#2064](https://github.com/mqttjs/MQTT.js/issues/2064) [#2063](https://github.com/mqttjs/MQTT.js/issues/2063) [#2062](https://github.com/mqttjs/MQTT.js/issues/2062) [#2061](https://github.com/mqttjs/MQTT.js/issues/2061) [#2060](https://github.com/mqttjs/MQTT.js/issues/2060)
+* keep broker CONNACK properties out of the user options object (GHSA-gfxc-3w7m-8ch4) ([#2062](https://github.com/mqttjs/MQTT.js/issues/2062)) ([3db16f5](https://github.com/mqttjs/MQTT.js/commit/3db16f54a12e46e496c6fca352d6bb8324f8634e)), closes [#2061](https://github.com/mqttjs/MQTT.js/issues/2061) [#2060](https://github.com/mqttjs/MQTT.js/issues/2060) [#2060](https://github.com/mqttjs/MQTT.js/issues/2060) [#2060](https://github.com/mqttjs/MQTT.js/issues/2060)
+* reject a duplicate CONNACK instead of re-running connection setup (GHSA-8phv-jwjm-93rr) ([#2064](https://github.com/mqttjs/MQTT.js/issues/2064)) ([7108ea5](https://github.com/mqttjs/MQTT.js/commit/7108ea597458e6c538e88f3ac1cf9f7c2001dcc2)), closes [#2063](https://github.com/mqttjs/MQTT.js/issues/2063) [#2062](https://github.com/mqttjs/MQTT.js/issues/2062) [#2061](https://github.com/mqttjs/MQTT.js/issues/2061) [#2060](https://github.com/mqttjs/MQTT.js/issues/2060)
+* reject an unsolicited AUTH instead of crashing the process (GHSA-fwrw-4mhv-wxvm) ([#2063](https://github.com/mqttjs/MQTT.js/issues/2063)) ([b511e7b](https://github.com/mqttjs/MQTT.js/commit/b511e7b7d9a927bc3af4c146b65e493c652a11ec)), closes [#2062](https://github.com/mqttjs/MQTT.js/issues/2062) [#2061](https://github.com/mqttjs/MQTT.js/issues/2061) [#2060](https://github.com/mqttjs/MQTT.js/issues/2060) [#2060](https://github.com/mqttjs/MQTT.js/issues/2060)
+* reject unsolicited MQTT 5 topic alias instead of crashing (GHSA-c8jq-r765-cq7g) ([#2060](https://github.com/mqttjs/MQTT.js/issues/2060)) ([7d07757](https://github.com/mqttjs/MQTT.js/commit/7d07757a1498f52243c64cb8c2dad416cf15449d))
+
 ## [5.15.2](https://github.com/mqttjs/MQTT.js/compare/v5.15.1...v5.15.2) (2026-07-06)
 
 
