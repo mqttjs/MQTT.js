@@ -1126,6 +1126,135 @@ describe('MQTT 5.0', () => {
 		},
 	)
 
+	// Round 8. `rejectAuth` tore the connection down unconditionally, but
+	// `client.handleAuth` is application-overridable and answers through a
+	// callback: one that fetches a token answers whenever the token arrives.
+	// By then the client may be on a later connection, and the teardown lands
+	// on a stream that never saw the AUTH. The `work()` guard above cannot
+	// catch this one - the callback runs outside the pump loop entirely.
+	it(
+		'should not let a parked auth exchange tear down the connection that replaced it',
+		{
+			timeout: 15000,
+		},
+		function _test(t, done) {
+			const errors: ErrorWithReasonCode[] = []
+			let connections = 0
+			let connectEvents = 0
+			let finished = false
+			let firstServerClient: any
+			let liveConnectionClosed = false
+			let releaseAuth: ((err: Error) => void) | null = null
+
+			const finish = (err?: Error) => {
+				if (finished) return
+				finished = true
+				clearTimeout(deadline)
+				client.end(true, (err1) => {
+					server2.close((err2) => {
+						done(err || err1 || err2)
+					})
+				})
+			}
+
+			const deadline = setTimeout(() => {
+				finish(
+					new Error(
+						`the second connection never settled (connections: ${connections}, connects: ${connectEvents}, errors: [${errors
+							.map((err) => err.message)
+							.join(', ')}])`,
+					),
+				)
+			}, 6000)
+
+			const server2 = new MqttServer((serverClient) => {
+				connections += 1
+				const connection = connections
+				if (connection === 1) {
+					firstServerClient = serverClient
+				} else {
+					serverClient.on('close', () => {
+						liveConnectionClosed = true
+					})
+				}
+				serverClient.on('connect', () => {
+					serverClient.connack({
+						reasonCode: 0,
+						properties: { authenticationMethod: 'test' },
+					})
+					if (connection !== 1) return
+					// an AUTH the application will only answer once this
+					// connection is gone
+					serverClient.stream.write(
+						mqttPacket.generate(
+							{
+								cmd: 'auth',
+								reasonCode: 24,
+								properties: { authenticationMethod: 'test' },
+							} as IAuthPacket,
+							{ protocolVersion: 5 },
+						),
+					)
+				})
+			}).listen(ports.PORTAND350)
+
+			const client = mqtt.connect({
+				host: 'localhost',
+				port: ports.PORTAND350,
+				protocolVersion: 5,
+				reconnectPeriod: 100,
+				properties: { authenticationMethod: 'test' },
+			})
+
+			client.on('error', (err) => errors.push(err as ErrorWithReasonCode))
+
+			client.handleAuth = (packet, callback) => {
+				if (releaseAuth) return
+				// park the exchange and drop the socket it belongs to
+				releaseAuth = callback as (err: Error) => void
+				firstServerClient.destroy()
+			}
+
+			client.on('connect', () => {
+				connectEvents += 1
+				if (connectEvents !== 2) return
+				// Refusing the parked exchange now must report the error
+				// without touching the connection that replaced it.
+				setImmediate(() =>
+					releaseAuth?.(new Error('answered too late')),
+				)
+				setTimeout(() => {
+					try {
+						assert.isFalse(
+							liveConnectionClosed,
+							'a parked auth exchange must not tear down the connection that replaced it',
+						)
+						assert.strictEqual(
+							connections,
+							2,
+							'the live connection must not have been torn down',
+						)
+						assert.deepStrictEqual(
+							errors.map((err) => err.message),
+							['answered too late'],
+							'the application must still be told the exchange failed',
+						)
+					} catch (assertErr) {
+						return finish(assertErr as Error)
+					}
+					finish()
+				}, 600)
+			})
+
+			t.after(() => {
+				if (!finished) {
+					client.end(true)
+					server2.close()
+				}
+			})
+		},
+	)
+
 	it(
 		'should throw an error if there is Auth Data with no Auth Method',
 		{

@@ -60,6 +60,7 @@ export default function getPorts(i = 0) {
 		PORTAND345: PORT + 345,
 		PORTAND347: PORT + 347,
 		PORTAND348: PORT + 348,
+		PORTAND350: PORT + 350,
 		PORTAND400: PORT + 400,
 	}
 
