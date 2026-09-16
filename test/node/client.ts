@@ -207,22 +207,19 @@ describe('MqttClient', () => {
 
 					client.once('error', (err) => {
 						assert.equal(err.message, 'Keepalive timeout')
-						const originalFLush = client['_flush']
-						// flush will be called on _cleanUp because of keepalive timeout
-						client['_flush'] = function _flush() {
-							originalFLush.call(client)
-							client.end((err1) => {
-								assert.strictEqual(
-									pubCallbackCalled &&
-										unsubscribeCallbackCalled,
-									true,
-									'callbacks should be invoked with error',
-								)
-								server2.close((err2) => {
-									done(err1 || err2)
-								})
+						// a keepalive timeout tears the connection down before
+						// it emits, so `_cleanUp` has already flushed the
+						// pending callbacks by the time we get here
+						assert.strictEqual(
+							pubCallbackCalled && unsubscribeCallbackCalled,
+							true,
+							'callbacks should be invoked with error',
+						)
+						client.end((err1) => {
+							server2.close((err2) => {
+								done(err1 || err2)
 							})
-						}
+						})
 					})
 				})
 			},

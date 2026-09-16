@@ -544,6 +544,8 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 	private connackPacket: IConnackPacket
 
+	private _serverProperties: IConnackPacket['properties']
+
 	public static defaultId() {
 		return `mqttjs_${Math.random().toString(16).substr(2, 8)}`
 	}
@@ -728,6 +730,10 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 			this._destroyKeepaliveManager()
 
+			// the broker properties describe the connection that just went
+			// away, they must not leak into the next one
+			this._serverProperties = undefined
+
 			if (this.topicAliasRecv) {
 				this.topicAliasRecv.clear()
 			}
@@ -809,6 +815,12 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 		this.log('connect :: calling method to clear reconnect')
 		this._clearReconnect()
+
+		// A refused CONNACK emits no `close` with the default
+		// `reconnectOnConnackError: false`, so without this the properties of a
+		// connection that is gone would still be readable while the next one is
+		// being negotiated.
+		this._serverProperties = undefined
 
 		if (this.disconnected && !this.reconnecting) {
 			this.incomingStore = this.options.incomingStore || new Store()
@@ -906,7 +918,13 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			keepalive: this.options.keepalive,
 			username: this.options.username,
 			password: this.options.password as Buffer,
-			properties: this.options.properties,
+			// Shallow copy: `topicAliasMaximum` below is written into this
+			// object, and writing it into `this.options.properties` would mutate
+			// the object the caller passed in - the outbound half of the same
+			// problem this advertises fixing on the inbound side.
+			properties: this.options.properties
+				? { ...this.options.properties }
+				: undefined,
 		}
 
 		if (this.options.will) {
@@ -2241,15 +2259,48 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	}
 
 	/**
+	 * Properties the broker sent in the CONNACK of the current connection, or
+	 * `undefined` when there is none. A refused CONNACK counts: `reasonString`
+	 * and `serverReference` are only ever sent there. They are read only: they
+	 * are kept here per connection and never merged into `options`, which
+	 * belongs to the caller.
+	 */
+	public get serverProperties(): IConnackPacket['properties'] {
+		return this._serverProperties
+	}
+
+	/**
+	 * Effective keepalive (in seconds): the `Server Keep Alive` the broker sent
+	 * in the CONNACK that opened the current connection when there is one, the
+	 * configured `keepalive` otherwise (so also while the client is not
+	 * connected).
+	 */
+	public get keepalive(): number {
+		// Only an accepted CONNACK opens a connection to keep alive. A refused
+		// one is still kept in `_serverProperties` - it is where `reasonString`
+		// lives - but with the default `reconnectOnConnackError: false` no
+		// `close` ever follows it, so its `serverKeepAlive` would be reported
+		// for good while `connected` stays false.
+		const serverKeepAlive = this.connected
+			? this._serverProperties?.serverKeepAlive
+			: undefined
+		// a configured keepalive of 0 disables it and the broker cannot turn it
+		// back on, a `serverKeepAlive` of 0 is the broker declining to set one
+		return serverKeepAlive && this.options.keepalive
+			? serverKeepAlive
+			: this.options.keepalive
+	}
+
+	/**
 	 * _setupKeepaliveManager - setup the keepalive manager
 	 */
 	private _setupKeepaliveManager() {
 		this.log(
 			'_setupKeepaliveManager :: keepalive %d (seconds)',
-			this.options.keepalive,
+			this.keepalive,
 		)
 
-		if (!this.keepaliveManager && this.options.keepalive) {
+		if (!this.keepaliveManager && this.keepalive) {
 			this.keepaliveManager = new KeepaliveManager(
 				this,
 				this.options.timerVariant,
@@ -2271,7 +2322,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	public reschedulePing(force = false) {
 		if (
 			this.keepaliveManager &&
-			this.options.keepalive &&
+			this.keepalive &&
 			(force || this.options.reschedulePings)
 		) {
 			this._reschedulePing()
@@ -2292,9 +2343,14 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	}
 
 	public onKeepaliveTimeout() {
-		this.emit('error', new Error('Keepalive timeout'))
 		this.log('onKeepaliveTimeout :: calling _cleanUp with force true')
+		// Tear down before emitting: `emit('error')` throws when nothing listens
+		// - a directly constructed `MqttClient` has no listener, only
+		// `mqtt.connect()` attaches one - and an application handler can throw
+		// too. Either one used to skip the teardown, leaving the socket of a
+		// broker that simply went silent open with no reconnect armed.
 		this._cleanUp(true)
+		this.emit('error', new Error('Keepalive timeout'))
 	}
 
 	/**
@@ -2359,9 +2415,12 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 		this.connackPacket = packet
 		this.messageIdProvider.clear()
-		this._setupKeepaliveManager()
 
+		// before `_setupKeepaliveManager`: `keepalive` only reports the broker
+		// `serverKeepAlive` once the connection is up, see the getter
 		this.connected = true
+
+		this._setupKeepaliveManager()
 
 		/** check if there are packets in outgoing store and stream them */
 		const startStreamProcess = () => {

@@ -4,6 +4,7 @@ import abstractClientTests from './abstract_client'
 import { MqttServer } from './server'
 import serverBuilder from './server_helpers_for_client_tests'
 import getPorts from './helpers/port_list'
+import mqttPacket, { type IPublishPacket } from 'mqtt-packet'
 import mqtt, { type ErrorWithReasonCode } from '../../src'
 
 const ports = getPorts(1)
@@ -1214,10 +1215,9 @@ describe('MQTT 5.0', () => {
 			}
 			const client = mqtt.connect(opts)
 			client.on('error', (error) => {
-				assert.strictEqual(
-					error.message,
-					'exceeding packets size connack',
-				)
+				assert.include(error.message, 'exceeding packets size connack')
+				assert.include(error.message, 'maximumPacketSize is 1')
+				assert.strictEqual((error as ErrorWithReasonCode).code, 149)
 				client.end(true, done)
 			})
 		},
@@ -1252,16 +1252,948 @@ describe('MQTT 5.0', () => {
 			}
 			const client = mqtt.connect(opts)
 			client.on('connect', () => {
-				assert.strictEqual(client.options.keepalive, 16)
+				// the broker values are the ones in use on this connection...
+				assert.strictEqual(client.keepalive, 16)
+				assert.strictEqual(client.keepaliveManager.keepalive, 16000)
+				// ...but they are never merged into the user options
+				assert.strictEqual(client.options.keepalive, 60)
 				assert.strictEqual(
 					client.options.properties.maximumPacketSize,
-					95,
+					100,
 				)
 				client.end(true, (err1) => {
 					server2.close((err2) => {
 						done(err1 || err2)
 					})
 				})
+			})
+		},
+	)
+
+	it(
+		'should not write CONNACK properties into the user options object',
+		{
+			timeout: 15000,
+		},
+		function _test(t, done) {
+			let finished = false
+			let client2: mqtt.MqttClient
+
+			const closeAll = (err?: Error) => {
+				evilServer.close(() => {
+					benignServer.close((err2) => {
+						done(err || err2)
+					})
+				})
+			}
+
+			const finish = (err?: Error) => {
+				if (finished) return
+				finished = true
+				client.end(true, () => {
+					if (!client2) {
+						return closeAll(err)
+					}
+					client2.end(true, () => closeAll(err))
+				})
+			}
+
+			// asserting straight inside an event handler turns a regression into
+			// a 15s timeout, the throw never reaches the test runner
+			const check = (fn: () => void) => {
+				try {
+					fn()
+					return true
+				} catch (err) {
+					finish(err as Error)
+					return false
+				}
+			}
+
+			const evilServer = new MqttServer((serverClient) => {
+				serverClient.on('connect', () => {
+					serverClient.connack({
+						reasonCode: 0,
+						properties: {
+							serverKeepAlive: 16,
+							maximumPacketSize: 1,
+						},
+					})
+				})
+			}).listen(ports.PORTAND330)
+
+			const benignServer = new MqttServer((serverClient) => {
+				serverClient.on('connect', () => {
+					serverClient.connack({ reasonCode: 0 })
+				})
+			}).listen(ports.PORTAND331)
+
+			// the very same object is later reused for a second client, as
+			// applications sharing a config factory do
+			const opts: mqtt.IClientOptions = {
+				host: 'localhost',
+				port: ports.PORTAND330,
+				protocolVersion: 5,
+				keepalive: 30,
+				reconnectPeriod: 0,
+			}
+
+			const client = mqtt.connect(opts)
+
+			client.on('error', (err) => finish(err))
+
+			client.on('connect', () => {
+				if (
+					!check(() => {
+						assert.strictEqual(client.keepalive, 16)
+						assert.strictEqual(opts.keepalive, 30)
+						assert.isUndefined(opts.properties)
+					})
+				) {
+					return
+				}
+
+				client.end(true, () => {
+					opts.port = ports.PORTAND331
+					client2 = mqtt.connect(opts)
+					client2.on('error', (err) => finish(err))
+					client2.on('connect', () => {
+						check(() => {
+							assert.strictEqual(client2.keepalive, 30)
+						})
+						finish()
+					})
+				})
+			})
+
+			// a test that times out never reaches `finish`, and would otherwise
+			// leave both ports bound and cascade EADDRINUSE into the next ones
+			t.after(() => {
+				if (!finished) {
+					client.end(true)
+					client2?.end(true)
+					evilServer.close()
+					benignServer.close()
+				}
+			})
+		},
+	)
+
+	// The other direction: the connect packet is built from the user options and
+	// then written into - `topicAliasMaximum` used to be stored straight back
+	// into the caller's own properties object.
+	it(
+		'should not write connect packet properties into the user options object',
+		{
+			timeout: 15000,
+		},
+		function _test(t, done) {
+			let finished = false
+
+			const finish = (err?: Error) => {
+				if (finished) return
+				finished = true
+				client.end(true, (err1) => {
+					server2.close((err2) => {
+						done(err || err1 || err2)
+					})
+				})
+			}
+
+			const server2 = new MqttServer((serverClient) => {
+				serverClient.on('connect', () => {
+					serverClient.connack({ reasonCode: 0 })
+				})
+			}).listen(ports.PORTAND337)
+
+			const properties: mqtt.IClientOptions['properties'] = {
+				topicAliasMaximum: 3,
+			}
+			const opts: mqtt.IClientOptions = {
+				host: 'localhost',
+				port: ports.PORTAND337,
+				protocolVersion: 5,
+				reconnectPeriod: 0,
+				// the connect packet is written from inside `connect()`, so the
+				// listener has to be attached before that runs
+				manualConnect: true,
+				properties,
+			}
+
+			const client = mqtt.connect(opts)
+			client.on('error', (error) => finish(error))
+			client.on('packetsend', (packet) => {
+				if (packet.cmd !== 'connect') {
+					return
+				}
+				try {
+					assert.notStrictEqual(
+						packet.properties,
+						properties,
+						'the connect packet must not be written into the caller object',
+					)
+					assert.strictEqual(packet.properties.topicAliasMaximum, 3)
+				} catch (err) {
+					return finish(err as Error)
+				}
+				finish()
+			})
+
+			client.connect()
+
+			// a test that times out never reaches `finish`, and would otherwise
+			// leave the port bound and cascade EADDRINUSE into the next ones
+			t.after(() => {
+				if (!finished) {
+					client.end(true)
+					server2.close()
+				}
+			})
+		},
+	)
+
+	it(
+		'should not apply the broker maximum packet size to inbound packets',
+		{
+			timeout: 15000,
+		},
+		function _test(t, done) {
+			let finished = false
+
+			const finish = (err?: Error) => {
+				if (finished) return
+				finished = true
+				client.end(true, (err1) => {
+					server2.close((err2) => {
+						done(err || err1 || err2)
+					})
+				})
+			}
+
+			// the CONNACK `Maximum Packet Size` (§3.2.2.3.6) is what the broker
+			// accepts, it says nothing about what the broker may send us
+			const server2 = new MqttServer((serverClient) => {
+				serverClient.on('connect', () => {
+					serverClient.connack({
+						reasonCode: 0,
+						properties: { maximumPacketSize: 1 },
+					})
+					serverClient.publish({
+						messageId: 0,
+						topic: 'a/b',
+						payload: 'a payload longer than 1 byte',
+						qos: 0,
+					})
+				})
+			}).listen(ports.PORTAND332)
+
+			const opts: mqtt.IClientOptions = {
+				host: 'localhost',
+				port: ports.PORTAND332,
+				protocolVersion: 5,
+				reconnectPeriod: 0,
+			}
+
+			const client = mqtt.connect(opts)
+			client.on('error', (error) => finish(error))
+			client.on('message', (topic, payload) => {
+				try {
+					assert.strictEqual(topic, 'a/b')
+					assert.strictEqual(
+						payload.toString(),
+						'a payload longer than 1 byte',
+					)
+					assert.strictEqual(
+						client.serverProperties.maximumPacketSize,
+						1,
+					)
+				} catch (err) {
+					return finish(err as Error)
+				}
+				finish()
+			})
+
+			// a test that times out never reaches `finish`, and would otherwise
+			// leave the port bound and cascade EADDRINUSE into the next ones
+			t.after(() => {
+				if (!finished) {
+					client.end(true)
+					server2.close()
+				}
+			})
+		},
+	)
+
+	it(
+		'should not let the broker re-enable a disabled keepalive',
+		{
+			timeout: 15000,
+		},
+		function _test(t, done) {
+			let finished = false
+
+			const finish = (err?: Error) => {
+				if (finished) return
+				finished = true
+				client.end(true, (err1) => {
+					server2.close((err2) => {
+						done(err || err1 || err2)
+					})
+				})
+			}
+
+			const server2 = new MqttServer((serverClient) => {
+				serverClient.on('connect', () => {
+					serverClient.connack({
+						reasonCode: 0,
+						properties: { serverKeepAlive: 16 },
+					})
+				})
+			}).listen(ports.PORTAND335)
+
+			const opts: mqtt.IClientOptions = {
+				host: 'localhost',
+				port: ports.PORTAND335,
+				protocolVersion: 5,
+				keepalive: 0,
+				reconnectPeriod: 0,
+			}
+
+			const client = mqtt.connect(opts)
+			client.on('error', (error) => finish(error))
+			client.on('connect', () => {
+				try {
+					assert.strictEqual(client.keepalive, 0)
+					assert.strictEqual(client.options.keepalive, 0)
+					// keepalive disabled means no manager at all, so no pings
+					assert.isNotOk(client.keepaliveManager)
+				} catch (err) {
+					return finish(err as Error)
+				}
+				finish()
+			})
+
+			// a test that times out never reaches `finish`, and would otherwise
+			// leave the port bound and cascade EADDRINUSE into the next ones
+			t.after(() => {
+				if (!finished) {
+					client.end(true)
+					server2.close()
+				}
+			})
+		},
+	)
+
+	it(
+		'should reconnect after receiving a packet over the configured maximum size',
+		{
+			timeout: 15000,
+		},
+		function _test(t, done) {
+			let finished = false
+
+			const finish = (err?: Error) => {
+				if (finished) return
+				finished = true
+				client.end(true, (err1) => {
+					server2.close((err2) => {
+						done(err || err1 || err2)
+					})
+				})
+			}
+
+			let connects = 0
+			const server2 = new MqttServer((serverClient) => {
+				serverClient.on('connect', () => {
+					connects++
+					serverClient.connack({ reasonCode: 0 })
+					if (connects === 1) {
+						serverClient.publish({
+							messageId: 0,
+							topic: 'a/b',
+							payload: 'a payload longer than 10 bytes',
+							qos: 0,
+						})
+					}
+				})
+			}).listen(ports.PORTAND336)
+
+			const opts: mqtt.IClientOptions = {
+				host: 'localhost',
+				port: ports.PORTAND336,
+				protocolVersion: 5,
+				reconnectPeriod: 100,
+				properties: { maximumPacketSize: 10 },
+			}
+
+			let errors = 0
+			const client = mqtt.connect(opts)
+			client.on('error', (error) => {
+				errors++
+				try {
+					assert.include(
+						error.message,
+						'exceeding packets size publish',
+					)
+					assert.include(error.message, 'maximumPacketSize is 10')
+					assert.strictEqual((error as ErrorWithReasonCode).code, 149)
+				} catch (err) {
+					finish(err as Error)
+				}
+			})
+			client.on('connect', () => {
+				if (connects < 2) {
+					return
+				}
+				try {
+					// the client reconnected on its own: an oversized packet is
+					// not a kill switch a hostile broker can pull
+					assert.strictEqual(errors, 1)
+				} catch (err) {
+					return finish(err as Error)
+				}
+				finish()
+			})
+
+			// a test that times out never reaches `finish`, and would otherwise
+			// leave the port bound and cascade EADDRINUSE into the next ones
+			t.after(() => {
+				if (!finished) {
+					client.end(true)
+					server2.close()
+				}
+			})
+		},
+	)
+
+	it(
+		'should drop the rest of the chunk an oversized packet came in',
+		{
+			timeout: 15000,
+		},
+		function _test(t, done) {
+			let settle: NodeJS.Timeout
+			let finished = false
+
+			const finish = (err?: Error) => {
+				if (finished) return
+				finished = true
+				clearTimeout(settle)
+				client.end(true, (err1) => {
+					server2.close((err2) => {
+						done(err || err1 || err2)
+					})
+				})
+			}
+
+			const server2 = new MqttServer((serverClient) => {
+				serverClient.on('connect', () => {
+					serverClient.connack({ reasonCode: 0 })
+					// one write, so both packets are parsed out of the same
+					// chunk before either is handled: dropping the connection
+					// over the first has to throw the second away instead of
+					// handling it against the stream it just destroyed
+					serverClient.stream.write(
+						Buffer.concat([
+							mqttPacket.generate(
+								{
+									cmd: 'publish',
+									topic: 'a/b',
+									payload: Buffer.from(
+										'a payload longer than 30 bytes, by a lot',
+									),
+									qos: 0,
+									retain: false,
+									dup: false,
+								} as IPublishPacket,
+								{ protocolVersion: 5 },
+							),
+							mqttPacket.generate(
+								{
+									cmd: 'publish',
+									topic: 'ok',
+									payload: Buffer.from('y'),
+									qos: 0,
+									retain: false,
+									dup: false,
+								} as IPublishPacket,
+								{ protocolVersion: 5 },
+							),
+						]),
+					)
+				})
+			}).listen(ports.PORTAND348)
+
+			const client = mqtt.connect({
+				host: 'localhost',
+				port: ports.PORTAND348,
+				protocolVersion: 5,
+				reconnectPeriod: 0,
+				properties: { maximumPacketSize: 30 },
+			})
+
+			client.on('message', (topic) =>
+				finish(
+					new Error(
+						`a message on "${topic}" was handled after the connection was torn down`,
+					),
+				),
+			)
+
+			client.once('error', (error) => {
+				try {
+					assert.include(
+						error.message,
+						'exceeding packets size publish',
+					)
+					assert.strictEqual((error as ErrorWithReasonCode).code, 149)
+				} catch (err) {
+					return finish(err as Error)
+				}
+				// leave the pump the time it would need to run the discarded
+				// PUBLISH: the `message` listener above fails the test if it
+				// ever does
+				settle = setTimeout(() => finish(), 300)
+			})
+
+			// a test that times out never reaches `finish`, and would otherwise
+			// leave the port bound and cascade EADDRINUSE into the next ones
+			t.after(() => {
+				if (!finished) {
+					client.end(true)
+					server2.close()
+				}
+			})
+		},
+	)
+
+	it(
+		'should keep enforcing the configured maximum packet size when the broker sends a bigger one',
+		{
+			timeout: 15000,
+		},
+		function _test(t, done) {
+			let finished = false
+
+			const finish = (err?: Error) => {
+				if (finished) return
+				finished = true
+				client.end(true, (err1) => {
+					server2.close((err2) => {
+						done(err || err1 || err2)
+					})
+				})
+			}
+
+			const server2 = new MqttServer((serverClient) => {
+				serverClient.on('connect', () => {
+					serverClient.connack({
+						reasonCode: 0,
+						properties: { maximumPacketSize: 1000 },
+					})
+					serverClient.publish({
+						messageId: 0,
+						topic: 'a/b',
+						payload: 'a payload longer than 10 bytes',
+						qos: 0,
+					})
+				})
+			}).listen(ports.PORTAND333)
+
+			const opts: mqtt.IClientOptions = {
+				host: 'localhost',
+				port: ports.PORTAND333,
+				protocolVersion: 5,
+				reconnectPeriod: 0,
+				// comfortably above the CONNACK, well below the PUBLISH
+				properties: { maximumPacketSize: 20 },
+			}
+
+			const client = mqtt.connect(opts)
+			// a regression accepts the packet instead of raising, and waiting
+			// only for `error` would turn that into a 15s timeout
+			client.on('message', () => {
+				finish(
+					new Error(
+						'the oversized packet was accepted: the broker limit replaced the configured one',
+					),
+				)
+			})
+			client.on('error', (error) => {
+				try {
+					assert.include(
+						error.message,
+						'exceeding packets size publish',
+					)
+					// the configured limit, not the bigger one the broker sent
+					assert.include(error.message, 'maximumPacketSize is 20')
+					assert.strictEqual((error as ErrorWithReasonCode).code, 149)
+					assert.strictEqual(
+						client.options.properties.maximumPacketSize,
+						20,
+					)
+				} catch (err) {
+					return finish(err as Error)
+				}
+				finish()
+			})
+
+			// a test that times out never reaches `finish`, and would otherwise
+			// leave the port bound and cascade EADDRINUSE into the next ones
+			t.after(() => {
+				if (!finished) {
+					client.end(true)
+					server2.close()
+				}
+			})
+		},
+	)
+
+	it(
+		'should count the fixed header towards the maximum packet size',
+		{
+			timeout: 15000,
+		},
+		function _test(t, done) {
+			let finished = false
+
+			const finish = (err?: Error) => {
+				if (finished) return
+				finished = true
+				client.end(true, (err1) => {
+					server2.close((err2) => {
+						done(err || err1 || err2)
+					})
+				})
+			}
+
+			// This PUBLISH has a Remaining Length of 16: 2 topic length + 3
+			// topic + 1 empty property length + 10 payload. On the wire it is 18
+			// bytes, the fixed header byte and the single byte encoding the
+			// Remaining Length included, and it is the wire size that `Maximum
+			// Packet Size` bounds (§3.1.2.11.4, §2.1.4).
+			const server2 = new MqttServer((serverClient) => {
+				serverClient.on('connect', () => {
+					serverClient.connack({ reasonCode: 0 })
+					serverClient.publish({
+						messageId: 0,
+						topic: 'a/b',
+						payload: '0123456789',
+						qos: 0,
+					})
+				})
+			}).listen(ports.PORTAND340)
+
+			const opts: mqtt.IClientOptions = {
+				host: 'localhost',
+				port: ports.PORTAND340,
+				protocolVersion: 5,
+				reconnectPeriod: 0,
+				// exactly the Remaining Length of that PUBLISH: comparing
+				// against that alone used to let 2 bytes too many through
+				properties: { maximumPacketSize: 16 },
+			}
+
+			const client = mqtt.connect(opts)
+			// a regression accepts the packet instead of raising, and waiting
+			// only for `error` would turn that into a 15s timeout
+			client.on('message', () => {
+				finish(
+					new Error(
+						'a packet 2 bytes over the advertised maximum was accepted',
+					),
+				)
+			})
+			client.on('error', (error) => {
+				try {
+					assert.include(
+						error.message,
+						'exceeding packets size publish',
+					)
+					assert.include(error.message, '18 bytes')
+					assert.include(error.message, 'maximumPacketSize is 16')
+					assert.strictEqual((error as ErrorWithReasonCode).code, 149)
+				} catch (err) {
+					return finish(err as Error)
+				}
+				finish()
+			})
+
+			// a test that times out never reaches `finish`, and would otherwise
+			// leave the port bound and cascade EADDRINUSE into the next ones
+			t.after(() => {
+				if (!finished) {
+					client.end(true)
+					server2.close()
+				}
+			})
+		},
+	)
+
+	it(
+		'should not carry broker properties over to the next connection',
+		{
+			timeout: 15000,
+		},
+		function _test(t, done) {
+			let finished = false
+
+			const finish = (err?: Error) => {
+				if (finished) return
+				finished = true
+				client.end(true, (err1) => {
+					server2.close((err2) => {
+						done(err || err1 || err2)
+					})
+				})
+			}
+
+			let connects = 0
+			const server2 = new MqttServer((serverClient) => {
+				serverClient.on('connect', () => {
+					connects++
+					serverClient.connack(
+						connects === 1
+							? {
+									reasonCode: 0,
+									properties: { serverKeepAlive: 16 },
+								}
+							: { reasonCode: 0 },
+					)
+				})
+			}).listen(ports.PORTAND334)
+
+			const opts: mqtt.IClientOptions = {
+				host: 'localhost',
+				port: ports.PORTAND334,
+				protocolVersion: 5,
+				keepalive: 30,
+				reconnectPeriod: 100,
+			}
+
+			const client = mqtt.connect(opts)
+			client.on('error', (error) => finish(error))
+			// the reset has to happen on `close`, not merely be overwritten by
+			// the next CONNACK: the second CONNACK here carries no properties,
+			// so asserting only after it would pass with the reset deleted
+			let closes = 0
+			client.on('close', () => {
+				closes++
+				if (closes > 1) {
+					return
+				}
+				try {
+					assert.isUndefined(client.serverProperties)
+					assert.strictEqual(client.keepalive, 30)
+				} catch (err) {
+					finish(err as Error)
+				}
+			})
+			client.on('connect', () => {
+				if (connects === 1) {
+					try {
+						assert.strictEqual(client.keepalive, 16)
+						assert.strictEqual(
+							client.serverProperties.serverKeepAlive,
+							16,
+						)
+					} catch (err) {
+						return finish(err as Error)
+					}
+					client.stream.end()
+					return
+				}
+				try {
+					assert.strictEqual(client.keepalive, 30)
+					assert.strictEqual(client.keepaliveManager.keepalive, 30000)
+					assert.isUndefined(client.serverProperties)
+				} catch (err) {
+					return finish(err as Error)
+				}
+				finish()
+			})
+
+			// a test that times out never reaches `finish`, and would otherwise
+			// leave the port bound and cascade EADDRINUSE into the next ones
+			t.after(() => {
+				if (!finished) {
+					client.end(true)
+					server2.close()
+				}
+			})
+		},
+	)
+
+	it(
+		'should tear the connection down before emitting a keepalive timeout',
+		{
+			timeout: 15000,
+		},
+		function _test(t, done) {
+			let finished = false
+			let timer: ReturnType<typeof setTimeout>
+
+			const finish = (err?: Error) => {
+				if (finished) return
+				finished = true
+				clearTimeout(timer)
+				client.end(true, (err1) => {
+					server2.close((err2) => {
+						done(err || err1 || err2)
+					})
+				})
+			}
+
+			// accepts the connection and then says nothing at all: no PINGRESP,
+			// nothing, the broker a keepalive timeout exists for
+			const server2 = new MqttServer((serverClient) => {
+				serverClient.on('connect', () => {
+					serverClient.connack({ reasonCode: 0 })
+				})
+			}).listen(ports.PORTAND338)
+
+			// the raw TCP socket is the one piece of state the client cannot
+			// fake: a teardown skipped client side leaves it open here
+			let socketClosed = false
+			let onSocketClose: () => void
+			server2.on('connection', (socket) => {
+				socket.on('close', () => {
+					socketClosed = true
+					onSocketClose?.()
+				})
+			})
+
+			const opts: mqtt.IClientOptions = {
+				host: 'localhost',
+				// a keepalive long enough that the real timer never races the
+				// assertions: a regression has to fail on them, not by throwing
+				// out of a timer callback and taking the whole run down
+				keepalive: 60,
+				port: ports.PORTAND338,
+				protocolVersion: 5,
+				reconnectPeriod: 0,
+			}
+
+			const client = mqtt.connect(opts)
+			client.on('connect', () => {
+				// Negative control: with no `error` listener `emit` itself
+				// throws, which is the state a directly constructed
+				// `MqttClient` is in - only `mqtt.connect()` attaches one.
+				// node:test fails a test on any uncaughtException, even with an
+				// own handler installed, so the throw has to happen on our own
+				// stack instead of inside the keepalive timer - this is the
+				// call the KeepaliveManager makes.
+				client.removeAllListeners('error')
+				try {
+					assert.throws(
+						() => client.onKeepaliveTimeout(),
+						/Keepalive timeout/,
+					)
+				} catch (err) {
+					return finish(err as Error)
+				}
+
+				if (socketClosed) {
+					return finish()
+				}
+				onSocketClose = () => finish()
+				timer = setTimeout(() => {
+					finish(
+						new Error(
+							'the broker still sees the socket open after a keepalive timeout',
+						),
+					)
+				}, 2000)
+			})
+
+			// a test that times out never reaches `finish`, and would otherwise
+			// leave the port bound and cascade EADDRINUSE into the next ones
+			t.after(() => {
+				if (!finished) {
+					clearTimeout(timer)
+					client.end(true)
+					server2.close()
+				}
+			})
+		},
+	)
+
+	it(
+		'should keep the configured keepalive after a refused CONNACK',
+		{
+			timeout: 15000,
+		},
+		function _test(t, done) {
+			let finished = false
+
+			const finish = (err?: Error) => {
+				if (finished) return
+				finished = true
+				client.end(true, (err1) => {
+					server2.close((err2) => {
+						done(err || err1 || err2)
+					})
+				})
+			}
+
+			const server2 = new MqttServer((serverClient) => {
+				serverClient.on('connect', () => {
+					serverClient.connack({
+						reasonCode: 135,
+						properties: {
+							serverKeepAlive: 16,
+							reasonString: 'go away',
+						},
+					})
+				})
+			}).listen(ports.PORTAND339)
+
+			const opts: mqtt.IClientOptions = {
+				host: 'localhost',
+				port: ports.PORTAND339,
+				protocolVersion: 5,
+				keepalive: 30,
+				reconnectPeriod: 0,
+			}
+
+			const client = mqtt.connect(opts)
+			client.on('connect', () =>
+				finish(
+					new Error('the refused CONNACK was treated as accepted'),
+				),
+			)
+			client.on('error', (error) => {
+				try {
+					assert.include(error.message, 'Connection refused')
+					assert.strictEqual((error as ErrorWithReasonCode).code, 135)
+					// the refusal explains itself: the only reason the
+					// properties of a refused CONNACK are kept at all
+					assert.strictEqual(
+						client.serverProperties.reasonString,
+						'go away',
+					)
+					assert.strictEqual(
+						client.serverProperties.serverKeepAlive,
+						16,
+					)
+					// ...but no connection was opened, and with the default
+					// `reconnectOnConnackError: false` no `close` follows, so a
+					// `serverKeepAlive` honoured here would stick for good
+					assert.isNotOk(client.connected)
+					assert.strictEqual(client.keepalive, 30)
+				} catch (err) {
+					return finish(err as Error)
+				}
+				finish()
+			})
+
+			// a test that times out never reaches `finish`, and would otherwise
+			// leave the port bound and cascade EADDRINUSE into the next ones
+			t.after(() => {
+				if (!finished) {
+					client.end(true)
+					server2.close()
+				}
 			})
 		},
 	)
