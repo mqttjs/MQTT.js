@@ -542,6 +542,13 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	 */
 	private _currentPump: PacketPump
 
+	/**
+	 * The Authentication Method sent in this connection's CONNECT, latched when
+	 * the packet is written. MQTT-4.12.0-3 requires every AUTH of the exchange
+	 * to carry the same one, and `options` can be mutated while it is running.
+	 */
+	private _authenticationMethod: string
+
 	private connackPacket: IConnackPacket
 
 	private _serverProperties: IConnackPacket['properties']
@@ -943,6 +950,9 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 					this.topicAliasRecv.max
 			}
 		}
+		this._authenticationMethod =
+			connectPacket.properties?.authenticationMethod
+
 		// avoid message queue
 		this._writePacket(connectPacket)
 

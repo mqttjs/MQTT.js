@@ -4,7 +4,7 @@ import abstractClientTests from './abstract_client'
 import { MqttServer } from './server'
 import serverBuilder from './server_helpers_for_client_tests'
 import getPorts from './helpers/port_list'
-import mqttPacket, { type IPublishPacket } from 'mqtt-packet'
+import mqttPacket, { type IAuthPacket, type IPublishPacket } from 'mqtt-packet'
 import mqtt, { type ErrorWithReasonCode } from '../../src'
 
 const ports = getPorts(1)
@@ -1126,6 +1126,135 @@ describe('MQTT 5.0', () => {
 		},
 	)
 
+	// Round 8. `rejectAuth` tore the connection down unconditionally, but
+	// `client.handleAuth` is application-overridable and answers through a
+	// callback: one that fetches a token answers whenever the token arrives.
+	// By then the client may be on a later connection, and the teardown lands
+	// on a stream that never saw the AUTH. The `work()` guard above cannot
+	// catch this one - the callback runs outside the pump loop entirely.
+	it(
+		'should not let a parked auth exchange tear down the connection that replaced it',
+		{
+			timeout: 15000,
+		},
+		function _test(t, done) {
+			const errors: ErrorWithReasonCode[] = []
+			let connections = 0
+			let connectEvents = 0
+			let finished = false
+			let firstServerClient: any
+			let liveConnectionClosed = false
+			let releaseAuth: ((err: Error) => void) | null = null
+
+			const finish = (err?: Error) => {
+				if (finished) return
+				finished = true
+				clearTimeout(deadline)
+				client.end(true, (err1) => {
+					server2.close((err2) => {
+						done(err || err1 || err2)
+					})
+				})
+			}
+
+			const deadline = setTimeout(() => {
+				finish(
+					new Error(
+						`the second connection never settled (connections: ${connections}, connects: ${connectEvents}, errors: [${errors
+							.map((err) => err.message)
+							.join(', ')}])`,
+					),
+				)
+			}, 6000)
+
+			const server2 = new MqttServer((serverClient) => {
+				connections += 1
+				const connection = connections
+				if (connection === 1) {
+					firstServerClient = serverClient
+				} else {
+					serverClient.on('close', () => {
+						liveConnectionClosed = true
+					})
+				}
+				serverClient.on('connect', () => {
+					serverClient.connack({
+						reasonCode: 0,
+						properties: { authenticationMethod: 'test' },
+					})
+					if (connection !== 1) return
+					// an AUTH the application will only answer once this
+					// connection is gone
+					serverClient.stream.write(
+						mqttPacket.generate(
+							{
+								cmd: 'auth',
+								reasonCode: 24,
+								properties: { authenticationMethod: 'test' },
+							} as IAuthPacket,
+							{ protocolVersion: 5 },
+						),
+					)
+				})
+			}).listen(ports.PORTAND350)
+
+			const client = mqtt.connect({
+				host: 'localhost',
+				port: ports.PORTAND350,
+				protocolVersion: 5,
+				reconnectPeriod: 100,
+				properties: { authenticationMethod: 'test' },
+			})
+
+			client.on('error', (err) => errors.push(err as ErrorWithReasonCode))
+
+			client.handleAuth = (packet, callback) => {
+				if (releaseAuth) return
+				// park the exchange and drop the socket it belongs to
+				releaseAuth = callback as (err: Error) => void
+				firstServerClient.destroy()
+			}
+
+			client.on('connect', () => {
+				connectEvents += 1
+				if (connectEvents !== 2) return
+				// Refusing the parked exchange now must report the error
+				// without touching the connection that replaced it.
+				setImmediate(() =>
+					releaseAuth?.(new Error('answered too late')),
+				)
+				setTimeout(() => {
+					try {
+						assert.isFalse(
+							liveConnectionClosed,
+							'a parked auth exchange must not tear down the connection that replaced it',
+						)
+						assert.strictEqual(
+							connections,
+							2,
+							'the live connection must not have been torn down',
+						)
+						assert.deepStrictEqual(
+							errors.map((err) => err.message),
+							['answered too late'],
+							'the application must still be told the exchange failed',
+						)
+					} catch (assertErr) {
+						return finish(assertErr as Error)
+					}
+					finish()
+				}, 600)
+			})
+
+			t.after(() => {
+				if (!finished) {
+					client.end(true)
+					server2.close()
+				}
+			})
+		},
+	)
+
 	it(
 		'should throw an error if there is Auth Data with no Auth Method',
 		{
@@ -1198,6 +1327,707 @@ describe('MQTT 5.0', () => {
 			})
 
 			client.connect()
+		},
+	)
+
+	it(
+		'should reject an unsolicited auth packet received after connack',
+		{
+			timeout: 5000,
+		},
+		function _test(t, done) {
+			let finished = false
+			let deadline: NodeJS.Timeout
+			const finish = (err?: Error) => {
+				if (finished) return
+				finished = true
+				clearTimeout(deadline)
+				client.end(true, () => {
+					server2.close(() => done(err))
+				})
+			}
+
+			const server2 = new MqttServer((serverClient) => {
+				serverClient.on('connect', () => {
+					serverClient.connack({ reasonCode: 0 })
+					// unsolicited "Continue authentication" from the broker
+					serverClient.auth({ reasonCode: 24 })
+				})
+			}).listen(ports.PORTAND121)
+
+			const client = mqtt.connect({
+				host: 'localhost',
+				port: ports.PORTAND121,
+				protocolVersion: 5,
+				reconnectPeriod: 0,
+			})
+
+			let errored = false
+
+			// `connect` itself is expected here: the AUTH rides in the same
+			// chunk as the connack. What must not happen is the connection
+			// surviving it. Without this a regressed guard leaves the test
+			// hanging to its 5s timeout instead of saying what went wrong.
+			client.once('connect', () => {
+				deadline = setTimeout(
+					() =>
+						finish(
+							new Error(
+								errored
+									? 'the unsolicited auth packet raised an error but did not tear the connection down'
+									: 'the unsolicited auth packet was accepted: no error emitted',
+							),
+						),
+					500,
+				)
+			})
+
+			client.once('error', (error: ErrorWithReasonCode) => {
+				errored = true
+				try {
+					assert.strictEqual(
+						error.message,
+						'Protocol error: Auth packet received but enhanced authentication was not requested',
+					)
+					assert.strictEqual(error.code, 130)
+				} catch (assertErr) {
+					return finish(assertErr as Error)
+				}
+				// the connection must go down, not just raise an error and let
+				// the broker keep sending
+				client.once('close', () => finish())
+			})
+
+			t.after(() => {
+				if (!finished) {
+					client.end(true)
+					server2.close()
+				}
+			})
+		},
+	)
+
+	it(
+		'should reject an unsolicited auth packet received before connack',
+		{
+			timeout: 5000,
+		},
+		function _test(t, done) {
+			let finished = false
+			const finish = (err?: Error) => {
+				if (finished) return
+				finished = true
+				clearTimeout(deadline)
+				client.end(true, () => {
+					server2.close(() => done(err))
+				})
+			}
+
+			const server2 = new MqttServer((serverClient) => {
+				serverClient.on('connect', () => {
+					// no connack at all, just the auth packet
+					serverClient.auth({ reasonCode: 24 })
+				})
+			}).listen(ports.PORTAND122)
+
+			const client = mqtt.connect({
+				host: 'localhost',
+				port: ports.PORTAND122,
+				protocolVersion: 5,
+				reconnectPeriod: 0,
+			})
+
+			// no connack is ever sent, so connecting at all means the
+			// unsolicited AUTH was taken for a finished handshake
+			client.once('connect', () =>
+				finish(
+					new Error(
+						'the unsolicited auth packet was accepted and the client connected',
+					),
+				),
+			)
+
+			// and if it is accepted silently nothing happens at all, so fail
+			// readably rather than hang to the test's 5s timeout
+			let errored = false
+			const deadline = setTimeout(
+				() =>
+					finish(
+						new Error(
+							errored
+								? 'the unsolicited auth packet raised an error but did not tear the connection down'
+								: 'the unsolicited auth packet was not rejected: no error emitted',
+						),
+					),
+				1500,
+			)
+
+			client.once('error', (error: ErrorWithReasonCode) => {
+				errored = true
+				try {
+					assert.strictEqual(
+						error.message,
+						'Protocol error: Auth packet received but enhanced authentication was not requested',
+					)
+					assert.strictEqual(error.code, 130)
+				} catch (assertErr) {
+					return finish(assertErr as Error)
+				}
+				client.once('close', () => finish())
+			})
+
+			t.after(() => {
+				if (!finished) {
+					client.end(true)
+					server2.close()
+				}
+			})
+		},
+	)
+
+	it(
+		'should drop the rest of the chunk it rejected an unsolicited auth packet in',
+		{
+			timeout: 5000,
+		},
+		function _test(t, done) {
+			let settle: NodeJS.Timeout
+			let finished = false
+			const finish = (err?: Error) => {
+				if (finished) return
+				finished = true
+				clearTimeout(deadline)
+				clearTimeout(settle)
+				client.end(true, () => {
+					server2.close(() => done(err))
+				})
+			}
+
+			const server2 = new MqttServer((serverClient) => {
+				serverClient.on('connect', () => {
+					serverClient.connack({ reasonCode: 0 })
+					// one write, so both packets are parsed out of the same
+					// chunk before either is handled: rejecting the unsolicited
+					// AUTH has to throw the PUBLISH behind it away instead of
+					// running it against the stream it just destroyed
+					serverClient.stream.write(
+						Buffer.concat([
+							mqttPacket.generate(
+								{ cmd: 'auth', reasonCode: 24 } as IAuthPacket,
+								{ protocolVersion: 5 },
+							),
+							mqttPacket.generate(
+								{
+									cmd: 'publish',
+									topic: 'after-teardown',
+									payload: Buffer.from('nope'),
+									qos: 0,
+									retain: false,
+									dup: false,
+								} as IPublishPacket,
+								{ protocolVersion: 5 },
+							),
+						]),
+					)
+				})
+			}).listen(ports.PORTAND347)
+
+			const client = mqtt.connect({
+				host: 'localhost',
+				port: ports.PORTAND347,
+				protocolVersion: 5,
+				reconnectPeriod: 0,
+			})
+
+			client.on('message', (topic) =>
+				finish(
+					new Error(
+						`a message on "${topic}" was handled after the connection was torn down`,
+					),
+				),
+			)
+
+			let errored = false
+			const deadline = setTimeout(
+				() =>
+					finish(
+						new Error(
+							errored
+								? 'the unsolicited auth packet raised an error but did not tear the connection down'
+								: 'the unsolicited auth packet was not rejected: no error emitted',
+						),
+					),
+				1500,
+			)
+
+			client.once('error', (error: ErrorWithReasonCode) => {
+				errored = true
+				try {
+					assert.strictEqual(
+						error.message,
+						'Protocol error: Auth packet received but enhanced authentication was not requested',
+					)
+					assert.strictEqual(error.code, 130)
+				} catch (assertErr) {
+					return finish(assertErr as Error)
+				}
+				client.once('close', () => {
+					clearTimeout(deadline)
+					// leave the pump the time it would need to run the
+					// discarded PUBLISH: the `message` listener above fails
+					// the test if it ever does
+					settle = setTimeout(() => finish(), 300)
+				})
+			})
+
+			t.after(() => {
+				if (!finished) {
+					client.end(true)
+					server2.close()
+				}
+			})
+		},
+	)
+
+	it(
+		'should reject an auth packet whose authentication method is not the one sent in connect',
+		{
+			timeout: 5000,
+		},
+		function _test(t, done) {
+			let finished = false
+			const finish = (err?: Error) => {
+				if (finished) return
+				finished = true
+				clearTimeout(deadline)
+				client.end(true, () => {
+					server2.close(() => done(err))
+				})
+			}
+
+			const server2 = new MqttServer((serverClient) => {
+				serverClient.on('connect', () => {
+					serverClient.connack({ reasonCode: 0 })
+					// MQTT-4.12.0-3: switching the method mid-exchange is a
+					// protocol violation, and would otherwise reach handleAuth
+					serverClient.auth({
+						reasonCode: 24,
+						properties: { authenticationMethod: 'weaker' },
+					})
+				})
+			}).listen(ports.PORTAND126)
+
+			const client = mqtt.connect({
+				host: 'localhost',
+				port: ports.PORTAND126,
+				protocolVersion: 5,
+				reconnectPeriod: 0,
+				properties: { authenticationMethod: 'json' },
+			})
+
+			// must never run: the guard refuses the packet before it gets here
+			client.handleAuth = () => {
+				finish(
+					new Error(
+						'a mismatched Authentication Method reached handleAuth',
+					),
+				)
+			}
+
+			let errored = false
+			const deadline = setTimeout(
+				() =>
+					finish(
+						new Error(
+							errored
+								? 'the mismatched Authentication Method raised an error but did not tear the connection down'
+								: 'the mismatched Authentication Method was accepted: no error emitted',
+						),
+					),
+				1500,
+			)
+
+			client.once('error', (error: ErrorWithReasonCode) => {
+				errored = true
+				try {
+					assert.strictEqual(
+						error.message,
+						'Protocol error: Auth packet Authentication Method does not match the "json" sent in CONNECT',
+					)
+					assert.strictEqual(error.code, 130)
+				} catch (assertErr) {
+					return finish(assertErr as Error)
+				}
+				client.once('close', () => finish())
+			})
+
+			t.after(() => {
+				if (!finished) {
+					client.end(true)
+					server2.close()
+				}
+			})
+		},
+	)
+
+	it(
+		'should emit an error when handleAuth provides no packet to continue the auth exchange',
+		{
+			timeout: 5000,
+		},
+		function _test(t, done) {
+			let finished = false
+			const finish = (err?: Error) => {
+				if (finished) return
+				finished = true
+				clearTimeout(deadline)
+				client.end(true, () => {
+					server2.close(() => done(err))
+				})
+			}
+
+			const server2 = new MqttServer((serverClient) => {
+				serverClient.on('connect', () => {
+					serverClient.connack({ reasonCode: 0 })
+					serverClient.auth({
+						reasonCode: 24,
+						properties: { authenticationMethod: 'json' },
+					})
+				})
+			}).listen(ports.PORTAND123)
+
+			// enhanced auth is requested but the default handleAuth
+			// completes without providing a packet
+			const client = mqtt.connect({
+				host: 'localhost',
+				port: ports.PORTAND123,
+				protocolVersion: 5,
+				reconnectPeriod: 0,
+				properties: { authenticationMethod: 'json' },
+			})
+
+			let errored = false
+			const deadline = setTimeout(
+				() =>
+					finish(
+						new Error(
+							errored
+								? 'the missing continuation packet raised an error but did not tear the connection down'
+								: 'the missing continuation packet was accepted: no error emitted',
+						),
+					),
+				1500,
+			)
+
+			client.once('error', (error: ErrorWithReasonCode) => {
+				errored = true
+				try {
+					assert.strictEqual(
+						error.message,
+						'Protocol error: No auth packet to continue the authentication exchange',
+					)
+					assert.strictEqual(error.code, 130)
+				} catch (assertErr) {
+					return finish(assertErr as Error)
+				}
+				// the exchange cannot continue and the connack timer is already
+				// cleared, so the socket must not be left up
+				client.once('close', () => finish())
+			})
+
+			t.after(() => {
+				if (!finished) {
+					client.end(true)
+					server2.close()
+				}
+			})
+		},
+	)
+
+	it(
+		'should tear down when handleAuth reports an error',
+		{
+			timeout: 5000,
+		},
+		function _test(t, done) {
+			let finished = false
+			const finish = (err?: Error) => {
+				if (finished) return
+				finished = true
+				clearTimeout(deadline)
+				client.end(true, () => {
+					server2.close(() => done(err))
+				})
+			}
+
+			const server2 = new MqttServer((serverClient) => {
+				serverClient.on('connect', () => {
+					serverClient.connack({ reasonCode: 0 })
+					serverClient.auth({
+						reasonCode: 24,
+						properties: { authenticationMethod: 'json' },
+					})
+				})
+			}).listen(ports.PORTAND128)
+
+			const client = mqtt.connect({
+				host: 'localhost',
+				port: ports.PORTAND128,
+				protocolVersion: 5,
+				reconnectPeriod: 0,
+				properties: { authenticationMethod: 'json' },
+			})
+
+			client.handleAuth = (packet, callback) => {
+				callback(new Error('handleAuth said no'))
+			}
+
+			let errored = false
+			const deadline = setTimeout(
+				() =>
+					finish(
+						new Error(
+							errored
+								? 'the handleAuth error did not tear the connection down'
+								: 'the handleAuth error was swallowed: no error emitted',
+						),
+					),
+				1500,
+			)
+
+			client.once('error', (error) => {
+				errored = true
+				try {
+					// the application's own error reaches it unchanged
+					assert.strictEqual(error.message, 'handleAuth said no')
+				} catch (assertErr) {
+					return finish(assertErr as Error)
+				}
+				// the exchange cannot go on and the connack timer is already
+				// cleared, so the socket must not be left up
+				client.once('close', () => finish())
+			})
+
+			t.after(() => {
+				if (!finished) {
+					client.end(true)
+					server2.close()
+				}
+			})
+		},
+	)
+
+	it(
+		'should send the packet returned by a custom handleAuth',
+		{
+			timeout: 5000,
+		},
+		function _test(t, done) {
+			let finished = false
+			const finish = (err?: Error) => {
+				if (finished) return
+				finished = true
+				client.end(true, () => {
+					server2.close(() => done(err))
+				})
+			}
+
+			const server2 = new MqttServer((serverClient) => {
+				serverClient.on('connect', () => {
+					serverClient.connack({ reasonCode: 0 })
+					serverClient.auth({
+						reasonCode: 24,
+						properties: { authenticationMethod: 'json' },
+					})
+				})
+				serverClient.on('auth', (packet) => {
+					try {
+						assert.strictEqual(packet.reasonCode, 24)
+						assert.strictEqual(
+							packet.properties.authenticationMethod,
+							'json',
+						)
+						finish()
+					} catch (error) {
+						finish(error)
+					}
+				})
+			}).listen(ports.PORTAND124)
+
+			const client = mqtt.connect({
+				host: 'localhost',
+				port: ports.PORTAND124,
+				protocolVersion: 5,
+				reconnectPeriod: 0,
+				properties: { authenticationMethod: 'json' },
+			})
+
+			client.handleAuth = (packet, callback) => {
+				callback(null, {
+					cmd: 'auth',
+					reasonCode: 24,
+					properties: {
+						authenticationMethod: 'json',
+						authenticationData: Buffer.from('continue'),
+					},
+				})
+			}
+
+			client.on('error', (error) => finish(error))
+
+			t.after(() => {
+				if (!finished) {
+					client.end(true)
+					server2.close()
+				}
+			})
+		},
+	)
+
+	it(
+		'should stay connected on an auth packet with reason code 0',
+		{
+			timeout: 5000,
+		},
+		function _test(t, done) {
+			let finished = false
+			const finish = (err?: Error) => {
+				if (finished) return
+				finished = true
+				client.end(true, () => {
+					server2.close(() => done(err))
+				})
+			}
+
+			const server2 = new MqttServer((serverClient) => {
+				serverClient.on('connect', () => {
+					serverClient.connack({ reasonCode: 0 })
+					// MQTT 5 3.15.2.1: reason code 0 on AUTH is "Success", the
+					// broker signing off on the authentication, not a refusal
+					serverClient.auth({
+						reasonCode: 0,
+						properties: { authenticationMethod: 'json' },
+					})
+				})
+			}).listen(ports.PORTAND125)
+
+			const client = mqtt.connect({
+				host: 'localhost',
+				port: ports.PORTAND125,
+				protocolVersion: 5,
+				reconnectPeriod: 0,
+				properties: { authenticationMethod: 'json' },
+			})
+
+			client.once('error', (error) =>
+				finish(
+					new Error(
+						`a successful auth exchange must not emit an error, got: ${error.message}`,
+					),
+				),
+			)
+			client.once('close', () =>
+				finish(
+					new Error(
+						'a successful auth exchange must not tear the connection down',
+					),
+				),
+			)
+
+			// give the AUTH time to arrive and be handled, then check the
+			// connection is still up
+			client.once('connect', () => {
+				setTimeout(() => {
+					try {
+						assert.isTrue(
+							client.connected,
+							'client should still be connected',
+						)
+					} catch (assertErr) {
+						return finish(assertErr as Error)
+					}
+					finish()
+				}, 300)
+			})
+
+			t.after(() => {
+				if (!finished) {
+					client.end(true)
+					server2.close()
+				}
+			})
+		},
+	)
+
+	it(
+		'should emit an error and tear down on an auth reason code a broker may not send',
+		{
+			timeout: 5000,
+		},
+		function _test(t, done) {
+			let finished = false
+			const finish = (err?: Error) => {
+				if (finished) return
+				finished = true
+				clearTimeout(deadline)
+				client.end(true, () => {
+					server2.close(() => done(err))
+				})
+			}
+
+			const server2 = new MqttServer((serverClient) => {
+				serverClient.on('connect', () => {
+					serverClient.connack({ reasonCode: 0 })
+					// 25 is "Re-authenticate", which only a client may send
+					serverClient.auth({
+						reasonCode: 25,
+						properties: { authenticationMethod: 'json' },
+					})
+				})
+			}).listen(ports.PORTAND127)
+
+			const client = mqtt.connect({
+				host: 'localhost',
+				port: ports.PORTAND127,
+				protocolVersion: 5,
+				reconnectPeriod: 0,
+				properties: { authenticationMethod: 'json' },
+			})
+
+			let errored = false
+			const deadline = setTimeout(
+				() =>
+					finish(
+						new Error(
+							errored
+								? 'the invalid auth reason code raised an error but did not tear the connection down'
+								: 'the invalid auth reason code was accepted: no error emitted',
+						),
+					),
+				1500,
+			)
+
+			client.once('error', (error: ErrorWithReasonCode) => {
+				errored = true
+				try {
+					assert.strictEqual(
+						error.message,
+						'Protocol error: Auth packet reason code 25 is not one a broker may send',
+					)
+					assert.strictEqual(error.code, 130)
+				} catch (assertErr) {
+					return finish(assertErr as Error)
+				}
+				// the exchange is over: the socket must not be left up
+				client.once('close', () => finish())
+			})
+
+			t.after(() => {
+				if (!finished) {
+					client.end(true)
+					server2.close()
+				}
+			})
 		},
 	)
 
