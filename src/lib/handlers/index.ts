@@ -36,8 +36,19 @@ const handle: PacketHandler = (client, packet, done, pump) => {
 		case 'suback':
 		case 'unsuback':
 			client.reschedulePing()
-			handleAck(client, packet)
-			done()
+			// `done` completes the pending `_write`, so it has to run even when
+			// the handler throws on its way out. `emit('error')` throws
+			// synchronously when nothing listens -- a directly constructed
+			// `MqttClient` has no listener, only `mqtt.connect()` attaches one
+			// -- and an application listener may throw of its own accord. The
+			// ack path deliberately leaves the connection up, so skipping
+			// `done` would wedge the pump on a live socket that keeps pinging
+			// and never reconnects.
+			try {
+				handleAck(client, packet)
+			} finally {
+				done()
+			}
 			break
 		case 'pubrel':
 			client.reschedulePing()

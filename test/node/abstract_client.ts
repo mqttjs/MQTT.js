@@ -2013,6 +2013,60 @@ export default function abstractTest(server, config, ports) {
 			})
 		})
 
+		// Acks are matched to the pending request by message id alone, so a
+		// broker can answer an UNSUBSCRIBE with a SUBACK carrying that id. It
+		// used to be reported to the application as a successful unsubscribe
+		// even though the broker never sent an UNSUBACK.
+		it('should drop a suback answering a pending unsubscribe', function _test(t, done) {
+			let unsubscribeMessageId: number
+			let ended = false
+			const server2 = serverBuilder(config.protocol, (serverClient) => {
+				serverClient.on('connect', () => {
+					serverClient.connack(
+						version === 5 ? { reasonCode: 0 } : { returnCode: 0 },
+					)
+				})
+				serverClient.on('unsubscribe', (packet) => {
+					unsubscribeMessageId = packet.messageId
+					serverClient.suback({
+						messageId: packet.messageId,
+						granted: [0],
+					})
+				})
+			})
+			teardownHelper.addServer(server2)
+			server2.listen(ports.PORTAND131, () => {
+				const client = connect({
+					host: 'localhost',
+					port: ports.PORTAND131,
+				})
+				teardownHelper.addClient(client)
+				client.once('connect', () => {
+					client.unsubscribe('a/b', () => {
+						// `end` below flushes it with `Connection closed`,
+						// which is the only way it may be called here
+						if (!ended) {
+							done(
+								new Error(
+									'a suback must not complete a pending unsubscribe',
+								),
+							)
+						}
+					})
+					client.once('error', (err) => {
+						assert.strictEqual(
+							err.message,
+							`Protocol error: suback does not answer the unsubscribe pending on message id ${unsubscribeMessageId}`,
+						)
+						// still pending: the id was not freed for reuse
+						assert.exists(client.outgoing[unsubscribeMessageId])
+						ended = true
+						client.end(true, done)
+					})
+				})
+			})
+		})
+
 		it('should unsubscribe from a chinese topic', function _test(t, done) {
 			const client = connect()
 			const topic = '中国'
@@ -2565,6 +2619,194 @@ export default function abstractTest(server, config, ports) {
 			})
 		})
 
+		// A SUBACK carries exactly one reason code per topic filter sent. Extra
+		// codes used to write past the end of the subscription array and throw
+		// an uncaught TypeError, crashing the process.
+		it('should error on a suback granting more reason codes than subscriptions sent', function _test(t, done) {
+			const server2 = serverBuilder(config.protocol, (serverClient) => {
+				serverClient.on('connect', () => {
+					serverClient.connack(
+						version === 5 ? { reasonCode: 0 } : { returnCode: 0 },
+					)
+				})
+				serverClient.on('subscribe', (packet) => {
+					serverClient.suback({
+						messageId: packet.messageId,
+						granted: [0, 0, 0],
+					})
+				})
+			})
+			teardownHelper.addServer(server2)
+			server2.listen(ports.PORTAND120, () => {
+				const client = connect({
+					host: 'localhost',
+					port: ports.PORTAND120,
+				})
+				teardownHelper.addClient(client)
+				client.once('connect', () => {
+					// A count mismatch is a protocol violation, and 3.1.1
+					// makes closing mandatory for the client too
+					// [MQTT-4.8.0-1]; MQTT 5 recommends it (4.13.1).
+					//
+					// The deadline is what makes this a real check: the
+					// teardown helper ends the client once the test is over,
+					// so `close` arrives either way and only its timing tells
+					// the two behaviours apart.
+					let subscribeErr: Error
+					let settled = false
+					const settle = (err?: Error) => {
+						if (settled) return
+						settled = true
+						clearTimeout(deadline)
+						done(err)
+					}
+					const deadline = setTimeout(
+						() =>
+							settle(
+								new Error(
+									'the connection was still up 2s after a suback protocol violation',
+								),
+							),
+						2000,
+					)
+					client.once('close', () => {
+						try {
+							assert.exists(subscribeErr, 'no error given')
+							assert.strictEqual(
+								subscribeErr.message,
+								'Protocol error: suback granted 3 reason code(s) for 1 subscription(s)',
+							)
+						} catch (assertErr) {
+							return settle(assertErr as Error)
+						}
+						settle()
+					})
+					client.subscribe('a/b', (err) => {
+						subscribeErr = err
+					})
+				})
+			})
+		})
+
+		// Missing codes are just as bad: the unanswered topics used to be
+		// reported back as granted at the qos asked for, so the application had
+		// no way to tell that it was never subscribed to them.
+		it('should error on a suback granting fewer reason codes than subscriptions sent', function _test(t, done) {
+			const server2 = serverBuilder(config.protocol, (serverClient) => {
+				serverClient.on('connect', () => {
+					serverClient.connack(
+						version === 5 ? { reasonCode: 0 } : { returnCode: 0 },
+					)
+				})
+				serverClient.on('subscribe', (packet) => {
+					serverClient.suback({
+						messageId: packet.messageId,
+						granted: [0],
+					})
+				})
+			})
+			teardownHelper.addServer(server2)
+			server2.listen(ports.PORTAND129, () => {
+				const client = connect({
+					host: 'localhost',
+					port: ports.PORTAND129,
+				})
+				teardownHelper.addClient(client)
+				client.once('connect', () => {
+					// without the check this resolved with err === null and
+					// reported both topics granted, c/d included
+					let subscribeErr: Error
+					let settled = false
+					const settle = (err?: Error) => {
+						if (settled) return
+						settled = true
+						clearTimeout(deadline)
+						done(err)
+					}
+					const deadline = setTimeout(
+						() =>
+							settle(
+								new Error(
+									'the connection was still up 2s after a suback protocol violation',
+								),
+							),
+						2000,
+					)
+					client.once('close', () => {
+						try {
+							assert.exists(subscribeErr, 'no error given')
+							assert.strictEqual(
+								subscribeErr.message,
+								'Protocol error: suback granted 1 reason code(s) for 2 subscription(s)',
+							)
+						} catch (assertErr) {
+							return settle(assertErr as Error)
+						}
+						settle()
+					})
+					client.subscribe(['a/b', 'c/d'], (err) => {
+						subscribeErr = err
+					})
+				})
+			})
+		})
+
+		// Acks are matched to the pending request by message id alone, so a
+		// broker can answer a SUBSCRIBE with an UNSUBACK carrying that id. An
+		// UNSUBACK has no `granted`, and reading it threw a TypeError inside
+		// the parser's write path, where no application can catch it.
+		it('should drop an unsuback answering a pending subscribe', function _test(t, done) {
+			let subscribeMessageId: number
+			let ended = false
+			const server2 = serverBuilder(config.protocol, (serverClient) => {
+				serverClient.on('connect', () => {
+					serverClient.connack(
+						version === 5 ? { reasonCode: 0 } : { returnCode: 0 },
+					)
+				})
+				serverClient.on('subscribe', (packet) => {
+					subscribeMessageId = packet.messageId
+					serverClient.unsuback({
+						messageId: packet.messageId,
+						// MQTT 5 UNSUBACKs carry a reason code vector, and
+						// mqtt-packet refuses to write one without it
+						granted: [0],
+					})
+				})
+			})
+			teardownHelper.addServer(server2)
+			server2.listen(ports.PORTAND130, () => {
+				const client = connect({
+					host: 'localhost',
+					port: ports.PORTAND130,
+				})
+				teardownHelper.addClient(client)
+				client.once('connect', () => {
+					client.subscribe('a/b', () => {
+						// `end` below flushes it with `Connection closed`,
+						// which is the only way it may be called here
+						if (!ended) {
+							done(
+								new Error(
+									'an unsuback must not complete a pending subscribe',
+								),
+							)
+						}
+					})
+					client.once('error', (err) => {
+						assert.strictEqual(
+							err.message,
+							`Protocol error: unsuback does not answer the subscribe pending on message id ${subscribeMessageId}`,
+						)
+						// still pending: the id was not freed for reuse
+						assert.exists(client.outgoing[subscribeMessageId])
+						ended = true
+						client.end(true, done)
+					})
+				})
+			})
+		})
+
 		it('should fire a callback with error if disconnected (options provided)', function _test(t, done) {
 			const client = connect()
 			const topic = 'test'
@@ -2659,6 +2901,149 @@ export default function abstractTest(server, config, ports) {
 			setTimeout(() => {
 				client.end()
 			}, 300)
+		})
+	})
+
+	/**
+	 * `client.outgoing` is keyed by message id alone, so before the guard in
+	 * `handleAck` any ack carrying a pending request's id ran that ack's
+	 * branch against it. The two cases the guard was written for sit with the
+	 * subscribe and unsubscribe tests above; these are the rest of the matrix,
+	 * where the damage is worse because a PUBLISH also owns an `outgoingStore`
+	 * entry that only the matching ack's path ever deletes.
+	 */
+	describe('ack matching', () => {
+		beforeEach(beforeEachExec)
+		after(afterExec)
+
+		const connackFor = () =>
+			version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
+
+		/**
+		 * Publishes at QoS 1 against a broker that answers with `answerWith`
+		 * instead of a PUBACK, and asserts that the ack was dropped: the
+		 * publish callback must not run, the id must stay pending, and the
+		 * outgoing store entry must still belong to the publish.
+		 */
+		const expectPublishAckDropped = (
+			port: number,
+			ackName: string,
+			answerWith: (serverClient: any, messageId: number) => void,
+			done: DoneCallback,
+		) => {
+			let publishMessageId: number
+			let ended = false
+			const server2 = serverBuilder(config.protocol, (serverClient) => {
+				serverClient.on('connect', () => {
+					serverClient.connack(connackFor())
+				})
+				serverClient.on('publish', (packet) => {
+					publishMessageId = packet.messageId
+					answerWith(serverClient, packet.messageId)
+				})
+			})
+			teardownHelper.addServer(server2)
+			server2.listen(port, () => {
+				const client = connect({ host: 'localhost', port })
+				teardownHelper.addClient(client)
+				client.once('connect', () => {
+					client.publish('a/b', 'payload', { qos: 1 }, () => {
+						// `end` below flushes it with `Connection closed`,
+						// which is the only way it may be called here
+						if (!ended) {
+							done(
+								new Error(
+									`${ackName} must not complete a pending publish`,
+								),
+							)
+						}
+					})
+					client.once('error', (err) => {
+						assert.strictEqual(
+							err.message,
+							`Protocol error: ${ackName} does not answer the publish pending on message id ${publishMessageId}`,
+						)
+						// the id stays pending, so nothing else can allocate it
+						// and overwrite the store entry it still owns
+						assert.exists(client.outgoing[publishMessageId])
+						client.outgoingStore.get(
+							{ messageId: publishMessageId },
+							(storeErr, stored) => {
+								assert.notExists(storeErr)
+								assert.strictEqual(stored.cmd, 'publish')
+								ended = true
+								client.end(true, done)
+							},
+						)
+					})
+				})
+			})
+		}
+
+		it('should drop a suback answering a pending publish', function _test(t, done) {
+			expectPublishAckDropped(
+				ports.PORTAND132,
+				'suback',
+				(serverClient, messageId) =>
+					serverClient.suback({ messageId, granted: [0] }),
+				done,
+			)
+		})
+
+		it('should drop an unsuback answering a pending publish', function _test(t, done) {
+			expectPublishAckDropped(
+				ports.PORTAND133,
+				'unsuback',
+				(serverClient, messageId) =>
+					// MQTT 5 UNSUBACKs carry a reason code vector, and
+					// mqtt-packet refuses to write one without it
+					serverClient.unsuback({ messageId, granted: [0] }),
+				done,
+			)
+		})
+
+		it('should drop a puback answering a pending subscribe', function _test(t, done) {
+			let subscribeMessageId: number
+			let ended = false
+			const server2 = serverBuilder(config.protocol, (serverClient) => {
+				serverClient.on('connect', () => {
+					serverClient.connack(connackFor())
+				})
+				serverClient.on('subscribe', (packet) => {
+					subscribeMessageId = packet.messageId
+					serverClient.puback({ messageId: packet.messageId })
+				})
+			})
+			teardownHelper.addServer(server2)
+			server2.listen(ports.PORTAND134, () => {
+				const client = connect({
+					host: 'localhost',
+					port: ports.PORTAND134,
+				})
+				teardownHelper.addClient(client)
+				client.once('connect', () => {
+					client.subscribe('a/b', () => {
+						// `end` below flushes it with `Connection closed`,
+						// which is the only way it may be called here
+						if (!ended) {
+							done(
+								new Error(
+									'a puback must not complete a pending subscribe',
+								),
+							)
+						}
+					})
+					client.once('error', (err) => {
+						assert.strictEqual(
+							err.message,
+							`Protocol error: puback does not answer the subscribe pending on message id ${subscribeMessageId}`,
+						)
+						assert.exists(client.outgoing[subscribeMessageId])
+						ended = true
+						client.end(true, done)
+					})
+				})
+			})
 		})
 	})
 

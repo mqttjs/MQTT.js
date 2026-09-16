@@ -1,5 +1,6 @@
 // Other Socket Errors: EADDRINUSE, ECONNRESET, ENOTFOUND, ETIMEDOUT.
 
+import { type Packet } from 'mqtt-packet'
 import { type PacketHandler, ErrorWithReasonCode } from '../shared'
 
 export const ReasonCodes = {
@@ -48,12 +49,33 @@ export const ReasonCodes = {
 	162: 'Wildcard Subscriptions not supported',
 }
 
+/**
+ * The requests that can be pending on a message id in `client.outgoing`.
+ * A PUBREL gets one of its own because the outgoing store replays it on
+ * reconnect, on an id whose PUBLISH is already done with.
+ */
+export type PendingCommand = 'publish' | 'pubrel' | 'subscribe' | 'unsubscribe'
+
+/**
+ * The acks that answer each pending request. An ack of any other type carries
+ * the message id of a request it cannot be an answer to. A QoS 2 PUBLISH stays
+ * pending across both of its acks, so it accepts PUBREC and PUBCOMP; a QoS 1
+ * one only ever sees the PUBACK.
+ */
+const acksForPendingCmd: Record<PendingCommand, Packet['cmd'][]> = {
+	publish: ['puback', 'pubrec', 'pubcomp'],
+	pubrel: ['pubcomp'],
+	subscribe: ['suback'],
+	unsubscribe: ['unsuback'],
+}
+
 const handleAck: PacketHandler = (client, packet) => {
 	/* eslint no-fallthrough: "off" */
 	const { messageId } = packet
 	const type = packet.cmd
 	let response = null
-	const cb = client.outgoing[messageId] ? client.outgoing[messageId].cb : null
+	const pending = client.outgoing[messageId]
+	const cb = pending ? pending.cb : null
 	let err = null
 
 	// Checking `!cb` happens to work, but it's not technically "correct".
@@ -70,6 +92,40 @@ const handleAck: PacketHandler = (client, packet) => {
 	if (!cb) {
 		client.log('_handleAck :: Server sent an ack in error. Ignoring.')
 		// Server sent an ack in error, ignore it.
+		return
+	}
+
+	// An ack answers the request that allocated its message id and nothing
+	// else. `client.outgoing` is keyed by id alone, so without this check a
+	// SUBACK carrying a pending PUBLISH's id ran the suback branch below: it
+	// freed the id and called the application's publish callback -- reporting
+	// a QoS 1/2 publish as delivered, or failing it with `Subscribe error` --
+	// while never calling `outgoingStore.del`, so the entry was left behind to
+	// be replayed on every reconnect and the freed id let the next publish's
+	// `outgoingStore.put` overwrite it. Every pairing is the same bug: a
+	// PUBREC for a pending SUBSCRIBE writes a PUBREL under a subscribe's id
+	// and leaves its promise pending for good.
+	//
+	// A mismatched ack is dropped, not turned into a failure of the pending
+	// request and not a reason to close the connection. Dropping touches no
+	// state, which is what makes the whole matrix safe at once; failing the
+	// request would tell the application a publish failed that the broker may
+	// be about to acknowledge, and would free its id and store entry on the
+	// way. `handleAck` already drops an ack whose message id it knows nothing
+	// about, a few lines up.
+	if (!acksForPendingCmd[pending.cmd]?.includes(type)) {
+		client.log(
+			'_handleAck :: %s does not answer the pending %s on message id %d. Ignoring.',
+			type,
+			pending.cmd,
+			messageId,
+		)
+		client.emit(
+			'error',
+			new Error(
+				`Protocol error: ${type} does not answer the ${pending.cmd} pending on message id ${messageId}`,
+			),
+		)
 		return
 	}
 
