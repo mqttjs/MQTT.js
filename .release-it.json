@@ -1,5 +1,5 @@
 {
-  "$schema": "https://unpkg.com/release-it@19/schema/release-it.json",
+  "$schema": "https://unpkg.com/release-it@21/schema/release-it.json",
   "github": {
     "release": true
   },
