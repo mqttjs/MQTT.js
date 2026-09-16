@@ -4033,6 +4033,215 @@ export default function abstractTest(server, config, ports) {
 		it('handle qos 2 messages exactly once when multiple pubrel received and sending pubcomp fails on client', function _test(t, done) {
 			testMultiplePubrel(true, done)
 		})
+
+		// The inbound QoS 2 message ids were only tracked on MQTT 5, so outside
+		// v5 nothing told the client which incoming store entries belonged to a
+		// session the broker had thrown away. They stayed there, and a PUBREL
+		// carrying the same id on a fresh session delivered the old session's
+		// message to the application (GHSA-h8jm-hm87-fqw3).
+		it(
+			'should not deliver a stored qos 2 message to a session the broker did not resume',
+			{
+				timeout: 15000,
+			},
+			function _test(t, done) {
+				const messageId = 1
+				const staleTopic = 'stale-session'
+				const messages: string[] = []
+				let connections = 0
+				let finished = false
+				let client: mqtt.MqttClient
+
+				const finish = (err?: Error) => {
+					if (finished) return
+					finished = true
+					clearTimeout(deadline)
+					client.end(true, (err1) => {
+						server2.close((err2) => {
+							done(err || err1 || err2)
+						})
+					})
+				}
+
+				// node:test defaults to no timeout and the run script sets none, so a
+				// regression that stops the reconnect instead of mis-delivering would
+				// hang the whole suite. Fail with something readable instead.
+				const deadline = setTimeout(() => {
+					finish(
+						new Error(
+							`the second session never completed (connections: ${connections}, messages: ${messages.length})`,
+						),
+					)
+				}, 5000)
+
+				const server2 = serverBuilder(
+					config.protocol,
+					(serverClient) => {
+						connections += 1
+						const connection = connections
+						serverClient.on('connect', () => {
+							// The client connects with `clean: true`, so the broker
+							// keeps no session and says so on both connections.
+							serverClient.connack(
+								version === 5
+									? { reasonCode: 0, sessionPresent: false }
+									: { returnCode: 0, sessionPresent: false },
+							)
+							if (connection === 1) {
+								serverClient.publish({
+									messageId,
+									topic: staleTopic,
+									payload: 'Message',
+									qos: 2,
+								})
+							} else {
+								// A PUBREL for the previous session's message id. The
+								// client must have thrown that message away with the
+								// session, so it answers PUBCOMP and emits nothing.
+								serverClient.pubrel({ messageId })
+							}
+						})
+						serverClient.on('pubrec', () => {
+							// Drop the socket without ever sending PUBREL, so the
+							// message stays in the client's incoming store.
+							serverClient.destroy()
+						})
+						serverClient.on('pubcomp', () => {
+							try {
+								assert.deepStrictEqual(
+									messages,
+									[],
+									"the previous session's message must not be delivered",
+								)
+							} catch (err) {
+								return finish(err as Error)
+							}
+							finish()
+						})
+					},
+				)
+				server2.listen(ports.PORTAND341, () => {
+					client = connect({
+						host: 'localhost',
+						port: ports.PORTAND341,
+						clean: true,
+						reconnectPeriod: 100,
+					})
+					client.on('message', (topic) => messages.push(topic))
+					// Dropping the socket is how the test gets to connection 2, so
+					// the transport errors that follow it are expected noise; the
+					// assertion that matters runs on the second PUBCOMP.
+					client.on('error', () => {})
+				})
+			},
+		)
+
+		// A clean start discards the previous session locally and
+		// unconditionally (MQTT-3.1.2-6), so Session Present on the CONNACK does
+		// not get a say. Trusting it let a broker that answers 1 to a clean start
+		// keep the previous session's incoming store entries - and their Receive
+		// Maximum slots - alive, re-opening the cross-session PUBREL replay
+		// (GHSA-h8jm-hm87-fqw3).
+		it(
+			'should not resume a session on a clean start even if the broker claims it did',
+			{
+				timeout: 15000,
+			},
+			function _test(t, done) {
+				const messageId = 1
+				const staleTopic = 'stale-session'
+				const messages: string[] = []
+				let connections = 0
+				let finished = false
+				let client: mqtt.MqttClient
+
+				const finish = (err?: Error) => {
+					if (finished) return
+					finished = true
+					clearTimeout(deadline)
+					client.end(true, (err1) => {
+						server2.close((err2) => {
+							done(err || err1 || err2)
+						})
+					})
+				}
+
+				const deadline = setTimeout(() => {
+					finish(
+						new Error(
+							`the second session never completed (connections: ${connections}, messages: ${messages.length})`,
+						),
+					)
+				}, 5000)
+
+				const server2 = serverBuilder(
+					config.protocol,
+					(serverClient) => {
+						connections += 1
+						const connection = connections
+						serverClient.on('connect', () => {
+							// The lie: the client asked for a clean start on both
+							// connections, so there is no session to be present.
+							serverClient.connack(
+								version === 5
+									? {
+											reasonCode: 0,
+											sessionPresent: connection > 1,
+										}
+									: {
+											returnCode: 0,
+											sessionPresent: connection > 1,
+										},
+							)
+							if (connection === 1) {
+								serverClient.publish({
+									messageId,
+									topic: staleTopic,
+									payload: 'Message',
+									qos: 2,
+								})
+							} else {
+								serverClient.pubrel({ messageId })
+							}
+						})
+						serverClient.on('pubrec', () => {
+							// Drop the socket without ever sending PUBREL, so the
+							// message stays in the client's incoming store.
+							serverClient.destroy()
+						})
+						serverClient.on('pubcomp', () => {
+							try {
+								assert.deepStrictEqual(
+									messages,
+									[],
+									"the previous session's message must not be delivered",
+								)
+								assert.strictEqual(
+									client['_incomingQoS2Ids'].size,
+									0,
+									'the slot the dropped message held must be released',
+								)
+							} catch (err) {
+								return finish(err as Error)
+							}
+							finish()
+						})
+					},
+				)
+				server2.listen(ports.PORTAND344, () => {
+					client = connect({
+						host: 'localhost',
+						port: ports.PORTAND344,
+						clean: true,
+						reconnectPeriod: 100,
+					})
+					client.on('message', (topic) => messages.push(topic))
+					// Dropping the socket is how the test gets to connection 2, so
+					// the transport errors that follow it are expected noise.
+					client.on('error', () => {})
+				})
+			},
+		)
 	})
 
 	describe('auto reconnect', () => {
