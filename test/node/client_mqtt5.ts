@@ -6,6 +6,8 @@ import serverBuilder from './server_helpers_for_client_tests'
 import getPorts from './helpers/port_list'
 import mqttPacket, { type IAuthPacket, type IPublishPacket } from 'mqtt-packet'
 import mqtt, { type ErrorWithReasonCode } from '../../src'
+import { EventEmitter } from 'node:events'
+import handlePacket from '../../src/lib/handlers'
 
 const ports = getPorts(1)
 
@@ -1412,6 +1414,47 @@ describe('MQTT 5.0', () => {
 			})
 		},
 	)
+
+	// Round 8. `done` is the pump callback that completes the pending `_write`.
+	// The ack path deliberately leaves the connection up, so skipping `done`
+	// wedges a live socket for good: it keeps pinging, never reconnects, and no
+	// later packet is ever handled - the GHSA-c8jq-r765-cq7g wedge reached
+	// through an application `error` listener instead of a broker.
+	it('should complete the pending write when an ack error listener throws', () => {
+		let doneCalls = 0
+		const client: any = new EventEmitter()
+		client.log = () => {}
+		client.options = { protocolVersion: 5 }
+		client.reschedulePing = () => {}
+		client.outgoing = {
+			1: { cmd: 'publish', volatile: false, cb: () => {} },
+		}
+		client.on('error', () => {
+			throw new Error('listener blew up')
+		})
+
+		assert.throws(
+			() =>
+				handlePacket(
+					client,
+					{
+						cmd: 'suback',
+						messageId: 1,
+						granted: [0],
+						length: 3,
+					} as any,
+					() => {
+						doneCalls += 1
+					},
+				),
+			/listener blew up/,
+		)
+		assert.strictEqual(
+			doneCalls,
+			1,
+			'the pump callback must run even though the error listener threw',
+		)
+	})
 
 	it(
 		'should throw an error if there is Auth Data with no Auth Method',
@@ -3923,6 +3966,764 @@ describe('MQTT 5.0', () => {
 			})
 			client.once('connect', () => {
 				client.subscribe('a/b', { qos: 1 })
+			})
+		},
+	)
+
+	// The tests below cover GHSA-h8jm-hm87-fqw3. They are deliberately not the
+	// last tests in this file: the `after` hook calls `process.exit(0)`, which
+	// swallows the result of whatever runs last.
+	const qos2Publish = (messageId: number) => ({
+		messageId,
+		topic: 'test',
+		payload: 'Message',
+		qos: 2 as const,
+	})
+
+	// The client used to retain inbound QoS 2 messages in its incoming store
+	// without enforcing the Receive Maximum it advertised, letting a broker grow
+	// client-side state past the bound.
+	it(
+		'should enforce the advertised receiveMaximum for inbound QoS 2 messages',
+		{
+			timeout: 15000,
+		},
+		function _test(t, done) {
+			const opts: mqtt.IClientOptions = {
+				host: 'localhost',
+				port: ports.PORTAND103,
+				protocolVersion: 5,
+				reconnectPeriod: 100,
+				properties: { receiveMaximum: 2 },
+			}
+			const client = mqtt.connect(opts)
+
+			let pubrecCount = 0
+			let connections = 0
+			let quotaError: ErrorWithReasonCode
+			let finished = false
+
+			const finish = (err?: Error) => {
+				if (finished) return
+				finished = true
+				client.end(true, (err1) => {
+					server2.close((err2) => {
+						done(err || err1 || err2)
+					})
+				})
+			}
+
+			const server2 = new MqttServer((serverClient) => {
+				connections++
+				const connection = connections
+				serverClient.on('connect', () => {
+					serverClient.connack({ reasonCode: 0 })
+					if (connection > 1) {
+						// Getting a second connection at all is the assertion for
+						// the teardown policy: `end()` would have made the 0x93
+						// terminal for the lifetime of the client.
+						try {
+							assert.isDefined(
+								quotaError,
+								'the third message must be refused',
+							)
+							assert.strictEqual(quotaError.code, 0x93)
+							assert.include(
+								quotaError.message,
+								'Receive Maximum exceeded',
+							)
+							assert.include(
+								quotaError.message,
+								'receiveMaximum is 2',
+								'the error names the limit it hit',
+							)
+							assert.strictEqual(
+								pubrecCount,
+								2,
+								'only the messages within the quota were acknowledged',
+							)
+						} catch (err) {
+							return finish(err as Error)
+						}
+						return finish()
+					}
+					// Send 3 distinct QoS 2 publishes and never send PUBREL, so
+					// they stay in-flight in the client's incoming store. With a
+					// receiveMaximum of 2 the third one must be refused.
+					for (let i = 1; i <= 3; i++) {
+						serverClient.publish(qos2Publish(i))
+					}
+				})
+				serverClient.on('pubrec', () => {
+					pubrecCount++
+				})
+			}).listen(ports.PORTAND103)
+
+			// A test that times out never reaches `finish`, and would otherwise
+			// leave the port bound and cascade EADDRINUSE into the next ones.
+			t.after(() => {
+				if (!finished) {
+					client.end(true)
+					server2.close()
+				}
+			})
+
+			client.on('error', (err) => {
+				if ((err as ErrorWithReasonCode).code === 0x93) {
+					quotaError = err as ErrorWithReasonCode
+				}
+			})
+		},
+	)
+
+	// `_write` parses the whole TCP chunk into the pump queue before the first
+	// packet is handled, so the quota teardown has to throw the rest of that
+	// chunk away. Without it the pump keeps running the packets of a broker we
+	// just declared in violation against a destroyed stream.
+	it(
+		'should drop the rest of the chunk after a receiveMaximum teardown',
+		{
+			timeout: 15000,
+		},
+		function _test(t, done) {
+			const client = mqtt.connect({
+				host: 'localhost',
+				port: ports.PORTAND342,
+				protocolVersion: 5,
+				// one connection only: everything asserted here is about the
+				// packets that follow the refused one in the same chunk
+				reconnectPeriod: 0,
+				properties: { receiveMaximum: 1 },
+			})
+
+			let finished = false
+
+			const finish = (err?: Error) => {
+				if (finished) return
+				finished = true
+				clearTimeout(deadline)
+				client.end(true, (err1) => {
+					server2.close((err2) => {
+						done(err || err1 || err2)
+					})
+				})
+			}
+
+			const errors: ErrorWithReasonCode[] = []
+			const messages: string[] = []
+
+			// the signal below only arrives if the teardown happened at all; a
+			// regression to a wedged pump would otherwise hang until the test
+			// timeout with nothing said about why
+			const deadline = setTimeout(() => {
+				finish(
+					new Error(
+						`the connection was never torn down (errors: ${errors.length}, messages: ${messages.length})`,
+					),
+				)
+			}, 2000)
+
+			const server2 = new MqttServer((serverClient) => {
+				// The client's teardown destroys its socket, and the FIN
+				// arriving here is strictly later than anything the pump could
+				// still do with the rest of the chunk: a leaked `message` is
+				// emitted from the nextTick queue, which drains in full before
+				// the event loop ever polls I/O. So this is the deterministic
+				// "the pump has had its chance" signal, in place of a sleep.
+				serverClient.on('close', () => {
+					try {
+						assert.deepStrictEqual(
+							messages,
+							[],
+							'no message may be emitted after the teardown',
+						)
+						assert.strictEqual(
+							errors.length,
+							1,
+							`expected exactly one error, got ${errors
+								.map((e) => e.message)
+								.join(', ')}`,
+						)
+						assert.strictEqual(errors[0].code, 0x93)
+						assert.include(
+							errors[0].message,
+							'2 inbound QoS 2 messages in flight, receiveMaximum is 1',
+							'the error counts the message that broke the quota',
+						)
+					} catch (assertErr) {
+						return finish(assertErr as Error)
+					}
+					finish()
+				})
+
+				serverClient.on('connect', () => {
+					serverClient.connack({ reasonCode: 0 })
+					// written back to back so they reach the client as one
+					// chunk: the second one exhausts the quota and tears the
+					// connection down, the third must never be handled
+					serverClient.publish(qos2Publish(1))
+					serverClient.publish(qos2Publish(2))
+					serverClient.publish({
+						messageId: 0,
+						topic: 'after-teardown',
+						payload: 'Message',
+						qos: 0,
+					})
+				})
+			}).listen(ports.PORTAND342)
+
+			client.on('error', (err) => errors.push(err as ErrorWithReasonCode))
+			client.on('message', (topic) => messages.push(topic))
+
+			t.after(() => {
+				if (!finished) {
+					client.end(true)
+					server2.close()
+				}
+			})
+		},
+	)
+
+	// The client used to put the raw user option on the wire while enforcing a
+	// clamped one, so a rejected value made the broker enforce a different limit
+	// than the client did - and `receiveMaximum: 0` is itself a protocol error
+	// (MQTT 5 3.2.2.3.3) that the broker blames the client for.
+	it(
+		'should advertise the receiveMaximum it enforces and leave the caller options alone',
+		{
+			timeout: 15000,
+		},
+		function _test(t, done) {
+			const properties: mqtt.IClientOptions['properties'] = {
+				receiveMaximum: 0,
+			}
+			const opts: mqtt.IClientOptions = {
+				host: 'localhost',
+				port: ports.PORTAND103,
+				protocolVersion: 5,
+				reconnectPeriod: 0,
+				properties,
+			}
+			const client = mqtt.connect(opts)
+
+			let finished = false
+
+			const finish = (err?: Error) => {
+				if (finished) return
+				finished = true
+				client.end(true, (err1) => {
+					server2.close((err2) => {
+						done(err || err1 || err2)
+					})
+				})
+			}
+
+			const server2 = new MqttServer((serverClient) => {
+				serverClient.on('connect', (packet) => {
+					try {
+						assert.strictEqual(
+							packet.properties.receiveMaximum,
+							0xffff,
+							'the advertised limit is the enforced one',
+						)
+						assert.strictEqual(
+							properties.receiveMaximum,
+							0,
+							'the options object the caller passed in is untouched',
+						)
+					} catch (err) {
+						return finish(err as Error)
+					}
+					finish()
+				})
+			}).listen(ports.PORTAND103)
+
+			// A test that times out never reaches `finish`, and would otherwise
+			// leave the port bound and cascade EADDRINUSE into the next ones.
+			t.after(() => {
+				if (!finished) {
+					client.end(true)
+					server2.close()
+				}
+			})
+
+			client.on('error', (err) => {
+				finish(err)
+			})
+		},
+	)
+
+	// The quota used to be reset on every `close` while the incoming store
+	// entries it is meant to bound survived the reconnect, so a broker could
+	// clear the counter by dropping the socket and grow the store one connection
+	// at a time, up to the 65535 message id ceiling. The session is resumed here,
+	// which is the only case where those entries legitimately outlive the socket.
+	it(
+		'should keep the receiveMaximum quota across a dropped connection',
+		{
+			timeout: 15000,
+		},
+		function _test(t, done) {
+			const opts: mqtt.IClientOptions = {
+				host: 'localhost',
+				port: ports.PORTAND103,
+				protocolVersion: 5,
+				clean: false,
+				clientId: 'ghsa-h8jm-quota-across-drop',
+				reconnectPeriod: 100,
+				properties: { receiveMaximum: 2 },
+			}
+			const client = mqtt.connect(opts)
+
+			let firstConnectionPubrecs = 0
+			let connections = 0
+			let finished = false
+
+			const finish = (err?: Error) => {
+				if (finished) return
+				finished = true
+				client.end(true, (err1) => {
+					server2.close((err2) => {
+						done(err || err1 || err2)
+					})
+				})
+			}
+
+			const server2 = new MqttServer((serverClient) => {
+				connections++
+				const connection = connections
+				serverClient.on('connect', () => {
+					serverClient.connack({
+						reasonCode: 0,
+						// The broker resumed the session, so the client keeps
+						// the messages it stored for it.
+						sessionPresent: connection > 1,
+					})
+					if (connection === 1) {
+						// Fill the quota and never send PUBREL: both packets stay
+						// in the client's incoming store.
+						serverClient.publish(qos2Publish(1))
+						serverClient.publish(qos2Publish(2))
+					} else {
+						// A message id the client has never seen. The two entries
+						// stored before the socket dropped are still there, so it
+						// must be refused.
+						serverClient.publish(qos2Publish(3))
+					}
+				})
+				serverClient.on('pubrec', () => {
+					if (connection > 1) {
+						return finish(
+							new Error(
+								'the quota was reset by dropping the connection',
+							),
+						)
+					}
+					firstConnectionPubrecs++
+					if (firstConnectionPubrecs === 2) {
+						// Drop the TCP connection without a DISCONNECT.
+						serverClient.destroy()
+					}
+				})
+			}).listen(ports.PORTAND103)
+
+			// A test that times out never reaches `finish`, and would otherwise
+			// leave the port bound and cascade EADDRINUSE into the next ones.
+			t.after(() => {
+				if (!finished) {
+					client.end(true)
+					server2.close()
+				}
+			})
+
+			client.on('error', (err) => {
+				if ((err as ErrorWithReasonCode).code !== 0x93) return
+				try {
+					assert.strictEqual(
+						connections,
+						2,
+						'the refusal happened on the second connection',
+					)
+				} catch (assertErr) {
+					return finish(assertErr as Error)
+				}
+				finish()
+			})
+		},
+	)
+
+	// The slot used to be released when the PUBREL arrived rather than when the
+	// store entry went away. Erroring from `handleMessage` is the documented
+	// backpressure signal and deliberately keeps the packet stored, so a broker
+	// that can make the application error could cycle new message ids forever.
+	it(
+		'should hold the receiveMaximum slot while the packet stays in the incoming store',
+		{
+			timeout: 15000,
+		},
+		function _test(t, done) {
+			const opts: mqtt.IClientOptions = {
+				host: 'localhost',
+				port: ports.PORTAND103,
+				protocolVersion: 5,
+				properties: { receiveMaximum: 2 },
+			}
+			const client = mqtt.connect(opts)
+
+			const handled: number[] = []
+			let pubrecCount = 0
+			let finished = false
+			let serverClient: any
+
+			const finish = (err?: Error) => {
+				if (finished) return
+				finished = true
+				client.end(true, (err1) => {
+					server2.close((err2) => {
+						done(err || err1 || err2)
+					})
+				})
+			}
+
+			// Always fail: erroring here means "I could not take this message",
+			// and leaves it in the incoming store.
+			client.handleMessage = (packet, cb) => {
+				handled.push(packet.messageId)
+				cb(new Error('application handler failure'))
+				// One more distinct id than the quota allows.
+				serverClient.publish(qos2Publish(handled.length + 1))
+			}
+
+			const server2 = new MqttServer((client2) => {
+				serverClient = client2
+				serverClient.on('connect', () => {
+					serverClient.connack({ reasonCode: 0 })
+					serverClient.publish(qos2Publish(1))
+				})
+				serverClient.on('pubrec', (packet) => {
+					pubrecCount++
+					if (pubrecCount > 2) {
+						return finish(
+							new Error(
+								'a stored packet released its receiveMaximum slot',
+							),
+						)
+					}
+					serverClient.pubrel({ messageId: packet.messageId })
+				})
+			}).listen(ports.PORTAND103)
+
+			// A test that times out never reaches `finish`, and would otherwise
+			// leave the port bound and cascade EADDRINUSE into the next ones.
+			t.after(() => {
+				if (!finished) {
+					client.end(true)
+					server2.close()
+				}
+			})
+
+			client.on('error', (err) => {
+				if ((err as ErrorWithReasonCode).code !== 0x93) {
+					return finish(err)
+				}
+				try {
+					assert.deepEqual(
+						handled,
+						[1, 2],
+						'both stored messages reached handleMessage',
+					)
+					assert.strictEqual(pubrecCount, 2)
+				} catch (assertErr) {
+					return finish(assertErr as Error)
+				}
+				finish()
+			})
+		},
+	)
+
+	// The other half of the same invariant: once the store entry is dropped the
+	// slot has to come back, including on the retry after a `handleMessage`
+	// error. Otherwise the quota leaks and the client tears down its own healthy
+	// connection with 0x93.
+	it(
+		'should release the receiveMaximum slot when the incoming store entry is dropped',
+		{
+			timeout: 15000,
+		},
+		function _test(t, done) {
+			const total = 5
+			const opts: mqtt.IClientOptions = {
+				host: 'localhost',
+				port: ports.PORTAND103,
+				protocolVersion: 5,
+				// deliberately smaller than `total`: every message has to give
+				// its slot back for the run to complete
+				properties: { receiveMaximum: 2 },
+			}
+			const client = mqtt.connect(opts)
+
+			const completed: number[] = []
+			const failedOnce = new Set<number>()
+			let finished = false
+			let serverClient: any
+
+			const finish = (err?: Error) => {
+				if (finished) return
+				finished = true
+				client.end(true, (err1) => {
+					server2.close((err2) => {
+						done(err || err1 || err2)
+					})
+				})
+			}
+
+			// Error on the first delivery of each id, accept the retry.
+			client.handleMessage = (packet, cb) => {
+				const { messageId } = packet
+				if (failedOnce.has(messageId)) {
+					return cb()
+				}
+				failedOnce.add(messageId)
+				cb(new Error('application handler failure'))
+				// A real broker retransmits the unacknowledged PUBREL.
+				serverClient.pubrel({ messageId })
+			}
+
+			const server2 = new MqttServer((client2) => {
+				serverClient = client2
+				serverClient.on('connect', () => {
+					serverClient.connack({ reasonCode: 0 })
+					serverClient.publish(qos2Publish(1))
+				})
+				serverClient.on('pubrec', (packet) => {
+					serverClient.pubrel({ messageId: packet.messageId })
+				})
+				serverClient.on('pubcomp', (packet) => {
+					completed.push(packet.messageId)
+					if (completed.length < total) {
+						serverClient.publish(qos2Publish(completed.length + 1))
+						return
+					}
+					try {
+						assert.deepEqual(completed, [1, 2, 3, 4, 5])
+						assert.isTrue(
+							client.connected,
+							'the client must still be connected',
+						)
+					} catch (err) {
+						return finish(err as Error)
+					}
+					finish()
+				})
+			}).listen(ports.PORTAND103)
+
+			// A test that times out never reaches `finish`, and would otherwise
+			// leave the port bound and cascade EADDRINUSE into the next ones.
+			t.after(() => {
+				if (!finished) {
+					client.end(true)
+					server2.close()
+				}
+			})
+
+			client.on('error', (err) => {
+				finish(err)
+			})
+		},
+	)
+
+	// The PUBRELs for a session the broker throws away are never coming, so the
+	// inbound QoS 2 messages waiting for them are dead. The client used to keep
+	// both the store entries and the Receive Maximum slots they hold, for its
+	// whole lifetime: a broker could PUBREC-then-drop its way through the quota
+	// and leave QoS 2 reception permanently refused with 0x93.
+	it(
+		'should discard inbound QoS 2 state when the broker does not resume the session',
+		{
+			timeout: 15000,
+		},
+		function _test(t, done) {
+			const rounds = 3
+			const opts: mqtt.IClientOptions = {
+				host: 'localhost',
+				port: ports.PORTAND103,
+				protocolVersion: 5,
+				reconnectPeriod: 100,
+				properties: { receiveMaximum: 2 },
+			}
+			const client = mqtt.connect(opts)
+
+			let connections = 0
+			let nextMessageId = 1
+			const pubrecsPerConnection: number[] = []
+			let finished = false
+
+			const finish = (err?: Error) => {
+				if (finished) return
+				finished = true
+				client.end(true, (err1) => {
+					server2.close((err2) => {
+						done(err || err1 || err2)
+					})
+				})
+			}
+
+			const server2 = new MqttServer((serverClient) => {
+				connections++
+				const connection = connections
+				pubrecsPerConnection[connection - 1] = 0
+				serverClient.on('connect', () => {
+					// The client connects with the default `clean: true`, so the
+					// broker keeps no session and says so.
+					serverClient.connack({
+						reasonCode: 0,
+						sessionPresent: false,
+					})
+					// Two message ids the client has never seen, filling the
+					// quota exactly.
+					serverClient.publish(qos2Publish(nextMessageId++))
+					serverClient.publish(qos2Publish(nextMessageId++))
+				})
+				serverClient.on('pubrec', () => {
+					pubrecsPerConnection[connection - 1]++
+					if (pubrecsPerConnection[connection - 1] < 2) {
+						return
+					}
+					if (connection < rounds) {
+						// Drop the socket without ever sending PUBREL, so both
+						// messages stay in the client's incoming store.
+						serverClient.destroy()
+						return
+					}
+					try {
+						assert.deepEqual(
+							pubrecsPerConnection,
+							new Array(rounds).fill(2),
+							'every connection acknowledged both messages',
+						)
+					} catch (err) {
+						return finish(err as Error)
+					}
+					finish()
+				})
+			}).listen(ports.PORTAND103)
+
+			// A test that times out never reaches `finish`, and would otherwise
+			// leave the port bound and cascade EADDRINUSE into the next ones.
+			t.after(() => {
+				if (!finished) {
+					client.end(true)
+					server2.close()
+				}
+			})
+
+			client.on('error', (err) => {
+				// Dropping the socket is how the test gets to the next round.
+				if ((err as NodeJS.ErrnoException).code === 'ECONNRESET') {
+					return
+				}
+				finish(err)
+			})
+		},
+	)
+
+	// The other side of the same rule: a session the broker does resume still
+	// owes us its PUBRELs, and they must find their stored packets.
+	it(
+		'should keep inbound QoS 2 state when the broker resumes the session',
+		{
+			timeout: 15000,
+		},
+		function _test(t, done) {
+			const opts: mqtt.IClientOptions = {
+				host: 'localhost',
+				port: ports.PORTAND103,
+				protocolVersion: 5,
+				clean: false,
+				clientId: 'ghsa-h8jm-resumed-session',
+				reconnectPeriod: 100,
+				properties: { receiveMaximum: 2 },
+			}
+			const client = mqtt.connect(opts)
+
+			const messageIds: number[] = []
+			let connections = 0
+			let finished = false
+
+			const finish = (err?: Error) => {
+				if (finished) return
+				finished = true
+				client.end(true, (err1) => {
+					server2.close((err2) => {
+						done(err || err1 || err2)
+					})
+				})
+			}
+
+			const server2 = new MqttServer((serverClient) => {
+				connections++
+				const connection = connections
+				serverClient.on('connect', () => {
+					if (connection === 1) {
+						serverClient.connack({
+							reasonCode: 0,
+							sessionPresent: false,
+						})
+						serverClient.publish(qos2Publish(1))
+						return
+					}
+					// The session is back, so the PUBLISH stored before the
+					// socket dropped has to still be there for the redelivered
+					// PUBREL to complete.
+					serverClient.connack({
+						reasonCode: 0,
+						sessionPresent: true,
+					})
+					serverClient.pubrel({ messageId: 1 })
+				})
+				serverClient.on('pubrec', () => {
+					// Drop the socket before the PUBREL, leaving the message in
+					// the client's incoming store.
+					serverClient.destroy()
+				})
+				serverClient.on('pubcomp', (packet) => {
+					try {
+						assert.strictEqual(
+							connection,
+							2,
+							'the message completed on the resumed connection',
+						)
+						assert.strictEqual(packet.messageId, 1)
+						assert.deepEqual(
+							messageIds,
+							[1],
+							'the stored message was delivered to the application',
+						)
+					} catch (err) {
+						return finish(err as Error)
+					}
+					finish()
+				})
+			}).listen(ports.PORTAND103)
+
+			// A test that times out never reaches `finish`, and would otherwise
+			// leave the port bound and cascade EADDRINUSE into the next ones.
+			t.after(() => {
+				if (!finished) {
+					client.end(true)
+					server2.close()
+				}
+			})
+
+			client.on('message', (topic, payload, packet) => {
+				messageIds.push(packet.messageId)
+			})
+
+			client.on('error', (err) => {
+				if ((err as NodeJS.ErrnoException).code === 'ECONNRESET') {
+					return
+				}
+				finish(err)
 			})
 		},
 	)

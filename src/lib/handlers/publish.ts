@@ -247,6 +247,25 @@ const handlePublish: PacketHandler = (
 							done,
 						)
 					} else {
+						// Record the message id before retaining another inbound
+						// QoS 2 message, so the entry can be purged with the
+						// session it belongs to. On MQTT 5 this also takes a
+						// Receive Maximum slot: without it a broker can send
+						// unlimited distinct-messageId QoS 2 PUBLISH packets
+						// before PUBREL and grow the incoming store past the
+						// advertised bound (GHSA-h8jm-hm87-fqw3).
+						if (
+							!client['_trackIncomingQoS2Publish'](
+								messageId,
+								done,
+								pump,
+							)
+						) {
+							// Quota exceeded. The connection has been torn down,
+							// the rest of the parsed chunk dropped and `done`
+							// already called; there is nothing left to do here.
+							return
+						}
 						client.incomingStore.put(packet, () => {
 							client['_sendPacket'](
 								{ cmd: 'pubrec', messageId },
