@@ -110,8 +110,12 @@ const handle: PacketHandler = (client, packet, done, pump) => {
 			break
 		case 'auth':
 			client.reschedulePing()
-			handleAuth(client, packet)
-			done()
+			// See the ack case above for why `done` is in a `finally`.
+			try {
+				handleAuth(client, packet, pump)
+			} finally {
+				done()
+			}
 			break
 		case 'pingresp':
 			client.log('_handlePacket :: received pingresp')
