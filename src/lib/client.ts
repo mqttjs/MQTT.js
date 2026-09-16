@@ -33,6 +33,7 @@ import {
 	type GenericCallback,
 	type IStream,
 	MQTTJS_VERSION,
+	type PacketPump,
 	type StreamBuilder,
 	type TimerVariant,
 	type VoidCallback,
@@ -523,6 +524,14 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 	private _deferredReconnect: () => void
 
+	/**
+	 * The packet pump `connect()` created last. A handler reaches its own pump
+	 * through the arguments it was called with, and compares it against this
+	 * one to tell whether the connection its packet came from is still the
+	 * live connection.
+	 */
+	private _currentPump: PacketPump
+
 	private connackPacket: IConnackPacket
 
 	public static defaultId() {
@@ -770,6 +779,24 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		let completeParse = null
 		const packets = []
 
+		// A single TCP chunk is parsed in full before the first packet is
+		// handled, so a handler that tears the connection down has to throw the
+		// rest of the chunk away: handling it would run packets of a broker we
+		// just declared in violation against an already destroyed stream.
+		//
+		// Both the queue and the client's current connection are things a
+		// handler must be able to ask about *its own* connection, so they are
+		// scoped to this `connect()` call and travel to the handlers rather
+		// than being read back off the client: a handler can resume long after
+		// the connection it belongs to is gone.
+		const pump: PacketPump = {
+			discardParsedPackets: () => {
+				packets.length = 0
+			},
+			isCurrent: () => this._currentPump === pump,
+		}
+		this._currentPump = pump
+
 		this.log('connect :: calling method to clear reconnect')
 		this._clearReconnect()
 
@@ -796,7 +823,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 			if (packet) {
 				this.log('work :: packet pulled from queue')
-				handlePacket(this, packet, nextTickWork)
+				handlePacket(this, packet, nextTickWork, pump)
 			} else {
 				this.log('work :: no packets in queue')
 				const done = completeParse
@@ -812,7 +839,14 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			} else {
 				const done = completeParse
 				completeParse = null
-				done()
+				// Same null check as `work` above: this is the callback handed
+				// to packet handlers, and a handler can hand it on to user code
+				// - `customHandleAcks` and `handleMessage` both take a callback
+				// the application invokes. An application that invokes one of
+				// them twice reaches here twice, and the second time the
+				// pending `_write` is already completed. Absorb it instead of
+				// crashing the pump from the inside.
+				if (done) done()
 			}
 		}
 

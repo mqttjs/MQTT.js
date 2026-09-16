@@ -587,7 +587,7 @@ describe('MQTT 5.0', () => {
 			client.on('error', (error) => {
 				assert.strictEqual(
 					error.message,
-					'Received Topic Alias is out of range',
+					'Received Topic Alias 4 is outside the advertised Topic Alias Maximum range 1-3',
 				)
 				client.end(true, (err1) => {
 					server2.close((err2) => {
@@ -633,7 +633,7 @@ describe('MQTT 5.0', () => {
 			client.on('error', (error) => {
 				assert.strictEqual(
 					error.message,
-					'Received Topic Alias is out of range',
+					'Received Topic Alias 0 is outside the advertised Topic Alias Maximum range 1-3',
 				)
 				client.end(true, (err1) => {
 					server2.close((err2) => {
@@ -676,16 +676,451 @@ describe('MQTT 5.0', () => {
 				})
 			}).listen(ports.PORTAND103)
 
-			client.on('error', (error) => {
+			client.on('error', (error: ErrorWithReasonCode) => {
 				assert.strictEqual(
 					error.message,
 					'Received unregistered Topic Alias',
 				)
+				// 3.3.4 3)a) codes a zero length Topic Name with no mapping as
+				// 0x82 Protocol Error, not the 0x94 the out-of-range cases get
+				assert.strictEqual(error.code, 130)
 				client.end(true, (err1) => {
 					server2.close((err2) => {
 						done(err1 || err2)
 					})
 				})
+			})
+		},
+	)
+
+	// Regression test for GHSA-c8jq-r765-cq7g: a broker sending a Topic Alias to
+	// a client that never advertised a Topic Alias Maximum used to dereference an
+	// uninitialized receiver and crash the process with an uncaught TypeError.
+	// The guard must tear the connection down and let it reconnect: returning
+	// without calling the packet pump callback leaves the client wedged
+	// (`connected === true`, no packets, no `close`), and ending the client would
+	// hand the broker a permanent kill switch.
+	it(
+		'should tear down and reconnect when the broker sends an unsolicited topic alias',
+		{
+			timeout: 15000,
+		},
+		function _test(t, done) {
+			const opts: mqtt.IClientOptions = {
+				host: 'localhost',
+				port: ports.PORTAND103,
+				protocolVersion: 5,
+				reconnectPeriod: 100,
+				// deliberately no properties.topicAliasMaximum, so the client
+				// does not initialize its topic alias receiver
+			}
+			const client = mqtt.connect(opts)
+
+			let finished = false
+			let deadline: NodeJS.Timeout
+
+			const finish = (err?: Error) => {
+				if (finished) return
+				finished = true
+				clearTimeout(deadline)
+				client.end(true, (err1) => {
+					server2.close((err2) => {
+						done(err || err1 || err2)
+					})
+				})
+			}
+
+			// assertions run inside event handlers, route failures to `done`
+			// instead of letting them escape the test's stack
+			const check = (fn: () => void) => {
+				try {
+					fn()
+				} catch (assertErr) {
+					finish(assertErr as Error)
+				}
+			}
+
+			const server2 = new MqttServer((serverClient) => {
+				serverClient.on('connect', () => {
+					serverClient.connack({ reasonCode: 0 })
+					// broker sends a topic alias the client never allowed
+					serverClient.publish({
+						messageId: 0,
+						topic: 'test',
+						payload: 'Message',
+						qos: 0,
+						properties: { topicAlias: 1 },
+					})
+				})
+			}).listen(ports.PORTAND103)
+
+			let errors = 0
+			let closes = 0
+			let connects = 0
+
+			// Without a deadline the only way to fail is the 15s test timeout,
+			// which says nothing about what broke. Each stage arms the one for
+			// the stage that follows it, and the message names the regression
+			// plus the counters that prove it.
+			const armDeadline = (ms: number, regression: string) => {
+				clearTimeout(deadline)
+				deadline = setTimeout(() => {
+					finish(
+						new Error(
+							`${regression} (errors: ${errors}, closes: ${closes}, connects: ${connects})`,
+						),
+					)
+				}, ms)
+			}
+
+			client.on('error', (err) => {
+				errors++
+				check(() => {
+					assert.strictEqual(
+						err.message,
+						'Received a PUBLISH Topic Alias but no Topic Alias Maximum was advertised',
+					)
+					assert.strictEqual((err as ErrorWithReasonCode).code, 148)
+				})
+			})
+
+			client.on('close', () => {
+				closes++
+				if (closes === 1) {
+					armDeadline(
+						2000,
+						'the connection was torn down but never reconnected',
+					)
+				}
+			})
+
+			client.on('connect', () => {
+				connects++
+				if (connects < 2) {
+					armDeadline(
+						3000,
+						'the unsolicited topic alias never tore the connection down: the client is wedged',
+					)
+					return
+				}
+				// the first connection was torn down by the guard and the
+				// client came back on its own: not wedged, not terminal
+				check(() => {
+					assert.isAtLeast(errors, 1, 'expected a protocol error')
+					assert.isAtLeast(closes, 1, 'expected the socket to close')
+					assert.isFalse(client.disconnecting)
+				})
+				finish()
+			})
+
+			// PORTAND103 is shared with ~20 other tests in this file: if the
+			// guard ever regresses to "wedged" this test times out, and without
+			// this the leaked listener makes all of them fail with EADDRINUSE
+			t.after(() => {
+				if (!finished) {
+					client.end(true)
+					server2.close()
+				}
+			})
+		},
+	)
+
+	// Also GHSA-c8jq-r765-cq7g: `_write` parses the whole TCP chunk into the
+	// pump queue before the first packet is handled, so a teardown that only
+	// called the pump callback kept running the rest of the attacker's chunk
+	// against a destroyed stream.
+	it(
+		'should drop the rest of the chunk after a topic alias teardown',
+		{
+			timeout: 15000,
+		},
+		function _test(t, done) {
+			const client = mqtt.connect({
+				host: 'localhost',
+				port: ports.PORTAND114,
+				protocolVersion: 5,
+				// one connection only: everything asserted here is about the
+				// packets that follow the bad one in the same chunk
+				reconnectPeriod: 0,
+				// deliberately no properties.topicAliasMaximum
+			})
+
+			let finished = false
+
+			const finish = (err?: Error) => {
+				if (finished) return
+				finished = true
+				clearTimeout(deadline)
+				client.end(true, (err1) => {
+					server2.close((err2) => {
+						done(err || err1 || err2)
+					})
+				})
+			}
+
+			const errors: Error[] = []
+			const messages: string[] = []
+
+			// the signal below only arrives if the teardown happened at all; a
+			// regression to the original wedge would otherwise hang until the
+			// test timeout with nothing said about why
+			const deadline = setTimeout(() => {
+				finish(
+					new Error(
+						`the connection was never torn down (errors: ${errors.length}, messages: ${messages.length})`,
+					),
+				)
+			}, 2000)
+
+			const server2 = new MqttServer((serverClient) => {
+				// The client's teardown destroys its socket, and the FIN
+				// arriving here is strictly later than anything the pump could
+				// still do with the rest of the chunk: a leaked `message` is
+				// emitted from the nextTick queue, which drains in full before
+				// the event loop ever polls I/O. So this is the deterministic
+				// "the pump has had its chance" signal, in place of a sleep.
+				serverClient.on('close', () => {
+					try {
+						assert.deepStrictEqual(
+							messages,
+							[],
+							'no message may be emitted after the teardown',
+						)
+						assert.strictEqual(
+							errors.length,
+							1,
+							`expected exactly one error, got ${errors
+								.map((e) => e.message)
+								.join(', ')}`,
+						)
+					} catch (assertErr) {
+						return finish(assertErr as Error)
+					}
+					finish()
+				})
+
+				serverClient.on('connect', () => {
+					serverClient.connack({ reasonCode: 0 })
+					// written back to back so they reach the client as one
+					// chunk: the bad one tears the connection down, the good
+					// one must never be handled
+					serverClient.publish({
+						messageId: 0,
+						topic: 'test',
+						payload: 'Message',
+						qos: 0,
+						properties: { topicAlias: 1 },
+					})
+					serverClient.publish({
+						messageId: 0,
+						topic: 'after-teardown',
+						payload: 'Message',
+						qos: 0,
+					})
+				})
+			}).listen(ports.PORTAND114)
+
+			client.on('error', (err) => errors.push(err))
+			client.on('message', (topic) => messages.push(topic))
+
+			t.after(() => {
+				if (!finished) {
+					client.end(true)
+					server2.close()
+				}
+			})
+		},
+	)
+
+	// Also GHSA-c8jq-r765-cq7g, one connection later. The packet queue is per
+	// connection, but the discard used to be a field on the client that every
+	// `connect()` reassigned. An application that parks inside `handleMessage`
+	// and answers after a reconnect resumes the *old* connection's pump, and
+	// the violation the pump then found emptied the queue of the connection
+	// that had replaced it and destroyed its stream - a connection that never
+	// did anything wrong.
+	it(
+		'should not let a violation on a closed connection touch the connection that replaced it',
+		{
+			timeout: 15000,
+		},
+		function _test(t, done) {
+			const messages: string[] = []
+			const errors: ErrorWithReasonCode[] = []
+			const parked = new Map<string, () => void>()
+			let connections = 0
+			let finished = false
+			let firstServerClient: any
+			let liveConnectionClosed = false
+
+			const finish = (err?: Error) => {
+				if (finished) return
+				finished = true
+				clearTimeout(deadline)
+				client.end(true, (err1) => {
+					server2.close((err2) => {
+						done(err || err1 || err2)
+					})
+				})
+			}
+
+			// Every stage of this test is driven by a callback the test itself
+			// holds, so a regression stalls rather than fails. Name what is
+			// missing instead of waiting out the test timeout.
+			const deadline = setTimeout(() => {
+				finish(
+					new Error(
+						`the second connection never delivered the rest of its chunk (connections: ${connections}, messages: [${messages.join(
+							', ',
+						)}], errors: ${errors.length})`,
+					),
+				)
+			}, 6000)
+
+			const server2 = new MqttServer((serverClient) => {
+				connections += 1
+				const connection = connections
+				if (connection === 1) {
+					firstServerClient = serverClient
+				} else {
+					// The client destroying its stream sends a FIN, so this is
+					// how the test sees the live connection being torn down by
+					// the dead one's violation.
+					serverClient.on('close', () => {
+						liveConnectionClosed = true
+					})
+				}
+				serverClient.on('connect', () => {
+					serverClient.connack({ reasonCode: 0 })
+					// Both publishes are written back to back so they reach the
+					// client as one chunk: the first one parks the pump, the
+					// second one stays in that connection's queue.
+					if (connection === 1) {
+						serverClient.publish({
+							messageId: 0,
+							topic: 'parked/1',
+							payload: 'Message',
+							qos: 0,
+						})
+						// the violation, judged long after this connection is
+						// gone
+						serverClient.publish({
+							messageId: 0,
+							topic: 'test',
+							payload: 'Message',
+							qos: 0,
+							properties: { topicAlias: 1 },
+						})
+					} else {
+						serverClient.publish({
+							messageId: 0,
+							topic: 'parked/2',
+							payload: 'Message',
+							qos: 0,
+						})
+						serverClient.publish({
+							messageId: 0,
+							topic: 'survivor',
+							payload: 'Message',
+							qos: 0,
+						})
+					}
+				})
+			}).listen(ports.PORTAND345)
+
+			const client = mqtt.connect({
+				host: 'localhost',
+				port: ports.PORTAND345,
+				protocolVersion: 5,
+				reconnectPeriod: 100,
+				// deliberately no properties.topicAliasMaximum, so any topic
+				// alias is a protocol violation
+			})
+
+			client.on('error', (err) => errors.push(err as ErrorWithReasonCode))
+			client.on('message', (topic) => messages.push(topic))
+
+			const staged = new Set<string>()
+
+			client.handleMessage = (packet, callback) => {
+				const topic = packet.topic.toString()
+				// Each topic drives exactly one stage of the test. A repeat
+				// means something reconnected that should not have; let it
+				// through and leave the verdict to the assertions below.
+				if (staged.has(topic)) {
+					callback()
+					return
+				}
+				staged.add(topic)
+				if (topic === 'parked/1') {
+					// Hold the first connection's pump open and drop its
+					// socket, so the client reconnects while the violation
+					// behind this packet is still unhandled.
+					parked.set(topic, () => callback())
+					firstServerClient.destroy()
+					return
+				}
+				if (topic === 'parked/2') {
+					parked.set(topic, () => callback())
+					// The first connection's pump resumes here, finds the
+					// topic alias, and must reach for its own queue - not this
+					// connection's.
+					parked.get('parked/1')()
+					// `nextTick` work from that pump drains before this fires.
+					setImmediate(() => parked.get('parked/2')())
+					return
+				}
+				callback()
+				if (topic !== 'survivor') return
+				try {
+					assert.deepStrictEqual(
+						messages,
+						['parked/1', 'parked/2', 'survivor'],
+						"the live connection's queue must survive the dead one's violation",
+					)
+					const rejections = errors.filter((err) => err.code === 148)
+					assert.strictEqual(
+						rejections.length,
+						1,
+						`expected exactly one topic alias rejection, got ${errors
+							.map((err) => err.message)
+							.join(', ')}`,
+					)
+					assert.strictEqual(
+						rejections[0].message,
+						'Received a PUBLISH Topic Alias but no Topic Alias Maximum was advertised',
+					)
+				} catch (assertErr) {
+					return finish(assertErr as Error)
+				}
+				// The teardown the violation would trigger is a `destroy()` on
+				// the client's stream: its FIN reaches the server within a
+				// poll, and a reconnect would follow 100ms later. Give both
+				// well over their time before calling the live connection
+				// untouched.
+				setTimeout(() => {
+					try {
+						assert.isFalse(
+							liveConnectionClosed,
+							'the live connection must not be torn down by a violation on the connection it replaced',
+						)
+						assert.strictEqual(
+							connections,
+							2,
+							'the live connection must not have been torn down',
+						)
+					} catch (assertErr) {
+						return finish(assertErr as Error)
+					}
+					finish()
+				}, 400)
+			}
+
+			t.after(() => {
+				if (!finished) {
+					client.end(true)
+					server2.close()
+				}
 			})
 		},
 	)
@@ -1088,6 +1523,186 @@ describe('MQTT 5.0', () => {
 		},
 	)
 
+	// Also GHSA-c8jq-r765-cq7g, reached through the application instead of the
+	// broker: a `customHandleAcks` that reports an error used to `return
+	// client.emit('error', …)` without calling the pump callback, so the pending
+	// `_write` was never completed and every packet after it was stranded on a
+	// connection that is still live.
+	it(
+		'should keep processing packets after customHandleAcks reports an error',
+		{
+			timeout: 15000,
+		},
+		function _test(t, done) {
+			let finished = false
+
+			const finish = (err?: Error) => {
+				if (finished) return
+				finished = true
+				client.end(true, (err1) => {
+					server2.close((err2) => {
+						done(err || err1 || err2)
+					})
+				})
+			}
+
+			const messages: string[] = []
+			const errors: string[] = []
+
+			const server2 = new MqttServer((serverClient) => {
+				serverClient.on('connect', () => {
+					serverClient.connack({ reasonCode: 0 })
+					// back to back, so the second one is already sitting in the
+					// pump queue when the first one errors
+					serverClient.publish({
+						topic: 'acks/bad',
+						payload: 'payload',
+						qos: 1,
+						messageId: 1,
+					})
+					serverClient.publish({
+						topic: 'acks/good',
+						payload: 'payload',
+						qos: 1,
+						messageId: 2,
+					})
+				})
+
+				// the PUBACK for the second message is the proof, and a
+				// deterministic one: only a pump that resumed after the error,
+				// on a connection the error did not tear down, can write it
+				serverClient.on('puback', (packet) => {
+					try {
+						assert.strictEqual(packet.messageId, 2)
+						assert.deepStrictEqual(messages, ['acks/good'])
+						assert.deepStrictEqual(errors, ['handler said no'])
+					} catch (assertErr) {
+						return finish(assertErr as Error)
+					}
+					finish()
+				})
+			}).listen(ports.PORTAND316)
+
+			const client = mqtt.connect({
+				host: 'localhost',
+				port: ports.PORTAND316,
+				protocolVersion: 5,
+				reconnectPeriod: 0,
+				customHandleAcks(topic, message, packet, cb) {
+					if (topic === 'acks/bad') {
+						cb(new Error('handler said no'))
+						return
+					}
+					cb(0)
+				},
+			})
+
+			client.on('error', (err) => errors.push(err.message))
+			client.on('message', (topic) => messages.push(topic))
+
+			t.after(() => {
+				if (!finished) {
+					client.end(true)
+					server2.close()
+				}
+			})
+		},
+	)
+
+	// A `customHandleAcks` that calls its callback twice is an application bug,
+	// but it must not take the client down with it. Before the pump callback
+	// was null checked the second call reached `nextTickWork` with the pending
+	// `_write` already completed and threw `done is not a function` from inside
+	// the packet pump - an uncaught exception, so the whole process died.
+	it(
+		'should survive a customHandleAcks that calls its callback twice',
+		{
+			timeout: 15000,
+		},
+		function _test(t, done) {
+			let finished = false
+
+			const finish = (err?: Error) => {
+				if (finished) return
+				finished = true
+				client.end(true, (err1) => {
+					server2.close((err2) => {
+						done(err || err1 || err2)
+					})
+				})
+			}
+
+			const messages: string[] = []
+			const errors: string[] = []
+
+			const server2 = new MqttServer((serverClient) => {
+				serverClient.on('connect', () => {
+					serverClient.connack({ reasonCode: 0 })
+					serverClient.publish({
+						topic: 'acks/twice',
+						payload: 'payload',
+						qos: 1,
+						messageId: 1,
+					})
+				})
+
+				serverClient.on('puback', (packet) => {
+					if (packet.messageId === 1) {
+						// the pump survived the double callback; now prove it is
+						// still live by pushing a second packet through it, in a
+						// write of its own
+						serverClient.publish({
+							topic: 'acks/after',
+							payload: 'payload',
+							qos: 1,
+							messageId: 2,
+						})
+						return
+					}
+
+					try {
+						assert.strictEqual(packet.messageId, 2)
+						assert.deepStrictEqual(messages, [
+							'acks/twice',
+							'acks/after',
+						])
+						assert.deepStrictEqual(errors, [
+							'handler called cb twice',
+						])
+					} catch (assertErr) {
+						return finish(assertErr as Error)
+					}
+					finish()
+				})
+			}).listen(ports.PORTAND343)
+
+			const client = mqtt.connect({
+				host: 'localhost',
+				port: ports.PORTAND343,
+				protocolVersion: 5,
+				reconnectPeriod: 0,
+				customHandleAcks(topic, message, packet, cb) {
+					if (topic === 'acks/twice') {
+						// deliberately missing the `return` an application
+						// should have written
+						cb(new Error('handler called cb twice'))
+					}
+					cb(0)
+				},
+			})
+
+			client.on('error', (err) => errors.push(err.message))
+			client.on('message', (topic) => messages.push(topic))
+
+			t.after(() => {
+				if (!finished) {
+					client.end(true)
+					server2.close()
+				}
+			})
+		},
+	)
+
 	it(
 		'puback handling custom reason code',
 		{
@@ -1264,6 +1879,7 @@ describe('MQTT 5.0', () => {
 					const code = 0
 					if (topic === 'a/b') {
 						cb(new Error('a/b is not valid'))
+						return
 					}
 					cb(code)
 				},
@@ -1310,6 +1926,7 @@ describe('MQTT 5.0', () => {
 					const code = 0
 					if (topic === 'a/b') {
 						cb(new Error('a/b is not valid'))
+						return
 					}
 					cb(code)
 				},
