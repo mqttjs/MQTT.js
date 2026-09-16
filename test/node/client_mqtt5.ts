@@ -1079,17 +1079,20 @@ describe('MQTT 5.0', () => {
 						['parked/1', 'parked/2', 'survivor'],
 						"the live connection's queue must survive the dead one's violation",
 					)
-					const rejections = errors.filter((err) => err.code === 148)
-					assert.strictEqual(
-						rejections.length,
-						1,
-						`expected exactly one topic alias rejection, got ${errors
+					// The violation is never examined at all: `work()` drops
+					// what is still queued on a connection the client has
+					// moved on from, so the packet reaches no handler and
+					// there is nothing to reject. Reporting a protocol error
+					// against a connection that no longer exists would tell
+					// the application about a stream it can no longer act on.
+					// What this test guards is unchanged: whatever the dead
+					// connection was carrying must not reach the live one.
+					assert.deepStrictEqual(
+						errors.map((err) => err.message),
+						[],
+						`a packet queued on the dead connection must not surface on the live one, got [${errors
 							.map((err) => err.message)
-							.join(', ')}`,
-					)
-					assert.strictEqual(
-						rejections[0].message,
-						'Received a PUBLISH Topic Alias but no Topic Alias Maximum was advertised',
+							.join(', ')}]`,
 					)
 				} catch (assertErr) {
 					return finish(assertErr as Error)
@@ -1116,6 +1119,161 @@ describe('MQTT 5.0', () => {
 					finish()
 				}, 400)
 			}
+
+			t.after(() => {
+				if (!finished) {
+					client.end(true)
+					server2.close()
+				}
+			})
+		},
+	)
+
+	// Round 8. The packet queue is per connection, but nothing stopped `work()`
+	// from handing a queued packet to a handler after the client had already
+	// moved on to a later connection. A CONNACK parked behind a slow
+	// `handleMessage` is then judged against the connection that replaced it:
+	// the duplicate-CONNACK gate (GHSA-8phv-jwjm-93rr) fires on a healthy
+	// connection and tears it down, so the fix for one advisory became a way to
+	// trigger the teardown of another.
+	it(
+		'should drop packets queued on a connection the client has moved on from',
+		{
+			timeout: 15000,
+		},
+		function _test(t, done) {
+			const errors: ErrorWithReasonCode[] = []
+			let connections = 0
+			let connectEvents = 0
+			let finished = false
+			let firstServerClient: any
+			let liveConnectionClosed = false
+			let releaseParked: (() => void) | null = null
+
+			const finish = (err?: Error) => {
+				if (finished) return
+				finished = true
+				clearTimeout(deadline)
+				client.end(true, (err1) => {
+					server2.close((err2) => {
+						done(err || err1 || err2)
+					})
+				})
+			}
+
+			const deadline = setTimeout(() => {
+				finish(
+					new Error(
+						`the second connection never settled (connections: ${connections}, connects: ${connectEvents}, errors: [${errors
+							.map((err) => err.message)
+							.join(', ')}])`,
+					),
+				)
+			}, 6000)
+
+			const server2 = new MqttServer((serverClient) => {
+				connections += 1
+				const connection = connections
+				if (connection === 1) {
+					firstServerClient = serverClient
+				} else {
+					// the client destroying its stream sends a FIN, so this is
+					// how the test sees a teardown of the live connection
+					serverClient.on('close', () => {
+						liveConnectionClosed = true
+					})
+				}
+				serverClient.on('connect', () => {
+					if (connection !== 1) {
+						serverClient.connack({ reasonCode: 0 })
+						return
+					}
+					// One chunk, parsed in full before its first packet is
+					// handled: the CONNACK is accepted, the PUBLISH parks the
+					// pump, and the second CONNACK stays queued on this
+					// connection until the application answers.
+					serverClient.stream.write(
+						Buffer.concat([
+							mqttPacket.generate(
+								{ cmd: 'connack', reasonCode: 0 } as any,
+								{ protocolVersion: 5 },
+							),
+							mqttPacket.generate(
+								{
+									cmd: 'publish',
+									topic: 'parked',
+									payload: Buffer.from('Message'),
+									qos: 0,
+									retain: false,
+									dup: false,
+								} as IPublishPacket,
+								{ protocolVersion: 5 },
+							),
+							mqttPacket.generate(
+								{ cmd: 'connack', reasonCode: 0 } as any,
+								{ protocolVersion: 5 },
+							),
+						]),
+					)
+				})
+			}).listen(ports.PORTAND349)
+
+			const client = mqtt.connect({
+				host: 'localhost',
+				port: ports.PORTAND349,
+				protocolVersion: 5,
+				reconnectPeriod: 100,
+			})
+
+			client.on('error', (err) => errors.push(err as ErrorWithReasonCode))
+
+			client.handleMessage = (packet, callback) => {
+				if (packet.topic.toString() !== 'parked' || releaseParked) {
+					callback()
+					return
+				}
+				// Hold this connection's pump open and drop its socket, so the
+				// client reconnects while the CONNACK behind this packet is
+				// still queued.
+				releaseParked = () => callback()
+				firstServerClient.destroy()
+			}
+
+			client.on('connect', () => {
+				connectEvents += 1
+				if (connectEvents !== 2) return
+				// The dead connection's pump resumes here and reaches its
+				// queued CONNACK. It must find nothing to do.
+				setImmediate(() => releaseParked?.())
+				setTimeout(() => {
+					try {
+						assert.isFalse(
+							liveConnectionClosed,
+							'a packet queued on the dead connection must not tear down the connection that replaced it',
+						)
+						assert.strictEqual(
+							connections,
+							2,
+							'the live connection must not have been torn down',
+						)
+						assert.strictEqual(
+							connectEvents,
+							2,
+							'a queued CONNACK must not re-run `_onConnect` on a later connection',
+						)
+						assert.deepStrictEqual(
+							errors.map((err) => err.code),
+							[],
+							`no error was expected, got [${errors
+								.map((err) => err.message)
+								.join(', ')}]`,
+						)
+					} catch (assertErr) {
+						return finish(assertErr as Error)
+					}
+					finish()
+				}, 600)
+			})
 
 			t.after(() => {
 				if (!finished) {

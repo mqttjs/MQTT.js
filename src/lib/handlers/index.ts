@@ -105,8 +105,12 @@ const handle: PacketHandler = (client, packet, done, pump) => {
 		case 'connack':
 			// no need to reschedule ping here as keepalive manager is created after successll connect
 			// (when onConnect is called at the end of handleConnack)
-			handleConnack(client, packet)
-			done()
+			// See the ack case above for why `done` is in a `finally`.
+			try {
+				handleConnack(client, packet, pump)
+			} finally {
+				done()
+			}
 			break
 		case 'auth':
 			client.reschedulePing()

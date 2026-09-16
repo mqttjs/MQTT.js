@@ -6,6 +6,8 @@ import sinon from 'sinon'
 import fs from 'fs'
 import levelStore from 'mqtt-level-store'
 import {
+	generate,
+	type IConnackPacket,
 	type IPublishPacket,
 	type IPubrelPacket,
 	type ISubackPacket,
@@ -71,6 +73,40 @@ export default function abstractTest(server, config, ports) {
 		const instance = serverBuilderFn(...args)
 		teardownHelper.addServer(instance)
 		return instance
+	}
+
+	/**
+	 * Assertions in the tests below run inside client and server event
+	 * handlers, outside the test's own stack: a throw there would never reach
+	 * `done` and the test would hang to its timeout instead of failing
+	 * readably. `check` routes the failure to `done`, `finish` ends the test,
+	 * `deadline` fails it with a named message if the event it waits for never
+	 * arrives, and all of them are guarded so only the first one wins.
+	 */
+	const guardDone = (done: DoneCallback) => {
+		let finished = false
+		let timer: NodeJS.Timeout
+		const finish = (err?: Error) => {
+			if (finished) return
+			finished = true
+			clearTimeout(timer)
+			done(err)
+		}
+		return {
+			finish,
+			deadline(ms: number, regression: string) {
+				clearTimeout(timer)
+				timer = setTimeout(() => finish(new Error(regression)), ms)
+			},
+			check(fn: () => void) {
+				if (finished) return
+				try {
+					fn()
+				} catch (err) {
+					finish(err as Error)
+				}
+			},
+		}
 	}
 
 	async function beforeEachExec() {
@@ -500,6 +536,479 @@ export default function abstractTest(server, config, ports) {
 				})
 			})
 		})
+	})
+
+	describe('duplicate connack', () => {
+		beforeEach(beforeEachExec)
+		after(afterExec)
+
+		const connackFor = (rc = 0) =>
+			version === 5 ? { reasonCode: rc } : { returnCode: rc }
+
+		/**
+		 * `serverClient.connack()` / `.publish()` write one packet each, so
+		 * whether they land in the client as one TCP chunk is up to the
+		 * kernel. These build the bytes by hand so a test can write a whole
+		 * attack chunk with a single `serverClient.stream.write`, which is what
+		 * makes the "rest of the chunk" part of these regressions reproducible:
+		 * the client parses the whole chunk into its queue before handling the
+		 * first packet of it.
+		 */
+		const rawConnack = (rc = 0) =>
+			generate(
+				{
+					cmd: 'connack',
+					sessionPresent: false,
+					...connackFor(rc),
+				} as IConnackPacket,
+				{ protocolVersion: version },
+			)
+
+		const rawPublish = (topic: string, qos: QoS = 0, messageId?: number) =>
+			generate(
+				{
+					cmd: 'publish',
+					topic,
+					payload: Buffer.from('LEAKED'),
+					qos,
+					dup: false,
+					retain: false,
+					messageId,
+				} as IPublishPacket,
+				{ protocolVersion: version },
+			)
+
+		it(
+			'should reject a second connack on an established connection',
+			{ timeout: 5000 },
+			function _test(t, done) {
+				const { check, finish } = guardDone(done)
+				let connectEvents = 0
+				let subscribes = 0
+				let publishes = 0
+				// the unique provider is the one whose occupancy `clear()` really wipes
+				const messageIdProvider = new mqtt.UniqueMessageIdProvider()
+				let inflightId: number
+				const server2 = serverBuilder(
+					config.protocol,
+					(serverClient) => {
+						serverClient.on('connect', () => {
+							serverClient.connack(connackFor())
+						})
+						serverClient.on('subscribe', (packet) => {
+							subscribes++
+							if (subscribes > 1) {
+								check(() => {
+									assert.fail(
+										'a duplicate connack must not resubscribe',
+									)
+								})
+								return
+							}
+							serverClient.suback({
+								messageId: packet.messageId,
+								granted: packet.subscriptions.map((e) => e.qos),
+							})
+						})
+						serverClient.on('publish', () => {
+							publishes++
+							if (publishes > 1) {
+								check(() => {
+									assert.fail(
+										'a duplicate connack must not replay the stored publish',
+									)
+								})
+								return
+							}
+							// never puback: the qos 1 message stays in the outgoing store,
+							// which is what a duplicate connack would replay
+							// [MQTT-3.2.0-2] violation
+							serverClient.connack(connackFor())
+						})
+					},
+				)
+				teardownHelper.addServer(server2)
+
+				server2.listen(ports.PORTAND51, () => {
+					const client = connect({
+						port: ports.PORTAND51,
+						host: 'localhost',
+						reconnectPeriod: 0,
+						messageIdProvider,
+					})
+					teardownHelper.addClient(client)
+
+					client.on('connect', () => {
+						connectEvents++
+						if (connectEvents > 1) {
+							// fail here rather than on a settle timeout, so a
+							// regression reads as an assertion and not a hang
+							check(() => {
+								assert.fail(
+									'a duplicate connack must not re-emit connect',
+								)
+							})
+							return
+						}
+						client.subscribe('dup/connack', { qos: 1 })
+						client.publish('dup/connack', 'payload', { qos: 1 })
+						inflightId = client.getLastMessageId()
+					})
+
+					client.on('error', (err: ErrorWithReasonCode) => {
+						check(() => {
+							assert.strictEqual(err.code, 130)
+							assert.include(err.message, 'duplicate CONNACK')
+							// the id of the still unacked publish must stay occupied:
+							// `register` only succeeds on a vacant id
+							assert.isFalse(
+								messageIdProvider.register(inflightId),
+							)
+						})
+					})
+
+					// reaching `close` at all is the teardown, and nothing the
+					// client might still have replayed can reach the server
+					// past it. Anything it wrongly did before has already
+					// tripped one of the handlers above.
+					client.on('close', () => {
+						check(() => {
+							assert.isFalse(client.connected)
+						})
+						client.end(true, (err2) => finish(err2))
+					})
+				})
+			},
+		)
+
+		it(
+			'should drop the rest of the chunk a duplicate connack arrived in',
+			{ timeout: 5000 },
+			function _test(t, done) {
+				const { check, finish, deadline } = guardDone(done)
+				const qos2Id = 7
+				const server2 = serverBuilder(
+					config.protocol,
+					(serverClient) => {
+						serverClient.on('connect', () => {
+							// The whole attack in one chunk. The client parses
+							// all four packets into its queue before handling
+							// the first, so the teardown the duplicate connack
+							// triggers arrives with two publishes still queued
+							// behind it.
+							serverClient.stream.write(
+								Buffer.concat([
+									rawConnack(),
+									rawConnack(),
+									rawPublish('after/teardown'),
+									rawPublish('after/teardown', 2, qos2Id),
+								]),
+							)
+						})
+					},
+				)
+				teardownHelper.addServer(server2)
+
+				server2.listen(ports.PORTAND56, () => {
+					const client = connect({
+						port: ports.PORTAND56,
+						host: 'localhost',
+						reconnectPeriod: 0,
+					})
+					teardownHelper.addClient(client)
+
+					client.on('message', (topic) => {
+						// fail here rather than on the close assertions, so a
+						// regression names the packet that got through
+						check(() => {
+							assert.fail(
+								`a publish behind the duplicate connack was delivered after the teardown: ${topic}`,
+							)
+						})
+					})
+
+					client.on('error', (err: ErrorWithReasonCode) => {
+						check(() => {
+							assert.strictEqual(err.code, 130)
+							assert.include(err.message, 'duplicate CONNACK')
+						})
+					})
+
+					client.on('close', () => {
+						check(() => {
+							client.incomingStore.get(
+								{ messageId: qos2Id },
+								(err) => {
+									assert.instanceOf(
+										err,
+										Error,
+										'a qos 2 publish behind the duplicate connack was stored: its message id stays occupied and the store entry is replayed on every reconnect',
+									)
+								},
+							)
+						})
+						client.end(true, (err2) => finish(err2))
+					})
+
+					deadline(
+						3000,
+						'the client never closed the connection after a duplicate connack',
+					)
+				})
+			},
+		)
+
+		it(
+			'should reject an accepting connack that follows a refused one',
+			{ timeout: 5000 },
+			function _test(t, done) {
+				const { check, finish, deadline } = guardDone(done)
+				const rcNotAuthorized = 135
+				let connectEvents = 0
+				const errors: ErrorWithReasonCode[] = []
+				const server2 = serverBuilder(
+					config.protocol,
+					(serverClient) => {
+						serverClient.on('connect', () => {
+							// One chunk: the refusal tears the connection down,
+							// but the accepting connack is already parsed into
+							// the client's queue by then, so the wire is closed
+							// too late to help. Only dropping the rest of the
+							// chunk -- and, behind it, the `connackReceived`
+							// gate -- can stop it from connecting the client.
+							serverClient.stream.write(
+								Buffer.concat([
+									rawConnack(rcNotAuthorized),
+									rawConnack(),
+								]),
+							)
+						})
+					},
+				)
+				teardownHelper.addServer(server2)
+
+				server2.listen(ports.PORTAND53, () => {
+					const client = connect({
+						port: ports.PORTAND53,
+						host: 'localhost',
+						reconnectPeriod: 0,
+					})
+					teardownHelper.addClient(client)
+
+					client.on('connect', () => {
+						connectEvents++
+						// fail here rather than on the settle timeout, so a
+						// regression reads as an assertion and not a hang
+						check(() => {
+							assert.fail(
+								'a connack following a refused one must not connect the client',
+							)
+						})
+					})
+
+					client.on('error', (err: ErrorWithReasonCode) => {
+						errors.push(err)
+						check(() => {
+							assert.deepEqual(
+								errors.map((e) => e.message),
+								['Connection refused: Not authorized'],
+								'the connack that followed the refused one was handled: the rest of the chunk was not dropped',
+							)
+							assert.strictEqual(err.code, rcNotAuthorized)
+							// the refused connack never set `connected`, so a
+							// gate on that property would have let the second
+							// one through
+							assert.isFalse(client.connected)
+						})
+					})
+
+					// the refused connack closed the connection; the `connect`
+					// handler above has already failed the test if the client
+					// ever came up on this socket
+					client.on('close', () => {
+						check(() => {
+							assert.strictEqual(connectEvents, 0)
+							assert.strictEqual(errors.length, 1)
+						})
+						client.end(true, (err2) => finish(err2))
+					})
+
+					deadline(
+						3000,
+						'the client never closed the connection after a refused connack',
+					)
+				})
+			},
+		)
+
+		it(
+			'should close the connection and drop the chunk on a refused connack',
+			{ timeout: 5000 },
+			function _test(t, done) {
+				const { check, finish, deadline } = guardDone(done)
+				const rcNotAuthorized = 135
+				let connections = 0
+				let socketClosed = false
+				const messages: string[] = []
+				const server2 = serverBuilder(
+					config.protocol,
+					(serverClient) => {
+						// writing to a destroyed socket comes back as a stream
+						// error, and an unhandled `error` on the connection
+						// would take the run down
+						serverClient.on('error', () => {})
+						serverClient.on('connect', () => {
+							connections++
+							// the refusal and a publish in one chunk, then more
+							// publishes afterwards: a broker that was never
+							// told the client went away keeps streaming
+							serverClient.stream.write(
+								Buffer.concat([
+									rawConnack(rcNotAuthorized),
+									rawPublish('after/refusal'),
+								]),
+							)
+							const timer = setInterval(() => {
+								serverClient.stream.write(
+									rawPublish('after/refusal'),
+								)
+							}, 20)
+							teardownHelper.add({}, () => clearInterval(timer))
+							serverClient.on('close', () => clearInterval(timer))
+						})
+					},
+				)
+				teardownHelper.addServer(server2)
+
+				server2.on('connection', (socket) => {
+					socket.on('close', () => {
+						socketClosed = true
+					})
+				})
+
+				server2.listen(ports.PORTAND55, () => {
+					const client = connect({
+						port: ports.PORTAND55,
+						host: 'localhost',
+						// `reconnectOnConnackError` is off (the default), so
+						// the teardown must not retry a connection the broker
+						// actively denied -- but the period has to be short
+						// enough that a regression would have retried by the
+						// time the assertions run
+						reconnectPeriod: 30,
+					})
+					teardownHelper.addClient(client)
+
+					client.on('message', (topic) => {
+						messages.push(topic)
+					})
+
+					client.on('error', (err: ErrorWithReasonCode) => {
+						check(() => {
+							assert.strictEqual(err.code, rcNotAuthorized)
+						})
+					})
+
+					client.on('close', () => {
+						// let the broker's post-refusal publishes arrive, if
+						// the socket is somehow still open, before asserting
+						const settle = setTimeout(() => {
+							check(() => {
+								assert.deepEqual(
+									messages,
+									[],
+									'a refused connack delivered messages to the application it just refused',
+								)
+								assert.isTrue(
+									socketClosed,
+									'the broker still sees the socket open after a refused connack',
+								)
+								assert.strictEqual(
+									connections,
+									1,
+									'`reconnectOnConnackError` is off: a denied connection must not be retried',
+								)
+							})
+							client.end(true, (err) => finish(err))
+						}, 200)
+						teardownHelper.add({}, () => clearTimeout(settle))
+					})
+
+					deadline(
+						3000,
+						'the client never closed the connection after a refused connack: the socket stayed open with no timers and no reconnect',
+					)
+				})
+			},
+		)
+
+		it(
+			'should accept the connack of a new connection after a disconnect',
+			{ timeout: 5000 },
+			function _test(t, done) {
+				const { check, finish, deadline } = guardDone(done)
+				let connectEvents = 0
+				let subscribes = 0
+				let client: mqtt.MqttClient | null = null
+				const server2 = serverBuilder(
+					config.protocol,
+					(serverClient) => {
+						serverClient.on('connect', () => {
+							serverClient.connack(connackFor())
+						})
+						serverClient.on('subscribe', (packet) => {
+							subscribes++
+							serverClient.suback({
+								messageId: packet.messageId,
+								granted: packet.subscriptions.map((e) => e.qos),
+							})
+
+							if (subscribes === 1) {
+								// drop the connection, the client must reconnect
+								serverClient.stream.destroy()
+							} else {
+								// resubscribed on the new connection
+								check(() => {
+									assert.strictEqual(connectEvents, 2)
+								})
+								client.end(true, (err) => finish(err))
+							}
+						})
+					},
+				)
+				teardownHelper.addServer(server2)
+
+				server2.listen(ports.PORTAND52, () => {
+					client = connect({
+						port: ports.PORTAND52,
+						host: 'localhost',
+						reconnectPeriod: 100,
+					})
+					teardownHelper.addClient(client)
+
+					client.on('error', (err) => finish(err))
+
+					client.on('connect', () => {
+						connectEvents++
+						if (connectEvents === 1) {
+							client.subscribe('dup/connack/reconnect', {
+								qos: 1,
+							})
+						}
+					})
+
+					// This is the no-regression test for reconnection: if the
+					// duplicate-CONNACK gate ever rejected the CONNACK of a new
+					// network connection, nothing here would throw -- the
+					// resubscribe would simply never arrive and the test would
+					// hang to its timeout with nothing said about why.
+					deadline(
+						3000,
+						'the client never resubscribed on the new connection: the connack of a reconnect was rejected',
+					)
+				})
+			},
+		)
 	})
 
 	describe('handling offline states', () => {
@@ -3765,6 +4274,79 @@ export default function abstractTest(server, config, ports) {
 					client.end(true, done)
 				})
 		})
+
+		it(
+			'should tear the connection down before emitting a connack timeout',
+			{ timeout: 10000 },
+			function _test(t, done) {
+				const { check, finish, deadline } = guardDone(done)
+				let client: mqtt.MqttClient | null = null
+
+				// the raw TCP socket is the one piece of state the client
+				// cannot fake: a teardown skipped client side leaves it open
+				// here, which is the wedge this test is the control for
+				let socketClosed = false
+				let onSocketClose: () => void
+
+				// accepts the network connection and then answers the CONNECT
+				// with nothing at all: the broker a connack timeout exists for
+				const server2 = serverBuilder(
+					config.protocol,
+					(serverClient) => {
+						serverClient.on('connect', () => {
+							// standing in for the connack timer, so clear it:
+							// nothing else does, and a pending 60s timer would
+							// outlive the test
+							clearTimeout(client['connackTimer'])
+
+							// Negative control: with no `error` listener `emit`
+							// itself throws, which is the state a directly
+							// constructed `MqttClient` is in -- only
+							// `mqtt.connect()` attaches one. node:test fails a test
+							// on any uncaughtException, even with an own handler
+							// installed, so the throw has to happen on a stack we
+							// catch rather than inside the connack timer.
+							client.removeAllListeners('error')
+							check(() =>
+								assert.throws(
+									() => client['_onConnackTimeout'](),
+									/connack timeout/,
+								),
+							)
+
+							if (socketClosed) {
+								return finish()
+							}
+							onSocketClose = () => finish()
+							deadline(
+								3000,
+								'the broker still sees the socket open after a connack timeout: the client emitted before tearing down',
+							)
+						})
+					},
+				)
+
+				server2.on('connection', (socket) => {
+					socket.on('close', () => {
+						socketClosed = true
+						onSocketClose?.()
+					})
+				})
+
+				server2.listen(ports.PORTAND54, () => {
+					client = connect({
+						host: 'localhost',
+						port: ports.PORTAND54,
+						// long enough that the real timer cannot race the
+						// assertions above: a regression has to fail on them,
+						// not by throwing out of a timer callback and taking
+						// the whole run down with an uncaughtException
+						connectTimeout: 60000,
+						reconnectPeriod: 0,
+					})
+				})
+			},
+		)
 
 		it('should reconnect on connack error if requested', function _test(t, done) {
 			let connackErrors = 0

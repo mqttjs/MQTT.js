@@ -553,6 +553,22 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 	private _serverProperties: IConnackPacket['properties']
 
+	/**
+	 * True once a CONNACK has been handled on the current network connection,
+	 * accepted or refused. [MQTT-3.2.0-2] allows only one per connection.
+	 * Reset in `connect()`, which runs once per network connection.
+	 */
+	private connackReceived: boolean
+
+	/**
+	 * Set while a refused CONNACK is torn down, so neither `_cleanUp` nor the
+	 * `close` handler arms a retry: closing the socket must not by itself
+	 * retry a connection the broker actively denied. `handleConnack` arms the
+	 * retry itself when `reconnectOnConnackError` is on. Reset in `connect()`,
+	 * so an explicit `reconnect()` still works.
+	 */
+	private reconnectSuppressed: boolean
+
 	public static defaultId() {
 		return `mqttjs_${Math.random().toString(16).substr(2, 8)}`
 	}
@@ -659,6 +675,10 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		this.queue = []
 		// connack timer
 		this.connackTimer = null
+		// No CONNACK seen yet on this network connection
+		this.connackReceived = false
+		// No refused CONNACK has disarmed the retry
+		this.reconnectSuppressed = false
 		// Reconnect timer
 		this.reconnectTimer = null
 		// Is processing store?
@@ -820,6 +840,12 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		}
 		this._currentPump = pump
 
+		// A new network connection, so the broker may send one CONNACK again.
+		// This runs for both the first connect and every reconnect, and before
+		// the stream exists, so no CONNACK can slip in ahead of it.
+		this.connackReceived = false
+		this.reconnectSuppressed = false
+
 		this.log('connect :: calling method to clear reconnect')
 		this._clearReconnect()
 
@@ -848,6 +874,28 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 		const work = () => {
 			this.log('work :: getting next packet in queue')
+
+			// Once the client has moved on to a later connection, whatever is
+			// still queued here was parsed on a stream that is gone. Handling
+			// it would run one connection's packets against another: the
+			// CONNACK of a connection that has been replaced still passes the
+			// duplicate gate, because `connect()` resets `connackReceived` for
+			// the new one, and `_onConnect` would then resubscribe and reset
+			// the message id state of a session it never belonged to. Acks for
+			// these packets cannot be sent either -- the stream they answer is
+			// destroyed. Dropping the queue is the only safe reading of it.
+			//
+			// A handler that tears its own connection down does not reach here:
+			// `_cleanUp` destroys the stream but creates no pump, so this trips
+			// only once `connect()` has actually installed a later one.
+			if (this._currentPump !== pump) {
+				this.log(
+					'work :: pump superseded, dropping %d queued packets',
+					packets.length,
+				)
+				packets.length = 0
+			}
+
 			const packet = packets.shift()
 
 			if (packet) {
@@ -991,15 +1039,32 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		this.stream.setMaxListeners(1000)
 
 		clearTimeout(this.connackTimer)
-		this.connackTimer = setTimeout(() => {
-			this.log(
-				'!!connectTimeout hit!! Calling _cleanUp with force `true`',
-			)
-			this.emit('error', new Error('connack timeout'))
-			this._cleanUp(true)
-		}, this.options.connectTimeout)
+		this.connackTimer = setTimeout(
+			() => this._onConnackTimeout(),
+			this.options.connectTimeout,
+		)
 
 		return this
+	}
+
+	/**
+	 * The broker accepted the network connection but never answered the
+	 * CONNECT. Named rather than inlined in the timer so it can be driven
+	 * from a test on the caller's own stack.
+	 * @api private
+	 */
+	private _onConnackTimeout() {
+		this.log('!!connectTimeout hit!! Calling _cleanUp with force `true`')
+		// Tear down before emitting, the same order as the CONNACK handlers.
+		// `emit('error')` throws synchronously when nothing is listening --
+		// `mqtt.connect()` attaches a no-op listener but a directly constructed
+		// `MqttClient` has none -- and an application handler may throw too.
+		// Either way the teardown would be skipped, and this timer has already
+		// fired: the socket would stay open with the keepalive manager alive
+		// and no reconnect ever armed, wedged for good by a broker that simply
+		// never answers the CONNECT.
+		this._cleanUp(true)
+		this.emit('error', new Error('connack timeout'))
 	}
 
 	/**
@@ -1900,6 +1965,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	private _setupReconnect() {
 		if (
 			!this.disconnecting &&
+			!this.reconnectSuppressed &&
 			!this.reconnectTimer &&
 			this.options.reconnectPeriod > 0
 		) {
