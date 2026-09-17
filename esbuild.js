@@ -4,6 +4,7 @@ const { rimraf } = require('rimraf')
 const fs = require('fs')
 const path = require('path')
 const { version } = require('./package.json');
+const { browserProcessPlugin, scheduler, shim } = require('./scripts/browser-process-build')
 
 const outdir = 'dist'
 
@@ -20,23 +21,10 @@ const options = {
     sourcemap: false, // this can be enabled while debugging, if we decide to keep this enabled we should also ship the `src` folder to npm
     metafile: true,
     plugins: [
-        {
-            name: 'browser-process',
-            setup(build) {
-                // mqtt-packet corks the stream and uncorks on process.nextTick.
-                // The default browser process shim drains that queue with
-                // setTimeout(0), which React Native throttles while
-                // backgrounded, so writes stall. Resolve process to a
-                // queueMicrotask-based shim instead (issue #2053).
-                const shim = path.resolve(__dirname, 'scripts/browser-process.ts')
-                // Dependencies use both the package and browser subpath forms.
-                build.onResolve({ filter: /^(node:)?process(?:\/browser(?:\.js)?|\/)?$/ }, () => ({
-                    path: shim,
-                }))
-            }
-        },
+        browserProcessPlugin(),
         polyfillNode({
             // Disable the default process polyfill so plugin order cannot replace our shim.
+            globals: { process: false },
             polyfills: { process: false, 'readable-stream': true }
         }),
         {
@@ -112,9 +100,10 @@ async function run() {
 async function buildWithProcessCheck(options) {
     const result = await build(options)
     const inputs = Object.keys(result.metafile.inputs)
-    if (!inputs.some(input => input.endsWith('scripts/browser-process.ts')) ||
-        inputs.some(input => /(?:process\/browser|node\/process)\.(?:js|mjs)$/.test(input))) {
-        throw new Error('Browser bundle did not resolve process exclusively to the microtask shim')
+    const absoluteInputs = inputs.map(input => path.resolve(options.absWorkingDir || process.cwd(), input))
+    if (!absoluteInputs.includes(scheduler) || !absoluteInputs.includes(shim) ||
+        !absoluteInputs.includes(path.resolve(__dirname, 'scripts/browser-process-inject.js'))) {
+        throw new Error('Browser bundle is missing the shared scheduler or its process injection')
     }
     return result
 }

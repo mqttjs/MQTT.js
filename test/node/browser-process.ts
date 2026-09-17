@@ -5,7 +5,9 @@ import { resolve } from 'node:path'
 import { tmpdir } from 'node:os'
 import { assert } from 'chai'
 import sinon from 'sinon'
-import { nextTick } from '../../scripts/browser-process'
+import browserProcess, { nextTick } from '../../src/lib/browser-process'
+import baseProcess from 'process/browser.js'
+import { nextTick as publicNextTick } from '../../src/lib/shared'
 
 describe('browser process.nextTick', () => {
 	afterEach(() => sinon.restore())
@@ -39,6 +41,11 @@ describe('browser process.nextTick', () => {
 		sinon.stub(globalThis, 'queueMicrotask').callsFake((callback) => {
 			tasks.push(callback)
 		})
+		sinon.stub(globalThis, 'setTimeout').callsFake(((
+			callback: () => void,
+		) => {
+			tasks.push(callback)
+		}) as any)
 		let seen = 0
 		for (let i = 0; i < 10000; i++) {
 			nextTick(() => {
@@ -47,13 +54,32 @@ describe('browser process.nextTick', () => {
 		}
 		assert.lengthOf(tasks, 1)
 		const shift = sinon.spy(Array.prototype, 'shift')
+		const slice = sinon.spy(Array.prototype, 'slice')
 		try {
-			tasks[0]()
+			for (let i = 0; i < tasks.length; i++) tasks[i]()
 		} finally {
 			shift.restore()
+			slice.restore()
 		}
 		assert.equal(seen, 10000)
 		assert.isFalse(shift.called)
+		assert.isFalse(
+			slice.called,
+			'yields must not repeatedly copy the backlog',
+		)
+	})
+
+	it('preserves the native Node scheduler in the public API', () => {
+		assert.strictEqual(publicNextTick, process.nextTick)
+	})
+
+	it('preserves the upstream process surface without mutating its scheduler', () => {
+		for (const key of Object.keys(baseProcess)) {
+			if (key !== 'nextTick')
+				assert.strictEqual(browserProcess[key], baseProcess[key])
+		}
+		assert.strictEqual(browserProcess.nextTick, nextTick)
+		assert.notStrictEqual(baseProcess.nextTick, nextTick)
 	})
 
 	it('throws when the callback is not a function', () => {
@@ -78,6 +104,29 @@ describe('browser process.nextTick', () => {
 		assert.deepEqual(order, [1, 2])
 	})
 
+	it('yields a recursive queue to timers without losing callback order', () => {
+		const microtasks: Array<() => void> = []
+		const timers: Array<() => void> = []
+		sinon
+			.stub(globalThis, 'queueMicrotask')
+			.callsFake((task) => microtasks.push(task))
+		sinon.stub(globalThis, 'setTimeout').callsFake(((task: () => void) => {
+			timers.push(task)
+		}) as any)
+		let seen = 0
+		const recurse = () => {
+			seen++
+			if (seen < 10000) nextTick(recurse)
+		}
+		nextTick(recurse)
+		microtasks[0]()
+		const yielded = seen < 10000
+		for (let i = 0; i < timers.length; i++) timers[i]()
+		assert.equal(seen, 10000)
+		assert.isTrue(yielded, 'recursive ticks must yield to the task queue')
+		assert.isNotEmpty(timers)
+	})
+
 	it('uncorks a stream without waiting for setTimeout', async () => {
 		const timer = sinon.spy(globalThis, 'setTimeout')
 		const stream = new PassThrough()
@@ -96,6 +145,31 @@ describe('browser process.nextTick', () => {
 
 		assert.equal(Buffer.concat(chunks).toString(), 'ping')
 		assert.isFalse(timer.called)
+	})
+
+	it('keeps FIFO ordering when more ticks arrive during a timer yield', () => {
+		const microtasks: Array<() => void> = []
+		const timers: Array<() => void> = []
+		sinon
+			.stub(globalThis, 'queueMicrotask')
+			.callsFake((task) => microtasks.push(task))
+		sinon.stub(globalThis, 'setTimeout').callsFake(((task: () => void) => {
+			timers.push(task)
+		}) as any)
+		const seen: number[] = []
+		for (let i = 0; i < 2048; i++) nextTick(() => seen.push(i))
+		microtasks[0]()
+		nextTick(() => seen.push(2048))
+		assert.lengthOf(
+			microtasks,
+			1,
+			'a yielded queue must not schedule a second drain',
+		)
+		for (let i = 0; i < timers.length; i++) timers[i]()
+		assert.deepEqual(
+			seen,
+			Array.from({ length: 2049 }, (_, i) => i),
+		)
 	})
 
 	it('falls back to a timer when microtasks are unavailable', () => {
@@ -165,6 +239,34 @@ describe('browser process.nextTick', () => {
 		assert.equal(timer.callCount, 2)
 		;(timer.secondCall.args[0] as () => void)()
 		assert.isTrue(ran)
+	})
+
+	it('ignores diagnostic failures while preserving callback errors and queued work', () => {
+		// A fresh process resets one-time diagnostic flags without test-only hooks.
+		execFileSync(process.execPath, [
+			'-r',
+			require.resolve('esbuild-register'),
+			'-e',
+			`
+			const assert = require('node:assert/strict')
+			require('debug')
+			require.cache[require.resolve('debug')].exports = () => {
+				throw new Error('logger failure')
+			}
+			const { nextTick } = require(${JSON.stringify(resolve(__dirname, '../../src/lib/browser-next-tick.ts'))})
+			const tasks = []
+			global.queueMicrotask = undefined
+			global.setTimeout = (task) => tasks.push(task)
+			const original = new Error('callback failure')
+			let ran = false
+			nextTick(() => { throw original })
+			nextTick(() => { ran = true })
+			assert.throws(tasks.shift(), (error) => error === original)
+			tasks.shift()()
+			assert.equal(ran, true)
+			assert.equal(tasks.length, 0)
+			`,
+		])
 	})
 
 	it('resolves process aliases through the real build plugins from another cwd', () => {
