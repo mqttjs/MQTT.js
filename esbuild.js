@@ -29,8 +29,8 @@ const options = {
                 // backgrounded, so writes stall. Resolve process to a
                 // queueMicrotask-based shim instead (issue #2053).
                 const shim = path.resolve(__dirname, 'scripts/browser-process.ts')
-                // readable-stream requires 'process/' (trailing slash).
-                build.onResolve({ filter: /^(node:)?process\/?$/ }, () => ({
+                // Dependencies use both the package and browser subpath forms.
+                build.onResolve({ filter: /^(node:)?process(?:\/browser(?:\.js)?|\/)?$/ }, () => ({
                     path: shim,
                 }))
             }

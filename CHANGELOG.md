@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Behaviour changes
+
+* Browser `process` imports use a batched microtask queue when `queueMicrotask` is available. The exported `nextTick` fallback also uses microtasks when the host has no `process.nextTick`; hosts with an existing implementation retain it. Microtasks share the Promise job queue and do not reproduce Node.js's separate `nextTick` ordering. Engines without `queueMicrotask` fall back to timers and remain subject to background timer throttling.
+
 # [5.16.0](https://github.com/mqttjs/MQTT.js/compare/v5.15.2...v5.16.0) (2026-09-16)
 
 ### Bug Fixes

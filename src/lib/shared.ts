@@ -113,7 +113,7 @@ export function applyMixin(
 	}
 }
 export const nextTick =
-	typeof process?.nextTick === 'function'
+	typeof process !== 'undefined' && typeof process.nextTick === 'function'
 		? process.nextTick
 		: (callback: () => void) => {
 				if (typeof queueMicrotask === 'function') {

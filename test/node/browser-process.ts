@@ -1,6 +1,8 @@
 import { describe, it, afterEach } from 'node:test'
 import { PassThrough } from 'node:stream'
 import { execFileSync } from 'node:child_process'
+import { resolve } from 'node:path'
+import { tmpdir } from 'node:os'
 import { assert } from 'chai'
 import sinon from 'sinon'
 import { nextTick } from '../../scripts/browser-process'
@@ -30,6 +32,28 @@ describe('browser process.nextTick', () => {
 		)
 		await Promise.resolve()
 		assert.deepEqual(received, [1, 'pong'])
+	})
+
+	it('drains a bulk queue without removing the front of the array', () => {
+		const tasks: Array<() => void> = []
+		sinon.stub(globalThis, 'queueMicrotask').callsFake((callback) => {
+			tasks.push(callback)
+		})
+		let seen = 0
+		for (let i = 0; i < 10000; i++) {
+			nextTick(() => {
+				assert.equal(seen++, i)
+			})
+		}
+		assert.lengthOf(tasks, 1)
+		const shift = sinon.spy(Array.prototype, 'shift')
+		try {
+			tasks[0]()
+		} finally {
+			shift.restore()
+		}
+		assert.equal(seen, 10000)
+		assert.isFalse(shift.called)
 	})
 
 	it('throws when the callback is not a function', () => {
@@ -109,11 +133,47 @@ describe('browser process.nextTick', () => {
 		assert.deepEqual(seen, ['queued', 'future'])
 	})
 
-	it('resolves process and process/ to the microtask shim through the real build plugins', async () => {
+	it('keeps older callbacks ahead of nested work after a throw', () => {
+		const tasks: Array<() => void> = []
+		sinon.stub(globalThis, 'queueMicrotask').callsFake((callback) => {
+			tasks.push(callback)
+		})
+		const seen: string[] = []
+		nextTick(() => {
+			nextTick(() => seen.push('nested'))
+			throw new Error('boom')
+		})
+		nextTick(() => seen.push('older'))
+		assert.throws(tasks.shift(), 'boom')
+		assert.lengthOf(tasks, 1)
+		tasks.shift()()
+		assert.deepEqual(seen, ['older', 'nested'])
+		assert.isEmpty(tasks)
+	})
+
+	it('recovers the timer fallback queue after a throw', () => {
+		sinon.stub(globalThis, 'queueMicrotask').value(undefined)
+		const timer = sinon.stub(globalThis, 'setTimeout')
+		let ran = false
+		nextTick(() => {
+			throw new Error('boom')
+		})
+		nextTick(() => {
+			ran = true
+		})
+		assert.throws(timer.firstCall.args[0] as () => void, 'boom')
+		assert.equal(timer.callCount, 2)
+		;(timer.secondCall.args[0] as () => void)()
+		assert.isTrue(ran)
+	})
+
+	it('resolves process aliases through the real build plugins from another cwd', () => {
 		// Run without esbuild-register's tsconfig baseUrl hook, which shadows
 		// the esbuild package with the repository's esbuild.js file.
-		execFileSync(process.execPath, [
-			'scripts/test-browser-process-build.js',
-		])
+		execFileSync(
+			process.execPath,
+			[resolve(__dirname, '../../scripts/test-browser-process-build.js')],
+			{ cwd: tmpdir() },
+		)
 	})
 })

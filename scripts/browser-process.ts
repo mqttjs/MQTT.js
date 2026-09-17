@@ -1,7 +1,7 @@
 // Build-only process shim: microtasks keep MQTT writes moving when React Native
 // throttles background timers. Browser microtasks share the Promise job queue;
 // they cannot reproduce Node's separate nextTick queue ordering.
-const pending: Array<{
+let pending: Array<{
 	callback: (...args: any[]) => void
 	args: any[]
 }> = []
@@ -11,8 +11,20 @@ function runNextTicks() {
 	draining = true
 	try {
 		while (pending.length) {
-			const item = pending.shift()
-			item.callback(...item.args)
+			const current = pending
+			pending = []
+			let nextIndex = 0
+			try {
+				while (nextIndex < current.length) {
+					// Advance before calling user code so a throwing callback is not retried.
+					const item = current[nextIndex++]
+					item.callback(...item.args)
+				}
+			} catch (error) {
+				// Older callbacks keep precedence over ticks enqueued during this batch.
+				pending = current.slice(nextIndex).concat(pending)
+				throw error
+			}
 		}
 	} finally {
 		draining = false
