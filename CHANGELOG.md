@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Behaviour changes
+
+* Browser `process` imports, bundled dependencies and the public `nextTick` export share one batched microtask queue. Node.js retains its native scheduler. Microtasks share the Promise job queue and do not reproduce Node.js's separate `nextTick` ordering. Each drain handles at most 1,024 callbacks before yielding through a timer to avoid recursive starvation; large backlogs can therefore still encounter background timer throttling. Engines without `queueMicrotask` use timers throughout. Fallback and interrupted-drain diagnostics are available under `mqttjs:nextTick`.
+* Legacy React Native and browser package resolvers select the ESM distribution. Unbundled browser `connect` calls retain the missing-`process.nextTick` compatibility repair for mutable hosts; deficient read-only hosts receive an error directing them to the browser distribution. This compatibility repair does not apply to direct `new MqttClient` calls through unbundled deep imports.
+
 # [5.16.0](https://github.com/mqttjs/MQTT.js/compare/v5.15.2...v5.16.0) (2026-09-16)
 
 ### Bug Fixes

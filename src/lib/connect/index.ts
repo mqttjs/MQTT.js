@@ -7,12 +7,8 @@ import MqttClient, {
 	type MqttProtocol,
 } from '../client'
 import isBrowser from '../is-browser'
+import { ensureBrowserProcessNextTick } from '../browser-process-compat'
 import { type StreamBuilder } from '../shared'
-
-// Handling the process.nextTick is not a function error in react-native applications.
-if (typeof process?.nextTick !== 'function') {
-	process.nextTick = setImmediate
-}
 
 const debug = _debug('mqttjs')
 
@@ -60,6 +56,11 @@ function connect(
 	opts?: IClientOptions,
 ): MqttClient {
 	debug('connecting to an MQTT broker...')
+	// Legacy main/deep imports do not receive the bundled process injection.
+	// Preserve the host repair for dependencies such as process-nextick-args.
+	if (isBrowser && typeof process !== 'undefined') {
+		ensureBrowserProcessNextTick(process)
+	}
 	if (typeof brokerUrl === 'object' && !opts) {
 		opts = brokerUrl
 		brokerUrl = ''

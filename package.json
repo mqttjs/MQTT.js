@@ -21,6 +21,7 @@
     "url": "git://github.com/mqttjs/MQTT.js.git"
   },
   "main": "./build/index.js",
+  "react-native": "./dist/mqtt.esm.js",
   "module": "./dist/mqtt.esm.js",
   "bin": {
     "mqtt_pub": "./build/bin/pub.js",
@@ -83,6 +84,7 @@
     "node": ">=16.0.0"
   },
   "browser": {
+    "./build/index.js": "./dist/mqtt.esm.js",
     "./mqtt.js": "./dist/mqtt.js",
     "fs": false,
     "tls": false,
@@ -98,6 +100,7 @@
     "lru-cache": "^10.4.3",
     "minimist": "^1.2.8",
     "mqtt-packet": "^9.0.2",
+    "process": "^0.11.10",
     "readable-stream": "^4.7.0",
     "rfdc": "^1.4.1",
     "socks": "^2.8.6",

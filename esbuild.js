@@ -2,7 +2,9 @@ const { build } = require('esbuild')
 const { polyfillNode } = require('esbuild-plugin-polyfill-node');
 const { rimraf } = require('rimraf')
 const fs = require('fs')
+const path = require('path')
 const { version } = require('./package.json');
+const { browserProcessPlugin, scheduler, shim } = require('./scripts/browser-process-build')
 
 const outdir = 'dist'
 
@@ -17,11 +19,13 @@ const options = {
     platform: 'browser',
     globalName: 'mqtt',
     sourcemap: false, // this can be enabled while debugging, if we decide to keep this enabled we should also ship the `src` folder to npm
+    metafile: true,
     plugins: [
+        browserProcessPlugin(),
         polyfillNode({
-            polyfills: [
-                'readable-stream'
-            ]
+            // Disable the default process polyfill so plugin order cannot replace our shim.
+            globals: { process: false },
+            polyfills: { process: false, 'readable-stream': true }
         }),
         {
             name: 'resolve-package-json',
@@ -70,17 +74,17 @@ const options = {
 async function run() {
     const start = Date.now()
     await rimraf(outdir)
-    await build(options)
+    await buildWithProcessCheck(options)
 
     options.minify = true
     options.outfile = `${outdir}/mqtt.min.js`
-    await build(options)
+    await buildWithProcessCheck(options)
 
 
     options.outfile = `${outdir}/mqtt.esm.js`
     options.format = 'esm'
 
-    await build(options)
+    await buildWithProcessCheck(options)
 
     console.log(`Build time: ${Date.now() - start}ms`)
     console.log('Build output:')
@@ -93,7 +97,20 @@ async function run() {
     }
 }
 
-run().catch((e) => {
+async function buildWithProcessCheck(options) {
+    const result = await build(options)
+    const inputs = Object.keys(result.metafile.inputs)
+    const absoluteInputs = inputs.map(input => path.resolve(options.absWorkingDir || process.cwd(), input))
+    if (!absoluteInputs.includes(scheduler) || !absoluteInputs.includes(shim) ||
+        !absoluteInputs.includes(path.resolve(__dirname, 'scripts/browser-process-inject.js'))) {
+        throw new Error('Browser bundle is missing the shared scheduler or its process injection')
+    }
+    return result
+}
+
+if (require.main === module) run().catch((e) => {
     console.error(e)
     process.exit(1)
 })
+
+module.exports = { options, buildWithProcessCheck }
