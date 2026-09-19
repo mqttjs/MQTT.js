@@ -4248,6 +4248,27 @@ export default function abstractTest(server, config, ports) {
 		beforeEach(beforeEachExec)
 		after(afterExec)
 
+		it('should mark the client as not connected once the connection is torn down', function _test(t, done) {
+			const { check, finish } = guardDone(done)
+			const client = connect()
+
+			client.on('connect', () => {
+				check(() => {
+					assert.isTrue(client.connected)
+					// A forced clean up destroys the stream, so the client is no longer
+					// connected. If this is only cleared by the asynchronous 'close',
+					// `_reconnect()` can still see a connected client and call `end()`,
+					// which leaves `disconnecting` set and stops reconnecting for good.
+					client['_cleanUp'](true)
+					assert.isFalse(
+						client.connected,
+						'connected should be false as soon as the stream is destroyed',
+					)
+				})
+				client.end(true, finish)
+			})
+		})
+
 		it('should mark the client disconnecting if #end called', function _test(t, done) {
 			const client = connect()
 

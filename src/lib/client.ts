@@ -2197,6 +2197,10 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 				'_cleanUp :: (%s) :: destroying stream',
 				this.options.clientId,
 			)
+			// The connection is gone the moment the stream is destroyed. Waiting for the
+			// asynchronous 'close' to clear this leaves a window in which `_reconnect()`
+			// still sees a connected client and calls `end()` instead of reconnecting.
+			this.connected = false
 			this.stream.destroy()
 		} else {
 			const packet: IDisconnectPacket = { cmd: 'disconnect', ...opts }
