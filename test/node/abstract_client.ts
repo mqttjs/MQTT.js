@@ -518,6 +518,70 @@ export default function abstractTest(server, config, ports) {
 			})
 		})
 
+		it('should emit error when connecting with a password but no username', function _test(t, done) {
+			const { finish, deadline, check } = guardDone(done)
+			deadline(5000, 'did not emit error for password without username')
+			const client = connect({
+				password: 'secret',
+				reconnectPeriod: 0,
+			})
+
+			client.on('connect', () => {
+				finish(new Error('Should not emit connect'))
+			})
+			client.on('error', (err) => {
+				check(() => {
+					assert.strictEqual(
+						err.message,
+						'Username is required to use password',
+					)
+				})
+				client.end(true, (endErr) => finish(endErr))
+			})
+		})
+
+		it('should emit error for stream errors that have a message but no code', function _test(t, done) {
+			const { finish, deadline, check } = guardDone(done)
+			deadline(5000, 'did not emit error for stream error without code')
+			const client = connect({ reconnectPeriod: 0 })
+
+			client.on('error', (err) => {
+				check(() => {
+					assert.strictEqual(
+						err.message,
+						'Username is required to use password',
+					)
+					assert.isUndefined((err as Error & { code?: string }).code)
+				})
+				client.end(true, (endErr) => finish(endErr))
+			})
+			client.once('connect', () => {
+				client.stream.destroy(
+					new Error('Username is required to use password'),
+				)
+			})
+		})
+
+		it('should not emit error when the stream is destroyed without an error', function _test(t, done) {
+			const { finish, deadline, check } = guardDone(done)
+			deadline(5000, 'did not emit close after silent stream destroy')
+			const client = connect({ reconnectPeriod: 0 })
+			let sawError = false
+
+			client.on('error', () => {
+				sawError = true
+			})
+			client.once('connect', () => {
+				client.stream.destroy()
+			})
+			client.once('close', () => {
+				check(() => {
+					assert.isFalse(sawError)
+				})
+				client.end(true, (endErr) => finish(endErr))
+			})
+		})
+
 		it('should have different client ids', function _test(t, done) {
 			// bug identified in this test: the client.end callback is invoked twice, once when the `end`
 			// method completes closing the stores and invokes the callback, and another time when the

@@ -75,6 +75,78 @@ describe('MqttClient', () => {
 		})
 	})
 
+	describe('stream errors', () => {
+		function openDuplex() {
+			return new Duplex({
+				read(n) {},
+				write(_chunk, _enc, cb) {
+					cb()
+				},
+			})
+		}
+
+		it('should emit error when the stream is destroyed with a message and no code', function _test(t, done) {
+			const duplex = openDuplex()
+			client = new mqtt.MqttClient(() => duplex, {
+				manualConnect: true,
+				reconnectPeriod: 0,
+				connectTimeout: 1000,
+			})
+			client.on('error', (err) => {
+				assert.strictEqual(
+					err.message,
+					'Username is required to use password',
+				)
+				assert.isUndefined((err as Error & { code?: string }).code)
+				client.end(true, (endErr) => done(endErr))
+			})
+			client.connect()
+			duplex.destroy(new Error('Username is required to use password'))
+		})
+
+		it('should not emit error when the stream is destroyed without an error', function _test(t, done) {
+			const duplex = openDuplex()
+			client = new mqtt.MqttClient(() => duplex, {
+				manualConnect: true,
+				reconnectPeriod: 0,
+				connectTimeout: 1000,
+			})
+			let sawError = false
+			client.on('error', () => {
+				sawError = true
+			})
+			client.on('close', () => {
+				assert.isFalse(sawError)
+				client.end(true, (endErr) => done(endErr))
+			})
+			client.connect()
+			duplex.destroy()
+		})
+
+		it('should not emit error for websocket-closed-before-open teardown', function _test(t, done) {
+			const duplex = openDuplex()
+			client = new mqtt.MqttClient(() => duplex, {
+				manualConnect: true,
+				reconnectPeriod: 0,
+				connectTimeout: 1000,
+			})
+			let sawError = false
+			client.on('error', () => {
+				sawError = true
+			})
+			client.on('close', () => {
+				assert.isFalse(sawError)
+				client.end(true, (endErr) => done(endErr))
+			})
+			client.connect()
+			duplex.destroy(
+				new Error(
+					'WebSocket was closed before the connection was established',
+				),
+			)
+		})
+	})
+
 	describe('message ids', () => {
 		it('should increment the message id', function _test(t, done) {
 			client = mqtt.connect(config)

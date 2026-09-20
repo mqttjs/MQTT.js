@@ -1104,14 +1104,30 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			work()
 		}
 
-		const streamErrorHandler = (error) => {
+		const streamErrorHandler = (
+			error: Error & { code?: string | number },
+		) => {
 			this.log('streamErrorHandler :: error', error.message)
-			// error.code will only be set on NodeJS env, browser don't allow to detect errors on sockets
-			// also emitting errors on browsers seems to create issues
+			// Node socket errors have `code` (ECONNREFUSED, …). mqtt-packet
+			// protocol errors have a message but no `code` and were previously
+			// swallowed by noop (#1939). Keep intentional silent closes silent:
+			// `destroy()` without an error, and the `ws` teardown error that is
+			// a side-effect of destroy() before the handshake finishes.
+			const wsClosedBeforeOpen =
+				error.message ===
+				'WebSocket was closed before the connection was established'
 			if (error.code) {
-				// handle error
 				this.log('streamErrorHandler :: emitting error')
 				this.emit('error', error)
+			} else if (error.message && !wsClosedBeforeOpen) {
+				this.log('streamErrorHandler :: emitting error')
+				// mqtt-packet destroys the stream synchronously while writing
+				// CONNECT, which runs inside the constructor. Defer so
+				// `mqtt.connect()` can attach its default listener and callers
+				// can subscribe before the event is delivered.
+				nextTick(() => {
+					this.emit('error', error)
+				})
 			} else {
 				this.noop(error)
 			}
@@ -1120,7 +1136,6 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		this.log('connect :: pipe stream to writable stream')
 		this.stream.pipe(writable)
 
-		// Suppress connection errors
 		this.stream.on('error', streamErrorHandler)
 
 		// Echo stream close
