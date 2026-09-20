@@ -75,6 +75,108 @@ describe('MqttClient', () => {
 		})
 	})
 
+	describe('connack timer on early connect failure (#1155)', () => {
+		function idleStream() {
+			return new Duplex({
+				read() {},
+				write(_chunk, _enc, cb) {
+					cb()
+				},
+			})
+		}
+
+		function neverOpenedStream() {
+			const stream = idleStream()
+			// Socket never opened: destroy is a no-op and `close` never fires.
+			stream.destroy = function destroy() {
+				return stream
+			}
+			return stream
+		}
+
+		it(
+			'should not emit connack timeout after a stream error that never closes',
+			{ timeout: 5000 },
+			function _test(t, done) {
+				const connectTimeout = 80
+				const stream = neverOpenedStream()
+				const errors: string[] = []
+				client = new mqtt.MqttClient(() => stream, {
+					connectTimeout,
+					reconnectPeriod: 0,
+				})
+				client.on('error', (err) => {
+					errors.push(err.message)
+				})
+
+				const err = new Error(
+					'getaddrinfo ENOTFOUND bad.invalid',
+				) as NodeJS.ErrnoException
+				err.code = 'ENOTFOUND'
+				stream.emit('error', err)
+				try {
+					assert.include(errors, 'getaddrinfo ENOTFOUND bad.invalid')
+				} catch (assertErr) {
+					client.end(true, () => done(assertErr as Error))
+					return
+				}
+
+				// Real time, not a fake clock: the bug is a live handle that
+				// keeps the process up for `connectTimeout`.
+				setTimeout(() => {
+					try {
+						assert.notInclude(
+							errors,
+							'connack timeout',
+							'connackTimer was left running after ENOTFOUND: the process would hang for connectTimeout',
+						)
+						client.end(true, done)
+					} catch (assertErr) {
+						client.end(true, () => done(assertErr as Error))
+					}
+				}, connectTimeout + 40)
+			},
+		)
+
+		it(
+			'should not emit connack timeout after end() when the stream never closes',
+			{ timeout: 5000 },
+			function _test(t, done) {
+				const connectTimeout = 80
+				const errors: string[] = []
+				// Idle stream, no error: `end()` without force stores the
+				// DISCONNECT and returns because `!connected`, so `close`
+				// never fires. finish() must still drop connackTimer.
+				client = new mqtt.MqttClient(() => idleStream(), {
+					connectTimeout,
+					reconnectPeriod: 0,
+				})
+				client.on('error', (err) => {
+					errors.push(err.message)
+				})
+
+				client.end((endErr) => {
+					if (endErr) {
+						done(endErr)
+						return
+					}
+					setTimeout(() => {
+						try {
+							assert.notInclude(
+								errors,
+								'connack timeout',
+								'connackTimer was left running after end(): the process would hang for connectTimeout',
+							)
+							done()
+						} catch (assertErr) {
+							done(assertErr as Error)
+						}
+					}, connectTimeout + 40)
+				})
+			},
+		)
+	})
+
 	describe('message ids', () => {
 		it('should increment the message id', function _test(t, done) {
 			client = mqtt.connect(config)

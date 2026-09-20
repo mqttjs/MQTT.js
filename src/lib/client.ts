@@ -1109,7 +1109,14 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			// error.code will only be set on NodeJS env, browser don't allow to detect errors on sockets
 			// also emitting errors on browsers seems to create issues
 			if (error.code) {
-				// handle error
+				// A lookup/connect failure (ENOTFOUND, ECONNREFUSED, ...) can
+				// fail the socket without ever opening it. The stream `close`
+				// handler -- the other place that clears `connackTimer` -- then
+				// never runs, so the timer keeps the process alive for
+				// `connectTimeout` (default 30s) and later emits a misleading
+				// "connack timeout" (#1155).
+				this.log('streamErrorHandler :: clearing connackTimer')
+				clearTimeout(this.connackTimer)
 				this.log('streamErrorHandler :: emitting error')
 				this.emit('error', error)
 			} else {
@@ -1913,6 +1920,14 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 				this.options.clientId,
 				force,
 			)
+			// `end()` can run before the stream has opened. `_cleanUp` then
+			// completes immediately (`!this.connected`) and may never destroy
+			// the stream (the unforced path stores the DISCONNECT instead).
+			// Stream `close` -- which is what normally clears `connackTimer` --
+			// never fires, so the timer would hang for `connectTimeout` and
+			// emit "connack timeout" after `end()` already completed (#1155).
+			this.log('end :: finish :: clearing connackTimer')
+			clearTimeout(this.connackTimer)
 			this._cleanUp(
 				<boolean>force,
 				() => {
@@ -2183,6 +2198,13 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	 * @api private
 	 */
 	private _cleanUp(forced: boolean, done?: DoneCallback, opts = {}) {
+		// Tear-down is not always paired with stream `close` (unforced
+		// `_cleanUp` while still connecting stores the DISCONNECT and
+		// returns). Clear the CONNACK deadline here too so no caller of
+		// `_cleanUp` can leave it running (#1155).
+		this.log('_cleanUp :: clearing connackTimer')
+		clearTimeout(this.connackTimer)
+
 		if (done) {
 			this.log('_cleanUp :: done callback provided for on stream close')
 			this.stream.on('close', done)
