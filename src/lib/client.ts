@@ -61,6 +61,26 @@ const MAX_RECEIVE_MAXIMUM = 0xffff
 /** MQTT 5 reason code 0x93 */
 const RECEIVE_MAXIMUM_EXCEEDED = 147
 
+/** Emitted by `ws` when a stream is destroyed before the handshake finishes. */
+const WS_CLOSED_BEFORE_OPEN =
+	'WebSocket was closed before the connection was established'
+
+/**
+ * mqtt-packet protocol errors have a message but no `code`. The `ws`
+ * destroy-before-open error is a teardown side-effect, not the original
+ * failure, and must stay silent (#1939).
+ */
+function isUncodedProtocolError(
+	error?: Error & { code?: string | number },
+): error is Error {
+	return Boolean(
+		error &&
+		!error.code &&
+		error.message &&
+		error.message !== WS_CLOSED_BEFORE_OPEN,
+	)
+}
+
 const defaultConnectOptions: IClientOptions = {
 	keepalive: 60,
 	reschedulePings: true,
@@ -1104,27 +1124,47 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			work()
 		}
 
+		// mqtt-packet calls `stream.destroy(err)` for protocol errors. On a
+		// `ws` stream that is still connecting, `createWebSocketStream` replaces
+		// that `err` with "WebSocket was closed before the connection was
+		// established". Capture the original error here so it still reaches
+		// application listeners (#1939).
+		let forwardedDestroyError: Error | undefined
+		const origDestroy = this.stream.destroy.bind(this.stream)
+		this.stream.destroy = ((
+			err?: Error,
+			callback?: (error: Error | null) => void,
+		) => {
+			if (isUncodedProtocolError(err)) {
+				forwardedDestroyError = err
+				this.log('stream.destroy :: forwarding error', err.message)
+				// CONNECT is written inside the constructor. Defer so
+				// `mqtt.connect()` can attach its default listener and callers
+				// can subscribe before the event is delivered.
+				nextTick(() => {
+					this.emit('error', err)
+				})
+			}
+			return origDestroy(err, callback)
+		}) as typeof this.stream.destroy
+
 		const streamErrorHandler = (
 			error: Error & { code?: string | number },
 		) => {
 			this.log('streamErrorHandler :: error', error.message)
-			// Node socket errors have `code` (ECONNREFUSED, …). mqtt-packet
-			// protocol errors have a message but no `code` and were previously
-			// swallowed by noop (#1939). Keep intentional silent closes silent:
-			// `destroy()` without an error, and the `ws` teardown error that is
-			// a side-effect of destroy() before the handshake finishes.
-			const wsClosedBeforeOpen =
-				error.message ===
-				'WebSocket was closed before the connection was established'
+			// Already forwarded from the destroy wrapper above.
+			if (error === forwardedDestroyError) {
+				this.noop(error)
+				return
+			}
+			// Node socket errors have `code` (ECONNREFUSED, …). Other
+			// no-code protocol errors that did not go through `destroy`
+			// still need to reach application listeners.
 			if (error.code) {
 				this.log('streamErrorHandler :: emitting error')
 				this.emit('error', error)
-			} else if (error.message && !wsClosedBeforeOpen) {
+			} else if (isUncodedProtocolError(error)) {
 				this.log('streamErrorHandler :: emitting error')
-				// mqtt-packet destroys the stream synchronously while writing
-				// CONNECT, which runs inside the constructor. Defer so
-				// `mqtt.connect()` can attach its default listener and callers
-				// can subscribe before the event is delivered.
 				nextTick(() => {
 					this.emit('error', error)
 				})
