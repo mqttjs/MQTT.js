@@ -116,10 +116,7 @@ export const nextTick =
 	typeof process?.nextTick === 'function'
 		? process.nextTick
 		: (callback: () => void) => {
-				// setTimeout is throttled in React Native background apps
-				if (typeof queueMicrotask === 'function')
-					queueMicrotask(callback)
-				else setTimeout(callback, 0)
+				setTimeout(callback, 0)
 			}
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports

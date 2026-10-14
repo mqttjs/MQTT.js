@@ -32,13 +32,13 @@ describe('browser bundle', () => {
 		})
 
 		// React Native in the background: timers never fire
-		let timers = 0
+		let setTimeoutCalls = 0
 		const context: Record<string, any> = {
 			AbortController,
 			AbortSignal,
 			queueMicrotask,
 			setTimeout: () => {
-				timers++
+				setTimeoutCalls++
 				return 0
 			},
 			clearTimeout: () => {},
@@ -50,7 +50,8 @@ describe('browser bundle', () => {
 		await new Promise<void>((resolve) => {
 			setImmediate(resolve)
 		})
+		// chunks lives in the vm realm; copy it so chai can compare
 		assert.deepEqual(Array.from(chunks), [0xc0, 0])
-		assert.equal(timers, 0)
+		assert.equal(setTimeoutCalls, 0)
 	})
 })
