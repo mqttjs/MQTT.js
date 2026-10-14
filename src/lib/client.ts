@@ -2370,12 +2370,26 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		this.emit('packetsend', packet)
 
 		this.log('_writePacket :: writing to stream')
+		const erroredBefore = this.stream.errored
 		const result = mqttPacket.writeToStream(
 			packet,
 			this.stream,
 			this.options,
 		)
 		this.log('_writePacket :: writeToStream result %s', result)
+
+		// mqtt-packet rejects an invalid packet by destroying the stream with
+		// the reason, which has no `code` so `streamErrorHandler` drops it (#1939)
+		const packetError = this.stream.errored
+		if (packetError && packetError !== erroredBefore) {
+			this.log('_writePacket :: invalid packet: %s', packetError.message)
+			// `ws` replaces the error it emits, and CONNECT is written from the
+			// constructor, before anyone can listen: report it right before `close`
+			this.stream.prependOnceListener('close', () => {
+				this.emit('error', packetError)
+			})
+		}
+
 		if (!result && cb && cb !== this.noop) {
 			this.log(
 				'_writePacket :: handle events on `drain` once through callback.',

@@ -537,6 +537,35 @@ export default function abstractTest(server, config, ports) {
 			})
 		})
 
+		it('should emit error event if mqtt-packet rejects the connect packet', function _test(t, done) {
+			const { check, finish, deadline } = guardDone(done)
+			deadline(3000, 'no close after an invalid connect packet')
+			const errors: Error[] = []
+
+			// mqtt-packet refuses a password without a username
+			const client = connect({ password: 'secret', reconnectPeriod: 0 })
+			client.on('connect', () => {
+				check(() => assert.fail('should not connect'))
+			})
+			client.on('error', (err) => {
+				errors.push(err)
+			})
+			client.once('close', () => {
+				check(() => {
+					assert.lengthOf(
+						errors,
+						1,
+						'error must be emitted once, before close',
+					)
+					assert.strictEqual(
+						errors[0].message,
+						'Username is required to use password',
+					)
+				})
+				client.end((err) => finish(err))
+			})
+		})
+
 		it('should have different client ids', function _test(t, done) {
 			// bug identified in this test: the client.end callback is invoked twice, once when the `end`
 			// method completes closing the stores and invokes the callback, and another time when the
