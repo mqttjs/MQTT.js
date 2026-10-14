@@ -162,7 +162,8 @@ function connect(
 
 	// only loads the protocols once
 	if (!protocols) {
-		protocols = {}
+		// null prototype: a `constructor://` URL must hit the unknown-protocol fallback
+		protocols = Object.create(null)
 		if (!isBrowser && !opts.forceNativeWebSocket) {
 			protocols.ws = require('./ws').streamBuilder
 			protocols.wss = require('./ws').streamBuilder
