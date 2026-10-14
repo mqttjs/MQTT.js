@@ -11,10 +11,8 @@ export default class TopicAliasRecv {
 	public length: number
 
 	constructor(max: number) {
-		// plain object is safe here: keys are broker aliases, range-checked in put()
 		this.aliasToTopic = {}
 		this.max = max
-		this.length = 0
 	}
 
 	/**
@@ -27,10 +25,8 @@ export default class TopicAliasRecv {
 		if (alias === 0 || alias > this.max) {
 			return false
 		}
-		if (!(alias in this.aliasToTopic)) {
-			this.length++
-		}
 		this.aliasToTopic[alias] = topic
+		this.length = Object.keys(this.aliasToTopic).length
 		return true
 	}
 
@@ -48,6 +44,5 @@ export default class TopicAliasRecv {
 	 */
 	clear() {
 		this.aliasToTopic = {}
-		this.length = 0
 	}
 }

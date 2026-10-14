@@ -39,7 +39,6 @@ import {
 	type TimerVariant,
 	type VoidCallback,
 	nextTick,
-	nullProtoMap,
 } from './shared'
 import type TopicAliasSend from './topic-alias-send'
 import { TypedEventEmitter } from './TypedEmitter'
@@ -711,8 +710,9 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		this.queueQoSZero =
 			options.queueQoSZero === undefined ? true : options.queueQoSZero
 
-		// map of subscribed topics to support reconnection
-		this._resubscribeTopics = nullProtoMap<IClientSubscribeOptions>()
+		// map of subscribed topics to support reconnection. Null prototype so
+		// topics like `__proto__` and `constructor` are plain keys
+		this._resubscribeTopics = Object.create(null)
 
 		// map of a subscribe messageId and a topic
 		this.messageIdToTopic = {}
@@ -2658,8 +2658,8 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 						topicI < _resubscribeTopicsKeys.length;
 						topicI++
 					) {
-						const resubscribeTopic =
-							nullProtoMap<IClientSubscribeOptions>()
+						const resubscribeTopic: ISubscriptionMap =
+							Object.create(null)
 						resubscribeTopic[_resubscribeTopicsKeys[topicI]] =
 							this._resubscribeTopics[
 								_resubscribeTopicsKeys[topicI]
@@ -2674,8 +2674,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 					this._subscribe(this._resubscribeTopics, true)
 				}
 			} else {
-				this._resubscribeTopics =
-					nullProtoMap<IClientSubscribeOptions>()
+				this._resubscribeTopics = Object.create(null)
 			}
 		}
 

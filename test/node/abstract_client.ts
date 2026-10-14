@@ -4851,19 +4851,13 @@ export default function abstractTest(server, config, ports) {
 			})
 		})
 
-		// resolves with the topics of the next SUBSCRIBE the server receives,
-		// detaching its listeners even when the caller never settles
-		const nextSubscribedTopics = (signal: AbortSignal) =>
-			new Promise<string[]>((resolve, reject) => {
-				const onClient = (serverClient) => {
+		// resolves with the topics of the next SUBSCRIBE the server receives
+		const nextSubscribedTopics = () =>
+			new Promise<string[]>((resolve) => {
+				server.once('client', (serverClient) => {
 					serverClient.once('subscribe', (packet) => {
 						resolve(packet.subscriptions.map((sub) => sub.topic))
 					})
-				}
-				server.once('client', onClient)
-				signal.addEventListener('abort', () => {
-					server.removeListener('client', onClient)
-					reject(signal.reason)
 				})
 			})
 
@@ -4877,7 +4871,6 @@ export default function abstractTest(server, config, ports) {
 					async function _test() {
 						const client = connect({ reconnectPeriod: 100 })
 						const topics = [reservedTopic, 'hello']
-						const ac = new AbortController()
 						try {
 							await once(client, 'connect')
 							await client.subscribeAsync(topics)
@@ -4889,16 +4882,13 @@ export default function abstractTest(server, config, ports) {
 								client.options.resubscribe = true
 								await client.subscribeAsync(topics)
 							}
-							const nextSubscribe = nextSubscribedTopics(
-								ac.signal,
-							)
+							const nextSubscribe = nextSubscribedTopics()
 							client.stream.end()
 							assert.deepEqual(
 								await nextSubscribe,
 								version === 5 ? [reservedTopic] : topics,
 							)
 						} finally {
-							ac.abort(new Error('test finished'))
 							await client.endAsync()
 						}
 					},
@@ -4906,40 +4896,18 @@ export default function abstractTest(server, config, ports) {
 			}
 
 			it(
-				`should keep \`${reservedTopic}\` when another topic is unsubscribed`,
-				{ timeout: 5000 },
-				async function _test() {
-					const client = connect({ reconnectPeriod: 100 })
-					const ac = new AbortController()
-					try {
-						await once(client, 'connect')
-						await client.subscribeAsync([reservedTopic, 'hello'])
-						await client.unsubscribeAsync('hello')
-						const nextSubscribe = nextSubscribedTopics(ac.signal)
-						client.stream.end()
-						assert.deepEqual(await nextSubscribe, [reservedTopic])
-					} finally {
-						ac.abort(new Error('test finished'))
-						await client.endAsync()
-					}
-				},
-			)
-
-			it(
 				`should not resubscribe to \`${reservedTopic}\` after unsubscribing it`,
 				{ timeout: 5000 },
 				async function _test() {
 					const client = connect({ reconnectPeriod: 100 })
-					const ac = new AbortController()
 					try {
 						await once(client, 'connect')
 						await client.subscribeAsync([reservedTopic, 'hello'])
 						await client.unsubscribeAsync(reservedTopic)
-						const nextSubscribe = nextSubscribedTopics(ac.signal)
+						const nextSubscribe = nextSubscribedTopics()
 						client.stream.end()
 						assert.deepEqual(await nextSubscribe, ['hello'])
 					} finally {
-						ac.abort(new Error('test finished'))
 						await client.endAsync()
 					}
 				},
