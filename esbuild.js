@@ -2,6 +2,7 @@ const { build } = require('esbuild')
 const { polyfillNode } = require('esbuild-plugin-polyfill-node');
 const { rimraf } = require('rimraf')
 const fs = require('fs')
+const path = require('path')
 const { version } = require('./package.json');
 
 const outdir = 'dist'
@@ -18,6 +19,17 @@ const options = {
     globalName: 'mqtt',
     sourcemap: false, // this can be enabled while debugging, if we decide to keep this enabled we should also ship the `src` folder to npm
     plugins: [
+        {
+            name: 'resolve-process',
+            setup(build) {
+                const shim = path.join(__dirname, 'scripts/browser-process.js')
+                // `process` and readable-stream's `process/` both go to the shim; the shim's own import falls through to jspm
+                build.onResolve({ filter: /^(node:)?process\/?$/ }, args => {
+                    if (args.importer === shim) return
+                    return { path: shim }
+                })
+            }
+        },
         polyfillNode({
             polyfills: [
                 'readable-stream'
@@ -93,7 +105,11 @@ async function run() {
     }
 }
 
-run().catch((e) => {
-    console.error(e)
-    process.exit(1)
-})
+if (require.main === module) {
+    run().catch((e) => {
+        console.error(e)
+        process.exit(1)
+    })
+}
+
+module.exports = { options }
