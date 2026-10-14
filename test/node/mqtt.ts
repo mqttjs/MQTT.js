@@ -291,5 +291,47 @@ describe('mqtt', () => {
 			c.options.should.have.property('protocol', 'mqtts')
 			c.end((err) => done(err))
 		})
+
+		it('should strip the trailing colon from the protocol of an options object', function _test(t, done) {
+			// shape of url.parse('mqtts://localhost:8883')
+			const c = mqtt.connect({
+				protocol: 'mqtts:' as IClientOptions['protocol'],
+				hostname: 'localhost',
+				port: 8883,
+			})
+
+			c.on('error', () => {})
+			c.options.should.have.property('protocol', 'mqtts')
+			c.end(true, (err) => done(err))
+		})
+
+		it('should keep the mqtts protocol of an options object', function _test(t, done) {
+			const c = mqtt.connect({
+				protocol: 'mqtts',
+				hostname: 'localhost',
+				port: 8883,
+			})
+
+			c.on('error', () => {})
+			c.options.should.have.property('protocol', 'mqtts')
+			c.end(true, (err) => done(err))
+		})
+
+		it('should strip the trailing colon from the protocol of a servers entry', function _test(t, done) {
+			const c = mqtt.connect({
+				servers: [
+					{
+						host: 'localhost',
+						port: 8883,
+						protocol:
+							'mqtts:' as IClientOptions['servers'][number]['protocol'],
+					},
+				],
+			})
+
+			c.on('error', () => {})
+			c.options.should.have.property('protocol', 'mqtts')
+			c.end(true, (err) => done(err))
+		})
 	})
 })

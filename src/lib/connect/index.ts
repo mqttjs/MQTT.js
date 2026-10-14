@@ -49,6 +49,11 @@ function parseAuthOptions(opts: IClientOptions) {
 	}
 }
 
+// url.parse() style objects carry the protocol as 'mqtts:'
+function stripProtocolColon(protocol: MqttProtocol): MqttProtocol {
+	return protocol?.replace(/:$/, '') as MqttProtocol
+}
+
 /**
  * connect - connect to an MQTT broker.
  */
@@ -96,10 +101,10 @@ function connect(
 			throw new Error('Missing protocol')
 		}
 
-		opts.protocol = (
-			opts.protocol || getDefaultWebSocketProtocol()
-		).replace(/:$/, '') as MqttProtocol
+		opts.protocol = opts.protocol || getDefaultWebSocketProtocol()
 	}
+
+	opts.protocol = stripProtocolColon(opts.protocol)
 
 	opts.unixSocket = opts.unixSocket || opts.protocol?.includes('+unix')
 
@@ -228,7 +233,9 @@ function connect(
 			opts.port = opts.servers[client._reconnectCount].port
 			opts.protocol = !opts.servers[client._reconnectCount].protocol
 				? opts.defaultProtocol
-				: opts.servers[client._reconnectCount].protocol
+				: stripProtocolColon(
+						opts.servers[client._reconnectCount].protocol,
+					)
 			opts.hostname = opts.host
 
 			client._reconnectCount++
