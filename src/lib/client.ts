@@ -154,7 +154,7 @@ export interface IClientOptions extends ISecureClientOptions {
 	query?: Record<string, string>
 	/** Auth string in the format <username>:<password> */
 	auth?: string
-	/** Optional SOCKS proxy to use for TCP / TLS connections , i.e. socks5://localhost:1333, socks4://localhost:1333, socks5h://localhost:1333 . Default is socks5h. */
+	/** Optional SOCKS proxy to use for TCP / TLS connections , i.e. socks5://localhost:1333, socks4://localhost:1333, socks5h://localhost:1333, socks4a://localhost:1333 . With socks5h and socks4a the proxy resolves the broker hostname. */
 	socksProxy?: string
 	/** Timeout for establishing a socks connection */
 	socksTimeout?: number
@@ -181,9 +181,11 @@ export interface IClientOptions extends ISecureClientOptions {
 	 */
 	reconnectPeriod?: number
 	/**
-	 * Set to true to enable the reconnect period to apply if the initial
-	 * connection is denied with an error in the CONNACK packet, such as with an
-	 * authentication error.
+	 * Set to true to keep reconnecting (every `reconnectPeriod`) after the
+	 * broker refuses a connection with an error in the CONNACK packet, such as
+	 * an authentication error. The refused connection is always closed; with
+	 * `false` (the default) the client stays offline until `connect()` or
+	 * `reconnect()` is called.
 	 */
 	reconnectOnConnackError?: boolean
 	/**
@@ -1018,10 +1020,8 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		this.log('connect :: calling method to clear reconnect')
 		this._clearReconnect()
 
-		// A refused CONNACK emits no `close` with the default
-		// `reconnectOnConnackError: false`, so without this the properties of a
-		// connection that is gone would still be readable while the next one is
-		// being negotiated.
+		// The old stream's `close` normally clears these, but an explicit
+		// `connect()`/`reconnect()` can run before it fires.
 		this._serverProperties = undefined
 
 		if (this.disconnected && !this.reconnecting) {
@@ -2534,9 +2534,9 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	public get keepalive(): number {
 		// Only an accepted CONNACK opens a connection to keep alive. A refused
 		// one is still kept in `_serverProperties` - it is where `reasonString`
-		// lives - but with the default `reconnectOnConnackError: false` no
-		// `close` ever follows it, so its `serverKeepAlive` would be reported
-		// for good while `connected` stays false.
+		// lives - until the `close` that follows the refusal, and `connected`
+		// stays false the whole time, so its `serverKeepAlive` must not be
+		// reported.
 		const serverKeepAlive = this.connected
 			? this._serverProperties?.serverKeepAlive
 			: undefined

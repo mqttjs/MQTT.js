@@ -3207,9 +3207,8 @@ describe('MQTT 5.0', () => {
 						client.serverProperties.serverKeepAlive,
 						16,
 					)
-					// ...but no connection was opened, and with the default
-					// `reconnectOnConnackError: false` no `close` follows, so a
-					// `serverKeepAlive` honoured here would stick for good
+					// ...but no connection was opened, so its
+					// `serverKeepAlive` must not be honoured
 					assert.isNotOk(client.connected)
 					assert.strictEqual(client.keepalive, 30)
 				} catch (err) {
