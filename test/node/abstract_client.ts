@@ -1978,10 +1978,7 @@ export default function abstractTest(server, config, ports) {
 			)
 
 			assert.strictEqual(sendSpy.callCount, 0)
-			client.end()
-			client.on('connect', () => {
-				done()
-			})
+			client.end((err) => done(err))
 		})
 
 		it(
@@ -4595,6 +4592,69 @@ export default function abstractTest(server, config, ports) {
 						// the whole run down with an uncaughtException
 						connectTimeout: 60000,
 						reconnectPeriod: 0,
+					})
+				})
+			},
+		)
+
+		it(
+			'should close the connection when ended before the connack arrives',
+			{ timeout: 10000 },
+			function _test(t, done) {
+				const { check, finish, deadline } = guardDone(done)
+				let client: mqtt.MqttClient | null = null
+				let ended = false
+				let socketClosed = false
+
+				const maybeFinish = () => {
+					if (ended && socketClosed) finish()
+				}
+
+				// answers the CONNECT with nothing, so the client is still
+				// waiting for its CONNACK when `end()` runs
+				const server2 = serverBuilder(
+					config.protocol,
+					(serverClient) => {
+						serverClient.on('connect', () => {
+							deadline(
+								3000,
+								'the broker still sees the socket open after end(): the client left the connection and its connack timer running',
+							)
+							client.end((err) => {
+								check(() => {
+									assert.notOk(err)
+									assert.isFalse(client.connected)
+								})
+								ended = true
+								maybeFinish()
+							})
+						})
+					},
+				)
+
+				server2.on('connection', (socket) => {
+					socket.on('close', () => {
+						socketClosed = true
+						maybeFinish()
+					})
+				})
+
+				server2.listen(ports.PORTAND54, () => {
+					client = connect({
+						host: 'localhost',
+						port: ports.PORTAND54,
+						// longer than the deadline: a leaked timer must fail
+						// on the deadline, not fire a connack timeout mid-run
+						connectTimeout: 60000,
+						reconnectPeriod: 0,
+					})
+					client.on('error', (err) => {
+						check(() =>
+							assert.fail(`unexpected error: ${err.message}`),
+						)
+					})
+					client.on('connect', () => {
+						check(() => assert.fail('should not connect'))
 					})
 				})
 			},

@@ -2199,6 +2199,14 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 				this.options.clientId,
 			)
 			this.stream.destroy()
+		} else if (!this.connected) {
+			// No session to close: `_sendPacket` would only queue the DISCONNECT
+			// and leave the socket and its CONNACK timer alive (#1155)
+			this.log(
+				'_cleanUp :: (%s) :: not connected, destroying stream',
+				this.options.clientId,
+			)
+			this.stream.destroy()
 		} else {
 			const packet: IDisconnectPacket = { cmd: 'disconnect', ...opts }
 			this.log(
