@@ -7,6 +7,8 @@ import path from 'node:path'
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { options } = require('../../esbuild.js')
 
+const PINGREQ = [0xc0, 0]
+
 describe('browser bundle', () => {
 	it('flushes mqtt-packet writes while timers are suspended (#2053)', async () => {
 		const result = await build({
@@ -51,7 +53,15 @@ describe('browser bundle', () => {
 			setImmediate(resolve)
 		})
 		// chunks lives in the vm realm; copy it so chai can compare
-		assert.deepEqual(Array.from(chunks), [0xc0, 0])
-		assert.equal(setTimeoutCalls, 0)
+		assert.deepEqual(
+			Array.from(chunks),
+			PINGREQ,
+			'packet not flushed: bundled process.nextTick is not the shim',
+		)
+		assert.equal(
+			setTimeoutCalls,
+			0,
+			'bundle scheduled a timer: some process import bypassed the shim',
+		)
 	})
 })
