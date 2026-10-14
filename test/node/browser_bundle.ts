@@ -13,6 +13,7 @@ describe('browser bundle', () => {
 	it('flushes mqtt-packet writes while timers are suspended (#2053)', async () => {
 		const result = await build({
 			...options,
+			// build the probe below in memory instead of the real entry
 			entryPoints: undefined,
 			outfile: undefined,
 			write: false,
@@ -45,7 +46,6 @@ describe('browser bundle', () => {
 			},
 			clearTimeout: () => {},
 		}
-		context.self = context
 		runInNewContext(result.outputFiles[0].text, context)
 
 		const chunks = context.probe.ping()
