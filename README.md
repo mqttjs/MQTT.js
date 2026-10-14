@@ -1,6 +1,6 @@
 # ![mqtt.js](https://raw.githubusercontent.com/mqttjs/MQTT.js/137ee0e3940c1f01049a30248c70f24dc6e6f829/MQTT.js.png)
 
-![Github Test Status](https://github.com/mqttjs/MQTT.js/workflows/MQTT.js%20CI/badge.svg) [![codecov](https://codecov.io/gh/mqttjs/MQTT.js/branch/master/graph/badge.svg)](https://codecov.io/gh/mqttjs/MQTT.js)
+[![Github Test Status](https://github.com/mqttjs/MQTT.js/actions/workflows/mqttjs-test.yml/badge.svg)](https://github.com/mqttjs/MQTT.js/actions/workflows/mqttjs-test.yml) [![codecov](https://codecov.io/gh/mqttjs/MQTT.js/branch/main/graph/badge.svg)](https://codecov.io/gh/mqttjs/MQTT.js)
 
 [![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://github.com/mqttjs/MQTT.js/graphs/commit-activity)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/mqttjs/MQTT.js/pulls)
@@ -52,8 +52,6 @@ not break as a result of unhandled errors. Additionally, typical TLS errors like
 added to a list of TLS errors that will be emitted from the MQTT.js client, and so can be handled as connection errors.
 
 **v3.0.0** adds support for MQTT 5, support for node v10.x, and many fixes to improve reliability.
-
-**Note:** MQTT v5 support is experimental as it has not been implemented by brokers yet.
 
 **v2.0.0** removes support for node v0.8, v0.10 and v0.12, and it is 3x faster in sending
 packets. It also removes all the deprecated functionality in v1.0.0,
@@ -958,13 +956,15 @@ import mqtt from 'mqtt'
 
 This will be automatically handled by your bundler.
 
-Otherwise you can choose to use a specific bundle like:
+Otherwise you can import the ESM bundle directly:
 
 ```js
-import * as mqtt from 'mqtt/dist/mqtt'
-import * as mqtt from 'mqtt/dist/mqtt.min'
 import mqtt from 'mqtt/dist/mqtt.esm'
 ```
+
+The `iife` bundles (`mqtt.js` and `mqtt.min.js`) have no exports, so they
+can't be imported. Load them with a `<script>` tag instead: they define a
+global `mqtt` (see [Via CDN](#cdn)).
 
 <a name="cdn"></a>
 
