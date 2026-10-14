@@ -2183,6 +2183,9 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	 * @api private
 	 */
 	private _cleanUp(forced: boolean, done?: DoneCallback, opts = {}) {
+		// a forced clean up clears `connected` below, but `done` must still wait for 'close'
+		const wasConnected = this.connected
+
 		if (done) {
 			this.log('_cleanUp :: done callback provided for on stream close')
 			this.stream.on('close', done)
@@ -2236,7 +2239,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 		this._destroyKeepaliveManager()
 
-		if (done && !this.connected) {
+		if (done && !wasConnected) {
 			this.log(
 				'_cleanUp :: (%s) :: removing stream `done` callback `close` listener',
 				this.options.clientId,

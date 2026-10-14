@@ -4269,6 +4269,25 @@ export default function abstractTest(server, config, ports) {
 			})
 		})
 
+		it('should call the forced end callback only after close', function _test(t, done) {
+			const { check, finish } = guardDone(done)
+			const client = connect()
+			let closed = false
+
+			client.once('close', () => {
+				closed = true
+			})
+
+			client.once('connect', () => {
+				client.end(true, () => {
+					check(() => {
+						assert.isTrue(closed, 'end callback ran before close')
+					})
+					finish()
+				})
+			})
+		})
+
 		it('should mark the client disconnecting if #end called', function _test(t, done) {
 			const client = connect()
 
