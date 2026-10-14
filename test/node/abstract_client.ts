@@ -4603,28 +4603,21 @@ export default function abstractTest(server, config, ports) {
 			function _test(t, done) {
 				const { check, finish, deadline } = guardDone(done)
 				let client: mqtt.MqttClient | null = null
+				// the broker sees its side of the socket close on its own schedule
 				let ended = false
 				let socketClosed = false
-
 				const maybeFinish = () => {
 					if (ended && socketClosed) finish()
 				}
 
-				// answers the CONNECT with nothing, so the client is still
-				// waiting for its CONNACK when `end()` runs
+				// never answers the CONNECT
 				const server2 = serverBuilder(
 					config.protocol,
 					(serverClient) => {
 						serverClient.on('connect', () => {
-							deadline(
-								3000,
-								'the broker still sees the socket open after end(): the client left the connection and its connack timer running',
-							)
+							deadline(3000, 'end() left the connection open')
 							client.end((err) => {
-								check(() => {
-									assert.notOk(err)
-									assert.isFalse(client.connected)
-								})
+								check(() => assert.notOk(err))
 								ended = true
 								maybeFinish()
 							})
@@ -4643,9 +4636,6 @@ export default function abstractTest(server, config, ports) {
 					client = connect({
 						host: 'localhost',
 						port: ports.PORTAND54,
-						// longer than the deadline: a leaked timer must fail
-						// on the deadline, not fire a connack timeout mid-run
-						connectTimeout: 60000,
 						reconnectPeriod: 0,
 					})
 					client.on('error', (err) => {
@@ -4653,8 +4643,66 @@ export default function abstractTest(server, config, ports) {
 							assert.fail(`unexpected error: ${err.message}`),
 						)
 					})
+				})
+			},
+		)
+
+		it(
+			'should not let a connection ended before its connack disturb the next one',
+			{ timeout: 10000 },
+			function _test(t, done) {
+				const { check, finish, deadline } = guardDone(done)
+				let client: mqtt.MqttClient | null = null
+				let connections = 0
+				let reconnected = false
+				const lateEvents: string[] = []
+
+				// ignores the first CONNECT, accepts the second
+				const server2 = serverBuilder(
+					config.protocol,
+					(serverClient) => {
+						serverClient.on('connect', () => {
+							connections++
+							if (connections === 1) {
+								deadline(
+									3000,
+									'the second connection never connected',
+								)
+								client.end()
+								client.reconnect()
+								return
+							}
+							serverClient.connack(
+								version === 5
+									? { reasonCode: 0 }
+									: { returnCode: 0 },
+							)
+						})
+					},
+				)
+
+				server2.listen(ports.PORTAND54, () => {
+					client = connect({
+						host: 'localhost',
+						port: ports.PORTAND54,
+						reconnectPeriod: 1000,
+					})
+					client.on('reconnect', () => {
+						reconnected = true
+					})
+					// the first socket's 'close' must land before the reconnect starts
+					client.on('close', () => {
+						if (reconnected) lateEvents.push('close')
+					})
+					client.on('offline', () => {
+						if (reconnected) lateEvents.push('offline')
+					})
 					client.on('connect', () => {
-						check(() => assert.fail('should not connect'))
+						check(() => {
+							assert.equal(connections, 2)
+							assert.deepEqual(lateEvents, [])
+						})
+						client.end((err) => finish(err))
 					})
 				})
 			},

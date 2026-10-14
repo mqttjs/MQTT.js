@@ -2184,6 +2184,9 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	 * @api private
 	 */
 	private _cleanUp(forced: boolean, done?: DoneCallback, opts = {}) {
+		// a stream destroyed here leaves no 'close' for `done` to wait on
+		const streamDestroyed = this.stream.destroyed
+
 		if (done) {
 			this.log('_cleanUp :: done callback provided for on stream close')
 			this.stream.on('close', done)
@@ -2201,7 +2204,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			this.stream.destroy()
 		} else if (!this.connected) {
 			// No session to close: `_sendPacket` would only queue the DISCONNECT
-			// and leave the socket and its CONNACK timer alive (#1155)
+			// and leave the socket and its CONNACK timer alive
 			this.log(
 				'_cleanUp :: (%s) :: not connected, destroying stream',
 				this.options.clientId,
@@ -2241,7 +2244,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 		this._destroyKeepaliveManager()
 
-		if (done && !this.connected) {
+		if (done && !this.connected && streamDestroyed) {
 			this.log(
 				'_cleanUp :: (%s) :: removing stream `done` callback `close` listener',
 				this.options.clientId,
