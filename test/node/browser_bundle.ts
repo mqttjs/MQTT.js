@@ -64,10 +64,4 @@ describe('browser bundle', () => {
 			'bundle scheduled a timer: some process import bypassed the shim',
 		)
 	})
-
-	it('points Metro without package exports at the shimmed bundle', () => {
-		// eslint-disable-next-line @typescript-eslint/no-require-imports
-		const pkg = require('../../package.json')
-		assert.equal(pkg['react-native'], pkg.exports['.']['react-native'])
-	})
 })

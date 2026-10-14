@@ -22,7 +22,6 @@
   },
   "main": "./build/index.js",
   "module": "./dist/mqtt.esm.js",
-  "react-native": "./dist/mqtt.esm.js",
   "bin": {
     "mqtt_pub": "./build/bin/pub.js",
     "mqtt_sub": "./build/bin/sub.js",
