@@ -3,7 +3,6 @@ import type { Duplex as NativeDuplex } from 'node:stream'
 import type { Duplex } from 'readable-stream'
 import type MqttClient from './client'
 import type { IClientOptions } from './client'
-import { nextTick as browserNextTick } from './browser-next-tick'
 
 export type DoneCallback = (error?: Error) => void
 
@@ -114,11 +113,14 @@ export function applyMixin(
 	}
 }
 export const nextTick =
-	typeof process !== 'undefined' &&
-	typeof process.versions?.node === 'string' &&
-	typeof process.nextTick === 'function'
+	typeof process?.nextTick === 'function'
 		? process.nextTick
-		: browserNextTick
+		: (callback: () => void) => {
+				// setTimeout is throttled in React Native background apps
+				if (typeof queueMicrotask === 'function')
+					queueMicrotask(callback)
+				else setTimeout(callback, 0)
+			}
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 export const MQTTJS_VERSION = require('../../package.json').version
