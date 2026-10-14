@@ -1,5 +1,12 @@
 # Changelog
 
+## [5.16.1](https://github.com/mqttjs/MQTT.js/compare/v5.16.0...v5.16.1) (2026-10-14)
+
+### Bug Fixes
+
+* reconnect instead of ending a client whose stream is already destroyed ([#2068](https://github.com/mqttjs/MQTT.js/issues/2068)) ([569bb31](https://github.com/mqttjs/MQTT.js/commit/569bb318b9e0fbde4e876ef450c2d88e37eca6f3))
+* schedule browser process.nextTick with queueMicrotask ([#2056](https://github.com/mqttjs/MQTT.js/issues/2056)) ([648b79c](https://github.com/mqttjs/MQTT.js/commit/648b79ccad79135f82198677c381a0c0e4fdd9bf)), closes [#2074](https://github.com/mqttjs/MQTT.js/issues/2074)
+
 # [5.16.0](https://github.com/mqttjs/MQTT.js/compare/v5.15.2...v5.16.0) (2026-09-16)
 
 ### Bug Fixes

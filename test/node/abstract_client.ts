@@ -183,6 +183,25 @@ export default function abstractTest(server, config, ports) {
 			})
 		})
 
+		it('should call the forced end callback only after close', function _test(t, done) {
+			const { check, finish } = guardDone(done)
+			const client = connect()
+			let closed = false
+
+			client.once('close', () => {
+				closed = true
+			})
+
+			client.once('connect', () => {
+				client.end(true, (err) => {
+					check(() => {
+						assert.isTrue(closed, 'end callback ran before close')
+					})
+					finish(err)
+				})
+			})
+		})
+
 		it('should emit end after end called and client must be disconnected', function _test(t, done) {
 			const client = connect()
 
@@ -4248,6 +4267,30 @@ export default function abstractTest(server, config, ports) {
 	describe('auto reconnect', () => {
 		beforeEach(beforeEachExec)
 		after(afterExec)
+
+		it('should reconnect when the reconnect timer fires before the stream closes', function _test(t, done) {
+			const { check, finish, deadline } = guardDone(done)
+			const client = connect()
+
+			client.once('connect', () => {
+				// a stalled socket delays 'close' past `reconnectPeriod`
+				client['_cleanUp'](true)
+				client['_reconnect']()
+				check(() => {
+					assert.isFalse(
+						client.disconnecting,
+						'_reconnect() must not end() a destroyed connection',
+					)
+				})
+				deadline(
+					2000,
+					'client did not reconnect after a forced clean up',
+				)
+				client.once('connect', () => {
+					client.end(true, (err) => finish(err))
+				})
+			})
+		})
 
 		it('should mark the client disconnecting if #end called', function _test(t, done) {
 			const client = connect()
