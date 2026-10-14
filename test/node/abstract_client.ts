@@ -537,32 +537,79 @@ export default function abstractTest(server, config, ports) {
 			})
 		})
 
-		it('should emit error event if mqtt-packet rejects the connect packet', function _test(t, done) {
-			const { check, finish, deadline } = guardDone(done)
-			deadline(3000, 'no close after an invalid connect packet')
-			const errors: Error[] = []
-
-			// mqtt-packet refuses a password without a username
-			const client = connect({ password: 'secret', reconnectPeriod: 0 })
-			client.on('connect', () => {
-				check(() => assert.fail('should not connect'))
-			})
+		// mqtt-packet refuses the packet by destroying the stream: the client
+		// must report why exactly once, before `close`
+		function expectPacketError(
+			client: mqtt.MqttClient,
+			message: string,
+			{ check, finish }: ReturnType<typeof guardDone>,
+		) {
+			const events: string[] = []
 			client.on('error', (err) => {
-				errors.push(err)
+				events.push(`error: ${err.message}`)
 			})
 			client.once('close', () => {
-				check(() => {
-					assert.lengthOf(
-						errors,
-						1,
-						'error must be emitted once, before close',
+				events.push('close')
+				client.end((endErr) => {
+					check(() =>
+						assert.deepEqual(events, [
+							`error: ${message}`,
+							'close',
+						]),
 					)
-					assert.strictEqual(
-						errors[0].message,
-						'Username is required to use password',
-					)
+					finish(endErr)
 				})
-				client.end((err) => finish(err))
+			})
+		}
+
+		it('should emit error event if mqtt-packet rejects the connect packet', function _test(t, done) {
+			const guard = guardDone(done)
+			guard.deadline(3000, 'no close after an invalid connect packet')
+
+			// a password without a username
+			const client = connect({ password: 'secret', reconnectPeriod: 0 })
+			client.on('connect', () => {
+				guard.check(() => assert.fail('should not connect'))
+			})
+			expectPacketError(
+				client,
+				'Username is required to use password',
+				guard,
+			)
+		})
+
+		it('should emit error event once if mqtt-packet rejects a packet after connecting', function _test(t, done) {
+			const guard = guardDone(done)
+			guard.deadline(3000, 'no close after an invalid publish packet')
+
+			const client = connect({ reconnectPeriod: 0 })
+			client.once('connect', () => {
+				// a non-string topic; the second write hits the destroyed stream
+				client.publish(42 as unknown as string, 'payload')
+				client.publish('valid', 'payload')
+			})
+			expectPacketError(client, 'Invalid topic', guard)
+		})
+
+		it('should still emit close if the packet error has no listener', function _test(t, done) {
+			const { check, finish } = guardDone(done)
+			const client = connect({ reconnectPeriod: 0 })
+			client.once('connect', () => {
+				let closed = false
+				client.once('close', () => {
+					closed = true
+				})
+				// no listener, so `emit('error')` throws: on this stack, not a timer's
+				client.removeAllListeners('error')
+				client['_packetError'] = new Error('Invalid topic')
+				check(() => {
+					assert.throws(
+						() => client.stream.emit('close'),
+						/Invalid topic/,
+					)
+					assert.isTrue(closed, 'the throw skipped the client close')
+				})
+				client.end(true, (err) => finish(err))
 			})
 		})
 

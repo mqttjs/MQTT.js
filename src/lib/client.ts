@@ -578,6 +578,12 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	private connackReceived: boolean
 
 	/**
+	 * Why mqtt-packet destroyed the current stream, if it refused to write a
+	 * packet. Emitted as `error` by the stream's `close` handler.
+	 */
+	private _packetError: Error | null = null
+
+	/**
 	 * Set while a refused CONNACK is torn down, so neither `_cleanUp` nor the
 	 * `close` handler arms a retry: closing the socket must not by itself
 	 * retry a connection the broker actively denied. `handleConnack` arms the
@@ -1014,6 +1020,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		// the stream exists, so no CONNACK can slip in ahead of it.
 		this.connackReceived = false
 		this.reconnectSuppressed = false
+		this._packetError = null
 
 		this.log('connect :: calling method to clear reconnect')
 		this._clearReconnect()
@@ -1127,8 +1134,17 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		this.stream.on('close', () => {
 			this.log('(%s)stream :: on close', this.options.clientId)
 			this._flushVolatile()
-			this.log('stream: emit close to MqttClient')
-			this.emit('close')
+			const packetError = this._packetError
+			this._packetError = null
+			try {
+				// emitted here, not where the write failed: CONNECT is written from
+				// the constructor, before anyone can listen
+				if (packetError) this.emit('error', packetError)
+			} finally {
+				// a throwing `error` listener must not skip the teardown
+				this.log('stream: emit close to MqttClient')
+				this.emit('close')
+			}
 		})
 
 		// Send a connect packet
@@ -2379,15 +2395,12 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		this.log('_writePacket :: writeToStream result %s', result)
 
 		// mqtt-packet rejects an invalid packet by destroying the stream with
-		// the reason, which has no `code` so `streamErrorHandler` drops it (#1939)
-		const packetError = this.stream.errored
-		if (packetError && packetError !== erroredBefore) {
+		// the reason. It has no `code`, so `streamErrorHandler` drops it.
+		// Read it from `errored`: `ws` replaces the error the stream emits.
+		const packetError = !erroredBefore && this.stream.errored
+		if (packetError && !(packetError as Error & { code?: unknown }).code) {
 			this.log('_writePacket :: invalid packet: %s', packetError.message)
-			// `ws` replaces the error it emits, and CONNECT is written from the
-			// constructor, before anyone can listen: report it right before `close`
-			this.stream.prependOnceListener('close', () => {
-				this.emit('error', packetError)
-			})
+			this._packetError = packetError
 		}
 
 		if (!result && cb && cb !== this.noop) {
