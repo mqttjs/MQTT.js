@@ -2127,7 +2127,8 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	private _reconnect() {
 		this.log('_reconnect: emitting reconnect to client')
 		this.emit('reconnect')
-		if (this.connected) {
+		// a destroyed stream can still report `connected` until its async 'close'
+		if (this.connected && !this.stream.destroyed) {
 			this.end(() => {
 				this.connect()
 			})
@@ -2183,9 +2184,6 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	 * @api private
 	 */
 	private _cleanUp(forced: boolean, done?: DoneCallback, opts = {}) {
-		// a forced clean up clears `connected` below, but `done` must still wait for 'close'
-		const wasConnected = this.connected
-
 		if (done) {
 			this.log('_cleanUp :: done callback provided for on stream close')
 			this.stream.on('close', done)
@@ -2200,10 +2198,6 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 				'_cleanUp :: (%s) :: destroying stream',
 				this.options.clientId,
 			)
-			// The connection is gone the moment the stream is destroyed. Waiting for the
-			// asynchronous 'close' to clear this leaves a window in which `_reconnect()`
-			// still sees a connected client and calls `end()` instead of reconnecting.
-			this.connected = false
 			this.stream.destroy()
 		} else {
 			const packet: IDisconnectPacket = { cmd: 'disconnect', ...opts }
@@ -2239,7 +2233,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 		this._destroyKeepaliveManager()
 
-		if (done && !wasConnected) {
+		if (done && !this.connected) {
 			this.log(
 				'_cleanUp :: (%s) :: removing stream `done` callback `close` listener',
 				this.options.clientId,

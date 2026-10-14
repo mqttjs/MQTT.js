@@ -182,6 +182,25 @@ export default function abstractTest(server, config, ports) {
 			})
 		})
 
+		it('should call the forced end callback only after close', function _test(t, done) {
+			const { check, finish } = guardDone(done)
+			const client = connect()
+			let closed = false
+
+			client.once('close', () => {
+				closed = true
+			})
+
+			client.once('connect', () => {
+				client.end(true, (err) => {
+					check(() => {
+						assert.isTrue(closed, 'end callback ran before close')
+					})
+					finish(err)
+				})
+			})
+		})
+
 		it('should emit end after end called and client must be disconnected', function _test(t, done) {
 			const client = connect()
 
@@ -4248,42 +4267,26 @@ export default function abstractTest(server, config, ports) {
 		beforeEach(beforeEachExec)
 		after(afterExec)
 
-		it('should mark the client as not connected once the connection is torn down', function _test(t, done) {
-			const { check, finish } = guardDone(done)
+		it('should reconnect when the reconnect timer fires before the stream closes', function _test(t, done) {
+			const { check, finish, deadline } = guardDone(done)
 			const client = connect()
-
-			client.on('connect', () => {
-				check(() => {
-					assert.isTrue(client.connected)
-					// A forced clean up destroys the stream, so the client is no longer
-					// connected. If this is only cleared by the asynchronous 'close',
-					// `_reconnect()` can still see a connected client and call `end()`,
-					// which leaves `disconnecting` set and stops reconnecting for good.
-					client['_cleanUp'](true)
-					assert.isFalse(
-						client.connected,
-						'connected should be false as soon as the stream is destroyed',
-					)
-				})
-				client.end(true, finish)
-			})
-		})
-
-		it('should call the forced end callback only after close', function _test(t, done) {
-			const { check, finish } = guardDone(done)
-			const client = connect()
-			let closed = false
-
-			client.once('close', () => {
-				closed = true
-			})
 
 			client.once('connect', () => {
-				client.end(true, () => {
-					check(() => {
-						assert.isTrue(closed, 'end callback ran before close')
-					})
-					finish()
+				// a stalled socket delays 'close' past `reconnectPeriod`
+				client['_cleanUp'](true)
+				client['_reconnect']()
+				check(() => {
+					assert.isFalse(
+						client.disconnecting,
+						'_reconnect() must not end() a destroyed connection',
+					)
+				})
+				deadline(
+					2000,
+					'client did not reconnect after a forced clean up',
+				)
+				client.once('connect', () => {
+					client.end(true, (err) => finish(err))
 				})
 			})
 		})
