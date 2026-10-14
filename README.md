@@ -17,7 +17,7 @@ in JavaScript for node.js and the browser.
 - [Installation](#install)
 - [Example](#example)
 - [React Native](#react-native)
-- [Import Styles](#example)
+- [Import Styles](#import_styles)
 - [Command Line Tools](#cli)
 - [API](#api)
 - [Browser](#browser)
@@ -46,7 +46,7 @@ Guide](https://cdn.rawgit.com/feross/standard/master/badge.svg)](https://github.
 **v4.0.0** (Released 04/2020) removes support for all end of life node versions, and now supports node v12 and v14. It also adds improvements to
 debug logging, along with some feature additions.
 
-As a **breaking change**, by default a error handler is built into the MQTT.js client, so if any
+As a **breaking change**, by default an error handler is built into the MQTT.js client, so if any
 errors are emitted and the user has not created an event handler on the client for errors, the client will
 not break as a result of unhandled errors. Additionally, typical TLS errors like `ECONNREFUSED`, `ECONNRESET` have been
 added to a list of TLS errors that will be emitted from the MQTT.js client, and so can be handled as connection errors.
@@ -198,12 +198,12 @@ MQTT.js uses the [debug](https://www.npmjs.com/package/debug#cmd) package for de
 $env:DEBUG='mqttjs*'
 ```
 
-<a name="reconnecting"></a>
+<a name="reconnection"></a>
 
 ## About Reconnection
 
-An important part of any websocket connection is what to do when a connection
-drops off and the client needs to reconnect. MQTT has built-in reconnection
+An important part of any MQTT connection is what to do when a connection
+drops off and the client needs to reconnect. MQTT.js has built-in reconnection
 support that can be configured to behave in ways that suit the application.
 
 #### Refresh Authentication Options / Signed Urls with `transformWsUrl` (Websocket Only)
@@ -232,7 +232,7 @@ Example (update clientId & username on each reconnect):
 
     const connection = await mqtt.connectAsync(<wss url>, {
       ...,
-      transformWsUrl: transformUrl,
+      transformWsUrl: transformWsUrl,
     });
 
 ```
@@ -276,12 +276,20 @@ the final connection when it drops.
 The default value is 1000 ms which means it will try to reconnect 1 second
 after losing the connection.
 
-Note that this will only enable reconnects after either a connection timeout, or
-after a successful connection. It will _not_ (by default) enable retrying
-connections that are actively denied with a CONNACK error by the server.
+The client reconnects whenever the network connection closes: when it fails to
+open, when no CONNACK arrives within `connectTimeout`, or when it drops after a
+successful connection. A connection the server actively refuses with a CONNACK
+error is always closed, but by default it is _not_ retried.
 
-To also enable automatic reconnects for CONNACK errors, set
-`reconnectOnConnackError: true`.
+To also retry after a CONNACK error, set `reconnectOnConnackError: true`.
+
+> **Changed in 5.16.0:** a refused CONNACK now always closes the connection.
+> Before, with `reconnectOnConnackError: false` the socket was left open and
+> the client usually retried anyway once the broker closed it. That accidental
+> retry is gone, so if you relied on it (for example, an auth backend that is
+> not ready at startup), set `reconnectOnConnackError: true`. See
+> [GHSA-8phv-jwjm-93rr](https://github.com/mqttjs/MQTT.js/security/advisories/GHSA-8phv-jwjm-93rr)
+> and [#2072](https://github.com/mqttjs/MQTT.js/issues/2072).
 
 <a name="topicalias"></a>
 
@@ -297,13 +305,13 @@ example scenario:
 1. PUBLISH topic:'t1', ta:1                   (register)
 2. PUBLISH topic:'t1'       -> topic:'', ta:1 (auto use existing map entry)
 3. PUBLISH topic:'t2', ta:1                   (register overwrite)
-4. PUBLISH topic:'t2'       -> topic:'', ta:1 (auto use existing map entry based on the receent map)
+4. PUBLISH topic:'t2'       -> topic:'', ta:1 (auto use existing map entry based on the recent map)
 5. PUBLISH topic:'t1'                         (t1 is no longer mapped to ta:1)
 ```
 
 User doesn't need to manage which topic is mapped to which topic alias.
-If the user want to register topic alias, then publish topic with topic alias.
-If the user want to use topic alias, then publish topic without topic alias. If there is a mapped topic alias then added it as a property and update the topic to empty string.
+If the user wants to register topic alias, then publish topic with topic alias.
+If the user wants to use topic alias, then publish topic without topic alias. If there is a mapped topic alias then add it as a property and update the topic to empty string.
 
 ### Enabling automatic Topic Alias assign
 
@@ -316,8 +324,8 @@ example scenario:
 The broker returns CONNACK (TopicAliasMaximum:3)
 1. PUBLISH topic:'t1' -> 't1', ta:1 (auto assign t1:1 and register)
 2. PUBLISH topic:'t1' -> ''  , ta:1 (auto use existing map entry)
-3. PUBLISH topic:'t2' -> 't2', ta:2 (auto assign t1:2 and register. 2 was vacant)
-4. PUBLISH topic:'t3' -> 't3', ta:3 (auto assign t1:3 and register. 3 was vacant)
+3. PUBLISH topic:'t2' -> 't2', ta:2 (auto assign t2:2 and register. 2 was vacant)
+4. PUBLISH topic:'t3' -> 't3', ta:3 (auto assign t3:3 and register. 3 was vacant)
 5. PUBLISH topic:'t4' -> 't4', ta:1 (LRU entry is overwritten)
 ```
 
@@ -345,7 +353,7 @@ Also user can manually register topic-alias pair using PUBLISH topic:'some', ta:
 - [`mqtt.Client#connected`](#connected)
 - [`mqtt.Client#keepalive`](#keepalive)
 - [`mqtt.Client#serverProperties`](#serverProperties)
-- [`mqtt.Client#reconnecting`](#reconnecting)
+- [`mqtt.Client#reconnecting`](#client-reconnecting)
 - [`mqtt.Client#getLastMessageId()`](#getLastMessageId)
 - [`mqtt.Store()`](#store)
 - [`mqtt.Store#put()`](#put)
@@ -363,12 +371,12 @@ Connects to the broker specified by the given url and options and
 returns a [Client](#client).
 
 The URL can be on the following protocols: 'mqtt', 'mqtts', 'tcp',
-'tls', 'ws', 'wss', 'wxs', 'alis'. If you are trying to connect to a unix socket just append the `+unix` suffix to the protocol (ex: `mqtt+unix`). This will set the `unixSocket` property automatically.
+'tls', 'ssl', 'ws', 'wss', 'wx', 'wxs', 'ali', 'alis'. If you are trying to connect to a unix socket just append the `+unix` suffix to the protocol (ex: `mqtt+unix`). This will set the `unixSocket` property automatically.
 
-The URL can also be an object as returned by
-[`URL.parse()`](http://nodejs.org/api/url.html#url_url_parse_urlstr_parsequerystring_slashesdenotehost),
-in that case the two objects are merged, i.e. you can pass a single
-object with both the URL and the connect options.
+The first argument can also be an options object instead of a URL string, e.g.
+`mqtt.connect({ host, port, protocol: 'mqtts' })`. It is then used as the
+options as-is, so don't pass a second argument: when both are given, the object
+is ignored.
 
 You can also specify a `servers` options with content: `[{ host:
 'localhost', port: 1883 }, ... ]`, in that case that array is iterated
@@ -399,8 +407,8 @@ events.
 
 The `Client` class wraps a client connection to an
 MQTT broker over an arbitrary transport method (TCP, TLS,
-WebSocket, ecc).
-`Client` is an [EventEmitter](https://nodejs.org/en/learn/asynchronous-work/the-nodejs-event-emitter) that has it's own [events](#events)
+WebSocket, etc.).
+`Client` is an [EventEmitter](https://nodejs.org/en/learn/asynchronous-work/the-nodejs-event-emitter) that has its own [events](#events)
 
 `Client` automatically handles the following:
 
@@ -426,7 +434,8 @@ The arguments are:
   - `reconnectPeriod`: `1000` milliseconds, interval between two
     reconnections. Disable auto reconnect by setting to `0`.
   - `reconnectOnConnackError`: `false`, whether to also reconnect if a CONNACK
-    is received with an error.
+    is received with an error. Since 5.16.0 a refused CONNACK always closes the
+    connection, and without this option no retry follows.
   - `connectTimeout`: `30 * 1000` milliseconds, time to wait before a
     CONNACK is received
   - `username`: the username required by your broker, if any
@@ -456,7 +465,7 @@ The arguments are:
     - `authenticationMethod`: the name of the authentication method used for extended authentication `string`,
     - `authenticationData`: Binary Data containing authentication data `binary`
   - `authPacket`: settings for auth packet `object`
-  - `will`: a message that will sent by the broker automatically when
+  - `will`: a message that will be sent by the broker automatically when
     the client disconnect badly. The format is:
     - `topic`: the topic to publish
     - `payload`: the message to publish
@@ -473,7 +482,7 @@ The arguments are:
   - `transformWsUrl` : optional `(url, options, client) => url` function
     For ws/wss protocols only. Can be used to implement signing
     urls which upon reconnect can have become expired.
-  - `createWebsocket` : optional `url, websocketSubProtocols, options) => Websocket` function
+  - `createWebsocket` : optional `(url, websocketSubProtocols, options) => Websocket` function
       For ws/wss protocols only. Can be used to implement a custom websocket subprotocol or implementation.
   - `resubscribe` : if connection is broken and reconnects,
     subscribed topics are automatically subscribed again (default `true`)
@@ -482,7 +491,7 @@ The arguments are:
   - `messageIdProvider`: custom messageId provider. when `new UniqueMessageIdProvider()` is set, then non conflict messageId is provided.
   - `log`: custom log function. Default uses [debug](https://www.npmjs.com/package/debug) package.
   - `manualConnect`: prevents the constructor to call `connect`. In this case after the `mqtt.connect` is called you should call `client.connect` manually.
-  - `timerVariant`: defaults to `auto`, which tries to determine which timer is most appropriate for you environment, if you're having detection issues, you can set it to `worker` or `native`. If none suits you, you can pass a timer object with set and clear properties:
+  - `timerVariant`: defaults to `auto`, which tries to determine which timer is most appropriate for your environment, if you're having detection issues, you can set it to `worker` or `native`. If none suits you, you can pass a timer object with set and clear properties:
     ```js
     timerVariant: {
       set: (func, timer) => setInterval(func, timer),
@@ -492,7 +501,7 @@ The arguments are:
   - `forceNativeWebSocket`: set to true if you're having detection issues (i.e. the `ws does not work in the browser` exception) to force the use of native WebSocket. It is important to note that if set to true for the first client created, then all the clients will use native WebSocket. And conversely, if not set or set to false, all will use the detection result.
   - `unixSocket`: if you want to connect to a unix socket, set this to true
 
-Instead of setting `socksProxy` you can also supple the same parameter via the environment variable `MQTTJS_SOCKS_PROXY`.
+Instead of setting `socksProxy` you can also supply the same parameter via the environment variable `MQTTJS_SOCKS_PROXY`.
 
 In case mqtts (mqtt over tls) is required, the `options` object is passed through to [`tls.connect()`](http://nodejs.org/api/tls.html#tls_tls_connect_options_callback). If using a **self-signed certificate**, set `rejectUnauthorized: false`. However, be cautious as this exposes you to potential man in the middle attacks and isn't recommended for production.
 
@@ -554,7 +563,8 @@ Emitted when the client goes offline.
 Emitted when the client cannot connect (i.e. connack rc != 0) or when a
 parsing error occurs.
 
-The following TLS errors will be emitted as an `error` event:
+Any stream error that has an error `code` (Node.js only) is emitted as an
+`error` event, for example:
 
 - `ECONNREFUSED`
 - `ECONNRESET`
@@ -565,9 +575,9 @@ The following TLS errors will be emitted as an `error` event:
 
 `function () {}`
 
-Emitted when [`mqtt.Client#end()`](#end) is called.
-If a callback was passed to `mqtt.Client#end()`, this event is emitted once the
-callback returns.
+Emitted when [`mqtt.Client#end()`](#end) completes, once the stores are
+closed. If a callback was passed to `mqtt.Client#end()`, it is called right
+after this event.
 
 #### Event `'message'`
 
@@ -641,6 +651,7 @@ Publish a message to a topic
 Async [`publish`](#publish). Returns a `Promise<Packet | undefined>`.
 
 A packet is anything that has a `messageId` property.
+
 ---
 
 <a name="subscribe"></a>
@@ -738,9 +749,12 @@ After this function is called, the messageId is released and becomes reusable.
 
 <a name="reconnect"></a>
 
-### mqtt.Client#reconnect()
+### mqtt.Client#reconnect([options])
 
-Connect again using the same options as connect()
+Connect again using the same options as connect(). `options` can hold
+`incomingStore` and `outgoingStore` to use for the new connection. Without
+`options`, new in-memory stores replace the ones in use, including stores
+passed to `mqtt.connect()`.
 
 ---
 
@@ -778,7 +792,7 @@ Three cases make the broker value irrelevant:
   configured `keepalive` stays in use.
 - a refused CONNACK opens no connection to keep alive, so its `Server Keep Alive`
   is ignored here. [`client.serverProperties`](#serverProperties) still reports
-  it.
+  it until the `close` that follows the refusal.
 
 ---
 
@@ -791,15 +805,15 @@ connection, `undefined` when there is none. Read only, and reset both when the
 connection closes and when the next connection attempt starts.
 
 A refused CONNACK counts, which is the only place `reasonString` and
-`serverReference` ever appear. With the default `reconnectOnConnackError: false`
-no `close` follows a refusal, so those stay readable until the next connection
-attempt - but they describe a connection that was never opened, which is why
+`serverReference` ever appear. Read them from the `error` handler: a refusal
+always closes the connection, and they are cleared when the `close` that follows
+it is emitted. They describe a connection that was never opened, which is why
 [`client.keepalive`](#keepalive) ignores their `serverKeepAlive`.
 
 Broker values are kept here and are never written back into the options object
 given to `mqtt.connect()`.
 
-#### Migrating from 5.x
+#### Migrating from 5.15 and earlier
 
 The broker no longer overwrites the options object:
 
@@ -817,18 +831,18 @@ Two things changed in how an inbound packet larger than
 
 - the limit now counts the whole packet. The fixed header byte and the bytes
   encoding the Remaining Length count toward it, as MQTT 5.0 requires
-  (§3.1.2.11.4 with §2.1.4); 5.x compared the limit against the Remaining
+  (§3.1.2.11.4 with §2.1.4); 5.15 and earlier compared the limit against the Remaining
   Length alone. The same configured limit therefore rejects packets 2 to 5 bytes
   smaller than it used to - 2 bytes for packets under 128 bytes, one more for
   every further step of the Remaining Length. A limit set right at the size of
   the largest packet expected needs raising by that much.
-- an oversized packet no longer ends the client. 5.x called
+- an oversized packet no longer ends the client. 5.15 and earlier called
   `end({ reasonCode: 149 })`: it sent a DISCONNECT and stopped the client for
   good. The connection is now dropped like any other failure, no DISCONNECT is
   sent, and the client reconnects. This was deliberate - one oversized packet
   was a kill switch any broker could pull permanently - but it cuts both ways: a
   broker holding a retained message that is always too large becomes a reconnect
-  loop where 5.x stopped after the first one. Applications that want the old
+  loop where 5.15 and earlier stopped after the first one. Applications that want the old
   stop can call `end()` from the `error` handler on reason code 149.
 
 ---
@@ -841,7 +855,7 @@ Number : get last message id. This is for sent messages only.
 
 ---
 
-<a name="reconnecting"></a>
+<a name="client-reconnecting"></a>
 
 ### mqtt.Client#reconnecting
 
@@ -919,8 +933,8 @@ Closes the Store.
 
 While the [ws](https://www.npmjs.com/package/ws) module is used in NodeJS, [WebSocket](https://developer.mozilla.org/en-US/docs/Web/API/WebSocket) is used in browsers. This is totally transparent to users except for the following:
 
-- The `wsOption` is not supported in browsers.
-- Browsers doesn't allow to catch many WebSocket errors for [security reasons](https://stackoverflow.com/a/31003057) as:
+- The `wsOptions` option is not supported in browsers.
+- Browsers don't allow catching many WebSocket errors for [security reasons](https://stackoverflow.com/a/31003057) as:
 
   > Access to this information could allow a malicious Web page to gain information about your network, so they require browsers report all connection-time errors in an indistinguishable way.
 
@@ -968,7 +982,7 @@ Here is how QoS works:
 
 - QoS 0 : received **at most once** : The packet is sent, and that's it. There is no validation about whether it has been received.
 - QoS 1 : received **at least once** : The packet is sent and stored as long as the client has not received a confirmation from the server. MQTT ensures that it _will_ be received, but there can be duplicates.
-- QoS 2 : received **exactly once** : Same as QoS 1 but there is no duplicates.
+- QoS 2 : received **exactly once** : Same as QoS 1 but there are no duplicates.
 
 About data consumption, obviously, QoS 2 > QoS 1 > QoS 0, if that's a concern to you.
 
@@ -1005,7 +1019,6 @@ const client = mqtt.connect("wxs://test.mosquitto.org", {
 ### Ali Mini Program
 
 Supports [Ali Mini Program](https://open.alipay.com/channel/miniIndex.htm). Use the `alis` protocol. See [the Alipay docs](https://docs.alipay.com/mini/developer/getting-started).
-<a name="example"></a>
 
 ```js
 const mqtt = require("mqtt");
