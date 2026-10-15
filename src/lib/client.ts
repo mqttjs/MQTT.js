@@ -578,10 +578,14 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	private connackReceived: boolean
 
 	/**
-	 * Why mqtt-packet destroyed the current stream, if it refused to write a
-	 * packet. Emitted as `error` by the stream's `close` handler.
+	 * Packets mqtt-packet refused to write, keyed by the stream it destroyed,
+	 * with the reason and the write's callback. Reported by that stream's
+	 * `close` handler: by then a later stream may already be connecting.
 	 */
-	private _packetError: Error | null = null
+	private _rejectedWrites = new WeakMap<
+		IStream,
+		{ error: Error; packet: Packet; cb?: DoneCallback }
+	>()
 
 	/**
 	 * Set while a refused CONNACK is torn down, so neither `_cleanUp` nor the
@@ -772,6 +776,10 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			const { queue } = this
 
 			const deliver = () => {
+				// a callback can resume this after the connection closed: the
+				// next connection delivers what is left
+				if (!this.connected) return
+
 				const entry = queue.shift()
 				this.log('deliver :: entry %o', entry)
 				let packet = null
@@ -1020,7 +1028,6 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		// the stream exists, so no CONNACK can slip in ahead of it.
 		this.connackReceived = false
 		this.reconnectSuppressed = false
-		this._packetError = null
 
 		this.log('connect :: calling method to clear reconnect')
 		this._clearReconnect()
@@ -1131,19 +1138,41 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		this.stream.on('error', streamErrorHandler)
 
 		// Echo stream close
-		this.stream.on('close', () => {
+		const { stream } = this
+		stream.on('close', () => {
 			this.log('(%s)stream :: on close', this.options.clientId)
+			const rejected = this._rejectedWrites.get(stream)
+			// before `_flushVolatile` fails it with a generic error
+			const failRejectedOutgoing =
+				rejected && this._takeOutgoing(rejected.packet)
 			this._flushVolatile()
-			const packetError = this._packetError
-			this._packetError = null
+
+			let threw = false
+			let thrown: unknown
 			try {
 				// emitted here, not where the write failed: CONNECT is written from
 				// the constructor, before anyone can listen
-				if (packetError) this.emit('error', packetError)
-			} finally {
-				// a throwing `error` listener must not skip the teardown
-				this.log('stream: emit close to MqttClient')
-				this.emit('close')
+				if (rejected) this.emit('error', rejected.error)
+			} catch (err) {
+				threw = true
+				thrown = err
+			}
+
+			this.log('stream: emit close to MqttClient')
+			this.emit('close')
+			// after 'close', so a packet sent from a callback is queued offline
+			// instead of written to the destroyed stream
+			if (rejected) {
+				failRejectedOutgoing?.(rejected.error)
+				rejected.cb?.(rejected.error)
+			}
+
+			// rethrown later, so it skips none of this stream's other 'close'
+			// listeners, such as the one `end()` waits on
+			if (threw) {
+				nextTick(() => {
+					throw thrown
+				})
 			}
 		})
 
@@ -2057,6 +2086,25 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	 * */
 
 	/**
+	 * Take the `outgoing` entry of a packet that can never be sent, and return
+	 * the function that fails its callback. A publish is also dropped from the
+	 * outgoing store, or every reconnect would resend it.
+	 */
+	private _takeOutgoing(packet: Packet): ((err: Error) => void) | undefined {
+		const { messageId } = packet as { messageId?: number }
+		const entry = messageId ? this.outgoing[messageId] : undefined
+		if (!entry) return undefined
+
+		if (entry.volatile) {
+			delete this.outgoing[messageId]
+			return entry.cb
+		}
+		return (err) => {
+			this._removeOutgoingAndStoreMessage(messageId, () => entry.cb(err))
+		}
+	}
+
+	/**
 	 * Flush all outgoing messages marked as `volatile` in `outgoing` queue. Volatile messages
 	 * typically are subscription and unsubscription requests.
 	 */
@@ -2400,7 +2448,13 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		const packetError = !erroredBefore && this.stream.errored
 		if (packetError && !(packetError as Error & { code?: unknown }).code) {
 			this.log('_writePacket :: invalid packet: %s', packetError.message)
-			this._packetError = packetError
+			// no 'drain' will come: the 'close' handler calls `cb` with the error
+			this._rejectedWrites.set(this.stream, {
+				error: packetError,
+				packet,
+				cb,
+			})
+			return
 		}
 
 		if (!result && cb && cb !== this.noop) {

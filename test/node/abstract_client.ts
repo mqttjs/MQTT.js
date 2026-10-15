@@ -591,25 +591,56 @@ export default function abstractTest(server, config, ports) {
 			expectPacketError(client, 'Invalid topic', guard)
 		})
 
-		it('should still emit close if the packet error has no listener', function _test(t, done) {
-			const { check, finish } = guardDone(done)
+		it('should emit error event if mqtt-packet rejects a packet just before a reconnect', function _test(t, done) {
+			const guard = guardDone(done)
+			guard.deadline(3000, 'no close after an invalid publish packet')
+
 			const client = connect({ reconnectPeriod: 0 })
 			client.once('connect', () => {
-				let closed = false
-				client.once('close', () => {
-					closed = true
+				client.publish(42 as unknown as string, 'payload')
+				// connects again before the destroyed stream emits 'close'
+				client.reconnect()
+			})
+			expectPacketError(client, 'Invalid topic', guard)
+		})
+
+		it('should call the callback of a rejected qos 0 publish with the error', function _test(t, done) {
+			const { check, finish } = guardDone(done)
+			const client = connect({ reconnectPeriod: 0 })
+			client.on('error', () => {})
+			client.once('connect', () => {
+				client.publish(42 as unknown as string, 'payload', (err) => {
+					check(() => {
+						assert.strictEqual(err?.message, 'Invalid topic')
+						assert.isFalse(client.connected)
+					})
+					client.end((endErr) => finish(endErr))
 				})
-				// no listener, so `emit('error')` throws: on this stack, not a timer's
-				client.removeAllListeners('error')
-				client['_packetError'] = new Error('Invalid topic')
-				check(() => {
-					assert.throws(
-						() => client.stream.emit('close'),
-						/Invalid topic/,
-					)
-					assert.isTrue(closed, 'the throw skipped the client close')
-				})
-				client.end(true, (err) => finish(err))
+			})
+		})
+
+		it('should call the callback of a rejected qos 1 publish and drop it from the store', function _test(t, done) {
+			const { check, finish } = guardDone(done)
+			const client = connect({ reconnectPeriod: 0 })
+			client.on('error', () => {})
+			client.once('connect', () => {
+				client.publish(
+					42 as unknown as string,
+					'payload',
+					{ qos: 1 },
+					(err) => {
+						check(() => {
+							assert.strictEqual(err?.message, 'Invalid topic')
+							assert.isEmpty(client.outgoing)
+						})
+						// otherwise every reconnect would resend it
+						client.outgoingStore.get({ messageId }, (storeErr) => {
+							check(() => assert.exists(storeErr))
+							client.end((endErr) => finish(endErr))
+						})
+					},
+				)
+				const messageId = client.getLastMessageId()
 			})
 		})
 

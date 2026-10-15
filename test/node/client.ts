@@ -226,6 +226,30 @@ describe('MqttClient', () => {
 		)
 	})
 
+	it(
+		'should still close and end when emitting a packet error throws',
+		{ timeout: 10000 },
+		function _test(t, done) {
+			// the rethrow is uncaught by design, so it runs in a child process
+			const child = fork(
+				path.join(__dirname, 'helpers', 'throwing_error_listener.ts'),
+				{ execArgv: ['-r', 'ts-node/register'] },
+			)
+			child.once('message', (events) => {
+				try {
+					assert.deepEqual(events, [
+						'close',
+						'uncaught: Invalid topic',
+						'end callback',
+					])
+					done()
+				} catch (err) {
+					done(err)
+				}
+			})
+		},
+	)
+
 	describe('reconnecting', () => {
 		it(
 			'should attempt to reconnect once server is down',
