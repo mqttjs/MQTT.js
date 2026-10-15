@@ -60,11 +60,6 @@ const buildStream: StreamBuilder = (client, opts) => {
 	})
 
 	function handleTLSerrors(err: Error) {
-		// How can I get verify this error is a tls error?
-		if (opts.rejectUnauthorized) {
-			client.emit('error', err)
-		}
-
 		// close this connection to match the behaviour of net
 		// otherwise all we get is an error from the connection
 		// and close event doesn't fire. This is a work around
