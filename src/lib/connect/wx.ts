@@ -58,7 +58,7 @@ function buildUrl(opts: IClientOptions, client: MqttClient) {
 		url = `${protocol}://${opts.hostname}:${opts.port}${opts.path}`
 	}
 	if (typeof opts.transformWsUrl === 'function') {
-		url = opts.transformWsUrl(url, opts, client)
+		return opts.transformWsUrl(url, opts, client)
 	}
 	return url
 }
@@ -102,39 +102,51 @@ const buildStream: StreamBuilder = (client, opts) => {
 
 	setDefaultOpts(opts)
 
-	const url = buildUrl(opts, client)
-	// https://github.com/wechat-miniprogram/api-typings/blob/master/types/wx/lib.wx.api.d.ts#L20984
-	socketTask = wx.connectSocket({
-		url,
-		protocols: [websocketSubProtocol],
-	})
-
 	proxy = buildProxy()
-	stream = new BufferedDuplex(opts, proxy, socketTask)
-	stream._destroy = (err, cb) => {
-		socketTask.close({
-			success() {
-				if (cb) cb(err)
-			},
+	// use a temporary placeholder for socketTask until the URL is resolved
+	stream = new BufferedDuplex(opts, proxy, null as any)
+
+	const connectSocket = (url: string) => {
+		// https://github.com/wechat-miniprogram/api-typings/blob/master/types/wx/lib.wx.api.d.ts#L20984
+		socketTask = wx.connectSocket({
+			url,
+			protocols: [websocketSubProtocol],
 		})
-	}
+		stream.socket = socketTask
 
-	const destroyRef = stream.destroy
-	stream.destroy = (err, cb) => {
-		stream.destroy = destroyRef
-
-		setTimeout(() => {
+		stream._destroy = (err, cb) => {
 			socketTask.close({
-				fail() {
-					stream._destroy(err, cb)
+				success() {
+					if (cb) cb(err)
 				},
 			})
-		}, 0)
+		}
 
-		return stream
+		const destroyRef = stream.destroy
+		stream.destroy = (err, cb) => {
+			stream.destroy = destroyRef
+
+			setTimeout(() => {
+				socketTask.close({
+					fail() {
+						stream._destroy(err, cb)
+					},
+				})
+			}, 0)
+
+			return stream
+		}
+
+		bindEventHandler()
 	}
 
-	bindEventHandler()
+	const urlOrPromise = buildUrl(opts, client)
+
+	if (urlOrPromise instanceof Promise) {
+		urlOrPromise.then(connectSocket).catch((err) => stream.destroy(err))
+	} else {
+		connectSocket(urlOrPromise)
+	}
 
 	return stream
 }
