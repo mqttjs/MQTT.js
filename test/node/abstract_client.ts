@@ -16,6 +16,7 @@ import {
 import { type DoneCallback, ErrorWithReasonCode } from 'src/lib/shared'
 import { fail } from 'assert'
 import { describe, it, beforeEach, afterEach, after } from 'node:test'
+import type Connection from 'mqtt-connection'
 import Store from '../../src/lib/store'
 import serverBuilderFn from './server_helpers_for_client_tests'
 import handlePubrel from '../../src/lib/handlers/pubrel'
@@ -4647,66 +4648,95 @@ export default function abstractTest(server, config, ports) {
 			},
 		)
 
-		it(
-			'should not let a connection ended before its connack disturb the next one',
-			{ timeout: 10000 },
-			function _test(t, done) {
-				const { check, finish, deadline } = guardDone(done)
-				let client: mqtt.MqttClient | null = null
-				let connections = 0
-				let reconnected = false
-				const lateEvents: string[] = []
-
-				// ignores the first CONNECT, accepts the second
-				const server2 = serverBuilder(
-					config.protocol,
-					(serverClient) => {
-						serverClient.on('connect', () => {
-							connections++
-							if (connections === 1) {
-								deadline(
-									3000,
-									'the second connection never connected',
-								)
-								client.end()
-								client.reconnect()
-								return
-							}
-							serverClient.connack(
-								version === 5
-									? { reasonCode: 0 }
-									: { returnCode: 0 },
-							)
-						})
-					},
-				)
-
-				server2.listen(ports.PORTAND54, () => {
-					client = connect({
-						host: 'localhost',
-						port: ports.PORTAND54,
-						reconnectPeriod: 1000,
-					})
-					client.on('reconnect', () => {
-						reconnected = true
-					})
-					// the first socket's 'close' must land before the reconnect starts
-					client.on('close', () => {
-						if (reconnected) lateEvents.push('close')
-					})
-					client.on('offline', () => {
-						if (reconnected) lateEvents.push('offline')
-					})
-					client.on('connect', () => {
-						check(() => {
-							assert.equal(connections, 2)
-							assert.deepEqual(lateEvents, [])
-						})
-						client.end((err) => finish(err))
-					})
-				})
+		// The first connection is ended, then a reconnect starts. Its socket's
+		// 'close' must land before that, not on the next connection.
+		const endThenReconnectCases: {
+			name: string
+			firstConnect: (
+				serverClient: Connection,
+				client: mqtt.MqttClient,
+			) => void
+		}[] = [
+			{
+				name: 'ended before its connack',
+				firstConnect: (serverClient, client) => {
+					client.end()
+					client.reconnect()
+				},
 			},
-		)
+			{
+				// the refusal destroys the stream, its 'close' still pending
+				name: 'refused and then ended',
+				firstConnect: (serverClient, client) => {
+					client.once('error', () => {
+						client.end(() => client.reconnect())
+					})
+					serverClient.connack(
+						version === 5 ? { reasonCode: 135 } : { returnCode: 5 },
+					)
+				},
+			},
+		]
+
+		for (const { name, firstConnect } of endThenReconnectCases) {
+			it(
+				`should not let a connection ${name} disturb the next one`,
+				{ timeout: 10000 },
+				function _test(t, done) {
+					const { check, finish, deadline } = guardDone(done)
+					let client: mqtt.MqttClient | null = null
+					let connections = 0
+					let reconnected = false
+					const lateEvents: string[] = []
+
+					const server2 = serverBuilder(
+						config.protocol,
+						(serverClient) => {
+							serverClient.on('connect', () => {
+								connections++
+								if (connections === 1) {
+									deadline(
+										3000,
+										'the second connection never connected',
+									)
+									firstConnect(serverClient, client)
+									return
+								}
+								serverClient.connack(
+									version === 5
+										? { reasonCode: 0 }
+										: { returnCode: 0 },
+								)
+							})
+						},
+					)
+
+					server2.listen(ports.PORTAND54, () => {
+						client = connect({
+							host: 'localhost',
+							port: ports.PORTAND54,
+							reconnectPeriod: 1000,
+						})
+						client.on('reconnect', () => {
+							reconnected = true
+						})
+						client.on('close', () => {
+							if (reconnected) lateEvents.push('close')
+						})
+						client.on('offline', () => {
+							if (reconnected) lateEvents.push('offline')
+						})
+						client.on('connect', () => {
+							check(() => {
+								assert.equal(connections, 2)
+								assert.deepEqual(lateEvents, [])
+							})
+							client.end((err) => finish(err))
+						})
+					})
+				},
+			)
+		}
 
 		it('should reconnect on connack error if requested', function _test(t, done) {
 			let connackErrors = 0
