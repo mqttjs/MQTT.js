@@ -543,6 +543,7 @@ export default function abstractTest(server, config, ports) {
 			client: mqtt.MqttClient,
 			message: string,
 			{ check, finish }: ReturnType<typeof guardDone>,
+			alsoCheck?: () => void,
 		) {
 			const events: string[] = []
 			client.on('error', (err) => {
@@ -551,12 +552,10 @@ export default function abstractTest(server, config, ports) {
 			client.once('close', () => {
 				events.push('close')
 				client.end((endErr) => {
-					check(() =>
-						assert.deepEqual(events, [
-							`error: ${message}`,
-							'close',
-						]),
-					)
+					check(() => {
+						assert.deepEqual(events, [`error: ${message}`, 'close'])
+						alsoCheck?.()
+					})
 					finish(endErr)
 				})
 			})
@@ -583,12 +582,18 @@ export default function abstractTest(server, config, ports) {
 			guard.deadline(3000, 'no close after an invalid publish packet')
 
 			const client = connect({ reconnectPeriod: 0 })
+			let rejectedErr: Error | undefined
 			client.once('connect', () => {
 				// a non-string topic; the second write hits the destroyed stream
-				client.publish(42 as unknown as string, 'payload')
+				// and must not replace the first as the rejected one
+				client.publish(42 as unknown as string, 'payload', (err) => {
+					rejectedErr = err
+				})
 				client.publish('valid', 'payload')
 			})
-			expectPacketError(client, 'Invalid topic', guard)
+			expectPacketError(client, 'Invalid topic', guard, () =>
+				assert.strictEqual(rejectedErr?.message, 'Invalid topic'),
+			)
 		})
 
 		it('should emit error event if mqtt-packet rejects a packet just before a reconnect', function _test(t, done) {
@@ -605,7 +610,8 @@ export default function abstractTest(server, config, ports) {
 		})
 
 		it('should call the callback of a rejected qos 0 publish with the error', function _test(t, done) {
-			const { check, finish } = guardDone(done)
+			const { check, finish, deadline } = guardDone(done)
+			deadline(3000, 'the publish callback never ran')
 			const client = connect({ reconnectPeriod: 0 })
 			client.on('error', () => {})
 			client.once('connect', () => {
@@ -620,7 +626,8 @@ export default function abstractTest(server, config, ports) {
 		})
 
 		it('should call the callback of a rejected qos 1 publish and drop it from the store', function _test(t, done) {
-			const { check, finish } = guardDone(done)
+			const { check, finish, deadline } = guardDone(done)
+			deadline(3000, 'the publish callback never ran')
 			const client = connect({ reconnectPeriod: 0 })
 			client.on('error', () => {})
 			client.once('connect', () => {
@@ -641,6 +648,83 @@ export default function abstractTest(server, config, ports) {
 					},
 				)
 				const messageId = client.getLastMessageId()
+			})
+		})
+
+		it('should call the callback of a rejected unsubscribe with the error', function _test(t, done) {
+			const { check, finish, deadline } = guardDone(done)
+			deadline(3000, 'the unsubscribe callback never ran')
+			const client = connect({ reconnectPeriod: 0 })
+			client.on('error', () => {})
+			client.once('connect', () => {
+				client.unsubscribe(42 as unknown as string, (err) => {
+					// not the generic error `_flushVolatile` gives on close
+					check(() =>
+						assert.strictEqual(
+							err?.message,
+							'Invalid unsubscriptions',
+						),
+					)
+					client.end((endErr) => finish(endErr))
+				})
+			})
+		})
+
+		it('should not resubscribe to a rejected subscribe', function _test(t, done) {
+			const { check, finish, deadline } = guardDone(done)
+			deadline(3000, 'the subscribe callback never ran')
+			const client = connect({ reconnectPeriod: 1000 })
+			client.on('error', () => {})
+			client.once('connect', () => {
+				client.subscribe(
+					'rejected',
+					{ qos: '1' as unknown as QoS },
+					(err) => {
+						check(() => {
+							assert.strictEqual(
+								err?.message,
+								'Invalid subscriptions - invalid qos',
+							)
+							// or every reconnect would send it, and be rejected, again
+							assert.notProperty(
+								client['_resubscribeTopics'],
+								'rejected',
+							)
+						})
+						client.end((endErr) => finish(endErr))
+					},
+				)
+			})
+		})
+
+		it('should deliver the rest of the offline queue in order after a rejected packet', function _test(t, done) {
+			const { check, finish, deadline } = guardDone(done)
+			deadline(5000, 'the queued publishes were never delivered')
+			const client = connect({ reconnectPeriod: 100 })
+			client.on('error', () => {})
+			const events: string[] = []
+			const record = (name: string) => (err?: Error) => {
+				events.push(err ? `${name}: ${err.message}` : name)
+			}
+
+			// queued offline, delivered on connect: the rejection must not move
+			// the packets after it, which go out on the next connection
+			client.publish(
+				42 as unknown as string,
+				'payload',
+				record('rejected'),
+			)
+			client.publish('first', 'payload', record('first'))
+			client.publish('second', 'payload', (err) => {
+				record('second')(err)
+				check(() =>
+					assert.deepEqual(events, [
+						'rejected: Invalid topic',
+						'first',
+						'second',
+					]),
+				)
+				client.end((endErr) => finish(endErr))
 			})
 		})
 

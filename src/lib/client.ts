@@ -1139,42 +1139,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 		// Echo stream close
 		const { stream } = this
-		stream.on('close', () => {
-			this.log('(%s)stream :: on close', this.options.clientId)
-			const rejected = this._rejectedWrites.get(stream)
-			// before `_flushVolatile` fails it with a generic error
-			const failRejectedOutgoing =
-				rejected && this._takeOutgoing(rejected.packet)
-			this._flushVolatile()
-
-			let threw = false
-			let thrown: unknown
-			try {
-				// emitted here, not where the write failed: CONNECT is written from
-				// the constructor, before anyone can listen
-				if (rejected) this.emit('error', rejected.error)
-			} catch (err) {
-				threw = true
-				thrown = err
-			}
-
-			this.log('stream: emit close to MqttClient')
-			this.emit('close')
-			// after 'close', so a packet sent from a callback is queued offline
-			// instead of written to the destroyed stream
-			if (rejected) {
-				failRejectedOutgoing?.(rejected.error)
-				rejected.cb?.(rejected.error)
-			}
-
-			// rethrown later, so it skips none of this stream's other 'close'
-			// listeners, such as the one `end()` waits on
-			if (threw) {
-				nextTick(() => {
-					throw thrown
-				})
-			}
-		})
+		stream.on('close', () => this._onStreamClose(stream))
 
 		// Send a connect packet
 		this.log('connect: sending packet `connect`')
@@ -2086,17 +2051,61 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	 * */
 
 	/**
+	 * A stream closed: report the packet mqtt-packet rejected on it, if any,
+	 * and emit the client's 'close'.
+	 */
+	private _onStreamClose(stream: IStream) {
+		this.log('(%s)stream :: on close', this.options.clientId)
+		const rejected = this._rejectedWrites.get(stream)
+		// before `_flushVolatile` fails it with a generic error
+		const failRejectedOutgoing =
+			rejected && this._takeOutgoing(rejected.packet)
+		this._flushVolatile()
+
+		let threw = false
+		let thrown: unknown
+		try {
+			// not where the write failed: CONNECT is written from the constructor
+			if (rejected) this.emit('error', rejected.error)
+		} catch (err) {
+			threw = true
+			thrown = err
+		}
+
+		this.log('stream: emit close to MqttClient')
+		this.emit('close')
+		// after 'close', so a packet sent from a callback is queued offline
+		if (rejected) {
+			failRejectedOutgoing?.(rejected.error)
+			rejected.cb?.(rejected.error)
+		}
+
+		// later, so the stream's other 'close' listeners, such as `end()`'s, run
+		if (threw) {
+			nextTick(() => {
+				throw thrown
+			})
+		}
+	}
+
+	/**
 	 * Take the `outgoing` entry of a packet that can never be sent, and return
-	 * the function that fails its callback. A publish is also dropped from the
-	 * outgoing store, or every reconnect would resend it.
+	 * the function that fails its callback. It is also dropped from what a
+	 * reconnect would send again: the outgoing store, or the resubscriptions.
 	 */
 	private _takeOutgoing(packet: Packet): ((err: Error) => void) | undefined {
 		const { messageId } = packet as { messageId?: number }
 		const entry = messageId ? this.outgoing[messageId] : undefined
-		if (!entry) return undefined
+		// an ack carries an incoming id, which can match an unrelated entry
+		if (!entry || entry.cmd !== packet.cmd) return undefined
 
 		if (entry.volatile) {
 			delete this.outgoing[messageId]
+			// as for a refused suback
+			this.messageIdToTopic[messageId]?.forEach((topic) => {
+				delete this._resubscribeTopics[topic]
+			})
+			delete this.messageIdToTopic[messageId]
 			return entry.cb
 		}
 		return (err) => {
@@ -2442,13 +2451,13 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		)
 		this.log('_writePacket :: writeToStream result %s', result)
 
-		// mqtt-packet rejects an invalid packet by destroying the stream with
-		// the reason. It has no `code`, so `streamErrorHandler` drops it.
-		// Read it from `errored`: `ws` replaces the error the stream emits.
+		// mqtt-packet rejects a packet by destroying the stream with an error
+		// that has no `code`, which `streamErrorHandler` drops. Read it from
+		// `errored`: `ws` replaces the error the stream emits.
 		const packetError = !erroredBefore && this.stream.errored
 		if (packetError && !(packetError as Error & { code?: unknown }).code) {
 			this.log('_writePacket :: invalid packet: %s', packetError.message)
-			// no 'drain' will come: the 'close' handler calls `cb` with the error
+			// no 'drain' will come: `_onStreamClose` calls `cb` with the error
 			this._rejectedWrites.set(this.stream, {
 				error: packetError,
 				packet,

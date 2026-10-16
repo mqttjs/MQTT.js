@@ -237,7 +237,9 @@ describe('MqttClient', () => {
 				// coverage map of the same source files, which it merges wrong
 				{ execArgv: ['-r', 'esbuild-register'] },
 			)
+			let reported = false
 			child.once('message', (events) => {
+				reported = true
 				try {
 					assert.deepEqual(events, [
 						'close',
@@ -248,6 +250,9 @@ describe('MqttClient', () => {
 				} catch (err) {
 					done(err)
 				}
+			})
+			child.once('exit', (code) => {
+				if (!reported) done(new Error(`child exited with code ${code}`))
 			})
 		},
 	)
