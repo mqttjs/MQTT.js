@@ -226,6 +226,37 @@ describe('MqttClient', () => {
 		)
 	})
 
+	it(
+		'should still close and end when emitting a packet error throws',
+		{ timeout: 10000 },
+		function _test(t, done) {
+			// the rethrow is uncaught by design, so it runs in a child process
+			const child = fork(
+				path.join(__dirname, 'helpers', 'throwing_error_listener.ts'),
+				// the runner's loader: another one gives `nyc` a second
+				// coverage map of the same source files, which it merges wrong
+				{ execArgv: ['-r', 'esbuild-register'] },
+			)
+			let reported = false
+			child.once('message', (events) => {
+				reported = true
+				try {
+					assert.deepEqual(events, [
+						'close',
+						'uncaught: Invalid topic',
+						'end callback',
+					])
+					done()
+				} catch (err) {
+					done(err)
+				}
+			})
+			child.once('exit', (code) => {
+				if (!reported) done(new Error(`child exited with code ${code}`))
+			})
+		},
+	)
+
 	describe('reconnecting', () => {
 		it(
 			'should attempt to reconnect once server is down',
