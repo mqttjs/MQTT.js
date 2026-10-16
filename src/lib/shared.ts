@@ -119,5 +119,17 @@ export const nextTick =
 				setTimeout(callback, 0)
 			}
 
+export function formatUrlHost(host: string): string {
+	if (
+		typeof host === 'string' &&
+		host.includes(':') &&
+		!host.startsWith('[') &&
+		!host.endsWith(']')
+	) {
+		return `[${host}]`
+	}
+	return host
+}
+
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 export const MQTTJS_VERSION = require('../../package.json').version
