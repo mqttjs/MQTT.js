@@ -233,7 +233,9 @@ describe('MqttClient', () => {
 			// the rethrow is uncaught by design, so it runs in a child process
 			const child = fork(
 				path.join(__dirname, 'helpers', 'throwing_error_listener.ts'),
-				{ execArgv: ['-r', 'ts-node/register'] },
+				// the runner's loader: another one gives `nyc` a second
+				// coverage map of the same source files, which it merges wrong
+				{ execArgv: ['-r', 'esbuild-register'] },
 			)
 			child.once('message', (events) => {
 				try {
