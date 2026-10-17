@@ -1,6 +1,6 @@
 import { Buffer } from 'buffer'
 import { Transform } from 'readable-stream'
-import { type IStream, type StreamBuilder } from '../shared'
+import { type IStream, type StreamBuilder, formatUrlHost } from '../shared'
 import { type IClientOptions } from '../client'
 import type MqttClient from '../client'
 import { BufferedDuplex } from '../BufferedDuplex'
@@ -49,9 +49,10 @@ function setDefaultOpts(opts: IClientOptions) {
 
 function buildUrl(opts: IClientOptions, client: MqttClient) {
 	const protocol = opts.protocol === 'alis' ? 'wss' : 'ws'
-	let url = `${protocol}://${opts.hostname}${opts.path}`
+	const host = formatUrlHost(opts.hostname || opts.host || 'localhost')
+	let url = `${protocol}://${host}${opts.path}`
 	if (opts.port && opts.port !== 80 && opts.port !== 443) {
-		url = `${protocol}://${opts.hostname}:${opts.port}${opts.path}`
+		url = `${protocol}://${host}:${opts.port}${opts.path}`
 	}
 	if (typeof opts.transformWsUrl === 'function') {
 		url = opts.transformWsUrl(url, opts, client)

@@ -2,7 +2,7 @@ import { Buffer } from 'buffer'
 import Ws, { type ClientOptions } from 'ws'
 import _debug from 'debug'
 import { Transform } from 'readable-stream'
-import { type IStream, type StreamBuilder } from '../shared'
+import { type IStream, type StreamBuilder, formatUrlHost } from '../shared'
 import isBrowser from '../is-browser'
 import { type IClientOptions } from '../client'
 import type MqttClient from '../client'
@@ -20,7 +20,8 @@ const WSS_OPTIONS = [
 ]
 
 function buildUrl(opts: IClientOptions, client: MqttClient) {
-	let url = `${opts.protocol}://${opts.hostname}:${opts.port}${opts.path}`
+	const host = formatUrlHost(opts.hostname || opts.host || 'localhost')
+	let url = `${opts.protocol}://${host}:${opts.port}${opts.path}`
 	if (typeof opts.transformWsUrl === 'function') {
 		url = opts.transformWsUrl(url, opts, client)
 	}
