@@ -1,5 +1,5 @@
 import { expect } from '@esm-bundle/chai';
-import mqtt from '../../'; // this will resolve to mqtt/dist/mqtt.esm.js
+import mqtt, { connect } from '../../'; // this will resolve to mqtt/dist/mqtt.esm.js
 
 // needed to test no-esm version /dist/mqtt.js
 /** @type { import('../../src') }*/
@@ -93,6 +93,11 @@ describe('MQTT.js browser tests', () => {
 		expect(mqtt2.connect).to.be.a('function')
 		expect(mqtt2.Client).to.be.a('function')
 		done()
+	})
+
+	it('should support named imports from the ESM version', () => {
+		expect(connect).to.be.a('function')
+		expect(connect).to.equal(mqtt.connect)
 	})
 
 	it('should work in a Web Worker', (done) => {
