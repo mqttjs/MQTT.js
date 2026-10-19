@@ -80,25 +80,15 @@ const options = {
     ],
 }
 
-// The entry is CommonJS, so without this wrapper the ESM bundle only gets a default export (#2074)
+// Bundled from the TypeScript source, so the named exports are ESM bindings to the
+// declarations themselves rather than copies of one CommonJS object (#2074)
 function esmOptions() {
-    // `default` is exported on its own below, and `export const { default }` is a syntax error
-    const names = Object.keys(require(entry)).filter(name => name !== 'default')
     return {
         ...options,
-        entryPoints: undefined,
+        entryPoints: ['./src/index.ts'],
         outfile: `${outdir}/mqtt.esm.js`,
         format: 'esm',
         minify: true,
-        stdin: {
-            resolveDir: __dirname,
-            contents: `
-                // require, not import, so the default export stays the module.exports object
-                const mqtt = require('${entry}')
-                export default mqtt
-                export const { ${names.join(', ')} } = mqtt
-            `,
-        },
     }
 }
 

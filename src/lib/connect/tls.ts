@@ -1,8 +1,7 @@
-import {
-	type ConnectionOptions,
-	type TLSSocket,
-	connect as tlsConnect,
-} from 'tls'
+// A default import, like `net` below: the browser bundles stub `tls` out, and
+// a named import from that stub is a static error when bundling from the
+// TypeScript source
+import tls, { type ConnectionOptions, type TLSSocket } from 'tls'
 import net from 'net'
 import _debug from 'debug'
 import { type StreamBuilder } from '../shared'
@@ -19,13 +18,13 @@ function connect(opts: IClientOptions): TLSSocket {
 			timeout: opts.socksTimeout,
 		})
 
-		return tlsConnect({
+		return tls.connect({
 			...rest,
 			socket,
 		} as ConnectionOptions)
 	}
 
-	return tlsConnect(opts as ConnectionOptions)
+	return tls.connect(opts as ConnectionOptions)
 }
 
 const buildStream: StreamBuilder = (client, opts) => {
