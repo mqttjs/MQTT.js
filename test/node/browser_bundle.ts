@@ -79,4 +79,14 @@ describe('browser bundle', () => {
 			'ESM bundle exports differ from build/index.js: named imports like { connect } break',
 		)
 	})
+
+	it('sends Metro without package exports to the react-native bundle', () => {
+		// eslint-disable-next-line @typescript-eslint/no-require-imports
+		const pkg = require('../../package.json')
+		assert.equal(
+			pkg['react-native'],
+			pkg.exports['.']['react-native'],
+			'older Metro falls back to build/ and misses the browser process shim',
+		)
+	})
 })
