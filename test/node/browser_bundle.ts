@@ -5,7 +5,7 @@ import { build } from 'esbuild/lib/main'
 import { runInNewContext } from 'node:vm'
 import path from 'node:path'
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const { options } = require('../../esbuild.js')
+const { options, esmOptions } = require('../../esbuild.js')
 
 const PINGREQ = [0xc0, 0]
 
@@ -62,6 +62,31 @@ describe('browser bundle', () => {
 			setTimeoutCalls,
 			0,
 			'bundle scheduled a timer: some process import bypassed the shim',
+		)
+	})
+
+	it('exports the same names from the ESM bundle as build/index.js (#2074)', async () => {
+		const { metafile } = await build({
+			...esmOptions(),
+			write: false,
+			metafile: true,
+		})
+
+		assert.sameMembers(
+			Object.values(metafile.outputs)[0].exports,
+			// eslint-disable-next-line @typescript-eslint/no-require-imports
+			Object.keys(require('../../build')),
+			'ESM bundle exports differ from build/index.js: named imports like { connect } break',
+		)
+	})
+
+	it('sends Metro without package exports to the react-native bundle', () => {
+		// eslint-disable-next-line @typescript-eslint/no-require-imports
+		const pkg = require('../../package.json')
+		assert.equal(
+			pkg['react-native'],
+			pkg.exports['.']['react-native'],
+			'older Metro falls back to build/ and misses the browser process shim',
 		)
 	})
 })

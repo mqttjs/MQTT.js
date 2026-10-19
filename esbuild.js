@@ -79,6 +79,28 @@ const options = {
     ],
 }
 
+// build/index.js is CommonJS, so as the entry point it only gives the ESM bundle a default export.
+// Re-export its keys by name too, so `import { connect } from 'mqtt'` works (#2074).
+// `require` rather than `import` keeps the default export the same object as before.
+function esmOptions() {
+    const names = Object.keys(require('./build/index.js')).filter(name => name !== 'default')
+    return {
+        ...options,
+        entryPoints: undefined,
+        outfile: `${outdir}/mqtt.esm.js`,
+        format: 'esm',
+        minify: true,
+        stdin: {
+            resolveDir: __dirname,
+            contents: `
+                const mqtt = require('./build/index.js')
+                export default mqtt
+                export const { ${names.join(', ')} } = mqtt
+            `,
+        },
+    }
+}
+
 async function run() {
     const start = Date.now()
     await rimraf(outdir)
@@ -89,10 +111,7 @@ async function run() {
     await build(options)
 
 
-    options.outfile = `${outdir}/mqtt.esm.js`
-    options.format = 'esm'
-
-    await build(options)
+    await build(esmOptions())
 
     console.log(`Build time: ${Date.now() - start}ms`)
     console.log('Build output:')
@@ -112,4 +131,4 @@ if (require.main === module) {
     })
 }
 
-module.exports = { options }
+module.exports = { options, esmOptions }
