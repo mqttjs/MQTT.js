@@ -764,6 +764,27 @@ Handle messages with backpressure support, one at a time.
 Override at will, but **always call `callback`**, or the client
 will hang.
 
+The callback controls when MQTT.js can handle the next incoming packet.
+An async `'message'` listener does not provide this gate: its returned promise
+is not awaited. By default, `handleMessage` calls the callback immediately.
+For sequential asynchronous work, override `handleMessage` and call the
+callback once that work finishes.
+
+![Two QoS 1 PUBLISH packets arrive together. MQTT.js emits the message event for packet 1 and calls handleMessage. Its callback must finish before PUBACK 1 is sent and packet 2 reaches the application. Packet 2 follows the same event, handler, callback and acknowledgement sequence.](help/images/message-backpressure.png)
+
+[Edit diagram](https://svgdiagram.ai/diagram-sources/mqttjs-message-backpressure?version=1).
+
+This example shows two already-parsed QoS 1 packets with the default
+acknowledgement handler and successful application callbacks. While the first
+callback is pending, packet 2 is not handled and PUBACK 1 has not been sent.
+The `'message'` event is still emitted before each `handleMessage` call; keep
+processing in one place to avoid doing the same work twice. Slow callbacks can
+cause stream backpressure and affect connection liveness, so this is a
+processing gate, not a substitute for adequate processing capacity.
+QoS 0 and QoS 2 use different acknowledgement paths.
+
+[Editable SVG](help/images/message-backpressure.svg).
+
 ---
 
 <a name="connected"></a>
