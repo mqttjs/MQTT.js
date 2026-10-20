@@ -21,7 +21,6 @@ export {
 	UniqueMessageIdProvider,
 	KeepaliveManager,
 }
-// `type`, or the ESM bundle built from this source exports it as `undefined`
 export type { IStore } from './lib/store'
 export * from './lib/client'
 export * from './lib/shared'

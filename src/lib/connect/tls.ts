@@ -1,6 +1,4 @@
-// A default import, like `net` below: the browser bundles stub `tls` out, and
-// a named import from that stub is a static error when bundling from the
-// TypeScript source
+// default import: browser bundles stub tls, and a named import from the stub fails the build
 import tls, { type ConnectionOptions, type TLSSocket } from 'tls'
 import net from 'net'
 import _debug from 'debug'

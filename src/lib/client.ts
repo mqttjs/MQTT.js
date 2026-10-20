@@ -413,7 +413,6 @@ export interface IClientUnsubscribeProperties {
 	properties?: IUnsubscribePacket['properties']
 }
 
-// `type`, or the ESM bundle built from this source exports them as `undefined`
 export type { IConnackPacket, IDisconnectPacket, IPublishPacket, Packet }
 export type OnConnectCallback = (packet: IConnackPacket) => void
 export type OnDisconnectCallback = (packet: IDisconnectPacket) => void
