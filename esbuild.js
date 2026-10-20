@@ -6,17 +6,21 @@ const path = require('path')
 const { version } = require('./package.json');
 
 const outdir = 'dist'
-const entry = './build/index.js'
+// IIFE and min bundles: the tsc output. ESM bundle: the TypeScript source, so the
+// named exports are bindings to the declarations, not copies of one CommonJS object (#2074)
+const cjsEntry = './build/index.js'
+const esmEntry = './src/index.ts'
 
 /**
  * @type {import('esbuild').BuildOptions}
  */
 const options = {
-    entryPoints: [entry],
+    entryPoints: [cjsEntry],
     bundle: true,
     outfile: `${outdir}/mqtt.js`,
     format: 'iife',
     platform: 'browser',
+    target: 'es2022', // what tsc emits for the IIFE and min bundles, so the ESM bundle built from src matches
     globalName: 'mqtt',
     sourcemap: false, // this can be enabled while debugging, if we decide to keep this enabled we should also ship the `src` folder to npm
     plugins: [
@@ -80,26 +84,12 @@ const options = {
     ],
 }
 
-// The entry is CommonJS, so without this wrapper the ESM bundle only gets a default export (#2074)
-function esmOptions() {
-    // `default` is exported on its own below, and `export const { default }` is a syntax error
-    const names = Object.keys(require(entry)).filter(name => name !== 'default')
-    return {
-        ...options,
-        entryPoints: undefined,
-        outfile: `${outdir}/mqtt.esm.js`,
-        format: 'esm',
-        minify: true,
-        stdin: {
-            resolveDir: __dirname,
-            contents: `
-                // require, not import, so the default export stays the module.exports object
-                const mqtt = require('${entry}')
-                export default mqtt
-                export const { ${names.join(', ')} } = mqtt
-            `,
-        },
-    }
+const esmOptions = {
+    ...options,
+    entryPoints: [esmEntry],
+    outfile: `${outdir}/mqtt.esm.js`,
+    format: 'esm',
+    minify: true,
 }
 
 async function run() {
@@ -107,7 +97,7 @@ async function run() {
     await rimraf(outdir)
     await build(options)
     await build({ ...options, minify: true, outfile: `${outdir}/mqtt.min.js` })
-    await build(esmOptions())
+    await build(esmOptions)
 
     console.log(`Build time: ${Date.now() - start}ms`)
     console.log('Build output:')

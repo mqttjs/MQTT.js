@@ -7,7 +7,7 @@
 import MqttClient from './lib/client'
 import DefaultMessageIdProvider from './lib/default-message-id-provider'
 import UniqueMessageIdProvider from './lib/unique-message-id-provider'
-import Store, { IStore } from './lib/store'
+import Store from './lib/store'
 import connect, { connectAsync } from './lib/connect'
 import KeepaliveManager from './lib/KeepaliveManager'
 
@@ -19,9 +19,9 @@ export {
 	Store,
 	DefaultMessageIdProvider,
 	UniqueMessageIdProvider,
-	IStore,
 	KeepaliveManager,
 }
+export type { IStore } from './lib/store'
 export * from './lib/client'
 export * from './lib/shared'
 export * from './lib/validations'

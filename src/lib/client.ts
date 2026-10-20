@@ -3,13 +3,13 @@
  */
 import mqttPacket, {
 	type IAuthPacket,
-	IConnackPacket,
-	IDisconnectPacket,
-	IPublishPacket,
+	type IConnackPacket,
+	type IDisconnectPacket,
+	type IPublishPacket,
 	type ISubscribePacket,
 	type ISubscription,
 	type IUnsubscribePacket,
-	Packet,
+	type Packet,
 	type QoS,
 	type ISubackPacket,
 	type IConnectPacket,
@@ -413,7 +413,7 @@ export interface IClientUnsubscribeProperties {
 	properties?: IUnsubscribePacket['properties']
 }
 
-export { IConnackPacket, IDisconnectPacket, IPublishPacket, Packet }
+export type { IConnackPacket, IDisconnectPacket, IPublishPacket, Packet }
 export type OnConnectCallback = (packet: IConnackPacket) => void
 export type OnDisconnectCallback = (packet: IDisconnectPacket) => void
 export type ClientSubscribeCallback = (
