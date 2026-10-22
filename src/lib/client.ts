@@ -61,6 +61,20 @@ const MAX_RECEIVE_MAXIMUM = 0xffff
 /** MQTT 5 reason code 0x93 */
 const RECEIVE_MAXIMUM_EXCEEDED = 147
 
+const WS_CLOSED_BEFORE_OPEN =
+	'WebSocket was closed before the connection was established'
+const WS_ERROR = 'WebSocket error'
+
+function isMeaningfulStreamError(
+	error?: Error & { code?: string | number },
+): error is Error & { code?: string | number } {
+	return Boolean(
+		error?.message &&
+		error.message !== WS_CLOSED_BEFORE_OPEN &&
+		error.message !== WS_ERROR,
+	)
+}
+
 const defaultConnectOptions: IClientOptions = {
 	keepalive: 60,
 	reschedulePings: true,
@@ -1037,6 +1051,21 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		)
 		this.stream = this.streamBuilder(this)
 
+		const stream = this.stream
+		let forwardedDestroyError: Error | undefined
+		const destroy = stream.destroy.bind(stream)
+		stream.destroy = ((error?: Error, callback?) => {
+			if (
+				!stream.destroyed &&
+				isMeaningfulStreamError(error) &&
+				!error.code
+			) {
+				forwardedDestroyError = error
+				nextTick(() => this.emit('error', error))
+			}
+			return destroy(error, callback)
+		}) as typeof stream.destroy
+
 		parser.on('packet', (packet) => {
 			this.log('parser :: on packet push to packets array.')
 			packets.push(packet)
@@ -1106,10 +1135,12 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 		const streamErrorHandler = (error) => {
 			this.log('streamErrorHandler :: error', error.message)
-			// error.code will only be set on NodeJS env, browser don't allow to detect errors on sockets
-			// also emitting errors on browsers seems to create issues
-			if (error.code) {
-				// handle error
+			if (
+				error === forwardedDestroyError ||
+				error.message === WS_CLOSED_BEFORE_OPEN
+			) {
+				this.noop(error)
+			} else if (error.code || isMeaningfulStreamError(error)) {
 				this.log('streamErrorHandler :: emitting error')
 				this.emit('error', error)
 			} else {
@@ -1120,7 +1151,6 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		this.log('connect :: pipe stream to writable stream')
 		this.stream.pipe(writable)
 
-		// Suppress connection errors
 		this.stream.on('error', streamErrorHandler)
 
 		// Echo stream close
