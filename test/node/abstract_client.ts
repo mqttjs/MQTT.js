@@ -438,6 +438,27 @@ export default function abstractTest(server, config, ports) {
 			})
 		})
 
+		it('should send an empty username when only a password is provided', function _test(t, done) {
+			const { check, finish, deadline } = guardDone(done)
+			deadline(
+				3000,
+				'password-only CONNECT was not received by the broker',
+			)
+
+			const client = connect({ password: 'secret' })
+			client.once('error', finish)
+
+			server.once('client', (serverClient) => {
+				serverClient.once('connect', (packet) => {
+					check(() => {
+						assert.strictEqual(packet.username, '')
+						assert.strictEqual(packet.password.toString(), 'secret')
+					})
+					client.end((err) => finish(err))
+				})
+			})
+		})
+
 		it('should require a clientId with clean=false', function _test(t, done) {
 			let errorCaught = false
 
