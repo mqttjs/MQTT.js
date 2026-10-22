@@ -1303,10 +1303,22 @@ export default function abstractTest(server, config, ports) {
 			const incomingStore = store.incoming
 			const outgoingStore = store.outgoing
 			let publishCount = 0
+			let connections = 0
 			const server2 = serverBuilder(config.protocol, (serverClient) => {
 				serverClient.on('connect', () => {
+					connections += 1
+					// The broker kept the session of the first connection,
+					// so the stored message must be delivered on the second.
 					const connack =
-						version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
+						version === 5
+							? {
+									reasonCode: 0,
+									sessionPresent: connections > 1,
+								}
+							: {
+									returnCode: 0,
+									sessionPresent: connections > 1,
+								}
 					serverClient.connack(connack)
 				})
 				serverClient.on('publish', (packet) => {
@@ -2288,6 +2300,7 @@ export default function abstractTest(server, config, ports) {
 		it('should keep message order', function _test(t, done) {
 			let publishCount = 0
 			let reconnect = false
+			let connections = 0
 			let client: mqtt.MqttClient
 			const incomingStore = new Store({ clean: false })
 			const outgoingStore = new Store({ clean: false })
@@ -2297,8 +2310,19 @@ export default function abstractTest(server, config, ports) {
 				serverClient.on('error', () => {})
 
 				serverClient.on('connect', (packet) => {
+					connections += 1
+					// The broker kept the session of the first connection,
+					// so the in-flight publishes must be resent in order.
 					const connack =
-						version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
+						version === 5
+							? {
+									reasonCode: 0,
+									sessionPresent: connections > 1,
+								}
+							: {
+									returnCode: 0,
+									sessionPresent: connections > 1,
+								}
 					serverClient.connack(connack)
 				})
 				serverClient.on('publish', (packet) => {
@@ -5092,13 +5116,25 @@ export default function abstractTest(server, config, ports) {
 
 		it('should resend in-flight QoS 1 publish messages from the client if clean is false', function _test(t, done) {
 			let reconnect = false
+			let connections = 0
 			let client: mqtt.MqttClient | null = null
 			const incomingStore = new mqtt.Store({ clean: false })
 			const outgoingStore = new mqtt.Store({ clean: false })
 			const server2 = serverBuilder(config.protocol, (serverClient) => {
 				serverClient.on('connect', (packet) => {
+					connections += 1
+					// The broker kept the session of the first connection,
+					// so the in-flight publish must be resent on the second.
 					const connack =
-						version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
+						version === 5
+							? {
+									reasonCode: 0,
+									sessionPresent: connections > 1,
+								}
+							: {
+									returnCode: 0,
+									sessionPresent: connections > 1,
+								}
 					serverClient.connack(connack)
 				})
 				serverClient.on('publish', (packet) => {
@@ -5138,13 +5174,25 @@ export default function abstractTest(server, config, ports) {
 
 		it('should resend in-flight QoS 2 publish messages from the client if clean is false', function _test(t, done) {
 			let reconnect = false
+			let connections = 0
 			let client: mqtt.MqttClient | null = null
 			const incomingStore = new mqtt.Store({ clean: false })
 			const outgoingStore = new mqtt.Store({ clean: false })
 			const server2 = serverBuilder(config.protocol, (serverClient) => {
 				serverClient.on('connect', (packet) => {
+					connections += 1
+					// The broker kept the session of the first connection,
+					// so the in-flight publish must be resent on the second.
 					const connack =
-						version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
+						version === 5
+							? {
+									reasonCode: 0,
+									sessionPresent: connections > 1,
+								}
+							: {
+									returnCode: 0,
+									sessionPresent: connections > 1,
+								}
 					serverClient.connack(connack)
 				})
 				serverClient.on('publish', (packet) => {
@@ -5184,13 +5232,25 @@ export default function abstractTest(server, config, ports) {
 
 		it('should resend in-flight QoS 2 pubrel messages from the client if clean is false', function _test(t, done) {
 			let reconnect = false
+			let connections = 0
 			let client: mqtt.MqttClient | null = null
 			const incomingStore = new mqtt.Store({ clean: false })
 			const outgoingStore = new mqtt.Store({ clean: false })
 			const server2 = serverBuilder(config.protocol, (serverClient) => {
 				serverClient.on('connect', (packet) => {
+					connections += 1
+					// The broker kept the session of the first connection,
+					// so the in-flight pubrel must be resent on the second.
 					const connack =
-						version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
+						version === 5
+							? {
+									reasonCode: 0,
+									sessionPresent: connections > 1,
+								}
+							: {
+									returnCode: 0,
+									sessionPresent: connections > 1,
+								}
 					serverClient.connack(connack)
 				})
 				serverClient.on('publish', (packet) => {
@@ -5242,10 +5302,129 @@ export default function abstractTest(server, config, ports) {
 			})
 		})
 
+		it('should not resend in-flight QoS 1 publish messages if clean is false and the broker discarded the session', function _test(t, done) {
+			let reconnect = false
+			let resent = false
+			let publishCallbackError: Error | null | undefined
+			let client: mqtt.MqttClient
+			const incomingStore = new mqtt.Store({ clean: false })
+			const outgoingStore = new mqtt.Store({ clean: false })
+
+			let finished = false
+			const finish = (err?: Error) => {
+				if (finished) return
+				finished = true
+				clearTimeout(deadline)
+				client.end(true, () => {
+					server2.close(() => done(err))
+				})
+			}
+
+			// Same hang guard as the session tests above: fail readably
+			// instead of hanging the suite if the reconnect stalls.
+			const deadline = setTimeout(() => {
+				finish(
+					new Error(
+						`the second session never completed (reconnect: ${reconnect}, resent: ${resent})`,
+					),
+				)
+			}, 8000)
+
+			const server2 = serverBuilder(config.protocol, (serverClient) => {
+				serverClient.on('connect', () => {
+					// The broker does not keep the session: Session Present
+					// is false on the first connect and on the reconnect
+					// alike, so the in-flight publish belongs to a session
+					// that no longer exists on either side.
+					serverClient.connack(
+						version === 5
+							? { reasonCode: 0, sessionPresent: false }
+							: { returnCode: 0, sessionPresent: false },
+					)
+				})
+				serverClient.on('publish', () => {
+					if (reconnect) {
+						resent = true
+					} else {
+						client.end(true, () => {
+							client.reconnect({
+								incomingStore,
+								outgoingStore,
+							})
+							reconnect = true
+						})
+					}
+				})
+			})
+
+			server2.listen(ports.PORTAND50, () => {
+				client = connect({
+					port: ports.PORTAND50,
+					host: 'localhost',
+					clean: false,
+					clientId: 'cid1',
+					reconnectPeriod: 0,
+					incomingStore,
+					outgoingStore,
+				})
+
+				client.on('connect', () => {
+					if (!reconnect) {
+						client.publish(
+							'topic',
+							'payload',
+							{ qos: 1 },
+							(err) => {
+								publishCallbackError = err
+							},
+						)
+					} else {
+						// `connect` is emitted once the outgoing store has
+						// been fully processed, so a resend would already
+						// have reached the server by now.
+						setTimeout(() => {
+							try {
+								assert.strictEqual(
+									resent,
+									false,
+									'the publish must not be resent once the broker discarded the session',
+								)
+								assert.ok(
+									publishCallbackError instanceof Error,
+									'the publish callback must be failed when its packet is discarded',
+								)
+								const remaining: unknown[] = []
+								const stream = outgoingStore.createStream()
+								stream.on('data', (packet) => {
+									remaining.push(packet)
+								})
+								stream.on('end', () => {
+									try {
+										assert.strictEqual(
+											remaining.length,
+											0,
+											'the outgoing store must not keep packets of a discarded session',
+										)
+									} catch (err) {
+										return finish(err as Error)
+									}
+									finish()
+								})
+							} catch (err) {
+								finish(err as Error)
+							}
+						}, 200)
+					}
+				})
+				client.on('error', () => {})
+			})
+		})
+
 		it('should resend in-flight publish messages by published order', function _test(t, done) {
 			let publishCount = 0
 			let reconnect = false
 			let disconnectOnce = true
+			let connections = 0
 			let client: mqtt.MqttClient | null = null
 			const incomingStore = new mqtt.Store({ clean: false })
 			const outgoingStore = new mqtt.Store({ clean: false })
@@ -5255,8 +5434,19 @@ export default function abstractTest(server, config, ports) {
 				serverClient.on('error', () => {})
 
 				serverClient.on('connect', (packet) => {
+					connections += 1
+					// The broker kept the session of the first connection,
+					// so the in-flight publishes must be resent in order.
 					const connack =
-						version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
+						version === 5
+							? {
+									reasonCode: 0,
+									sessionPresent: connections > 1,
+								}
+							: {
+									returnCode: 0,
+									sessionPresent: connections > 1,
+								}
 					serverClient.connack(connack)
 				})
 				serverClient.on('publish', (packet) => {

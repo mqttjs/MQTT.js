@@ -528,6 +528,16 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	/** keep a reference of packets that have been successfully processed from outgoing store  */
 	private _packetIdsDuringStoreProcessing: Record<number, boolean>
 
+	/**
+	 * Message ids that were already in `outgoingStore` when the current
+	 * connection attempt started, snapshotted in `connect()`. Those packets
+	 * were stored for an earlier session: if the broker does not resume that
+	 * session, they are the ones `_onConnect` must not retransmit (#1651).
+	 * Packets queued after the snapshot belong to the current attempt and
+	 * are always delivered.
+	 */
+	private _outgoingIdsAtConnectStart: Set<number>
+
 	private _storeProcessingQueue: {
 		invoke: () => any
 		cbStorePut?: DoneCallback
@@ -742,6 +752,8 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		this._storeProcessing = false
 		// Packet Ids are put into the store during store processing
 		this._packetIdsDuringStoreProcessing = {}
+		// Ids of the packets the outgoing store held before `connect()`
+		this._outgoingIdsAtConnectStart = new Set()
 		// Store processing queue
 		this._storeProcessingQueue = []
 
@@ -1030,6 +1042,26 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			this._incomingQoS2Ids.clear()
 			this.disconnecting = false
 			this.disconnected = false
+		}
+
+		// Snapshot the packets the outgoing store already holds. They were
+		// stored for an earlier session, and whether they may be sent on
+		// this connection depends on the Session Present flag of the
+		// CONNACK that answers it (see `_onConnect`). The built-in store
+		// fixes the snapshot at `createStream` time, and the stream is
+		// drained long before a CONNACK can arrive; on any failure the
+		// snapshot stays empty and everything is delivered, as before.
+		this._outgoingIdsAtConnectStart = new Set()
+		try {
+			const storeSnapshot = this.outgoingStore.createStream()
+			storeSnapshot.on('data', (storedPacket: Packet) => {
+				this._outgoingIdsAtConnectStart.add(storedPacket.messageId)
+			})
+			storeSnapshot.on('error', () => {
+				this._outgoingIdsAtConnectStart.clear()
+			})
+		} catch {
+			this._outgoingIdsAtConnectStart.clear()
 		}
 
 		this.log(
@@ -2693,6 +2725,20 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			this._discardIncomingQoS2State()
 		}
 
+		// The outgoing mirror of that discard: with a persistent session
+		// (`clean: false`), the Session Present flag also decides whether
+		// the packets stored for the previous session may be retransmitted.
+		// If the broker discarded the session, they must not be: their
+		// message ids and ack flows belong to a session that no longer
+		// exists (#1651). MQTT 3.1 has no such flag, so there the store is
+		// always streamed, as before.
+		const outgoingIdsToDiscard =
+			!this.options.clean &&
+			this.options.protocolVersion >= 4 &&
+			packet.sessionPresent === false
+				? this._outgoingIdsAtConnectStart
+				: null
+
 		this.messageIdProvider.clear()
 
 		// before `_setupKeepaliveManager`: `keepalive` only reports the broker
@@ -2748,6 +2794,30 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 				// Skip already processed store packets
 				if (this._packetIdsDuringStoreProcessing[packet2.messageId]) {
+					storeDeliver()
+					return
+				}
+
+				// Stored for a session the broker did not resume: drop the
+				// packet from the store and fail its callback instead of
+				// retransmitting it into the new session.
+				if (
+					outgoingIdsToDiscard &&
+					outgoingIdsToDiscard.has(packet2.messageId)
+				) {
+					outgoingIdsToDiscard.delete(packet2.messageId)
+					this._packetIdsDuringStoreProcessing[packet2.messageId] =
+						true
+					this.outgoingStore.del(packet2, this.noop)
+					const pending = this.outgoing[packet2.messageId]
+					delete this.outgoing[packet2.messageId]
+					if (pending && typeof pending.cb === 'function') {
+						pending.cb(
+							new Error(
+								'Packet discarded: the broker did not resume the session it was stored for',
+							),
+						)
+					}
 					storeDeliver()
 					return
 				}
