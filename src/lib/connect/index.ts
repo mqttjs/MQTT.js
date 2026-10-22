@@ -123,6 +123,14 @@ function connect(
 	// merge in the auth options if supplied
 	parseAuthOptions(opts)
 
+	// A password can only be encoded in a CONNECT packet when a username is
+	// present. Treat an omitted username as an empty one so that brokers
+	// authenticating by password alone receive the supplied password instead
+	// of the connection failing while the packet is being written.
+	if (opts.password !== undefined && opts.username === undefined) {
+		opts.username = ''
+	}
+
 	// support clientId passed in the query string of the url
 	if (opts.query && typeof opts.query.clientId === 'string') {
 		opts.clientId = opts.query.clientId

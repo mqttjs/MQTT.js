@@ -35,6 +35,17 @@ describe('mqtt', () => {
 			c.end((err) => done(err))
 		})
 
+		it('should set an empty username when only a password is provided', function _test(t, done) {
+			const c = mqtt.connect('mqtt://localhost:1883', {
+				password: 'pass',
+			})
+
+			c.should.be.instanceOf(mqtt.MqttClient)
+			c.options.should.have.property('username', '')
+			c.options.should.have.property('password', 'pass')
+			c.end((err) => done(err))
+		})
+
 		it('should return an MqttClient with path set when protocol is ws/wss', function _test(t, done) {
 			const c = mqtt.connect('ws://localhost:1883/mqtt')
 
