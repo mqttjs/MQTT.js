@@ -16,6 +16,8 @@ import {
 import { type DoneCallback, ErrorWithReasonCode } from 'src/lib/shared'
 import { fail } from 'assert'
 import { describe, it, beforeEach, afterEach, after } from 'node:test'
+import type Connection from 'mqtt-connection'
+import type { AddressInfo } from 'net'
 import Store from '../../src/lib/store'
 import serverBuilderFn from './server_helpers_for_client_tests'
 import handlePubrel from '../../src/lib/handlers/pubrel'
@@ -1437,6 +1439,79 @@ export default function abstractTest(server, config, ports) {
 			client.publish('test', 'test', { qos: 1 })
 			client.end(true, done)
 		})
+
+		// A graceful end() waits for in-flight acks, but they only arrive on a
+		// live connection
+		const connackOk = version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
+		const endWithoutAckCases: {
+			name: string
+			onConnect: (
+				serverClient: Connection,
+				client: mqtt.MqttClient,
+			) => void
+			onPublish?: (
+				serverClient: Connection,
+				client: mqtt.MqttClient,
+			) => void
+			reconnectPeriod?: number
+		}[] = [
+			{
+				name: 'when ended before the connack',
+				onConnect: (serverClient, client) => client.end(),
+			},
+			{
+				name: 'once the connection closes',
+				onConnect: (serverClient) => serverClient.connack(connackOk),
+				onPublish: (serverClient, client) => {
+					client.end()
+					serverClient.destroy()
+				},
+			},
+			{
+				name: 'when ended while offline',
+				onConnect: (serverClient) => serverClient.connack(connackOk),
+				onPublish: (serverClient, client) => {
+					client.once('offline', () => client.end())
+					serverClient.destroy()
+				},
+				reconnectPeriod: 1000,
+			},
+		]
+		for (const {
+			name,
+			onConnect,
+			onPublish,
+			reconnectPeriod = 0,
+		} of endWithoutAckCases) {
+			it(`does not wait acks ${name}`, function _test(t, done) {
+				const { finish, deadline } = guardDone(done)
+				let client: mqtt.MqttClient | null = null
+
+				// never acks the publish
+				const server2 = serverBuilder(
+					config.protocol,
+					(serverClient) => {
+						serverClient.on('connect', () =>
+							onConnect(serverClient, client),
+						)
+						serverClient.on('publish', () =>
+							onPublish?.(serverClient, client),
+						)
+					},
+				)
+
+				server2.listen(0, () => {
+					client = connect({
+						host: 'localhost',
+						port: (server2.address() as AddressInfo).port,
+						reconnectPeriod,
+					})
+					client.publish('test', 'test', { qos: 1 })
+					client.once('end', () => finish())
+					deadline(3000, 'end() is still waiting for an ack')
+				})
+			})
+		}
 
 		it('should call cb if store.put fails', function _test(t, done) {
 			const store = new Store()
