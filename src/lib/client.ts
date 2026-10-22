@@ -580,6 +580,13 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	private connackReceived: boolean
 
 	/**
+	 * Streams that have emitted 'close', which `_cleanUp` must not wait for.
+	 * `destroyed` cannot tell: it is set before 'close' is emitted, and the
+	 * `wx` stream emits 'close' without ever setting it.
+	 */
+	private _closedStreams = new WeakSet<IStream>()
+
+	/**
 	 * Set while a refused CONNACK is torn down, so neither `_cleanUp` nor the
 	 * `close` handler arms a retry: closing the socket must not by itself
 	 * retry a connection the broker actively denied. `handleConnack` arms the
@@ -1124,8 +1131,10 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		this.stream.on('error', streamErrorHandler)
 
 		// Echo stream close
-		this.stream.on('close', () => {
+		const { stream } = this
+		stream.on('close', () => {
 			this.log('(%s)stream :: on close', this.options.clientId)
+			this._closedStreams.add(stream)
 			this._flushVolatile()
 			this.log('stream: emit close to MqttClient')
 			this.emit('close')
@@ -2184,6 +2193,9 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	 * @api private
 	 */
 	private _cleanUp(forced: boolean, done?: DoneCallback, opts = {}) {
+		// read before `destroy()`, which may emit 'close' and call `done` itself
+		const streamClosed = this._closedStreams.has(this.stream)
+
 		if (done) {
 			this.log('_cleanUp :: done callback provided for on stream close')
 			this.stream.on('close', done)
@@ -2199,6 +2211,17 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 				this.options.clientId,
 			)
 			this.stream.destroy()
+		} else if (!this.connected) {
+			// No session to close: `_sendPacket` would only queue the DISCONNECT
+			// and leave the socket and its CONNACK timer alive. A closed stream
+			// is left alone: `wx` would emit 'close' a second time.
+			if (!streamClosed) {
+				this.log(
+					'_cleanUp :: (%s) :: not connected, destroying stream',
+					this.options.clientId,
+				)
+				this.stream.destroy()
+			}
 		} else {
 			const packet: IDisconnectPacket = { cmd: 'disconnect', ...opts }
 			this.log(
@@ -2233,7 +2256,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 		this._destroyKeepaliveManager()
 
-		if (done && !this.connected) {
+		if (done && streamClosed) {
 			this.log(
 				'_cleanUp :: (%s) :: removing stream `done` callback `close` listener',
 				this.options.clientId,
