@@ -16,7 +16,38 @@ if (typeof process?.nextTick !== 'function') {
 
 const debug = _debug('mqttjs')
 
-let protocols: Record<string, StreamBuilder> = null
+let nodeProtocols: Record<string, StreamBuilder> = null
+let browserProtocols: Record<string, StreamBuilder> = null
+
+function loadNodeProtocols(): Record<string, StreamBuilder> {
+	if (!nodeProtocols) {
+		nodeProtocols = {}
+		nodeProtocols.ws = require('./ws').streamBuilder
+		nodeProtocols.wss = require('./ws').streamBuilder
+
+		nodeProtocols.mqtt = require('./tcp').default
+		nodeProtocols.tcp = require('./tcp').default
+		nodeProtocols.ssl = require('./tls').default
+		nodeProtocols.tls = nodeProtocols.ssl
+		nodeProtocols.mqtts = require('./tls').default
+	}
+	return nodeProtocols
+}
+
+function loadBrowserProtocols(): Record<string, StreamBuilder> {
+	if (!browserProtocols) {
+		browserProtocols = {}
+		browserProtocols.ws = require('./ws').browserStreamBuilder
+		browserProtocols.wss = require('./ws').browserStreamBuilder
+
+		browserProtocols.wx = require('./wx').default
+		browserProtocols.wxs = require('./wx').default
+
+		browserProtocols.ali = require('./ali').default
+		browserProtocols.alis = require('./ali').default
+	}
+	return browserProtocols
+}
 
 function getDefaultWebSocketProtocol(): MqttProtocol {
 	if (typeof location !== 'undefined') {
@@ -165,29 +196,14 @@ function connect(
 		}
 	}
 
-	// only loads the protocols once
-	if (!protocols) {
-		protocols = {}
-		if (!isBrowser && !opts.forceNativeWebSocket) {
-			protocols.ws = require('./ws').streamBuilder
-			protocols.wss = require('./ws').streamBuilder
-
-			protocols.mqtt = require('./tcp').default
-			protocols.tcp = require('./tcp').default
-			protocols.ssl = require('./tls').default
-			protocols.tls = protocols.ssl
-			protocols.mqtts = require('./tls').default
-		} else {
-			protocols.ws = require('./ws').browserStreamBuilder
-			protocols.wss = require('./ws').browserStreamBuilder
-
-			protocols.wx = require('./wx').default
-			protocols.wxs = require('./wx').default
-
-			protocols.ali = require('./ali').default
-			protocols.alis = require('./ali').default
-		}
-	}
+	// The stream builders are only loaded once per environment, but the
+	// set is picked for every connect() call: `forceNativeWebSocket` must
+	// only affect the client that sets it, not every other client created
+	// in the same process (#2050).
+	const protocols =
+		isBrowser || opts.forceNativeWebSocket
+			? loadBrowserProtocols()
+			: loadNodeProtocols()
 
 	if (!protocols[opts.protocol]) {
 		const isSecure = ['mqtts', 'wss'].indexOf(opts.protocol) !== -1
