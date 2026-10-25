@@ -76,6 +76,22 @@ describe('mqtt', () => {
 			c.end((err) => done(err))
 		})
 
+		it('should handle IPv6 addresses in WebSocket URL without throwing Invalid URL (issue #1569)', function _test(t, done) {
+			const c = mqtt.connect('ws://[::1]:8883')
+
+			c.should.be.instanceOf(mqtt.MqttClient)
+			c.stream['url'].should.equal('ws://[::1]:8883/')
+			c.end(true, (err) => done(err))
+		})
+
+		it('should handle IPv6 host in options for WebSocket URL without throwing Invalid URL', function _test(t, done) {
+			const c = mqtt.connect({ host: '::1', port: 8883, protocol: 'ws' })
+
+			c.should.be.instanceOf(mqtt.MqttClient)
+			c.stream['url'].should.equal('ws://[::1]:8883/')
+			c.end(true, (err) => done(err))
+		})
+
 		it('should return an MqttClient with username and password options set', function _test(t, done) {
 			const c = mqtt.connect('mqtt://user@localhost:1883')
 
