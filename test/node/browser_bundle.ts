@@ -66,7 +66,7 @@ describe('browser bundle', () => {
 	})
 
 	it('exports the same names from the ESM bundle as build/index.js (#2074)', async () => {
-		const esm = esmOptions()
+		const esm = esmOptions
 		const { metafile } = await build({
 			...esm,
 			write: false,

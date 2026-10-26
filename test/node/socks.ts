@@ -1,7 +1,15 @@
 import assert from 'assert'
+import { EventEmitter, once } from 'events'
+import fs from 'fs'
 import { type AddressInfo, createServer, type Server, type Socket } from 'net'
 import { describe, it, mock, afterEach, beforeEach } from 'node:test'
+import path from 'path'
+import tls from 'tls'
 import openSocks from 'src/lib/connect/socks'
+import buildTlsStream from 'src/lib/connect/tls'
+
+const KEY = path.join(__dirname, 'helpers', 'tls-key.pem')
+const CERT = path.join(__dirname, 'helpers', 'tls-cert.pem')
 
 type State5 = 'new' | 'id' | 'connect'
 
@@ -496,5 +504,34 @@ describe('SOCKS layer', { timeout: 1000 }, () => {
 		stream.destroy()
 
 		assert.strictEqual(lookup.mock.callCount(), 0)
+	})
+
+	it('should connect TLS over a SOCKS proxy', async () => {
+		const port = await server5.start()
+
+		const stream = buildTlsStream(
+			new EventEmitter() as any,
+			{
+				host: 'localhost',
+				port: 8883,
+				socksProxy: `socks5h://localhost:${port}`,
+				ca: [fs.readFileSync(CERT)],
+			} as any,
+		)
+
+		const rawSocket = await server5.connect
+		const tlsServerSocket = new tls.TLSSocket(rawSocket, {
+			isServer: true,
+			key: fs.readFileSync(KEY),
+			cert: fs.readFileSync(CERT),
+		})
+
+		await once(stream, 'secureConnect')
+
+		tlsServerSocket.destroy()
+		stream.destroy()
+
+		assert.strictEqual(server5.destinationAddress(), 'localhost')
+		assert.strictEqual(server5.destinationPort(), 8883)
 	})
 })
