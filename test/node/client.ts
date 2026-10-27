@@ -75,6 +75,76 @@ describe('MqttClient', () => {
 		})
 	})
 
+	describe('connack timer on early connect failure (#1155)', () => {
+		function neverOpenedStream() {
+			const stream = new Duplex({
+				read() {},
+				write(_chunk, _enc, cb) {
+					cb()
+				},
+			})
+			// A socket that fails before opening (ENOTFOUND, ECONNREFUSED
+			// on some platforms, ...) may never emit `close`: destroy is
+			// a no-op on it and nothing else will follow the `error`.
+			stream.destroy = function destroy() {
+				return stream
+			}
+			return stream
+		}
+
+		it(
+			'should not emit connack timeout after a stream error that never closes',
+			{ timeout: 5000 },
+			function _test(t, done) {
+				const connectTimeout = 100
+				const stream = neverOpenedStream()
+				const errors: string[] = []
+				client = new mqtt.MqttClient(() => stream, {
+					connectTimeout,
+					reconnectPeriod: 0,
+				})
+				client.on('error', (err) => {
+					errors.push(err.message)
+				})
+
+				const err = new Error(
+					'getaddrinfo ENOTFOUND bad.invalid',
+				) as NodeJS.ErrnoException
+				err.code = 'ENOTFOUND'
+				stream.emit('error', err)
+
+				try {
+					assert.deepEqual(errors, [
+						'getaddrinfo ENOTFOUND bad.invalid',
+					])
+				} catch (assertErr) {
+					client.end(true)
+					done(assertErr as Error)
+					return
+				}
+
+				// Real time, not a fake clock: the bug is a live timer
+				// that keeps the process up for `connectTimeout` and then
+				// reports a misleading `connack timeout` for a connection
+				// attempt that already failed.
+				setTimeout(() => {
+					try {
+						assert.deepEqual(
+							errors,
+							['getaddrinfo ENOTFOUND bad.invalid'],
+							'connackTimer was left running after the stream error: it fired a connack timeout for an already failed connect',
+						)
+						client.end(true)
+						done()
+					} catch (assertErr) {
+						client.end(true)
+						done(assertErr as Error)
+					}
+				}, connectTimeout + 150)
+			},
+		)
+	})
+
 	describe('message ids', () => {
 		it('should increment the message id', function _test(t, done) {
 			client = mqtt.connect(config)
