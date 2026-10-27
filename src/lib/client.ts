@@ -1109,6 +1109,15 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			// error.code will only be set on NodeJS env, browser don't allow to detect errors on sockets
 			// also emitting errors on browsers seems to create issues
 			if (error.code) {
+				// A lookup/connect failure (ENOTFOUND, ECONNREFUSED, ...)
+				// can fail the stream before it ever opens. The stream
+				// `close` handler -- the other place that clears
+				// `connackTimer` -- may then never run, so the timer would
+				// keep the process alive for `connectTimeout` (default
+				// 30s) and go on to emit a misleading `connack timeout`
+				// for a connect attempt that already failed (#1155).
+				this.log('streamErrorHandler :: clearing connackTimer')
+				clearTimeout(this.connackTimer)
 				// handle error
 				this.log('streamErrorHandler :: emitting error')
 				this.emit('error', error)
