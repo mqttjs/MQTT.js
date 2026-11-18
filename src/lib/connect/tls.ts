@@ -32,13 +32,6 @@ const buildStream: StreamBuilder = (client, opts) => {
 	opts.port = opts.port || 8883
 	opts.host = opts.hostname || opts.host || 'localhost'
 
-	// Default SNI to the connect host unless explicitly set, and never for an
-	// IP (RFC 6066). An explicit servername allows verifying the certificate
-	// against a hostname that differs from the connect host.
-	if (net.isIP(opts.host) === 0 && !opts.servername) {
-		opts.servername = opts.host
-	}
-
 	opts.rejectUnauthorized = opts.rejectUnauthorized !== false
 
 	delete opts.path
@@ -50,7 +43,17 @@ const buildStream: StreamBuilder = (client, opts) => {
 		opts.rejectUnauthorized,
 	)
 
-	const connection = connect(opts)
+	// Default SNI to the connect host unless explicitly set, and never for an
+	// IP (RFC 6066). An explicit servername allows verifying the certificate
+	// against a hostname that differs from the connect host. The default is
+	// not written to opts: with `servers`, each reconnect can go to another
+	// host, and that host needs its own servername.
+	const servername =
+		opts.servername || (net.isIP(opts.host) === 0 ? opts.host : undefined)
+
+	const connection = connect(
+		servername === undefined ? opts : { ...opts, servername },
+	)
 	connection.on('secureConnect', () => {
 		if (opts.rejectUnauthorized && !connection.authorized) {
 			connection.emit('error', new Error('TLS not authorized'))
