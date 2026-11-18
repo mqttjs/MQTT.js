@@ -1,8 +1,10 @@
 import path from 'path'
 import fs from 'fs'
+import dns from 'dns'
+import net from 'net'
 import { assert } from 'chai'
 import { describe, it, after } from 'node:test'
-import mqtt from '../../src'
+import mqtt, { type IClientOptions } from '../../src'
 import abstractClientTests from './abstract_client'
 import { MqttSecureServer, type MqttServerListener } from './server'
 import 'should'
@@ -12,6 +14,7 @@ const ports = getPorts(5)
 
 const port = ports.PORT
 const sniPort = ports.PORTAND40
+const closingPort = ports.PORTAND41
 const KEY = path.join(__dirname, 'helpers', 'tls-key.pem')
 const CERT = path.join(__dirname, 'helpers', 'tls-cert.pem')
 const WRONG_CERT = path.join(__dirname, 'helpers', 'wrong-cert.pem')
@@ -270,6 +273,54 @@ describe('MqttSecureClient', () => {
 				server.on('secureConnection', server.setupConnection) // reset eventHandler
 				client.end((err) => done(err))
 			})
+		})
+
+		it('should use the servername of each host of servers after a failover', function _test(t, done) {
+			// The first host closes each socket, so the client connects to the
+			// next host. The certificate of the second host is valid only for
+			// SNI_HOSTNAME, so the SNI of the first host must not stay.
+			const closing = net
+				.createServer((socket) => {
+					socket.destroy()
+				})
+				.listen(closingPort, () => {
+					const client = mqtt.connect({
+						protocol: 'mqtts',
+						servers: [
+							{
+								host: 'mqtt-first.example.test',
+								port: closingPort,
+							},
+							{ host: SNI_HOSTNAME, port: sniPort },
+						],
+						ca: [fs.readFileSync(SNI_CERT)],
+						rejectUnauthorized: true,
+						reconnectPeriod: 100,
+						// Both test hosts resolve to the loopback address, with no DNS
+						lookup: (_hostname, options, callback) =>
+							dns.lookup('127.0.0.1', options, callback),
+					} as IClientOptions)
+
+					// The first host closes the socket (ECONNRESET), and the client
+					// tries the next host. Only a certificate error fails the test.
+					// The client can emit an error more than once: call done once.
+					let failed = false
+					client.on('error', (err: NodeJS.ErrnoException) => {
+						if (
+							err.code === 'ERR_TLS_CERT_ALTNAME_INVALID' &&
+							!failed
+						) {
+							failed = true
+							closing.close()
+							client.end(true, () => done(err))
+						}
+					})
+
+					client.once('connect', () => {
+						closing.close()
+						client.end((err) => done(err))
+					})
+				})
 		})
 
 		it('should validate the certificate against an explicit servername', function _test(t, done) {
