@@ -104,8 +104,6 @@ describe('Websocket Client', () => {
 		if (httpServer.listening) {
 			httpServer.close()
 		}
-
-		process.exit(0)
 	})
 
 	it('should use mqtt as the protocol by default', function _test(t, done) {

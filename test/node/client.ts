@@ -35,8 +35,6 @@ describe('MqttClient', () => {
 		if (server.listening) {
 			server.close()
 		}
-
-		process.exit(0)
 	})
 
 	it('should have static VERSION set', function _test(t) {

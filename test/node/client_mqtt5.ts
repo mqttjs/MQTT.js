@@ -25,8 +25,6 @@ describe('MQTT 5.0', () => {
 		if (server.listening) {
 			server.close()
 		}
-
-		process.exit(0)
 	})
 
 	abstractClientTests(server, config, ports)
@@ -3969,9 +3967,7 @@ describe('MQTT 5.0', () => {
 		},
 	)
 
-	// The tests below cover GHSA-h8jm-hm87-fqw3. They are deliberately not the
-	// last tests in this file: the `after` hook calls `process.exit(0)`, which
-	// swallows the result of whatever runs last.
+	// The tests below cover GHSA-h8jm-hm87-fqw3.
 	const qos2Publish = (messageId: number) => ({
 		messageId,
 		topic: 'test',
