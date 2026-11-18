@@ -861,6 +861,30 @@ describe('MqttClient', () => {
 				)
 			},
 		)
+
+		it(
+			'should call the callback of end() before connect() when option manualConnect=true',
+			{
+				timeout: 10000,
+			},
+			async function _test(t) {
+				client = mqtt.connect({
+					...config,
+					manualConnect: true,
+				})
+
+				await client.endAsync()
+
+				assert.isTrue(
+					client.disconnected,
+					'client should be disconnected',
+				)
+				assert.isFalse(
+					client.disconnecting,
+					'disconnecting should be false after end',
+				)
+			},
+		)
 	})
 
 	describe('async methods', () => {

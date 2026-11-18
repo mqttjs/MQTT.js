@@ -2184,6 +2184,16 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	 * @api private
 	 */
 	private _cleanUp(forced: boolean, done?: DoneCallback, opts = {}) {
+		if (!this.stream) {
+			// With manualConnect, the client has no stream before connect()
+			this.log('_cleanUp :: no stream to close')
+			this._destroyKeepaliveManager()
+			if (done) {
+				done()
+			}
+			return
+		}
+
 		if (done) {
 			this.log('_cleanUp :: done callback provided for on stream close')
 			this.stream.on('close', done)
