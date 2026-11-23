@@ -917,6 +917,52 @@ describe('MqttClient', () => {
 		)
 
 		it(
+			'publish after end() with reconnectPeriod 0 gives an error instead of throwing',
+			{
+				timeout: 5000,
+			},
+			async function _test(t) {
+				client = await mqtt.connectAsync({
+					...config,
+					reconnectPeriod: 0,
+				})
+				await client.endAsync()
+
+				assert.isFalse(client.disconnecting)
+
+				for (const qos of [0, 1, 2] as const) {
+					const err = await new Promise<Error | undefined>(
+						(resolve) => {
+							client.publish('t', 'x', { qos }, (e) => resolve(e))
+						},
+					)
+					assert.equal(
+						err?.message,
+						'client disconnected',
+						`QoS ${qos}`,
+					)
+				}
+
+				let rejected: Error | undefined
+				try {
+					await client.publishAsync('t', 'x', { qos: 1 })
+				} catch (err) {
+					rejected = err
+				}
+				assert.equal(rejected?.message, 'client disconnected')
+
+				// connect() opens new stores, so publishing works again.
+				await new Promise<void>((resolve, reject) => {
+					client.once('connect', () => resolve())
+					client.once('error', reject)
+					client.connect()
+				})
+				await client.publishAsync('t', 'x', { qos: 1 })
+				await client.endAsync()
+			},
+		)
+
+		it(
 			'publish should throw error',
 			{
 				timeout: 5000,
