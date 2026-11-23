@@ -1587,6 +1587,33 @@ export default function abstractTest(server, config, ports) {
 			})
 		})
 
+		it('should send DUP 0 for a QoS 0 publish even when dup is set', function _test(t, done) {
+			const client = connect()
+
+			client.once('connect', () => {
+				client.publish('test', 'test', { qos: 0, dup: true })
+			})
+
+			server.once('client', (serverClient) => {
+				serverClient.once('publish', (packet) => {
+					let failure: Error | undefined
+					try {
+						assert.strictEqual(packet.qos, 0)
+						assert.strictEqual(
+							packet.dup,
+							false,
+							'a QoS 0 PUBLISH must have DUP 0',
+						)
+					} catch (err) {
+						failure = err
+					}
+					client.end(() => {
+						done(failure)
+					})
+				})
+			})
+		})
+
 		it('should publish with the default options for an empty parameter', function _test(t, done) {
 			const client = connect()
 			const payload = 'test'
