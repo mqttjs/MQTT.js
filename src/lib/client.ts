@@ -1935,7 +1935,9 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 		this.disconnecting = true
 
-		if (!force && Object.keys(this.outgoing).length > 0) {
+		// With no stream (manualConnect before connect()), nothing can empty
+		// outgoing, so do not wait for it
+		if (!force && this.stream && Object.keys(this.outgoing).length > 0) {
 			// wait 10ms, just to be sure we received all of it
 			this.log(
 				'end :: (%s) :: calling finish in 10ms once outgoing is empty',
@@ -2184,17 +2186,8 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	 * @api private
 	 */
 	private _cleanUp(forced: boolean, done?: DoneCallback, opts = {}) {
-		if (!this.stream) {
-			// With manualConnect, the client has no stream before connect()
-			this.log('_cleanUp :: no stream to close')
-			this._destroyKeepaliveManager()
-			if (done) {
-				done()
-			}
-			return
-		}
-
-		if (done) {
+		// With manualConnect, the client has no stream before connect()
+		if (done && this.stream) {
 			this.log('_cleanUp :: done callback provided for on stream close')
 			this.stream.on('close', done)
 		}
@@ -2204,12 +2197,14 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			if (this.options.reconnectPeriod === 0 && this.options.clean) {
 				this._flush()
 			}
-			this.log(
-				'_cleanUp :: (%s) :: destroying stream',
-				this.options.clientId,
-			)
-			this.stream.destroy()
-		} else {
+			if (this.stream) {
+				this.log(
+					'_cleanUp :: (%s) :: destroying stream',
+					this.options.clientId,
+				)
+				this.stream.destroy()
+			}
+		} else if (this.stream) {
 			const packet: IDisconnectPacket = { cmd: 'disconnect', ...opts }
 			this.log(
 				'_cleanUp :: (%s) :: call _sendPacket with disconnect packet',
@@ -2248,7 +2243,9 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 				'_cleanUp :: (%s) :: removing stream `done` callback `close` listener',
 				this.options.clientId,
 			)
-			this.stream.removeListener('close', done)
+			if (this.stream) {
+				this.stream.removeListener('close', done)
+			}
 			done()
 		}
 	}

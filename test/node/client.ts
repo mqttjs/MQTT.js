@@ -863,11 +863,11 @@ describe('MqttClient', () => {
 		)
 
 		it(
-			'should call the callback of end() before connect() when option manualConnect=true',
+			'should resolve endAsync() before connect() when option manualConnect=true',
 			{
 				timeout: 10000,
 			},
-			async function _test(t) {
+			async function _test() {
 				client = mqtt.connect({
 					...config,
 					manualConnect: true,
@@ -882,6 +882,80 @@ describe('MqttClient', () => {
 				assert.isFalse(
 					client.disconnecting,
 					'disconnecting should be false after end',
+				)
+			},
+		)
+
+		it(
+			'should call the callback of end(true) before connect() when option manualConnect=true',
+			{
+				timeout: 10000,
+			},
+			async function _test() {
+				client = mqtt.connect({
+					...config,
+					manualConnect: true,
+				})
+
+				await new Promise<void>((resolve, reject) => {
+					client.end(true, (err) => (err ? reject(err) : resolve()))
+				})
+
+				assert.isTrue(
+					client.disconnected,
+					'client should be disconnected',
+				)
+			},
+		)
+
+		it(
+			'should call the callback of a QoS 1 publish queued before connect() on end(true) when option manualConnect=true',
+			{
+				timeout: 10000,
+			},
+			async function _test() {
+				client = mqtt.connect({
+					...config,
+					manualConnect: true,
+					reconnectPeriod: 0,
+				})
+
+				const published = new Promise<Error | undefined>((resolve) => {
+					client.publish('hello', 'world', { qos: 1 }, (err) =>
+						resolve(err),
+					)
+				})
+				const ended = new Promise<void>((resolve, reject) => {
+					client.end(true, (err) => (err ? reject(err) : resolve()))
+				})
+
+				const err = await published
+				assert.instanceOf(err, Error)
+				assert.equal(err.message, 'Connection closed')
+				await ended
+			},
+		)
+
+		it(
+			'should call the callback of end() before connect() with a QoS 1 publish queued when option manualConnect=true',
+			{
+				timeout: 10000,
+			},
+			async function _test() {
+				client = mqtt.connect({
+					...config,
+					manualConnect: true,
+				})
+
+				client.publish('hello', 'world', { qos: 1 })
+
+				await new Promise<void>((resolve, reject) => {
+					client.end((err) => (err ? reject(err) : resolve()))
+				})
+
+				assert.isTrue(
+					client.disconnected,
+					'client should be disconnected',
 				)
 			},
 		)
