@@ -21,7 +21,7 @@ This runs the Node tests (`npm run test:node`). Browser tests run separately wit
 
 ### Running specific tests
 
-For example, you can run `node -r esbuild-register --test test/node/keepaliveManager.ts`
+For example, you can run `node -r esbuild-register --test --test-force-exit test/node/keepaliveManager.ts`
 
 ### Browser
 
@@ -53,18 +53,18 @@ For NodeJS tests we use the NodeJS [Test Runner](https://nodejs.org/api/test.htm
 npm run test:node
 ```
 
-The tests are located in the `test/node` directory. `npm run unit-test:node` runs every `test/node/*.ts` file with `--test-concurrency 4` and the `spec` and `junit` (`junit.xml`) reporters.
+The tests are located in the `test/node` directory. `npm run unit-test:node` runs every `test/node/*.ts` file with `--test-concurrency 4`, `--test-force-exit` and the `spec` and `junit` (`junit.xml`) reporters. `--test-force-exit` ends the process after the last test of a file, because some tests leave servers or clients open. Pass it also when you run a single file, or the process may not exit.
 
 When developing/debugging tests it's useful to run the tests for a single file/test, for example:
 
 ```sh
-node -r esbuild-register --test --inspect test/node/client.ts
+node -r esbuild-register --test --test-force-exit --inspect test/node/client.ts
 ```
 
 If you want to run tests using a filter, you can use the `--test-name-pattern` flag:
 
 ```sh
-node -r esbuild-register --test --test-name-pattern="should resend in-flight QoS" --inspect test/node/client.ts
+node -r esbuild-register --test --test-force-exit --test-name-pattern="should resend in-flight QoS" --inspect test/node/client.ts
 ```
 
 You can also run tests in watch mode using the `--watch` flag.
