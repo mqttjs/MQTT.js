@@ -2283,8 +2283,18 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 					alias = packet.properties.topicAlias
 				}
 				const topic = packet.topic.toString()
+				// [MQTT-3.3.2-8]: Topic Alias 0 is never valid, so test for
+				// presence rather than truthiness.
 				if (this.topicAliasSend) {
-					if (alias) {
+					if (alias !== undefined) {
+						if (alias === 0) {
+							this.log(
+								'applyTopicAlias :: error out of range. topic: %s - alias: %d',
+								topic,
+								alias,
+							)
+							return new Error('Sending Topic Alias out of range')
+						}
 						if (topic.length !== 0) {
 							// register topic alias
 							this.log(
@@ -2346,7 +2356,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 							}
 						}
 					}
-				} else if (alias) {
+				} else if (alias !== undefined) {
 					this.log(
 						'applyTopicAlias :: error out of range. topic: %s - alias: %d',
 						topic,
