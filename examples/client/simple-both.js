@@ -1,6 +1,4 @@
-'use strict'
-
-const mqtt = require('../..')
+import mqtt from 'mqtt'
 const client = mqtt.connect()
 
 // or const client = mqtt.connect({ port: 1883, host: '192.168.1.100', keepalive: 10000});

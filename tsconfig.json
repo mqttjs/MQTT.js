@@ -22,7 +22,6 @@
 		"removeComments": true,
 		"allowSyntheticDefaultImports": true,
 		"outDir": "./build",
-		"baseUrl": "./",
 		"incremental": true,
 		"preserveSymlinks": true,
 		"resolveJsonModule": true,

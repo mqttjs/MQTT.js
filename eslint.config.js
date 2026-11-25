@@ -1,24 +1,24 @@
-const {
+import {
     defineConfig,
     globalIgnores,
-} = require("eslint/config");
+} from "eslint/config";
 
-const tsParser = require("@typescript-eslint/parser");
-const typescriptEslintEslintPlugin = require("@typescript-eslint/eslint-plugin");
-const globals = require("globals");
-const js = require("@eslint/js");
+import tsParser from "@typescript-eslint/parser";
+import typescriptEslintEslintPlugin from "@typescript-eslint/eslint-plugin";
+import globals from "globals";
+import js from "@eslint/js";
 
-const {
+import {
     FlatCompat,
-} = require("@eslint/eslintrc");
+} from "@eslint/eslintrc";
 
 const compat = new FlatCompat({
-    baseDirectory: __dirname,
+    baseDirectory: import.meta.dirname,
     recommendedConfig: js.configs.recommended,
     allConfig: js.configs.all
 });
 
-module.exports = defineConfig([{
+export default defineConfig([{
     languageOptions: {
         parser: tsParser,
 
@@ -33,7 +33,7 @@ module.exports = defineConfig([{
 
         parserOptions: {
             project: "tsconfig.json",
-            tsconfigRootDir: __dirname,
+            tsconfigRootDir: import.meta.dirname,
         },
     },
 

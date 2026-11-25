@@ -3,7 +3,7 @@
  */
 import { Readable } from 'readable-stream'
 import { type Packet } from 'mqtt-packet'
-import { type DoneCallback } from './shared'
+import { type DoneCallback } from './shared.js'
 
 const streamsOpts = { objectMode: true }
 const defaultStoreOptions = {

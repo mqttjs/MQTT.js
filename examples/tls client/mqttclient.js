@@ -1,5 +1,3 @@
-'use strict'
-
 /** ************************** IMPORTANT NOTE ***********************************
 
   The certificate used on this example has been generated for a host named stark.
@@ -14,12 +12,12 @@
   <the ip address of the server> stark
  *******************************************************************************/
 
-const mqtt = require('mqtt')
-const fs = require('fs')
-const path = require('path')
-const KEY = fs.readFileSync(path.join(__dirname, '/tls-key.pem'))
-const CERT = fs.readFileSync(path.join(__dirname, '/tls-cert.pem'))
-const TRUSTED_CA_LIST = fs.readFileSync(path.join(__dirname, '/crt.ca.cg.pem'))
+import mqtt from 'mqtt'
+import fs from 'fs'
+import path from 'path'
+const KEY = fs.readFileSync(path.join(import.meta.dirname, '/tls-key.pem'))
+const CERT = fs.readFileSync(path.join(import.meta.dirname, '/tls-cert.pem'))
+const TRUSTED_CA_LIST = fs.readFileSync(path.join(import.meta.dirname, '/crt.ca.cg.pem'))
 
 const PORT = 1883
 const HOST = 'stark'

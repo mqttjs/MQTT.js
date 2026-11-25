@@ -1,8 +1,6 @@
-'use strict'
-
-const mqtt = require('mqtt')
-const url = require('url')
-const HttpsProxyAgent = require('https-proxy-agent')
+import mqtt from 'mqtt'
+import url from 'url'
+import HttpsProxyAgent from 'https-proxy-agent'
 /*
 host: host of the endpoint you want to connect e.g. my.mqqt.host.com
 path: path to you endpoint e.g. '/foo/bar/mqtt'

@@ -1,6 +1,4 @@
-'use strict'
-
-const mqtt = require('../..')
+import mqtt from 'mqtt'
 const client = mqtt.connect()
 
 client.publish('presence', 'hello!')

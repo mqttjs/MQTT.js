@@ -1,13 +1,17 @@
-/* eslint-disable @typescript-eslint/no-require-imports */
 import _debug from 'debug'
 import url from 'url'
 import MqttClient, {
 	type IClientOptions,
 	type MqttClientEventCallbacks,
 	type MqttProtocol,
-} from '../client'
-import isBrowser from '../is-browser'
-import { type StreamBuilder } from '../shared'
+} from '../client.js'
+import isBrowser from '../is-browser.js'
+import { type StreamBuilder } from '../shared.js'
+import { browserStreamBuilder, streamBuilder as wsStreamBuilder } from './ws.js'
+import buildTcpStream from './tcp.js'
+import buildTlsStream from './tls.js'
+import buildWxStream from './wx.js'
+import buildAliStream from './ali.js'
 
 // Handling the process.nextTick is not a function error in react-native applications.
 if (typeof process?.nextTick !== 'function') {
@@ -169,23 +173,23 @@ function connect(
 	if (!protocols) {
 		protocols = {}
 		if (!isBrowser && !opts.forceNativeWebSocket) {
-			protocols.ws = require('./ws').streamBuilder
-			protocols.wss = require('./ws').streamBuilder
+			protocols.ws = wsStreamBuilder
+			protocols.wss = wsStreamBuilder
 
-			protocols.mqtt = require('./tcp').default
-			protocols.tcp = require('./tcp').default
-			protocols.ssl = require('./tls').default
+			protocols.mqtt = buildTcpStream
+			protocols.tcp = buildTcpStream
+			protocols.ssl = buildTlsStream
 			protocols.tls = protocols.ssl
-			protocols.mqtts = require('./tls').default
+			protocols.mqtts = buildTlsStream
 		} else {
-			protocols.ws = require('./ws').browserStreamBuilder
-			protocols.wss = require('./ws').browserStreamBuilder
+			protocols.ws = browserStreamBuilder
+			protocols.wss = browserStreamBuilder
 
-			protocols.wx = require('./wx').default
-			protocols.wxs = require('./wx').default
+			protocols.wx = buildWxStream
+			protocols.wxs = buildWxStream
 
-			protocols.ali = require('./ali').default
-			protocols.alis = require('./ali').default
+			protocols.ali = buildAliStream
+			protocols.alis = buildAliStream
 		}
 	}
 

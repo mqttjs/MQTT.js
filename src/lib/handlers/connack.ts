@@ -1,8 +1,8 @@
 import { type IConnackPacket } from 'mqtt-packet'
-import { ReasonCodes } from './ack'
-import TopicAliasSend from '../topic-alias-send'
-import { ErrorWithReasonCode, type PacketPump } from '../shared'
-import type MqttClient from '../client'
+import { ReasonCodes } from './ack.js'
+import TopicAliasSend from '../topic-alias-send.js'
+import { ErrorWithReasonCode, type PacketPump } from '../shared.js'
+import type MqttClient from '../client.js'
 
 // The pump callback is not among the arguments on purpose: `handlers/index.ts`
 // calls it once this handler returns, in a `finally`, so every path here is

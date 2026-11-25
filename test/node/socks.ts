@@ -1,7 +1,7 @@
 import assert from 'assert'
 import { type AddressInfo, createServer, type Server, type Socket } from 'net'
 import { describe, it, mock, afterEach, beforeEach } from 'node:test'
-import openSocks from 'src/lib/connect/socks'
+import openSocks from '../../src/lib/connect/socks.js'
 
 type State5 = 'new' | 'id' | 'connect'
 

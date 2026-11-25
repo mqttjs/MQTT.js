@@ -1,5 +1,10 @@
 {
     "extends": "./tsconfig.json",
+    "compilerOptions": {
+        // package.json is imported from outside src; keep build/ flat and the build info inside it
+        "rootDir": "./src",
+        "tsBuildInfoFile": "./build/tsconfig.build.tsbuildinfo"
+    },
     "exclude": ["node_modules", "test", "dist", "build", "example.ts"],
   }
   

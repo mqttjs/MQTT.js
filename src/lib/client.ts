@@ -3,13 +3,13 @@
  */
 import mqttPacket, {
 	type IAuthPacket,
-	IConnackPacket,
-	IDisconnectPacket,
-	IPublishPacket,
+	type IConnackPacket,
+	type IDisconnectPacket,
+	type IPublishPacket,
 	type ISubscribePacket,
 	type ISubscription,
 	type IUnsubscribePacket,
-	Packet,
+	type Packet,
 	type QoS,
 	type ISubackPacket,
 	type IConnectPacket,
@@ -19,14 +19,14 @@ import clone from 'rfdc/default'
 import _debug from 'debug'
 import type { ClientOptions } from 'ws'
 import { type ClientRequestArgs } from 'http'
-import * as validations from './validations'
-import Store, { type IStore } from './store'
-import handlePacket from './handlers'
-import { ReasonCodes, type PendingCommand } from './handlers/ack'
+import * as validations from './validations.js'
+import Store, { type IStore } from './store.js'
+import handlePacket from './handlers/index.js'
+import { ReasonCodes, type PendingCommand } from './handlers/ack.js'
 import DefaultMessageIdProvider, {
 	type IMessageIdProvider,
-} from './default-message-id-provider'
-import TopicAliasRecv from './topic-alias-recv'
+} from './default-message-id-provider.js'
+import TopicAliasRecv from './topic-alias-recv.js'
 import {
 	type DoneCallback,
 	ErrorWithReasonCode,
@@ -39,12 +39,12 @@ import {
 	type TimerVariant,
 	type VoidCallback,
 	nextTick,
-} from './shared'
-import type TopicAliasSend from './topic-alias-send'
-import { TypedEventEmitter } from './TypedEmitter'
-import KeepaliveManager from './KeepaliveManager'
-import isBrowser, { isWebWorker } from './is-browser'
-import { type Timer } from './get-timer'
+} from './shared.js'
+import type TopicAliasSend from './topic-alias-send.js'
+import { TypedEventEmitter } from './TypedEmitter.js'
+import KeepaliveManager from './KeepaliveManager.js'
+import isBrowser, { isWebWorker } from './is-browser.js'
+import { type Timer } from './get-timer.js'
 
 const setImmediate =
 	globalThis.setImmediate ||
@@ -413,7 +413,7 @@ export interface IClientUnsubscribeProperties {
 	properties?: IUnsubscribePacket['properties']
 }
 
-export { IConnackPacket, IDisconnectPacket, IPublishPacket, Packet }
+export type { IConnackPacket, IDisconnectPacket, IPublishPacket, Packet }
 export type OnConnectCallback = (packet: IConnackPacket) => void
 export type OnDisconnectCallback = (packet: IDisconnectPacket) => void
 export type ClientSubscribeCallback = (

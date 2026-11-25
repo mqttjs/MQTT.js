@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 
-import path from 'path'
+import { fileURLToPath } from 'url'
 import fs from 'fs'
 import minimist from 'minimist'
 import help from 'help-me'
-import { type IClientOptions } from 'src/lib/client'
-import { connect } from '../mqtt'
+import { type IClientOptions } from '../lib/client.js'
+import { connect } from '../mqtt.js'
 
 const helpMe = help({
-	dir: path.join(__dirname, '../../', 'help'),
+	dir: fileURLToPath(new URL('../../help', import.meta.url)),
 })
 
 export default function start(args: string[]) {
@@ -141,6 +141,6 @@ export default function start(args: string[]) {
 	})
 }
 
-if (require.main === module) {
+if (import.meta.main) {
 	start(process.argv.slice(2))
 }

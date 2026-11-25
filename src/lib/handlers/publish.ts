@@ -4,8 +4,8 @@ import {
 	type DoneCallback,
 	type PacketHandler,
 	type PacketPump,
-} from '../shared'
-import type MqttClient from '../client'
+} from '../shared.js'
+import type MqttClient from '../client.js'
 
 const validReasonCodes = [0, 16, 128, 131, 135, 144, 145, 151, 153]
 

@@ -1,12 +1,12 @@
 import http from 'http'
-import WebSocket from 'ws'
+import WebSocket, { WebSocketServer, createWebSocketStream } from 'ws'
 import MQTTConnection from 'mqtt-connection'
 import assert from 'assert'
 import { after, describe, it } from 'node:test'
-import abstractClientTests from './abstract_client'
-import getPorts from './helpers/port_list'
-import { MqttServerNoWait } from './server'
-import mqtt, { type IClientOptions } from '../../src'
+import abstractClientTests from './abstract_client.js'
+import getPorts from './helpers/port_list.js'
+import { MqttServerNoWait } from './server.js'
+import mqtt, { type IClientOptions } from '../../src/index.js'
 
 const ports = getPorts(4)
 
@@ -14,7 +14,7 @@ const port = 9999
 const httpServer = http.createServer()
 let lastProcotols = new Set<string>()
 function attachWebsocketServer(httpServer2) {
-	const webSocketServer = new WebSocket.Server({
+	const webSocketServer = new WebSocketServer({
 		server: httpServer2,
 		handleProtocols: (protocols: Set<string>, request: any) => {
 			lastProcotols = protocols
@@ -24,7 +24,7 @@ function attachWebsocketServer(httpServer2) {
 	})
 
 	webSocketServer.on('connection', (ws) => {
-		const stream = WebSocket.createWebSocketStream(ws)
+		const stream = createWebSocketStream(ws)
 		const connection = new MQTTConnection(stream)
 		connection.protocol = ws.protocol
 		httpServer2.emit('client', connection)

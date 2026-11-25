@@ -1,6 +1,6 @@
 import { assert } from 'chai'
 import { describe, it } from 'node:test'
-import { NumberAllocator } from '../../src/lib/number-allocator'
+import { NumberAllocator } from '../../src/lib/number-allocator.js'
 
 describe('NumberAllocator', () => {
 	describe('alloc', () => {

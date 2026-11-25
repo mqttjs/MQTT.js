@@ -1,7 +1,7 @@
-import type { MqttClient } from 'src'
+import type { MqttClient } from '../../../src/index.js'
 import { randomUUID } from 'node:crypto'
 import { isAsyncFunction } from 'node:util/types'
-import type serverBuilder from '../server_helpers_for_client_tests'
+import type serverBuilder from '../server_helpers_for_client_tests.js'
 
 type ServerBuilderInstance = ReturnType<typeof serverBuilder>
 

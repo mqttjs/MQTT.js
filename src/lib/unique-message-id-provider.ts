@@ -1,5 +1,5 @@
-import { NumberAllocator } from './number-allocator'
-import { type IMessageIdProvider } from './default-message-id-provider'
+import { NumberAllocator } from './number-allocator.js'
+import { type IMessageIdProvider } from './default-message-id-provider.js'
 
 /**
  * UniqueMessageAllocator constructor

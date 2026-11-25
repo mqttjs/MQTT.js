@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, it } from 'node:test'
 import { assert } from 'chai'
 import { useFakeTimers, spy, stub } from 'sinon'
-import { type MqttClient } from 'src'
-import KeepaliveManager from '../../src/lib/KeepaliveManager'
+import { type MqttClient } from '../../src/index.js'
+import KeepaliveManager from '../../src/lib/KeepaliveManager.js'
 
 function mockedClient(keepalive: number) {
 	return {

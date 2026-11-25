@@ -1,6 +1,6 @@
 import { type IAuthPacket } from 'mqtt-packet'
-import { ErrorWithReasonCode, type PacketPump } from '../shared'
-import type MqttClient from '../client'
+import { ErrorWithReasonCode, type PacketPump } from '../shared.js'
+import type MqttClient from '../client.js'
 
 /** MQTT 5 reason code 0x82 */
 const PROTOCOL_ERROR = 130

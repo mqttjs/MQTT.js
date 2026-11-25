@@ -21,7 +21,7 @@ This runs the Node tests (`npm run test:node`). Browser tests run separately wit
 
 ### Running specific tests
 
-For example, you can run `node -r esbuild-register --test test/node/keepaliveManager.ts`
+For example, you can run `node --import tsx --test test/node/keepaliveManager.ts`
 
 ### Browser
 
@@ -58,13 +58,13 @@ The tests are located in the `test/node` directory. `npm run unit-test:node` run
 When developing/debugging tests it's useful to run the tests for a single file/test, for example:
 
 ```sh
-node -r esbuild-register --test --inspect test/node/client.ts
+node --import tsx --test --inspect test/node/client.ts
 ```
 
 If you want to run tests using a filter, you can use the `--test-name-pattern` flag:
 
 ```sh
-node -r esbuild-register --test --test-name-pattern="should resend in-flight QoS" --inspect test/node/client.ts
+node --import tsx --test --test-name-pattern="should resend in-flight QoS" --inspect test/node/client.ts
 ```
 
 You can also run tests in watch mode using the `--watch` flag.

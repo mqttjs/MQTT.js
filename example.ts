@@ -1,4 +1,4 @@
-import mqtt from './src/index'
+import mqtt from './src/index.js'
 
 const client = mqtt.connect('mqtt://broker.hivemq.com', {
 	keepalive: 3,

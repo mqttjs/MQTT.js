@@ -1,9 +1,11 @@
-const { build } = require('esbuild')
-const { polyfillNode } = require('esbuild-plugin-polyfill-node');
-const { rimraf } = require('rimraf')
-const fs = require('fs')
-const path = require('path')
-const { version } = require('./package.json');
+import { build } from 'esbuild'
+import { polyfillNode } from 'esbuild-plugin-polyfill-node'
+import { rimraf } from 'rimraf'
+import fs from 'fs'
+import path from 'path'
+import pkg from './package.json' with { type: 'json' }
+
+const { version } = pkg
 
 const outdir = 'dist'
 const entry = './build/index.js'
@@ -11,7 +13,7 @@ const entry = './build/index.js'
 /**
  * @type {import('esbuild').BuildOptions}
  */
-const options = {
+export const options = {
     entryPoints: [entry],
     bundle: true,
     outfile: `${outdir}/mqtt.js`,
@@ -23,7 +25,7 @@ const options = {
         {
             name: 'resolve-process',
             setup(build) {
-                const shim = path.join(__dirname, 'scripts/browser-process.js')
+                const shim = path.join(import.meta.dirname, 'scripts/browser-process.js')
                 // `process` and readable-stream's `process/` both go to the shim; the shim's own import falls through to jspm
                 build.onResolve({ filter: /^(node:)?process\/?$/ }, args => {
                     if (args.importer === shim) return
@@ -61,7 +63,8 @@ const options = {
             name: 'resolve-socks',
             setup(build) {
                 // socks is not supported in the browser and adds several 100kb to the build, so stub it
-                build.onResolve({ filter: /socks$/ }, args => {
+                // also matches our own ./socks.js wrapper, which pulls in node-only stream/assert/dns
+                build.onResolve({ filter: /socks(\.js)?$/ }, args => {
                     return {
                         path: args.path,
                         namespace: 'socks-stub'
@@ -80,25 +83,12 @@ const options = {
     ],
 }
 
-// The entry is CommonJS, so without this wrapper the ESM bundle only gets a default export (#2074)
-function esmOptions() {
-    // `default` is exported on its own below, and `export const { default }` is a syntax error
-    const names = Object.keys(require(entry)).filter(name => name !== 'default')
+export function esmOptions() {
     return {
         ...options,
-        entryPoints: undefined,
         outfile: `${outdir}/mqtt.esm.js`,
         format: 'esm',
         minify: true,
-        stdin: {
-            resolveDir: __dirname,
-            contents: `
-                // require, not import, so the default export stays the module.exports object
-                const mqtt = require('${entry}')
-                export default mqtt
-                export const { ${names.join(', ')} } = mqtt
-            `,
-        },
     }
 }
 
@@ -120,11 +110,9 @@ async function run() {
     }
 }
 
-if (require.main === module) {
+if (import.meta.main) {
     run().catch((e) => {
         console.error(e)
         process.exit(1)
     })
 }
-
-module.exports = { options, esmOptions }

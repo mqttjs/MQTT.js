@@ -1,12 +1,15 @@
-const aedes = require('aedes')()
-const httpServer = require('http').createServer()
-const WebSocket = require('ws')
+import Aedes from 'aedes'
+import http from 'http'
+import { WebSocketServer, createWebSocketStream } from 'ws'
+
+const aedes = Aedes()
+const httpServer = http.createServer()
 const wsPort = 8080
 
 // Here we are creating the Websocket Server that is using the HTTP Server...
-const wss = new WebSocket.Server({ server: httpServer })
+const wss = new WebSocketServer({ server: httpServer })
 wss.on('connection', function connection (ws) {
-  const duplex = WebSocket.createWebSocketStream(ws)
+  const duplex = createWebSocketStream(ws)
   aedes.handle(duplex)
 })
 

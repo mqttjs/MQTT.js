@@ -2,22 +2,22 @@ import path from 'path'
 import fs from 'fs'
 import { assert } from 'chai'
 import { describe, it, after } from 'node:test'
-import mqtt from '../../src'
-import abstractClientTests from './abstract_client'
-import { MqttSecureServer, type MqttServerListener } from './server'
+import mqtt from '../../src/index.js'
+import abstractClientTests from './abstract_client.js'
+import { MqttSecureServer, type MqttServerListener } from './server.js'
 import 'should'
-import getPorts from './helpers/port_list'
+import getPorts from './helpers/port_list.js'
 
 const ports = getPorts(5)
 
 const port = ports.PORT
 const sniPort = ports.PORTAND40
-const KEY = path.join(__dirname, 'helpers', 'tls-key.pem')
-const CERT = path.join(__dirname, 'helpers', 'tls-cert.pem')
-const WRONG_CERT = path.join(__dirname, 'helpers', 'wrong-cert.pem')
+const KEY = path.join(import.meta.dirname, 'helpers', 'tls-key.pem')
+const CERT = path.join(import.meta.dirname, 'helpers', 'tls-cert.pem')
+const WRONG_CERT = path.join(import.meta.dirname, 'helpers', 'wrong-cert.pem')
 // Certificate valid only for `mqtt.example.test` (not localhost / 127.0.0.1).
-const SNI_KEY = path.join(__dirname, 'helpers', 'sni-key.pem')
-const SNI_CERT = path.join(__dirname, 'helpers', 'sni-cert.pem')
+const SNI_KEY = path.join(import.meta.dirname, 'helpers', 'sni-key.pem')
+const SNI_CERT = path.join(import.meta.dirname, 'helpers', 'sni-cert.pem')
 const SNI_HOSTNAME = 'mqtt.example.test'
 
 const serverListener: MqttServerListener = (client) => {

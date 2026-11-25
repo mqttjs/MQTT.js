@@ -9,13 +9,13 @@ import { Duplex } from 'readable-stream'
 import Connection from 'mqtt-connection'
 import util from 'util'
 import _debug from 'debug'
-import { type IClientOptions } from 'src/lib/client'
+import { type IClientOptions } from '../../src/lib/client.js'
 import { describe, it, after } from 'node:test'
-import getPorts from './helpers/port_list'
-import serverBuilder from './server_helpers_for_client_tests'
-import { MqttServer } from './server'
-import abstractClientTests from './abstract_client'
-import mqtt, { MQTTJS_VERSION } from '../../src'
+import getPorts from './helpers/port_list.js'
+import serverBuilder from './server_helpers_for_client_tests.js'
+import { MqttServer } from './server.js'
+import abstractClientTests from './abstract_client.js'
+import mqtt, { MQTTJS_VERSION } from '../../src/index.js'
 
 const debug = _debug('mqttjs:client-test')
 
@@ -233,13 +233,17 @@ describe('MqttClient', () => {
 				timeout: 5000,
 			},
 			function _test(t, done) {
-				const args = ['-r', 'ts-node/register']
+				const args = ['--import', 'tsx']
 
 				if (process.env.DEBUG_SERVER) {
 					args.unshift('--inspect')
 				}
 				const innerServer = fork(
-					path.join(__dirname, 'helpers', 'server_process.ts'),
+					path.join(
+						import.meta.dirname,
+						'helpers',
+						'server_process.ts',
+					),
 					{
 						execArgv: args,
 					},

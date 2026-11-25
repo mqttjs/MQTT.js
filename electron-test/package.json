@@ -23,7 +23,7 @@
     "@wdio/mocha-framework": "9.9.0",
     "@wdio/spec-reporter": "9.9.0",
     "aedes-cli": "0.8.0",
-    "electron": "34.2.0",
+    "electron": "39.8.10",
     "typescript": "^5.4.5",
     "wdio-electron-service": "8.0.0"
   },

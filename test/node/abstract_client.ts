@@ -13,22 +13,22 @@ import {
 	type ISubackPacket,
 	type QoS,
 } from 'mqtt-packet'
-import { type DoneCallback, ErrorWithReasonCode } from 'src/lib/shared'
+import { type DoneCallback, ErrorWithReasonCode } from '../../src/lib/shared.js'
 import { fail } from 'assert'
 import { describe, it, beforeEach, afterEach, after } from 'node:test'
-import Store from '../../src/lib/store'
-import serverBuilderFn from './server_helpers_for_client_tests'
-import handlePubrel from '../../src/lib/handlers/pubrel'
-import TeardownHelper from './helpers/TeardownHelper'
-import handle from '../../src/lib/handlers/index'
-import handlePublish from '../../src/lib/handlers/publish'
+import Store from '../../src/lib/store.js'
+import serverBuilderFn from './server_helpers_for_client_tests.js'
+import handlePubrel from '../../src/lib/handlers/pubrel.js'
+import TeardownHelper from './helpers/TeardownHelper.js'
+import handle from '../../src/lib/handlers/index.js'
+import handlePublish from '../../src/lib/handlers/publish.js'
 import mqtt, {
 	type IClientOptions,
 	type IClientPublishOptions,
 	type IClientSubscribeOptions,
 	type ISubscriptionMap,
 	type ISubscriptionRequest,
-} from '../../src'
+} from '../../src/index.js'
 
 /**
  * These tests try to be consistent with names for servers (brokers) and clients,

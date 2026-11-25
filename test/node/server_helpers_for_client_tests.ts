@@ -4,13 +4,17 @@ import path from 'path'
 import fs from 'fs'
 
 import http from 'http'
-import WebSocket from 'ws'
+import { WebSocketServer, createWebSocketStream } from 'ws'
 import MQTTConnection from 'mqtt-connection'
 import { type Server } from 'net'
-import { MqttServer, MqttSecureServer, type MqttServerListener } from './server'
+import {
+	MqttServer,
+	MqttSecureServer,
+	type MqttServerListener,
+} from './server.js'
 
-const KEY = path.join(__dirname, 'helpers', 'tls-key.pem')
-const CERT = path.join(__dirname, 'helpers', 'tls-cert.pem')
+const KEY = path.join(import.meta.dirname, 'helpers', 'tls-key.pem')
+const CERT = path.join(import.meta.dirname, 'helpers', 'tls-cert.pem')
 
 const debug = _debug('mqttjs:server_helpers_for_client_tests')
 
@@ -140,14 +144,14 @@ export default function serverBuilder(
 	}
 	if (protocol === 'ws') {
 		const attachWebsocketServer = (server) => {
-			const webSocketServer = new WebSocket.Server({
+			const webSocketServer = new WebSocketServer({
 				server,
 				perMessageDeflate: false,
 			})
 
 			webSocketServer.on('connection', (ws) => {
 				// server.connectionList.push(ws)
-				const stream = WebSocket.createWebSocketStream(ws)
+				const stream = createWebSocketStream(ws)
 				const connection = new MQTTConnection(stream)
 				connection.protocol = ws.protocol
 				server.emit('client', connection)

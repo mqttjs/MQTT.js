@@ -1,6 +1,4 @@
-'use strict'
-
-const mqtt = require('../../')
+import mqtt from 'mqtt'
 
 const clientId = 'mqttjs_' + Math.random().toString(16).substr(2, 8)
 

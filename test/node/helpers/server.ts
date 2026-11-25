@@ -1,5 +1,5 @@
 import fs from 'fs'
-import { MqttServer, MqttSecureServer } from '../server'
+import { MqttServer, MqttSecureServer } from '../server.js'
 
 export function init_server(PORT: number) {
 	const server = new MqttServer((client) => {
