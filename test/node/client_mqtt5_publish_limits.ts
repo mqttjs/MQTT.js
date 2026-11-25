@@ -45,6 +45,20 @@ function publish(
 	})
 }
 
+// MqttClient is a typed emitter, which `events.once` does not accept
+function connected(client: MqttClient) {
+	return new Promise<void>((resolve) => {
+		client.once('connect', () => resolve())
+	})
+}
+
+async function stop(client: MqttClient, server: MqttServer) {
+	await new Promise<void>((resolve) => {
+		client.end(true, () => resolve())
+	})
+	server.close()
+}
+
 const cases: {
 	name: string
 	properties: IConnackPacket['properties']
@@ -105,7 +119,7 @@ describe('MQTT 5.0 outgoing PUBLISH limits from CONNACK', () => {
 					messageIdProvider,
 				})
 				try {
-					await once(client, 'connect')
+					await connected(client)
 
 					const err = await publish(
 						client,
@@ -138,10 +152,7 @@ describe('MQTT 5.0 outgoing PUBLISH limits from CONNACK', () => {
 						'the refused PUBLISH never reached the server',
 					)
 				} finally {
-					await new Promise<void>((resolve) => {
-						client.end(true, () => resolve())
-					})
-					server.close()
+					await stop(client, server)
 				}
 			},
 		)
@@ -160,7 +171,7 @@ describe('MQTT 5.0 outgoing PUBLISH limits from CONNACK', () => {
 				reconnectPeriod: 0,
 			})
 			try {
-				await once(client, 'connect')
+				await connected(client)
 				const err = await publish(
 					client,
 					'limits/refused',
@@ -181,10 +192,7 @@ describe('MQTT 5.0 outgoing PUBLISH limits from CONNACK', () => {
 					['limits/ok'],
 				)
 			} finally {
-				await new Promise<void>((resolve) => {
-					client.end(true, () => resolve())
-				})
-				server.close()
+				await stop(client, server)
 			}
 		},
 	)
@@ -196,16 +204,19 @@ describe('MQTT 5.0 outgoing PUBLISH limits from CONNACK', () => {
 			const { server, port, publishes } = await startServer({
 				maximumQoS: 1,
 			})
+			const messageIdProvider = new UniqueMessageIdProvider()
 			const client = mqtt.connect({
 				port,
 				protocolVersion: 5,
 				reconnectPeriod: 0,
+				messageIdProvider,
 			})
 			try {
 				// published before the CONNACK: stored, then sent after it
 				const refused = publish(client, 'limits/refused', 'x', {
 					qos: 2,
 				})
+				const refusedId = client.getLastMessageId()
 				const ok = publish(client, 'limits/ok', 'ok', { qos: 1 })
 				assert.match(
 					(await refused)?.message,
@@ -213,15 +224,152 @@ describe('MQTT 5.0 outgoing PUBLISH limits from CONNACK', () => {
 				)
 				assert.isNotOk(await ok)
 				assert.deepEqual(client.outgoing, {})
+				const stored = await new Promise((resolve) => {
+					client.outgoingStore.get({ messageId: refusedId }, (err) =>
+						resolve(err),
+					)
+				})
+				assert.instanceOf(stored, Error, 'store entry removed')
+				assert.isTrue(
+					messageIdProvider.register(refusedId),
+					'message id freed',
+				)
 				assert.deepEqual(
 					publishes.map((p) => p.topic.toString()),
 					['limits/ok'],
 				)
 			} finally {
-				await new Promise<void>((resolve) => {
-					client.end(true, () => resolve())
+				await stop(client, server)
+			}
+		},
+	)
+
+	it(
+		'calls back once for a refused publish queued during the store replay',
+		testOptions,
+		async () => {
+			const { server, port, publishes } = await startServer({
+				maximumQoS: 1,
+			})
+			const client = mqtt.connect({
+				port,
+				protocolVersion: 5,
+				reconnectPeriod: 0,
+			})
+			try {
+				let calls = 0
+				const queued = new Promise<Error | undefined>((resolve) => {
+					// refused during the replay, so this publish is queued
+					// until the replay ends
+					client.publish('limits/a', 'x', { qos: 2 }, () => {
+						client.publish('limits/b', 'x', { qos: 2 }, (err) => {
+							calls++
+							resolve(err)
+						})
+					})
 				})
-				server.close()
+				assert.match(
+					(await queued)?.message,
+					/QoS 2 exceeds the server Maximum QoS 1/,
+				)
+				assert.isNotOk(
+					await publish(client, 'limits/ok', 'ok', { qos: 1 }),
+				)
+				assert.strictEqual(calls, 1)
+				assert.deepEqual(client.outgoing, {})
+				assert.deepEqual(
+					publishes.map((p) => p.topic.toString()),
+					['limits/ok'],
+				)
+			} finally {
+				await stop(client, server)
+			}
+		},
+	)
+
+	const allowed: {
+		name: string
+		properties: IConnackPacket['properties']
+		opts: mqtt.IClientPublishOptions
+		topic?: string
+		payload: string
+	}[] = [
+		{
+			name: 'RETAIN 1 when CONNACK leaves out Retain Available',
+			properties: {},
+			opts: { qos: 1, retain: true },
+			payload: 'x',
+		},
+		{
+			// 1 (header) + 1 (remaining length) + 2 + 5 (topic) + 1 (properties
+			// length) + 118 (payload) = 128
+			name: 'a packet exactly at the server Maximum Packet Size',
+			properties: { maximumPacketSize: 128 },
+			opts: { qos: 0 },
+			topic: 'big/t',
+			payload: 'x'.repeat(118),
+		},
+	]
+
+	for (const c of allowed) {
+		it(`sends ${c.name}`, testOptions, async () => {
+			const { server, port, publishes } = await startServer(c.properties)
+			const client = mqtt.connect({
+				port,
+				protocolVersion: 5,
+				reconnectPeriod: 0,
+			})
+			try {
+				await connected(client)
+				assert.isNotOk(
+					await publish(
+						client,
+						c.topic ?? 'limits/ok',
+						c.payload,
+						c.opts,
+					),
+				)
+				// a QoS 0 callback comes before the server has read the packet
+				assert.isNotOk(
+					await publish(client, 'limits/last', 'x', { qos: 1 }),
+				)
+				assert.strictEqual(publishes.length, 2)
+			} finally {
+				await stop(client, server)
+			}
+		})
+	}
+
+	it(
+		'sizes a publish that reuses a topic alias without its topic',
+		testOptions,
+		async () => {
+			const topic = 'long/topic/name/xxxxxx'
+			const { server, port, publishes } = await startServer({
+				maximumPacketSize: 64,
+				topicAliasMaximum: 5,
+			})
+			const client = mqtt.connect({
+				port,
+				protocolVersion: 5,
+				reconnectPeriod: 0,
+				autoAssignTopicAlias: true,
+			})
+			try {
+				await connected(client)
+				assert.isNotOk(await publish(client, topic, 'x', { qos: 1 }))
+				// with the alias: 1 + 1 + 2 + 0 (topic) + 1 + 3 (alias) + 56 = 64;
+				// with the topic it would be 83
+				assert.isNotOk(
+					await publish(client, topic, 'x'.repeat(56), { qos: 0 }),
+				)
+				assert.isNotOk(
+					await publish(client, 'limits/last', 'x', { qos: 1 }),
+				)
+				assert.strictEqual(publishes.length, 3)
+				assert.strictEqual(publishes[1].topic.toString(), '')
+			} finally {
+				await stop(client, server)
 			}
 		},
 	)
@@ -241,7 +389,7 @@ describe('MQTT 5.0 outgoing PUBLISH limits from CONNACK', () => {
 				autoAssignTopicAlias: true,
 			})
 			try {
-				await once(client, 'connect')
+				await connected(client)
 				// topic + payload fill the packet to 128 bytes without an alias:
 				// 1 (header) + 1 (remaining length) + 2 + 5 (topic) + 1 (properties
 				// length) + 118 (payload) = 128; the alias adds 3, and 1 more for
@@ -256,10 +404,7 @@ describe('MQTT 5.0 outgoing PUBLISH limits from CONNACK', () => {
 				assert.strictEqual(publishes.length, 1)
 				assert.strictEqual(publishes[0].topic.toString(), 'big/t')
 			} finally {
-				await new Promise<void>((resolve) => {
-					client.end(true, () => resolve())
-				})
-				server.close()
+				await stop(client, server)
 			}
 		},
 	)
