@@ -2479,6 +2479,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			return
 		}
 		delete this.outgoing[messageId]
+		this._releaseSendQuota(messageId)
 		// the store may not hold the packet yet: its error is not the one to report
 		this.outgoingStore.del({ messageId }, () => {
 			this.messageIdProvider.deallocate(messageId)
@@ -2557,6 +2558,14 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			this._outgoingInFlightIds.add(messageId)
 			// already stored by `_holdForSendQuota`, so no cbStorePut
 			this._sendPacket(held.packet, held.cb, undefined, held.noStore)
+		}
+	}
+
+	/** Frees the send quota slot or held entry of a publish that is done. */
+	private _releaseSendQuota(messageId: number) {
+		this._publishesAwaitingQuota.delete(messageId)
+		if (this._outgoingInFlightIds.delete(messageId)) {
+			this._sendPublishesAwaitingQuota()
 		}
 	}
 
@@ -3064,11 +3073,8 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		cb: PacketCallback,
 	) {
 		delete this.outgoing[messageId]
-		// PUBACK, PUBCOMP, PUBREC >= 0x80 or a failed publish: free its slot
-		this._publishesAwaitingQuota.delete(messageId)
-		if (this._outgoingInFlightIds.delete(messageId)) {
-			this._sendPublishesAwaitingQuota()
-		}
+		// PUBACK, PUBCOMP, PUBREC >= 0x80 or a removed message
+		this._releaseSendQuota(messageId)
 		this.outgoingStore.del({ messageId }, (err, packet) => {
 			cb(err, packet)
 			this.messageIdProvider.deallocate(messageId)
