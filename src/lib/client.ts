@@ -586,6 +586,25 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	/** `properties.receiveMaximum`, validated and latched at construction */
 	private _receiveMaximum: number
 
+	/**
+	 * MQTT 5 send quota (section 4.9): message ids of the QoS 1/2 PUBLISH
+	 * packets written on this connection and not yet acknowledged by PUBACK,
+	 * PUBCOMP or a PUBREC >= 0x80. Its size is bounded by the server Receive
+	 * Maximum [MQTT-3.3.4-7]. Cleared per network connection, since the quota
+	 * restarts from the next CONNACK [MQTT-4.9.0-1].
+	 */
+	private _outgoingInFlightIds: Set<number>
+
+	/**
+	 * QoS 1/2 PUBLISH packets waiting for a send quota slot, in publish order.
+	 * They are already in `outgoingStore`, so dropping this on close loses
+	 * nothing: the store replays them on the next connection.
+	 */
+	private _publishesAwaitingQuota: Map<
+		number,
+		{ packet: IPublishPacket; cb: DoneCallback; noStore: boolean }
+	>
+
 	private _deferredReconnect: () => void
 
 	/**
@@ -710,6 +729,9 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		// Inbound QoS 2 message ids held in `incomingStore`, for MQTT 5 Receive
 		// Maximum accounting
 		this._incomingQoS2Ids = new Set()
+
+		this._outgoingInFlightIds = new Set()
+		this._publishesAwaitingQuota = new Map()
 
 		// Latch the quota now: reading it per packet would let a caller mutating
 		// `options` disable the check, and `receiveMaximum: 0` (rejects every
@@ -841,6 +863,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			// the broker properties describe the connection that just went
 			// away, they must not leak into the next one
 			this._serverProperties = undefined
+			this._resetSendQuota()
 
 			if (this.topicAliasRecv) {
 				this.topicAliasRecv.clear()
@@ -1047,6 +1070,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		// The old stream's `close` normally clears these, but an explicit
 		// `connect()`/`reconnect()` can run before it fires.
 		this._serverProperties = undefined
+		this._resetSendQuota()
 
 		if (this.disconnected && !this.reconnecting) {
 			this.incomingStore = this.options.incomingStore || new Store()
@@ -2457,6 +2481,82 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		})
 	}
 
+	/**
+	 * MQTT 5 flow control (section 4.9): takes a send quota slot for a QoS 1/2
+	 * PUBLISH, or holds it when none is free [MQTT-3.3.4-7]. A held packet is
+	 * put in `outgoingStore` as if it were sent offline, and is written by
+	 * `_sendPublishesAwaitingQuota` when an ack frees a slot. QoS 0 is never
+	 * held [MQTT-4.9.0-3].
+	 *
+	 * @returns `true` when the packet is held
+	 */
+	private _holdForSendQuota(
+		packet: Packet,
+		cb: DoneCallback,
+		cbStorePut: DoneCallback,
+		noStore?: boolean,
+	): boolean {
+		if (
+			this.options.protocolVersion !== 5 ||
+			!this.connected ||
+			packet.cmd !== 'publish' ||
+			packet.qos === 0
+		) {
+			return false
+		}
+		const { messageId } = packet
+		// a slot is per message id: a re-send or a released packet has one
+		if (this._outgoingInFlightIds.has(messageId)) {
+			return false
+		}
+		// 0 is a Protocol Error in CONNACK; enforcing it would stall every publish
+		const quota =
+			this._serverProperties?.receiveMaximum || MAX_RECEIVE_MAXIMUM
+		// once one packet waits, later ones wait behind it to keep their order
+		if (
+			this._publishesAwaitingQuota.size === 0 &&
+			this._outgoingInFlightIds.size < quota
+		) {
+			this._outgoingInFlightIds.add(messageId)
+			return false
+		}
+		this.log(
+			'_holdForSendQuota :: send quota %d used, holding publish %d',
+			quota,
+			messageId,
+		)
+		this._publishesAwaitingQuota.set(messageId, {
+			packet,
+			cb,
+			noStore: !!noStore,
+		})
+		if (!noStore) {
+			this._storePacket(packet, cb, cbStorePut)
+		}
+		return true
+	}
+
+	/** Writes the held publishes, in order, while the send quota has room. */
+	private _sendPublishesAwaitingQuota() {
+		const quota =
+			this._serverProperties?.receiveMaximum || MAX_RECEIVE_MAXIMUM
+		for (const [messageId, held] of this._publishesAwaitingQuota) {
+			if (this._outgoingInFlightIds.size >= quota) {
+				return
+			}
+			this._publishesAwaitingQuota.delete(messageId)
+			this._outgoingInFlightIds.add(messageId)
+			// already stored by `_holdForSendQuota`, so no cbStorePut
+			this._sendPacket(held.packet, held.cb, undefined, held.noStore)
+		}
+	}
+
+	/** The send quota restarts with each connection [MQTT-4.9.0-1]. */
+	private _resetSendQuota() {
+		this._outgoingInFlightIds.clear()
+		this._publishesAwaitingQuota.clear()
+	}
+
 	private _noop(err?: Error) {
 		this.log('noop ::', err)
 	}
@@ -2505,8 +2605,15 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		cb = cb || this.noop
 
 		// check the limits first: a refused packet must not register an alias
-		const err =
-			this._checkOutgoingPublish(packet) || this._applyTopicAlias(packet)
+		let err = this._checkOutgoingPublish(packet)
+		if (!err) {
+			// before the alias too: a held packet must not register an alias
+			// that packets written ahead of it would then use
+			if (this._holdForSendQuota(packet, cb, cbStorePut, noStore)) {
+				return
+			}
+			err = this._applyTopicAlias(packet)
+		}
 		if (err) {
 			this._failPublish(packet as IPublishPacket, err, cb)
 			return
@@ -2948,6 +3055,11 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		cb: PacketCallback,
 	) {
 		delete this.outgoing[messageId]
+		// PUBACK, PUBCOMP, PUBREC >= 0x80 or a failed publish: free its slot
+		this._publishesAwaitingQuota.delete(messageId)
+		if (this._outgoingInFlightIds.delete(messageId)) {
+			this._sendPublishesAwaitingQuota()
+		}
 		this.outgoingStore.del({ messageId }, (err, packet) => {
 			cb(err, packet)
 			this.messageIdProvider.deallocate(messageId)
