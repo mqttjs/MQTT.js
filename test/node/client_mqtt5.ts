@@ -120,7 +120,9 @@ describe('MQTT 5.0', () => {
 		},
 	)
 
-	for (const qos of [0, 1, 2] as const) {
+	// QoS 0 is covered by 'topic should be complemented on receive'. QoS 2
+	// emits from the incoming store on PUBREL, so it needs its own case.
+	for (const qos of [1, 2] as const) {
 		it(
 			`aliased QoS ${qos} PUBLISH with an empty topic gets the alias topic`,
 			{
@@ -135,7 +137,7 @@ describe('MQTT 5.0', () => {
 						topicAliasMaximum: 3,
 					},
 				})
-				const received: { topic: string; packetTopic: string }[] = []
+				let received = 0
 				let finished = false
 				const finish = (err?: Error) => {
 					if (finished) return
@@ -177,24 +179,15 @@ describe('MQTT 5.0', () => {
 					}
 				})
 
+				client.on('error', finish)
 				client.on('message', (topic, payload, packet) => {
-					received.push({ topic, packetTopic: packet.topic })
-					if (received.length < 2) return
 					try {
-						assert.deepEqual(received, [
-							{
-								topic: 'alias/topic',
-								packetTopic: 'alias/topic',
-							},
-							{
-								topic: 'alias/topic',
-								packetTopic: 'alias/topic',
-							},
-						])
+						assert.strictEqual(topic, 'alias/topic')
+						assert.strictEqual(packet.topic, 'alias/topic')
 					} catch (err) {
 						return finish(err as Error)
 					}
-					finish()
+					if (++received === 2) finish()
 				})
 			},
 		)
