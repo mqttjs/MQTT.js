@@ -66,14 +66,13 @@ describe('browser bundle', () => {
 	})
 
 	it('exports the same names from the ESM bundle as build/index.js (#2074)', async () => {
-		const esm = esmOptions
 		const { metafile } = await build({
-			...esm,
+			...esmOptions,
 			write: false,
 			metafile: true,
 		})
 
-		const bundleExports = metafile.outputs[esm.outfile].exports
+		const bundleExports = metafile.outputs[esmOptions.outfile].exports
 		// eslint-disable-next-line @typescript-eslint/no-require-imports
 		const cjsExports = Object.keys(require('../../build'))
 		assert.sameMembers(

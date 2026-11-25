@@ -20,7 +20,6 @@ const options = {
     outfile: `${outdir}/mqtt.js`,
     format: 'iife',
     platform: 'browser',
-    target: 'es2022', // what tsc emits for the IIFE and min bundles, so the ESM bundle built from src matches
     globalName: 'mqtt',
     sourcemap: false, // this can be enabled while debugging, if we decide to keep this enabled we should also ship the `src` folder to npm
     plugins: [
