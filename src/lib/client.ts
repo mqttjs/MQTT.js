@@ -2258,7 +2258,10 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			// The original packet is for sending.
 			// The cloned storePacket is for storing to resend on reconnect.
 			// Topic Alias must not be used after disconnected.
-			storePacket = clone(packet)
+			// Written to the wire right after the put: any later send of the
+			// stored copy is a re-delivery (MQTT-3.3.1-1), and the flag tells
+			// `_onConnect` the packet is part of the session state.
+			storePacket = { ...clone(packet), dup: true }
 			err = this._removeTopicAliasAndRecoverTopicName(
 				storePacket as IPublishPacket,
 			)
@@ -2693,6 +2696,16 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			this._discardIncomingQoS2State()
 		}
 
+		// MQTT 5 asked to keep the session and the broker has none
+		// (MQTT-3.2.2-5): the outgoing session state, the QoS 1/2 messages
+		// already sent but not completely acknowledged (section 4.1), is
+		// discarded instead of resent (MQTT-4.4.0-1). MQTT 3.1.1 requires
+		// the resend whatever Session Present says, so it keeps it.
+		const discardOutgoingSession =
+			this.options.protocolVersion === 5 &&
+			!this.options.clean &&
+			packet.sessionPresent !== true
+
 		this.messageIdProvider.clear()
 
 		// before `_setupKeepaliveManager`: `keepalive` only reports the broker
@@ -2752,6 +2765,17 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 					return
 				}
 
+				// `_storeAndSend` stores every PUBLISH it writes with DUP 1, and
+				// a stored PUBREL was always written. A PUBLISH with DUP 0 was
+				// stored while offline and never sent, so it is not session
+				// state: it goes out on any session, as a first delivery.
+				const neverSent = packet2.cmd === 'publish' && !packet2.dup
+
+				if (discardOutgoingSession && !neverSent) {
+					this._discardOutgoingSessionPacket(packet2, storeDeliver)
+					return
+				}
+
 				// Avoid unnecessary stream read operations when disconnected
 				if (!this.disconnecting && !this.reconnectTimer) {
 					cb = this.outgoing[packet2.messageId]
@@ -2774,7 +2798,35 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 					this._packetIdsDuringStoreProcessing[packet2.messageId] =
 						true
 					if (this.messageIdProvider.register(packet2.messageId)) {
-						this._sendPacket(packet2, undefined, undefined, true)
+						if (neverSent) {
+							// DUP 0 on the wire, DUP 1 in the store, as in
+							// `_storeAndSend`. The copy is stored before
+							// `_sendPacket` can apply a Topic Alias to `packet2`.
+							this.outgoingStore.put(
+								{ ...packet2, dup: true },
+								(err) => {
+									if (err) {
+										this.log(
+											'storeDeliver :: put error %o',
+											err,
+										)
+									}
+									this._sendPacket(
+										packet2,
+										undefined,
+										undefined,
+										true,
+									)
+								},
+							)
+						} else {
+							this._sendPacket(
+								packet2,
+								undefined,
+								undefined,
+								true,
+							)
+						}
 					} else {
 						this.log(
 							'messageId: %d has already used.',
@@ -2834,6 +2886,34 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			if (f.callback) f.callback(new Error('Connection closed'))
 		}
 		this._storeProcessingQueue.splice(0)
+	}
+
+	/**
+	 * Drops a stored packet of a session the broker no longer has and fails
+	 * its pending callback, then calls `next`.
+	 */
+	private _discardOutgoingSessionPacket(packet: Packet, next: () => void) {
+		const { messageId } = packet
+		const pending = this.outgoing[messageId]
+		delete this.outgoing[messageId]
+		this._packetIdsDuringStoreProcessing[messageId] = true
+		this.log(
+			'_discardOutgoingSessionPacket :: session not resumed, dropping %s %d',
+			packet.cmd,
+			messageId,
+		)
+		this.outgoingStore.del({ messageId }, () => {
+			if (pending) {
+				pending.cb(
+					new Error(
+						packet.cmd === 'pubrel'
+							? 'Session lost (Session Present 0) before PUBCOMP: the delivery outcome of the QoS 2 message is unknown'
+							: 'Session lost (Session Present 0): the message was sent but not acknowledged, and is not sent again',
+					),
+				)
+			}
+			next()
+		})
 	}
 
 	/**

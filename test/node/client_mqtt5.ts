@@ -3969,6 +3969,176 @@ describe('MQTT 5.0', () => {
 		},
 	)
 
+	// MQTT-3.2.2-5: with Clean Start 0 and Session Present 0, the client
+	// discards its session state. Section 4.1 counts the QoS 1/2 messages sent
+	// but not completely acknowledged in it, not the ones never sent.
+	describe('session lost on reconnect (Session Present 0)', () => {
+		const lostSessionClient = (clientId: string) =>
+			mqtt.connect({
+				host: 'localhost',
+				port: ports.PORTAND103,
+				protocolVersion: 5,
+				clean: false,
+				clientId,
+				reconnectPeriod: 100,
+				properties: { sessionExpiryInterval: 300 },
+			})
+
+		it(
+			'should not resend a sent QoS 1 publish, and should send a publish made while offline',
+			{ timeout: 15000 },
+			function _test(t, done) {
+				const client = lostSessionClient('session-lost-publish')
+				const secondConnection: IPublishPacket[] = []
+				let sentCallbackError: Error | undefined
+				let connections = 0
+				let finished = false
+
+				const finish = (err?: Error) => {
+					if (finished) return
+					finished = true
+					client.end(true, (err1) => {
+						server2.close((err2) => {
+							done(err || err1 || err2)
+						})
+					})
+				}
+
+				const server2 = new MqttServer((serverClient) => {
+					connections++
+					const connection = connections
+					serverClient.on('connect', () => {
+						serverClient.connack({
+							reasonCode: 0,
+							sessionPresent: false,
+						})
+					})
+					serverClient.on('publish', (packet) => {
+						if (connection === 1) {
+							// Drop the connection before the PUBACK.
+							serverClient.destroy()
+							return
+						}
+						secondConnection.push(packet)
+						serverClient.puback({ messageId: packet.messageId })
+					})
+				}).listen(ports.PORTAND103)
+
+				t.after(() => {
+					if (!finished) {
+						client.end(true)
+						server2.close()
+					}
+				})
+
+				client.on('error', () => {})
+				client.once('connect', () => {
+					client.publish('sent', 'a', { qos: 1 }, (err) => {
+						sentCallbackError = err
+					})
+				})
+				client.once('offline', () => {
+					client.publish('offline', 'b', { qos: 1 }, (err) => {
+						try {
+							assert.ifError(err)
+							assert.instanceOf(
+								sentCallbackError,
+								Error,
+								'the callback of the discarded publish must fail',
+							)
+							assert.match(
+								sentCallbackError.message,
+								/Session lost/,
+							)
+							assert.deepEqual(
+								secondConnection.map((p) => [p.topic, p.dup]),
+								[['offline', false]],
+								'only the never-sent publish goes out, as a first delivery',
+							)
+						} catch (assertErr) {
+							return finish(assertErr as Error)
+						}
+						finish()
+					})
+				})
+			},
+		)
+
+		it(
+			'should not resend a stored PUBREL, and should fail its callback',
+			{ timeout: 15000 },
+			function _test(t, done) {
+				const client = lostSessionClient('session-lost-pubrel')
+				let connections = 0
+				let pubrelsOnSecondConnection = 0
+				let finished = false
+
+				const finish = (err?: Error) => {
+					if (finished) return
+					finished = true
+					client.end(true, (err1) => {
+						server2.close((err2) => {
+							done(err || err1 || err2)
+						})
+					})
+				}
+
+				const server2 = new MqttServer((serverClient) => {
+					connections++
+					const connection = connections
+					serverClient.on('connect', () => {
+						serverClient.connack({
+							reasonCode: 0,
+							sessionPresent: false,
+						})
+					})
+					serverClient.on('publish', (packet) => {
+						serverClient.pubrec({ messageId: packet.messageId })
+					})
+					serverClient.on('pubrel', (packet) => {
+						if (connection === 1) {
+							// Drop the connection before the PUBCOMP.
+							serverClient.destroy()
+							return
+						}
+						pubrelsOnSecondConnection++
+						serverClient.pubcomp({ messageId: packet.messageId })
+					})
+				}).listen(ports.PORTAND103)
+
+				t.after(() => {
+					if (!finished) {
+						client.end(true)
+						server2.close()
+					}
+				})
+
+				client.on('error', () => {})
+				client.once('connect', () => {
+					client.publish('topic', 'payload', { qos: 2 }, (err) => {
+						try {
+							assert.strictEqual(
+								connections,
+								2,
+								'the callback runs on the second connection',
+							)
+							assert.instanceOf(
+								err,
+								Error,
+								'the callback of the discarded PUBREL must fail',
+							)
+							assert.match(err.message, /outcome .* unknown/)
+							assert.strictEqual(pubrelsOnSecondConnection, 0)
+						} catch (assertErr) {
+							return finish(assertErr as Error)
+						}
+						finish()
+					})
+				})
+			},
+		)
+	})
+
 	// The tests below cover GHSA-h8jm-hm87-fqw3. They are deliberately not the
 	// last tests in this file: the `after` hook calls `process.exit(0)`, which
 	// swallows the result of whatever runs last.
