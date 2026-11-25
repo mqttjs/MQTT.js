@@ -855,10 +855,18 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 	/**
 	 * _nextId
-	 * @return unsigned int
+	 * Skips ids that are still in flight [MQTT-2.2.1-3]: a provider such as
+	 * the default one does not track which ids are in use.
+	 * @return unsigned int, or null when every id is in flight
 	 */
-	private _nextId() {
-		return this.messageIdProvider.allocate()
+	private _nextId(): number | null {
+		for (let i = 0; i < 65535; i++) {
+			const id = this.messageIdProvider.allocate()
+			if (id === null || !this.outgoing[id]) {
+				return id
+			}
+		}
+		return null
 	}
 
 	/**

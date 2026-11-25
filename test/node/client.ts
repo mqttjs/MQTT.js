@@ -84,6 +84,41 @@ describe('MqttClient', () => {
 			client.end((err) => done(err))
 		})
 
+		it('should not give a new packet an id that is still in flight', function _test(t, done) {
+			client = mqtt.connect(config)
+			client.messageIdProvider['nextId'] = 65535
+			client.outgoing[1] = { volatile: false, cmd: 'publish', cb() {} }
+
+			assert.equal(client['_nextId'](), 65535)
+			assert.equal(client['_nextId'](), 2)
+			client.end(true, (err) => done(err))
+		})
+
+		it('should queue a publish until an id is free when every id is in flight', function _test(t, done) {
+			client = mqtt.connect(config)
+			client.on('connect', () => {
+				for (let id = 1; id <= 65535; id++) {
+					client.outgoing[id] = {
+						volatile: false,
+						cmd: 'publish',
+						cb() {},
+					}
+				}
+				const freeId = 42
+
+				client.on('packetsend', (packet) => {
+					if (packet.cmd === 'publish') {
+						assert.equal(packet.messageId, freeId)
+						client.end(true, (err) => done(err))
+					}
+				})
+				client.publish('a', 'b', { qos: 1 })
+				assert.lengthOf(client['_storeProcessingQueue'], 1)
+
+				client['_removeOutgoingAndStoreMessage'](freeId, () => {})
+			})
+		})
+
 		it("should not throw an error if packet's messageId is not found when receiving a pubrel packet", function _test(t, done) {
 			const server2 = new MqttServer((serverClient) => {
 				serverClient.on('connect', (packet) => {
