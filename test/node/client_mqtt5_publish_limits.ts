@@ -92,6 +92,13 @@ const cases: {
 		error: /packet size \d+ exceeds the server Maximum Packet Size 128/,
 	},
 	{
+		name: 'a QoS 0 packet over the server Maximum Packet Size (MQTT-3.2.2-15)',
+		properties: { maximumPacketSize: 128 },
+		opts: { qos: 0 },
+		payload: 'x'.repeat(300),
+		error: /packet size \d+ exceeds the server Maximum Packet Size 128/,
+	},
+	{
 		name: 'a Subscription Identifier (MQTT-3.3.4-6)',
 		properties: {},
 		opts: { qos: 1, properties: { subscriptionIdentifier: 5 } },
@@ -170,45 +177,6 @@ describe('MQTT 5.0 outgoing PUBLISH limits from CONNACK', () => {
 			},
 		)
 	}
-
-	it(
-		'refuses a QoS 0 publish over the server Maximum Packet Size',
-		testOptions,
-		async () => {
-			const { server, port, publishes } = await startServer({
-				maximumPacketSize: 128,
-			})
-			const client = mqtt.connect({
-				port,
-				protocolVersion: 5,
-				reconnectPeriod: 0,
-			})
-			try {
-				await connected(client)
-				const err = await publish(
-					client,
-					'limits/refused',
-					'x'.repeat(300),
-					{
-						qos: 0,
-					},
-				)
-				assert.match(
-					err?.message,
-					/exceeds the server Maximum Packet Size/,
-				)
-				assert.isNotOk(
-					await publish(client, 'limits/ok', 'ok', { qos: 1 }),
-				)
-				assert.deepEqual(
-					publishes.map((p) => p.topic.toString()),
-					['limits/ok'],
-				)
-			} finally {
-				await stop(client, server)
-			}
-		},
-	)
 
 	it(
 		'checks a publish queued offline against the CONNACK it goes out on',
@@ -341,6 +309,12 @@ describe('MQTT 5.0 outgoing PUBLISH limits from CONNACK', () => {
 		payload: string
 	}[] = [
 		{
+			name: 'a Topic Alias equal to the server Topic Alias Maximum',
+			properties: { topicAliasMaximum: 2 },
+			opts: { qos: 1, properties: { topicAlias: 2 } },
+			payload: 'x',
+		},
+		{
 			name: 'RETAIN 1 when CONNACK leaves out Retain Available',
 			properties: {},
 			opts: { qos: 1, retain: true },
@@ -411,7 +385,7 @@ describe('MQTT 5.0 outgoing PUBLISH limits from CONNACK', () => {
 				await connected(client)
 				assert.isNotOk(await publish(client, topic, 'x', { qos: 1 }))
 				// with the alias: 1 + 1 + 2 + 0 (topic) + 1 + 3 (alias) + 56 = 64;
-				// with the topic it would be 83
+				// with the full topic and no alias it would be 83
 				assert.isNotOk(
 					await publish(client, topic, 'x'.repeat(56), { qos: 0 }),
 				)

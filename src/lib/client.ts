@@ -2375,11 +2375,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		}
 	}
 
-	/**
-	 * Checks an outgoing MQTT 5 PUBLISH against the limits the server sent in
-	 * CONNACK. Every publish goes through `_sendPacket`, so messages queued
-	 * offline are checked against the CONNACK of the connection they go out on.
-	 */
+	/** Checks an outgoing MQTT 5 PUBLISH against the server CONNACK limits. */
 	private _checkOutgoingPublish(packet: Packet): Error | undefined {
 		if (this.options.protocolVersion !== 5 || packet.cmd !== 'publish') {
 			return undefined
@@ -2419,10 +2415,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		return undefined
 	}
 
-	/**
-	 * The publish `_applyTopicAlias` will send, without its side effects: a
-	 * known alias replaces the topic, a new auto-assigned one is added to it.
-	 */
+	/** The publish `_applyTopicAlias` will send, without side effects; keep in sync. */
 	private _publishAsSent(packet: IPublishPacket): IPublishPacket {
 		const topic = packet.topic.toString()
 		const { autoAssignTopicAlias, autoUseTopicAlias } = this.options
@@ -2465,8 +2458,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		// the store may not hold the packet yet: its error is not the one to report
 		this.outgoingStore.del({ messageId }, () => {
 			this.messageIdProvider.deallocate(messageId)
-			// Async: the store replay and processing queue both send their next
-			// publish from here, and a run of refusals would recurse on one stack.
+			// async: store replay sends its next publish from this callback
 			setImmediate(() => {
 				entry.cb(err)
 				this._invokeStoreProcessingQueue()
