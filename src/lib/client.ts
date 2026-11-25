@@ -61,14 +61,9 @@ const MAX_RECEIVE_MAXIMUM = 0xffff
 /** MQTT 5 reason code 0x93 */
 const RECEIVE_MAXIMUM_EXCEEDED = 147
 
-/**
- * Bytes `packet` takes on the wire, or `undefined` when mqtt-packet refuses to
- * encode it. Counts what `writeToStream` writes instead of building a buffer,
- * so the payload is never copied.
- */
+/** Bytes `packet` takes on the wire, counted without copying the payload. */
 const encodedSize = (packet: Packet, opts: IClientOptions) => {
 	let size = 0
-	let invalid = false
 	const counter = {
 		write(chunk: Buffer | string) {
 			size +=
@@ -77,12 +72,10 @@ const encodedSize = (packet: Packet, opts: IClientOptions) => {
 					: chunk.length
 			return true
 		},
-		destroy() {
-			invalid = true
-		},
+		destroy() {},
 	}
 	mqttPacket.writeToStream(packet, counter as any, opts)
-	return invalid ? undefined : size
+	return size
 }
 
 const defaultConnectOptions: IClientOptions = {
@@ -2406,11 +2399,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		}
 	}
 
-	/**
-	 * Checks an outgoing MQTT 5 PUBLISH against the limits the server sent in
-	 * CONNACK. Every publish goes through `_sendPacket`, so messages queued
-	 * offline are checked against the CONNACK of the connection they go out on.
-	 */
+	/** Checks an outgoing MQTT 5 PUBLISH against the server CONNACK limits. */
 	private _checkOutgoingPublish(packet: Packet): Error | undefined {
 		if (this.options.protocolVersion !== 5 || packet.cmd !== 'publish') {
 			return undefined
@@ -2422,7 +2411,8 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			)
 		}
 		const server = this._serverProperties
-		if (!server) {
+		// an offline publish is checked when it is sent after the next CONNACK
+		if (!server || !this.connected) {
 			return undefined
 		}
 		// [MQTT-3.2.2-11]
@@ -2439,24 +2429,8 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		}
 		// [MQTT-3.2.2-15]
 		if (server.maximumPacketSize) {
-			let wirePacket = packet
-			const topic = packet.topic.toString()
-			// auto-assign adds a new alias next to the topic in _applyTopicAlias
-			if (
-				this.options.autoAssignTopicAlias &&
-				this.topicAliasSend &&
-				topic.length !== 0 &&
-				!packet.properties?.topicAlias &&
-				!this.topicAliasSend.getAliasByTopic(topic)
-			) {
-				wirePacket = {
-					...packet,
-					properties: { ...packet.properties, topicAlias: 1 },
-				}
-			}
-			// an invalid packet is left to _writePacket to report, as before
-			const size = encodedSize(wirePacket, this.options)
-			if (size !== undefined && size > server.maximumPacketSize) {
+			const size = encodedSize(this._publishAsSent(packet), this.options)
+			if (size > server.maximumPacketSize) {
 				return new Error(
 					`Publish refused: packet size ${size} exceeds the server Maximum Packet Size ${server.maximumPacketSize}`,
 				)
@@ -2465,19 +2439,54 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		return undefined
 	}
 
-	/**
-	 * Fails a publish that `_sendPacket` refused. A QoS 1/2 publish reports to
-	 * the callback kept in `outgoing` and frees its message id and store entry.
-	 */
+	/** The publish `_applyTopicAlias` will send, without side effects; keep in sync. */
+	private _publishAsSent(packet: IPublishPacket): IPublishPacket {
+		const topic = packet.topic.toString()
+		const { autoAssignTopicAlias, autoUseTopicAlias } = this.options
+		if (
+			!this.topicAliasSend ||
+			topic.length === 0 ||
+			packet.properties?.topicAlias ||
+			!(autoAssignTopicAlias || autoUseTopicAlias)
+		) {
+			return packet
+		}
+		const alias = this.topicAliasSend.getAliasByTopic(topic)
+		if (alias) {
+			return {
+				...packet,
+				topic: '',
+				properties: { ...packet.properties, topicAlias: alias },
+			}
+		}
+		if (!autoAssignTopicAlias) {
+			return packet
+		}
+		// every alias encodes to 2 bytes, so the value does not change the size
+		return {
+			...packet,
+			properties: { ...packet.properties, topicAlias: 1 },
+		}
+	}
+
+	/** Fails a refused publish, freeing its message id and store entry. */
 	private _failPublish(packet: IPublishPacket, err: Error, cb: DoneCallback) {
-		const pending = packet.qos > 0 && this.outgoing[packet.messageId]
-		if (!pending) {
+		this.log('_failPublish :: %s', err.message)
+		const { messageId } = packet
+		const entry = packet.qos > 0 ? this.outgoing[messageId] : undefined
+		if (!entry) {
 			cb(err)
 			return
 		}
+		delete this.outgoing[messageId]
 		// the store may not hold the packet yet: its error is not the one to report
-		this._removeOutgoingAndStoreMessage(packet.messageId, () => {
-			pending.cb(err)
+		this.outgoingStore.del({ messageId }, () => {
+			this.messageIdProvider.deallocate(messageId)
+			// async: store replay sends its next publish from this callback
+			setImmediate(() => {
+				entry.cb(err)
+				this._invokeStoreProcessingQueue()
+			})
 		})
 	}
 
