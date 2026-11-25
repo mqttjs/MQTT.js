@@ -73,6 +73,12 @@ const cases: {
 		error: /QoS 2 exceeds the server Maximum QoS 1/,
 	},
 	{
+		name: 'QoS 1 when the server Maximum QoS is 0 (MQTT-3.2.2-11)',
+		properties: { maximumQoS: 0 },
+		opts: { qos: 1 },
+		error: /QoS 1 exceeds the server Maximum QoS 0/,
+	},
+	{
 		name: 'RETAIN 1 when the server has Retain Available 0 (MQTT-3.2.2-14)',
 		properties: { retainAvailable: false },
 		opts: { qos: 1, retain: true },
@@ -141,10 +147,17 @@ describe('MQTT 5.0 outgoing PUBLISH limits from CONNACK', () => {
 					messageIdProvider.deallocate(refusedId)
 
 					// the connection is still up and takes a valid publish
+					const qos = c.properties.maximumQoS === 0 ? 0 : 1
 					const okErr = await publish(client, 'limits/ok', 'ok', {
-						qos: 1,
+						qos,
 					})
 					assert.isNotOk(okErr)
+					// a QoS 0 callback comes before the server has read the packet
+					while (publishes.length === 0) {
+						await new Promise((resolve) => {
+							setTimeout(resolve, 10)
+						})
+					}
 					assert.isTrue(client.connected)
 					assert.deepEqual(
 						publishes.map((p) => p.topic.toString()),
@@ -287,6 +300,39 @@ describe('MQTT 5.0 outgoing PUBLISH limits from CONNACK', () => {
 		},
 	)
 
+	it(
+		'refuses a long run of stored publishes without growing the stack',
+		{ timeout: 30000 },
+		async () => {
+			const { server, port, publishes } = await startServer({
+				maximumQoS: 1,
+			})
+			const client = mqtt.connect({
+				port,
+				protocolVersion: 5,
+				reconnectPeriod: 0,
+			})
+			try {
+				// stored before the CONNACK, each refused when the store replays it
+				const refused = Array.from({ length: 3000 }, (_, i) =>
+					publish(client, `limits/refused/${i}`, 'x', { qos: 2 }),
+				)
+				const errors = await Promise.all(refused)
+				assert.isTrue(errors.every((err) => err instanceof Error))
+				assert.isNotOk(
+					await publish(client, 'limits/ok', 'ok', { qos: 1 }),
+				)
+				assert.deepEqual(client.outgoing, {})
+				assert.deepEqual(
+					publishes.map((p) => p.topic.toString()),
+					['limits/ok'],
+				)
+			} finally {
+				await stop(client, server)
+			}
+		},
+	)
+
 	const allowed: {
 		name: string
 		properties: IConnackPacket['properties']
@@ -297,6 +343,12 @@ describe('MQTT 5.0 outgoing PUBLISH limits from CONNACK', () => {
 		{
 			name: 'RETAIN 1 when CONNACK leaves out Retain Available',
 			properties: {},
+			opts: { qos: 1, retain: true },
+			payload: 'x',
+		},
+		{
+			name: 'RETAIN 1 when the server has Retain Available 1',
+			properties: { retainAvailable: true },
 			opts: { qos: 1, retain: true },
 			payload: 'x',
 		},
@@ -390,10 +442,8 @@ describe('MQTT 5.0 outgoing PUBLISH limits from CONNACK', () => {
 			})
 			try {
 				await connected(client)
-				// topic + payload fill the packet to 128 bytes without an alias:
-				// 1 (header) + 1 (remaining length) + 2 + 5 (topic) + 1 (properties
-				// length) + 118 (payload) = 128; the alias adds 3, and 1 more for
-				// the longer remaining length
+				// 128 bytes without an alias (see the at-the-limit case above);
+				// the alias adds 3, and 1 more for the longer remaining length
 				const err = await publish(client, 'big/t', 'x'.repeat(118), {
 					qos: 0,
 				})

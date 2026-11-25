@@ -61,11 +61,7 @@ const MAX_RECEIVE_MAXIMUM = 0xffff
 /** MQTT 5 reason code 0x93 */
 const RECEIVE_MAXIMUM_EXCEEDED = 147
 
-/**
- * Bytes `packet` takes on the wire. Counts what `writeToStream` writes instead
- * of building a buffer, so the payload is never copied. mqtt-packet refuses an
- * invalid packet before writing any byte, so that one counts as about 0.
- */
+/** Bytes `packet` takes on the wire, counted without copying the payload. */
 const encodedSize = (packet: Packet, opts: IClientOptions) => {
 	let size = 0
 	const counter = {
@@ -2395,7 +2391,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			)
 		}
 		const server = this._serverProperties
-		// a refused CONNACK sets them too; offline packets are checked on replay
+		// an offline publish is checked when it is sent after the next CONNACK
 		if (!server || !this.connected) {
 			return undefined
 		}
@@ -2456,28 +2452,25 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		}
 	}
 
-	/**
-	 * Fails a publish that `_sendPacket` refused. A QoS 1/2 publish reports to
-	 * the callback kept in `outgoing` and frees its message id and store entry.
-	 */
+	/** Fails a refused publish, freeing its message id and store entry. */
 	private _failPublish(packet: IPublishPacket, err: Error, cb: DoneCallback) {
 		this.log('_failPublish :: %s', err.message)
 		const { messageId } = packet
-		const pending = packet.qos > 0 && this.outgoing[messageId]
-		if (!pending) {
+		const entry = packet.qos > 0 ? this.outgoing[messageId] : undefined
+		if (!entry) {
 			cb(err)
 			return
 		}
-		// Not `_removeOutgoingAndStoreMessage`: it runs the store processing
-		// queue at once, and that queue may be running this publish right now,
-		// which would retry it forever.
 		delete this.outgoing[messageId]
 		// the store may not hold the packet yet: its error is not the one to report
 		this.outgoingStore.del({ messageId }, () => {
 			this.messageIdProvider.deallocate(messageId)
-			pending.cb(err)
-			// the freed id may let a queued publish go
-			setImmediate(() => this._invokeStoreProcessingQueue())
+			// Async: the store replay and processing queue both send their next
+			// publish from here, and a run of refusals would recurse on one stack.
+			setImmediate(() => {
+				entry.cb(err)
+				this._invokeStoreProcessingQueue()
+			})
 		})
 	}
 
