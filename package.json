@@ -80,7 +80,7 @@
     "lint"
   ],
   "engines": {
-    "node": ">=16.0.0"
+    "node": ">=22.19.0"
   },
   "browser": {
     "./mqtt.js": "./dist/mqtt.js",
@@ -97,7 +97,7 @@
     "help-me": "^5.0.0",
     "lru-cache": "^10.4.3",
     "minimist": "^1.2.8",
-    "mqtt-packet": "^9.0.2",
+    "mqtt-packet": "github:mqttjs/mqtt-packet#92d32f0ad13bad08ca7c1a472cb0885d9f027893",
     "readable-stream": "^4.7.0",
     "rfdc": "^1.4.1",
     "socks": "^2.8.6",

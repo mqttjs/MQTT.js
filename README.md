@@ -37,6 +37,10 @@ Guide](https://cdn.rawgit.com/feross/standard/master/badge.svg)](https://github.
 
 ## Important notes for existing users
 
+**v6.0.0**
+
+- Requires Node.js >= 22.19.0. `mqtt-packet` is now an ES module and needs `require(esm)` support.
+
 **v5.0.0** (07/2023)
 
 - Removes support for all end of life node versions (v12 and v14), and now supports node v18 and v20.
