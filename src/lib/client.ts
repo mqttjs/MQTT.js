@@ -61,6 +61,30 @@ const MAX_RECEIVE_MAXIMUM = 0xffff
 /** MQTT 5 reason code 0x93 */
 const RECEIVE_MAXIMUM_EXCEEDED = 147
 
+/**
+ * Bytes `packet` takes on the wire, or `undefined` when mqtt-packet refuses to
+ * encode it. Counts what `writeToStream` writes instead of building a buffer,
+ * so the payload is never copied.
+ */
+const encodedSize = (packet: Packet, opts: IClientOptions) => {
+	let size = 0
+	let invalid = false
+	const counter = {
+		write(chunk: Buffer | string) {
+			size +=
+				typeof chunk === 'string'
+					? Buffer.byteLength(chunk)
+					: chunk.length
+			return true
+		},
+		destroy() {
+			invalid = true
+		},
+	}
+	mqttPacket.writeToStream(packet, counter as any, opts)
+	return invalid ? undefined : size
+}
+
 const defaultConnectOptions: IClientOptions = {
 	keepalive: 60,
 	reschedulePings: true,
@@ -2358,6 +2382,81 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		}
 	}
 
+	/**
+	 * Checks an outgoing MQTT 5 PUBLISH against the limits the server sent in
+	 * CONNACK. Every publish goes through `_sendPacket`, so messages queued
+	 * offline are checked against the CONNACK of the connection they go out on.
+	 */
+	private _checkOutgoingPublish(packet: Packet): Error | undefined {
+		if (this.options.protocolVersion !== 5 || packet.cmd !== 'publish') {
+			return undefined
+		}
+		// [MQTT-3.3.4-6]
+		if (packet.properties?.subscriptionIdentifier !== undefined) {
+			return new Error(
+				'Publish refused: a client must not send a Subscription Identifier',
+			)
+		}
+		const server = this._serverProperties
+		if (!server) {
+			return undefined
+		}
+		// [MQTT-3.2.2-11]
+		if (server.maximumQoS !== undefined && packet.qos > server.maximumQoS) {
+			return new Error(
+				`Publish refused: QoS ${packet.qos} exceeds the server Maximum QoS ${server.maximumQoS}`,
+			)
+		}
+		// [MQTT-3.2.2-14]
+		if (packet.retain && server.retainAvailable === false) {
+			return new Error(
+				'Publish refused: the server does not support retained messages (Retain Available is 0)',
+			)
+		}
+		// [MQTT-3.2.2-15]
+		if (server.maximumPacketSize) {
+			let wirePacket = packet
+			const topic = packet.topic.toString()
+			// auto-assign adds a new alias next to the topic in _applyTopicAlias
+			if (
+				this.options.autoAssignTopicAlias &&
+				this.topicAliasSend &&
+				topic.length !== 0 &&
+				!packet.properties?.topicAlias &&
+				!this.topicAliasSend.getAliasByTopic(topic)
+			) {
+				wirePacket = {
+					...packet,
+					properties: { ...packet.properties, topicAlias: 1 },
+				}
+			}
+			// an invalid packet is left to _writePacket to report, as before
+			const size = encodedSize(wirePacket, this.options)
+			if (size !== undefined && size > server.maximumPacketSize) {
+				return new Error(
+					`Publish refused: packet size ${size} exceeds the server Maximum Packet Size ${server.maximumPacketSize}`,
+				)
+			}
+		}
+		return undefined
+	}
+
+	/**
+	 * Fails a publish that `_sendPacket` refused. A QoS 1/2 publish reports to
+	 * the callback kept in `outgoing` and frees its message id and store entry.
+	 */
+	private _failPublish(packet: IPublishPacket, err: Error, cb: DoneCallback) {
+		const pending = packet.qos > 0 && this.outgoing[packet.messageId]
+		if (!pending) {
+			cb(err)
+			return
+		}
+		// the store may not hold the packet yet: its error is not the one to report
+		this._removeOutgoingAndStoreMessage(packet.messageId, () => {
+			pending.cb(err)
+		})
+	}
+
 	private _noop(err?: Error) {
 		this.log('noop ::', err)
 	}
@@ -2405,9 +2504,11 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		cbStorePut = cbStorePut || this.noop
 		cb = cb || this.noop
 
-		const err = this._applyTopicAlias(packet)
+		// check the limits first: a refused packet must not register an alias
+		const err =
+			this._checkOutgoingPublish(packet) || this._applyTopicAlias(packet)
 		if (err) {
-			cb(err)
+			this._failPublish(packet as IPublishPacket, err, cb)
 			return
 		}
 
