@@ -6,15 +6,15 @@
  *
  * See LICENSE for more information
  */
-import path from 'path'
+import { fileURLToPath } from 'url'
 import Commist from 'commist'
 import help from 'help-me'
-import publish from './pub'
-import subscribe from './sub'
-import { MQTTJS_VERSION } from '../mqtt'
+import publish from './pub.js'
+import subscribe from './sub.js'
+import { MQTTJS_VERSION } from '../mqtt.js'
 
 const helpMe = help({
-	dir: path.join(__dirname, '../../', 'help'),
+	dir: fileURLToPath(new URL('../../help', import.meta.url)),
 	ext: '.txt',
 })
 

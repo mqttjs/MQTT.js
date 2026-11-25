@@ -1,10 +1,8 @@
-'use strict'
-
-const mqtt = require('../..')
-const path = require('path')
-const fs = require('fs')
-const KEY = fs.readFileSync(path.join(__dirname, '..', '..', 'test', 'helpers', 'tls-key.pem'))
-const CERT = fs.readFileSync(path.join(__dirname, '..', '..', 'test', 'helpers', 'tls-cert.pem'))
+import mqtt from 'mqtt'
+import path from 'path'
+import fs from 'fs'
+const KEY = fs.readFileSync(path.join(import.meta.dirname, '..', '..', 'test', 'helpers', 'tls-key.pem'))
+const CERT = fs.readFileSync(path.join(import.meta.dirname, '..', '..', 'test', 'helpers', 'tls-cert.pem'))
 
 const PORT = 8443
 

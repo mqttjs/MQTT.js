@@ -1,13 +1,13 @@
 import { assert } from 'chai'
 import { after, describe, it } from 'node:test'
-import abstractClientTests from './abstract_client'
-import { MqttServer } from './server'
-import serverBuilder from './server_helpers_for_client_tests'
-import getPorts from './helpers/port_list'
+import abstractClientTests from './abstract_client.js'
+import { MqttServer } from './server.js'
+import serverBuilder from './server_helpers_for_client_tests.js'
+import getPorts from './helpers/port_list.js'
 import mqttPacket, { type IAuthPacket, type IPublishPacket } from 'mqtt-packet'
-import mqtt, { type ErrorWithReasonCode } from '../../src'
+import mqtt, { type ErrorWithReasonCode } from '../../src/index.js'
 import { EventEmitter } from 'node:events'
-import handlePacket from '../../src/lib/handlers'
+import handlePacket from '../../src/lib/handlers/index.js'
 
 const ports = getPorts(1)
 

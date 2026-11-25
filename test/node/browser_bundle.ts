@@ -1,11 +1,9 @@
 import { describe, it } from 'node:test'
 import { assert } from 'chai'
-// tsconfig baseUrl would resolve plain 'esbuild' to the repo's esbuild.js
-import { build } from 'esbuild/lib/main'
+import { build } from 'esbuild'
 import { runInNewContext } from 'node:vm'
 import path from 'node:path'
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const { options, esmOptions } = require('../../esbuild.js')
+import { options, esmOptions } from '../../esbuild.js'
 
 const PINGREQ = [0xc0, 0]
 
@@ -19,7 +17,7 @@ describe('browser bundle', () => {
 			write: false,
 			globalName: 'probe',
 			stdin: {
-				resolveDir: path.join(__dirname, '../..'),
+				resolveDir: path.join(import.meta.dirname, '../..'),
 				contents: `
 					import { writeToStream } from 'mqtt-packet'
 					import { PassThrough } from 'readable-stream'
@@ -74,11 +72,10 @@ describe('browser bundle', () => {
 		})
 
 		const bundleExports = metafile.outputs[esm.outfile].exports
-		// eslint-disable-next-line @typescript-eslint/no-require-imports
-		const cjsExports = Object.keys(require('../../build'))
+		const buildExports = Object.keys(await import('../../build/index.js'))
 		assert.sameMembers(
 			bundleExports,
-			cjsExports,
+			buildExports,
 			'ESM bundle exports differ from build/index.js: named imports like { connect } break',
 		)
 	})

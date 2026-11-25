@@ -1,9 +1,9 @@
-import handlePublish from './publish'
-import handleAuth from './auth'
-import handleConnack from './connack'
-import handleAck from './ack'
-import handlePubrel from './pubrel'
-import { ErrorWithReasonCode, type PacketHandler } from '../shared'
+import handlePublish from './publish.js'
+import handleAuth from './auth.js'
+import handleConnack from './connack.js'
+import handleAck from './ack.js'
+import handlePubrel from './pubrel.js'
+import { ErrorWithReasonCode, type PacketHandler } from '../shared.js'
 
 /**
  * Bytes the Remaining Length of a packet takes on the wire: it is a variable

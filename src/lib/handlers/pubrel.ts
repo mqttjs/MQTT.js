@@ -3,7 +3,7 @@ import {
 	type IPublishPacket,
 	type IPubrelPacket,
 } from 'mqtt-packet'
-import { type PacketHandler } from '../shared'
+import { type PacketHandler } from '../shared.js'
 
 const handlePubrel: PacketHandler = (client, packet: IPubrelPacket, done) => {
 	client.log('handling pubrel packet')

@@ -1,13 +1,10 @@
-import {
-	type ConnectionOptions,
-	type TLSSocket,
-	connect as tlsConnect,
-} from 'tls'
+// default import: the browser bundle stubs 'tls' with an empty module
+import tls, { type ConnectionOptions, type TLSSocket } from 'tls'
 import net from 'net'
 import _debug from 'debug'
-import { type StreamBuilder } from '../shared'
-import { type IClientOptions } from '../client'
-import openSocks from './socks'
+import { type StreamBuilder } from '../shared.js'
+import { type IClientOptions } from '../client.js'
+import openSocks from './socks.js'
 
 const debug = _debug('mqttjs:tls')
 
@@ -19,13 +16,13 @@ function connect(opts: IClientOptions): TLSSocket {
 			timeout: opts.socksTimeout,
 		})
 
-		return tlsConnect({
+		return tls.connect({
 			...rest,
 			socket,
 		} as ConnectionOptions)
 	}
 
-	return tlsConnect(opts as ConnectionOptions)
+	return tls.connect(opts as ConnectionOptions)
 }
 
 const buildStream: StreamBuilder = (client, opts) => {

@@ -1,12 +1,12 @@
 import { Buffer } from 'buffer'
-import Ws, { type ClientOptions } from 'ws'
+import Ws, { type ClientOptions, createWebSocketStream } from 'ws'
 import _debug from 'debug'
 import { Transform } from 'readable-stream'
-import { type IStream, type StreamBuilder } from '../shared'
-import isBrowser from '../is-browser'
-import { type IClientOptions } from '../client'
-import type MqttClient from '../client'
-import { BufferedDuplex, writev } from '../BufferedDuplex'
+import { type IStream, type StreamBuilder } from '../shared.js'
+import isBrowser from '../is-browser.js'
+import { type IClientOptions } from '../client.js'
+import type MqttClient from '../client.js'
+import { BufferedDuplex, writev } from '../BufferedDuplex.js'
 
 const debug = _debug('mqttjs:ws')
 
@@ -147,7 +147,7 @@ const streamBuilder: StreamBuilder = (client, opts): IStream => {
 	const url = buildUrl(options, client)
 	const socket = createWebSocket(client, url, options)
 	// @ts-expect-error - This is a type confusion because of the overlap between browser oriented code and Node.js oriented code.
-	const webSocketStream = Ws.createWebSocketStream(socket, options.wsOptions)
+	const webSocketStream = createWebSocketStream(socket, options.wsOptions)
 
 	webSocketStream['url'] = url
 	socket.on('close', () => {

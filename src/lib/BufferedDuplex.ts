@@ -1,6 +1,6 @@
 import { Duplex, type Transform } from 'readable-stream'
 import { Buffer } from 'buffer'
-import { type IClientOptions } from './client'
+import { type IClientOptions } from './client.js'
 
 /**
  * Utils writev function for browser, ensure to write Buffers to socket (convert strings).

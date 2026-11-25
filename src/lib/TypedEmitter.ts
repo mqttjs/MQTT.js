@@ -1,5 +1,5 @@
 import EventEmitter from 'events'
-import { applyMixin } from './shared'
+import { applyMixin } from './shared.js'
 
 export type EventHandler =
 	// Add more overloads as necessary

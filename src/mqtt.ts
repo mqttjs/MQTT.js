@@ -4,12 +4,12 @@
  *
  * See LICENSE for more information
  */
-import MqttClient from './lib/client'
-import DefaultMessageIdProvider from './lib/default-message-id-provider'
-import UniqueMessageIdProvider from './lib/unique-message-id-provider'
-import Store, { IStore } from './lib/store'
-import connect, { connectAsync } from './lib/connect'
-import KeepaliveManager from './lib/KeepaliveManager'
+import MqttClient from './lib/client.js'
+import DefaultMessageIdProvider from './lib/default-message-id-provider.js'
+import UniqueMessageIdProvider from './lib/unique-message-id-provider.js'
+import Store, { type IStore } from './lib/store.js'
+import connect, { connectAsync } from './lib/connect/index.js'
+import KeepaliveManager from './lib/KeepaliveManager.js'
 
 export const Client = MqttClient
 export {
@@ -19,14 +19,14 @@ export {
 	Store,
 	DefaultMessageIdProvider,
 	UniqueMessageIdProvider,
-	IStore,
 	KeepaliveManager,
 }
-export * from './lib/client'
-export * from './lib/shared'
-export * from './lib/validations'
-export { ReasonCodes } from './lib/handlers/ack'
+export type { IStore }
+export * from './lib/client.js'
+export * from './lib/shared.js'
+export * from './lib/validations.js'
+export { ReasonCodes } from './lib/handlers/ack.js'
 // `client.outgoing` is public and its entries carry `cmd`, so callers need to
 // be able to name its type
-export type { PendingCommand } from './lib/handlers/ack'
-export type { Timer } from './lib/get-timer'
+export type { PendingCommand } from './lib/handlers/ack.js'
+export type { Timer } from './lib/get-timer.js'

@@ -1,9 +1,9 @@
 import { Buffer } from 'buffer'
 import { Transform } from 'readable-stream'
-import { type StreamBuilder } from '../shared'
-import { type IClientOptions } from '../client'
-import type MqttClient from '../client'
-import { BufferedDuplex } from '../BufferedDuplex'
+import { type StreamBuilder } from '../shared.js'
+import { type IClientOptions } from '../client.js'
+import type MqttClient from '../client.js'
+import { BufferedDuplex } from '../BufferedDuplex.js'
 
 /* global wx */
 let socketTask: any

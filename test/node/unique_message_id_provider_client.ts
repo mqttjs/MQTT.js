@@ -1,8 +1,11 @@
 import { describe, after } from 'node:test'
-import abstractClientTests from './abstract_client'
-import serverBuilder from './server_helpers_for_client_tests'
-import { UniqueMessageIdProvider, type IClientOptions } from '../../src'
-import getPorts from './helpers/port_list'
+import abstractClientTests from './abstract_client.js'
+import serverBuilder from './server_helpers_for_client_tests.js'
+import {
+	UniqueMessageIdProvider,
+	type IClientOptions,
+} from '../../src/index.js'
+import getPorts from './helpers/port_list.js'
 
 const ports = getPorts(3)
 

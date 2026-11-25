@@ -1,7 +1,7 @@
 // Other Socket Errors: EADDRINUSE, ECONNRESET, ENOTFOUND, ETIMEDOUT.
 
 import { type Packet } from 'mqtt-packet'
-import { type PacketHandler, ErrorWithReasonCode } from '../shared'
+import { type PacketHandler, ErrorWithReasonCode } from '../shared.js'
 
 export const ReasonCodes = {
 	0: '',

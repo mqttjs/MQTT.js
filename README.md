@@ -40,6 +40,7 @@ Guide](https://cdn.rawgit.com/feross/standard/master/badge.svg)](https://github.
 **v6.0.0**
 
 - Requires Node.js >= 22.19.0. `mqtt-packet` is now an ES module and needs `require(esm)` support.
+- MQTT.js is now an ES module (`"type": "module"`). `import` works as before and `require('mqtt')` still works through `require(esm)`. TypeScript projects that compile to CommonJS with `"module": "node16"` get error TS1479; use `"module": "nodenext"` (TypeScript >= 5.8) or ES modules.
 
 **v5.0.0** (07/2023)
 

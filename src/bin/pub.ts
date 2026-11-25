@@ -1,19 +1,22 @@
 #!/usr/bin/env node
 
 import { Writable } from 'readable-stream'
-import path from 'path'
+import { fileURLToPath } from 'url'
 import fs from 'fs'
 import concat from 'concat-stream'
 import help from 'help-me'
 
 import minimist, { type ParsedArgs } from 'minimist'
 import split2 from 'split2'
-import { type IClientOptions, type IClientPublishOptions } from 'src/lib/client'
+import {
+	type IClientOptions,
+	type IClientPublishOptions,
+} from '../lib/client.js'
 import { pipeline } from 'stream'
-import { connect } from '../mqtt'
+import { connect } from '../mqtt.js'
 
 const helpMe = help({
-	dir: path.join(__dirname, '../../', 'help'),
+	dir: fileURLToPath(new URL('../../help', import.meta.url)),
 })
 
 function send(args: ParsedArgs) {
@@ -169,6 +172,6 @@ export default function start(args: string[]) {
 	}
 }
 
-if (require.main === module) {
+if (import.meta.main) {
 	start(process.argv.slice(2))
 }

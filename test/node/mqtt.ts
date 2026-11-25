@@ -1,7 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import { describe, it } from 'node:test'
-import mqtt, { type IClientOptions } from '../../src'
+import mqtt, { type IClientOptions } from '../../src/index.js'
 import 'should'
 
 describe('mqtt', () => {
@@ -125,9 +125,19 @@ describe('mqtt', () => {
 		})
 
 		const sslOpts: IClientOptions = {
-			keyPath: path.join(__dirname, 'helpers', 'private-key.pem'),
-			certPath: path.join(__dirname, 'helpers', 'public-cert.pem'),
-			caPaths: [path.join(__dirname, 'helpers', 'public-cert.pem')],
+			keyPath: path.join(
+				import.meta.dirname,
+				'helpers',
+				'private-key.pem',
+			),
+			certPath: path.join(
+				import.meta.dirname,
+				'helpers',
+				'public-cert.pem',
+			),
+			caPaths: [
+				path.join(import.meta.dirname, 'helpers', 'public-cert.pem'),
+			],
 		}
 
 		it('should return an MqttClient when connect is called with mqtts:/ url', function _test(t, done) {
@@ -176,14 +186,18 @@ describe('mqtt', () => {
 
 		const sslOpts2: IClientOptions = {
 			key: fs.readFileSync(
-				path.join(__dirname, 'helpers', 'private-key.pem'),
+				path.join(import.meta.dirname, 'helpers', 'private-key.pem'),
 			),
 			cert: fs.readFileSync(
-				path.join(__dirname, 'helpers', 'public-cert.pem'),
+				path.join(import.meta.dirname, 'helpers', 'public-cert.pem'),
 			),
 			ca: [
 				fs.readFileSync(
-					path.join(__dirname, 'helpers', 'public-cert.pem'),
+					path.join(
+						import.meta.dirname,
+						'helpers',
+						'public-cert.pem',
+					),
 				),
 			],
 		}

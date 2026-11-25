@@ -1,8 +1,9 @@
 import type { Packet, ISubackPacket } from 'mqtt-packet'
 import type { Duplex as NativeDuplex } from 'node:stream'
 import type { Duplex } from 'readable-stream'
-import type MqttClient from './client'
-import type { IClientOptions } from './client'
+import type MqttClient from './client.js'
+import type { IClientOptions } from './client.js'
+import pkg from '../../package.json' with { type: 'json' }
 
 export type DoneCallback = (error?: Error) => void
 
@@ -119,5 +120,4 @@ export const nextTick =
 				setTimeout(callback, 0)
 			}
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-export const MQTTJS_VERSION = require('../../package.json').version
+export const MQTTJS_VERSION = pkg.version

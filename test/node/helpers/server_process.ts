@@ -1,4 +1,4 @@
-import { MqttServer } from '../server'
+import { MqttServer } from '../server.js'
 
 new MqttServer((client) => {
 	client.on('connect', () => {

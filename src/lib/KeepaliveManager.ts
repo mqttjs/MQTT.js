@@ -1,6 +1,6 @@
-import type MqttClient from './client'
-import getTimer, { type Timer } from './get-timer'
-import type { TimerVariant } from './shared'
+import type MqttClient from './client.js'
+import getTimer, { type Timer } from './get-timer.js'
+import type { TimerVariant } from './shared.js'
 
 export default class KeepaliveManager {
 	private _keepalive: number

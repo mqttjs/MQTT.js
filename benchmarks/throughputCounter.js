@@ -1,6 +1,6 @@
 #! /usr/bin/env node
 
-const mqtt = require('..')
+import mqtt from 'mqtt'
 
 const client = mqtt.connect({
 	port: 1883,
