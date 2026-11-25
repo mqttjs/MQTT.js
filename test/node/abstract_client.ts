@@ -4972,12 +4972,11 @@ export default function abstractTest(server, config, ports) {
 			})
 		})
 
-		// SUBACK codes follow the order of the topic filters [MQTT-3.9.3-1]. A
-		// single refused code used to drop each topic of the SUBSCRIBE from the
-		// resubscriptions, so the granted ones were lost at the next reconnect.
+		// SUBACK codes follow the order of the topic filters [MQTT-3.9.3-1]
 		it('should resubscribe only the granted topics of a partly refused suback', function _test(t, done) {
 			let connections = 0
 			let client: mqtt.MqttClient | null = null
+			const resubscribed: string[] = []
 			const server2 = serverBuilder(config.protocol, (serverClient) => {
 				connections += 1
 				const connection = connections
@@ -4996,8 +4995,11 @@ export default function abstractTest(server, config, ports) {
 					})
 					if (connection === 2) {
 						// 3.1.1 resubscribes in one SUBSCRIBE, MQTT 5 in one per topic
-						assert.deepStrictEqual(topics, ['a'])
-						client.end(true, done)
+						resubscribed.push(...topics)
+						if (resubscribed.length >= 2) {
+							assert.deepStrictEqual(resubscribed, ['a', 'c'])
+							client.end(true, done)
+						}
 					}
 				})
 			})
@@ -5010,15 +5012,16 @@ export default function abstractTest(server, config, ports) {
 				})
 
 				client.once('connect', () => {
-					client.subscribe(['a', 'b'], (err) => {
+					client.subscribe(['a', 'b', 'c'], (err) => {
 						assert.strictEqual(
 							err?.message,
 							'Subscribe error: Unspecified error',
 						)
 						assert.deepStrictEqual(
 							Object.keys(client['_resubscribeTopics']),
-							['a'],
+							['a', 'c'],
 						)
+						// drop the connection to force a reconnect and resubscribe
 						client.stream.end()
 					})
 				})

@@ -3751,8 +3751,7 @@ describe('MQTT 5.0', () => {
 		})
 	})
 
-	// An UNSUBACK code of 0x80 or more is a failure (MQTT 5 3.11.3). It used
-	// to be reported to the application as a successful unsubscribe.
+	// An UNSUBACK code of 0x80 or more is a failure (MQTT 5 3.11.3)
 	it('unsuback handling error codes', async function _test(t) {
 		const codes: Record<string, number> = { denied: 0x87, gone: 0x11 }
 		const server2 = new MqttServer((serverClient) => {
