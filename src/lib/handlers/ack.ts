@@ -200,7 +200,18 @@ const handleAck: PacketHandler = (client, packet) => {
 			delete client.outgoing[messageId]
 			client.messageIdProvider.deallocate(messageId)
 			client['_invokeStoreProcessingQueue']()
-			cb(null, packet)
+			// MQTT 5 only: a 3.1.1 UNSUBACK has no payload. A code of 0x80 or
+			// more is a failure (MQTT 5 3.11.3)
+			const unsubackRC = (packet.granted ?? []).find(
+				(rc) => (rc & 0x80) !== 0,
+			)
+			if (unsubackRC !== undefined) {
+				err = new ErrorWithReasonCode(
+					`Unsubscribe error: ${ReasonCodes[unsubackRC]}`,
+					unsubackRC,
+				)
+			}
+			cb(err, packet)
 			break
 		}
 		default:
