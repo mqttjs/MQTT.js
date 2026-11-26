@@ -121,6 +121,22 @@ describe('MQTT.js browser tests', () => {
 		}
 	})
 
+	it('should never fall back to plain WebSocket for a secure protocol', () => {
+		for (const proto of ['mqtts', 'tls', 'ssl']) {
+			const client = mqtt.connect(`${proto}://localhost:${window.wssPort}`, {
+				manualConnect: true,
+			})
+			expect(client.options.protocol, proto).to.equal('wss')
+		}
+	})
+
+	it('should still fall back from mqtt to ws', () => {
+		const client = mqtt.connect(`mqtt://localhost:${window.wsPort}`, {
+			manualConnect: true,
+		})
+		expect(client.options.protocol).to.equal('ws')
+	})
+
 	testProto('ws', window.wsPort, () => {
 		testProto('wss', window.wssPort)
 	})

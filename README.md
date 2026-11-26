@@ -371,6 +371,13 @@ returns a [Client](#client).
 The URL can be on the following protocols: 'mqtt', 'mqtts', 'tcp',
 'tls', 'ssl', 'ws', 'wss', 'wx', 'wxs', 'ali', 'alis'. If you are trying to connect to a unix socket just append the `+unix` suffix to the protocol (ex: `mqtt+unix`). This will set the `unixSocket` property automatically.
 
+A secure protocol (`mqtts`, `tls`, `ssl`, `wss`, `wxs`, `alis`) the current
+environment has no transport for is only ever replaced by a secure one:
+`mqtts`/`tls`/`ssl` become `wss` in the browser (or with
+`forceNativeWebSocket`), and `wxs`/`alis` become `mqtts` on Node.js. If no
+secure transport is available, `connect()` throws instead of connecting without
+TLS.
+
 The first argument can also be an options object instead of a URL string, e.g.
 `mqtt.connect({ host, port, protocol: 'mqtts' })`. It is then used as the
 options as-is, so don't pass a second argument: when both are given, the object
@@ -496,7 +503,7 @@ The arguments are:
       clear: (id) => clearInterval(id)
     }
     ```
-  - `forceNativeWebSocket`: set to true if you're having detection issues (i.e. the `ws does not work in the browser` exception) to force the use of native WebSocket. It is important to note that if set to true for the first client created, then all the clients will use native WebSocket. And conversely, if not set or set to false, all will use the detection result.
+  - `forceNativeWebSocket`: set to true if you're having detection issues (i.e. the `ws does not work in the browser` exception) to force the use of native WebSocket. It only applies to the client that sets it; other clients keep using the detection result.
   - `unixSocket`: if you want to connect to a unix socket, set this to true
 
 Instead of setting `socksProxy` you can also supply the same parameter via the environment variable `MQTTJS_SOCKS_PROXY`.
