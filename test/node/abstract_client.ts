@@ -109,6 +109,14 @@ export default function abstractTest(server, config, ports) {
 		}
 	}
 
+	/** CONNACK with Session Present 1 from the second connection on, if `keepsSession`. */
+	const resumedConnack = (connection: number, keepsSession = true) => {
+		const sessionPresent = keepsSession && connection > 1
+		return version === 5
+			? { reasonCode: 0, sessionPresent }
+			: { returnCode: 0, sessionPresent }
+	}
+
 	async function beforeEachExec() {
 		await teardownHelper.runAll()
 		teardownHelper.reset({ removeOnce: true })
@@ -1289,6 +1297,7 @@ export default function abstractTest(server, config, ports) {
 		})
 
 		it('should not overtake the messages stored in the level-db-store', function _test(t, done) {
+			let connections = 0
 			teardownHelper.add({ executeOnce: true }, async () => {
 				await new Promise<void>((resolve) => {
 					fs.rm(storePath, { recursive: true }, () => {
@@ -1305,9 +1314,7 @@ export default function abstractTest(server, config, ports) {
 			let publishCount = 0
 			const server2 = serverBuilder(config.protocol, (serverClient) => {
 				serverClient.on('connect', () => {
-					const connack =
-						version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
-					serverClient.connack(connack)
+					serverClient.connack(resumedConnack(++connections))
 				})
 				serverClient.on('publish', (packet) => {
 					if (packet.qos !== 0) {
@@ -2286,6 +2293,7 @@ export default function abstractTest(server, config, ports) {
 		)
 
 		it('should keep message order', function _test(t, done) {
+			let connections = 0
 			let publishCount = 0
 			let reconnect = false
 			let client: mqtt.MqttClient
@@ -2297,9 +2305,7 @@ export default function abstractTest(server, config, ports) {
 				serverClient.on('error', () => {})
 
 				serverClient.on('connect', (packet) => {
-					const connack =
-						version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
-					serverClient.connack(connack)
+					serverClient.connack(resumedConnack(++connections))
 				})
 				serverClient.on('publish', (packet) => {
 					serverClient.puback({ messageId: packet.messageId })
@@ -5147,15 +5153,14 @@ export default function abstractTest(server, config, ports) {
 		})
 
 		it('should resend in-flight QoS 1 publish messages from the client if clean is false', function _test(t, done) {
+			let connections = 0
 			let reconnect = false
 			let client: mqtt.MqttClient | null = null
 			const incomingStore = new mqtt.Store({ clean: false })
 			const outgoingStore = new mqtt.Store({ clean: false })
 			const server2 = serverBuilder(config.protocol, (serverClient) => {
 				serverClient.on('connect', (packet) => {
-					const connack =
-						version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
-					serverClient.connack(connack)
+					serverClient.connack(resumedConnack(++connections))
 				})
 				serverClient.on('publish', (packet) => {
 					if (reconnect) {
@@ -5192,20 +5197,100 @@ export default function abstractTest(server, config, ports) {
 			})
 		})
 
+		// MQTT-3.3.1-1: a PUBLISH sent again has DUP 1 and the same Packet
+		// Identifier. `sessionPresent` is what the broker answers on the
+		// reconnect.
+		const resendsWithDup = (done: DoneCallback, keepsSession: boolean) => {
+			const { check, finish, deadline } = guardDone(done)
+			let connections = 0
+			let firstId: number | undefined
+			let client: mqtt.MqttClient
+			const incomingStore = new mqtt.Store({ clean: false })
+			const outgoingStore = new mqtt.Store({ clean: false })
+			const server2 = serverBuilder(config.protocol, (serverClient) => {
+				const connection = ++connections
+				serverClient.on('connect', () => {
+					serverClient.connack(
+						resumedConnack(connection, keepsSession),
+					)
+				})
+				serverClient.on('publish', (packet) => {
+					if (connection === 1) {
+						check(() => assert.strictEqual(packet.dup, false))
+						firstId = packet.messageId
+						// Drop the connection before the PUBACK.
+						client.end(true, () => {
+							client.reconnect({ incomingStore, outgoingStore })
+						})
+						return
+					}
+					check(() => {
+						assert.strictEqual(packet.messageId, firstId)
+						assert.strictEqual(
+							packet.dup,
+							true,
+							'a PUBLISH sent again must have DUP 1',
+						)
+					})
+					serverClient.puback({ messageId: packet.messageId })
+				})
+			})
+			deadline(
+				5000,
+				'the publish was not acknowledged after the reconnect',
+			)
+
+			server2.listen(ports.PORTAND50, () => {
+				client = connect({
+					port: ports.PORTAND50,
+					host: 'localhost',
+					clean: false,
+					clientId: 'cid1',
+					reconnectPeriod: 0,
+					incomingStore,
+					outgoingStore,
+				})
+				client.on('error', () => {})
+				client.once('connect', () => {
+					client.publish('topic', 'payload', { qos: 1 }, (err) => {
+						check(() => assert.ifError(err))
+						finish()
+					})
+				})
+			})
+		}
+
+		it('should resend an unacknowledged QoS 1 publish with DUP 1 and the same id', function _test(t, done) {
+			resendsWithDup(done, true)
+		})
+
+		it(
+			'should resend an unacknowledged QoS 1 publish with DUP 1 on MQTT 3.1.1 even if Session Present is 0',
+			{ skip: version === 5 },
+			function _test(t, done) {
+				resendsWithDup(done, false)
+			},
+		)
+
 		it('should resend in-flight QoS 2 publish messages from the client if clean is false', function _test(t, done) {
+			let connections = 0
 			let reconnect = false
 			let client: mqtt.MqttClient | null = null
 			const incomingStore = new mqtt.Store({ clean: false })
 			const outgoingStore = new mqtt.Store({ clean: false })
 			const server2 = serverBuilder(config.protocol, (serverClient) => {
 				serverClient.on('connect', (packet) => {
-					const connack =
-						version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
-					serverClient.connack(connack)
+					serverClient.connack(resumedConnack(++connections))
 				})
 				serverClient.on('publish', (packet) => {
 					if (reconnect) {
-						done()
+						done(
+							packet.dup
+								? undefined
+								: new Error(
+										'a PUBLISH sent again must have DUP 1',
+									),
+						)
 					} else {
 						client.end(true, () => {
 							client.reconnect({
@@ -5239,15 +5324,14 @@ export default function abstractTest(server, config, ports) {
 		})
 
 		it('should resend in-flight QoS 2 pubrel messages from the client if clean is false', function _test(t, done) {
+			let connections = 0
 			let reconnect = false
 			let client: mqtt.MqttClient | null = null
 			const incomingStore = new mqtt.Store({ clean: false })
 			const outgoingStore = new mqtt.Store({ clean: false })
 			const server2 = serverBuilder(config.protocol, (serverClient) => {
 				serverClient.on('connect', (packet) => {
-					const connack =
-						version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
-					serverClient.connack(connack)
+					serverClient.connack(resumedConnack(++connections))
 				})
 				serverClient.on('publish', (packet) => {
 					if (!reconnect) {
@@ -5299,6 +5383,7 @@ export default function abstractTest(server, config, ports) {
 		})
 
 		it('should resend in-flight publish messages by published order', function _test(t, done) {
+			let connections = 0
 			let publishCount = 0
 			let reconnect = false
 			let disconnectOnce = true
@@ -5311,9 +5396,7 @@ export default function abstractTest(server, config, ports) {
 				serverClient.on('error', () => {})
 
 				serverClient.on('connect', (packet) => {
-					const connack =
-						version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
-					serverClient.connack(connack)
+					serverClient.connack(resumedConnack(++connections))
 				})
 				serverClient.on('publish', (packet) => {
 					serverClient.puback({ messageId: packet.messageId })
