@@ -4,6 +4,7 @@
 import { assert } from 'chai'
 import sinon from 'sinon'
 import fs from 'fs'
+import { once } from 'events'
 import levelStore from 'mqtt-level-store'
 import {
 	generate,
@@ -4847,6 +4848,82 @@ export default function abstractTest(server, config, ports) {
 				} else {
 					assert.isTrue(reconnectEvent)
 				}
+			})
+		})
+
+		// resolves with the topics of the next SUBSCRIBE the server receives
+		const nextSubscribedTopics = () =>
+			new Promise<string[]>((resolve) => {
+				server.once('client', (serverClient) => {
+					serverClient.once('subscribe', (packet) => {
+						resolve(packet.subscriptions.map((sub) => sub.topic))
+					})
+				})
+			})
+
+		// `__proto__` used to change the prototype of the resubscribe map and
+		// `resubscribe` collided with the internal force-resubscribe flag
+		for (const reservedTopic of ['__proto__', 'resubscribe']) {
+			for (const resetSubscriptions of [false, true]) {
+				it(
+					`should resubscribe to \`${reservedTopic}\` ${resetSubscriptions ? 'after resetting subscriptions' : 'when reconnecting'}`,
+					{ timeout: 5000 },
+					async function _test() {
+						const client = connect({ reconnectPeriod: 100 })
+						const topics = [reservedTopic, 'hello']
+						try {
+							await once(client, 'connect')
+							await client.subscribeAsync(topics)
+							if (resetSubscriptions) {
+								client.options.resubscribe = false
+								const reconnected = once(client, 'connect')
+								client.stream.end()
+								await reconnected
+								client.options.resubscribe = true
+								await client.subscribeAsync(topics)
+							}
+							const nextSubscribe = nextSubscribedTopics()
+							client.stream.end()
+							assert.deepEqual(
+								await nextSubscribe,
+								version === 5 ? [reservedTopic] : topics,
+							)
+						} finally {
+							await client.endAsync()
+						}
+					},
+				)
+			}
+
+			it(
+				`should not resubscribe to \`${reservedTopic}\` after unsubscribing it`,
+				{ timeout: 5000 },
+				async function _test() {
+					const client = connect({ reconnectPeriod: 100 })
+					try {
+						await once(client, 'connect')
+						await client.subscribeAsync([reservedTopic, 'hello'])
+						await client.unsubscribeAsync(reservedTopic)
+						const nextSubscribe = nextSubscribedTopics()
+						client.stream.end()
+						assert.deepEqual(await nextSubscribe, ['hello'])
+					} finally {
+						await client.endAsync()
+					}
+				},
+			)
+		}
+
+		it('should reject a subscription map entry without a valid qos', function _test(t, done) {
+			const client = connect()
+			client.on('connect', () => {
+				client.subscribe({ 'a/b': {} } as any, (err) => {
+					assert.instanceOf(err, Error)
+					assert.equal(err.message, 'Invalid qos for topic a/b')
+					// the connection must survive a malformed map
+					assert.isTrue(client.connected)
+					client.end(true, done)
+				})
 			})
 		})
 
