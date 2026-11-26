@@ -590,6 +590,115 @@ describe('MQTT 5.0', () => {
 	)
 
 	it(
+		'should error cb call and send nothing if PUBLISH topicAlias is 0',
+		{
+			timeout: 15000,
+		},
+		function _test(t, done) {
+			const opts: mqtt.IClientOptions = {
+				host: 'localhost',
+				port: ports.PORTAND103,
+				protocolVersion: 5,
+			}
+			const client = mqtt.connect(opts)
+			const published: string[] = []
+			const server2 = new MqttServer((serverClient) => {
+				serverClient.on('connect', (packet) => {
+					serverClient.connack({
+						reasonCode: 0,
+						sessionPresent: false,
+						properties: {
+							topicAliasMaximum: 3,
+						},
+					})
+				})
+				serverClient.on('publish', (packet) => {
+					published.push(packet.topic.toString())
+					if (packet.topic.toString() !== 'test2') return
+					// Only the valid publish reached the server
+					assert.deepStrictEqual(published, ['test2'])
+					client.end(true, (err1) => {
+						server2.close((err2) => {
+							done(err1 || err2)
+						})
+					})
+				})
+			}).listen(ports.PORTAND103)
+
+			client.on('connect', () => {
+				// [MQTT-3.3.2-8]: a Topic Alias of 0 is not allowed, with or
+				// without a topic name
+				client.publish(
+					'test1',
+					'Message',
+					{ properties: { topicAlias: 0 } },
+					(error1) => {
+						assert.strictEqual(
+							error1?.message,
+							'Sending Topic Alias out of range',
+						)
+						client.publish(
+							'',
+							'Message',
+							{ properties: { topicAlias: 0 } },
+							(error2) => {
+								assert.strictEqual(
+									error2?.message,
+									'Sending Topic Alias out of range',
+								)
+								// A later valid publish shows the connection is still open
+								client.publish('test2', 'Message')
+							},
+						)
+					},
+				)
+			})
+		},
+	)
+
+	it(
+		'should error cb call if PUBLISH topicAlias is 0 on topicAlias disabled by broker',
+		{
+			timeout: 15000,
+		},
+		function _test(t, done) {
+			const opts: mqtt.IClientOptions = {
+				host: 'localhost',
+				port: ports.PORTAND103,
+				protocolVersion: 5,
+			}
+			const client = mqtt.connect(opts)
+			const server2 = new MqttServer((serverClient) => {
+				serverClient.on('connect', (packet) => {
+					serverClient.connack({
+						reasonCode: 0,
+						sessionPresent: false,
+					})
+				})
+			}).listen(ports.PORTAND103)
+
+			client.on('connect', () => {
+				client.publish(
+					'test1',
+					'Message',
+					{ properties: { topicAlias: 0 } },
+					(error) => {
+						assert.strictEqual(
+							error?.message,
+							'Sending Topic Alias out of range',
+						)
+						client.end(true, (err1) => {
+							server2.close((err2) => {
+								done(err1 || err2)
+							})
+						})
+					},
+				)
+			})
+		},
+	)
+
+	it(
 		'should error cb call if PUBLISH out of range topicAlias on topicAlias disabled by broker',
 		{
 			timeout: 15000,
