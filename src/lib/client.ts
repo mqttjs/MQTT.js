@@ -860,13 +860,22 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	 * @return unsigned int, or null when every id is in flight
 	 */
 	private _nextId(): number | null {
-		for (let i = 0; i < 65535; i++) {
-			const id = this.messageIdProvider.allocate()
-			if (id === null || !this.outgoing[id]) {
-				return id
+		const skipped: number[] = []
+		let id: number | null = null
+		for (let attempt = 0; attempt < 65535; attempt++) {
+			const candidate = this.messageIdProvider.allocate()
+			if (candidate === null || !this.outgoing[candidate]) {
+				id = candidate
+				break
 			}
+			skipped.push(candidate)
 		}
-		return null
+		// allocate() marked them used in a tracking provider; the store replay
+		// still has to register them
+		for (const skippedId of skipped) {
+			this.messageIdProvider.deallocate(skippedId)
+		}
+		return id
 	}
 
 	/**

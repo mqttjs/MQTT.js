@@ -15,7 +15,7 @@ import getPorts from './helpers/port_list'
 import serverBuilder from './server_helpers_for_client_tests'
 import { MqttServer } from './server'
 import abstractClientTests from './abstract_client'
-import mqtt, { MQTTJS_VERSION } from '../../src'
+import mqtt, { MQTTJS_VERSION, UniqueMessageIdProvider } from '../../src'
 
 const debug = _debug('mqttjs:client-test')
 
@@ -84,7 +84,7 @@ describe('MqttClient', () => {
 			client.end((err) => done(err))
 		})
 
-		it('should not give a new packet an id that is still in flight', function _test(t, done) {
+		it('should skip an id that is still in flight when the id wraps to 1', function _test(t, done) {
 			client = mqtt.connect(config)
 			client.messageIdProvider['nextId'] = 65535
 			client.outgoing[1] = { volatile: false, cmd: 'publish', cb() {} }
@@ -94,8 +94,20 @@ describe('MqttClient', () => {
 			client.end(true, (err) => done(err))
 		})
 
+		it('should release the ids it skips in a tracking provider', function _test(t, done) {
+			const messageIdProvider = new UniqueMessageIdProvider()
+			client = mqtt.connect({ ...config, messageIdProvider })
+			client.outgoing[1] = { volatile: false, cmd: 'publish', cb() {} }
+
+			assert.equal(client['_nextId'](), 2)
+			assert.isTrue(messageIdProvider.register(1))
+			client.end(true, (err) => done(err))
+		})
+
 		it('should queue a publish until an id is free when every id is in flight', function _test(t, done) {
 			client = mqtt.connect(config)
+			// a random start id could land on freeId and hide a regression
+			client.messageIdProvider['nextId'] = 1
 			client.on('connect', () => {
 				for (let id = 1; id <= 65535; id++) {
 					client.outgoing[id] = {
@@ -108,14 +120,22 @@ describe('MqttClient', () => {
 
 				client.on('packetsend', (packet) => {
 					if (packet.cmd === 'publish') {
-						assert.equal(packet.messageId, freeId)
-						client.end(true, (err) => done(err))
+						client.end(true, (err) =>
+							done(
+								err ||
+									(packet.messageId === freeId
+										? undefined
+										: new Error(
+												`sent id ${packet.messageId}`,
+											)),
+							),
+						)
 					}
 				})
 				client.publish('a', 'b', { qos: 1 })
 				assert.lengthOf(client['_storeProcessingQueue'], 1)
 
-				client['_removeOutgoingAndStoreMessage'](freeId, () => {})
+				client.removeOutgoingMessage(freeId)
 			})
 		})
 
