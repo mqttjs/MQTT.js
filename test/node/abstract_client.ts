@@ -4810,55 +4810,112 @@ export default function abstractTest(server, config, ports) {
 			},
 		)
 
-		it(
-			'should close the connection when ended before the connack arrives',
-			{ timeout: 10000 },
-			function _test(t, done) {
-				const { check, finish, deadline } = guardDone(done)
-				let client: mqtt.MqttClient | null = null
-				// the broker sees its side of the socket close on its own schedule
-				let ended = false
-				let socketClosed = false
-				const maybeFinish = () => {
-					if (ended && socketClosed) finish()
-				}
-
-				// never answers the CONNECT
-				const server2 = serverBuilder(
-					config.protocol,
-					(serverClient) => {
-						serverClient.on('connect', () => {
-							deadline(3000, 'end() left the connection open')
-							client.end((err) => {
-								check(() => assert.notOk(err))
-								ended = true
-								maybeFinish()
-							})
-						})
-					},
-				)
-
-				server2.on('connection', (socket) => {
-					socket.on('close', () => {
-						socketClosed = true
-						maybeFinish()
-					})
-				})
-
-				server2.listen(ports.PORTAND54, () => {
-					client = connect({
-						host: 'localhost',
-						port: ports.PORTAND54,
-						reconnectPeriod: 0,
-					})
-					client.on('error', (err) => {
-						check(() =>
-							assert.fail(`unexpected error: ${err.message}`),
-						)
-					})
-				})
+		const endBeforeConnackCases: {
+			name: string
+			force: boolean
+			connackAfterEnd: boolean
+		}[] = [
+			{
+				name: 'ended before the connack arrives',
+				force: false,
+				connackAfterEnd: false,
 			},
-		)
+			{
+				name: 'force-ended before the connack arrives',
+				force: true,
+				connackAfterEnd: false,
+			},
+			{
+				name: 'ended just before the connack arrives',
+				force: false,
+				connackAfterEnd: true,
+			},
+		]
+
+		for (const { name, force, connackAfterEnd } of endBeforeConnackCases) {
+			it(
+				`should close the connection when ${name}`,
+				{ timeout: 10000 },
+				function _test(t, done) {
+					const { check, finish, deadline } = guardDone(done)
+					const reconnectPeriod = 100
+					let client: mqtt.MqttClient | null = null
+					let endCallbacks = 0
+					let reconnects = 0
+					let connects = 0
+					// the broker sees its side of the socket close on its own schedule
+					let socketClosed = false
+					const maybeFinish = () => {
+						if (endCallbacks === 0 || !socketClosed) return
+						// long enough for a wrongly armed reconnect timer to fire
+						setTimeout(() => {
+							check(() => {
+								assert.equal(
+									endCallbacks,
+									1,
+									'end callback count',
+								)
+								assert.equal(
+									reconnects,
+									0,
+									'reconnects after end',
+								)
+								assert.equal(connects, 0, 'connects after end')
+							})
+							finish()
+						}, reconnectPeriod * 3)
+					}
+
+					// never answers the CONNECT before `end()`
+					const server2 = serverBuilder(
+						config.protocol,
+						(serverClient) => {
+							serverClient.on('connect', () => {
+								deadline(3000, 'end() left the connection open')
+								client.end(force, (err) => {
+									check(() => assert.notOk(err))
+									endCallbacks++
+									maybeFinish()
+								})
+								if (connackAfterEnd) {
+									serverClient.connack(
+										version === 5
+											? { reasonCode: 0 }
+											: { returnCode: 0 },
+									)
+								}
+							})
+						},
+					)
+
+					server2.on('connection', (socket) => {
+						socket.on('close', () => {
+							socketClosed = true
+							maybeFinish()
+						})
+					})
+
+					server2.listen(ports.PORTAND54, () => {
+						client = connect({
+							host: 'localhost',
+							port: ports.PORTAND54,
+							reconnectPeriod,
+						})
+						client.on('error', (err) => {
+							check(() =>
+								assert.fail(`unexpected error: ${err.message}`),
+							)
+						})
+						client.on('reconnect', () => {
+							reconnects++
+						})
+						client.on('connect', () => {
+							connects++
+						})
+					})
+				},
+			)
+		}
 
 		// The first connection is ended, then a reconnect starts. Its socket's
 		// 'close' must land before that, not on the next connection.
@@ -4883,8 +4940,11 @@ export default function abstractTest(server, config, ports) {
 					client.once('error', () => {
 						client.end(() => client.reconnect())
 					})
+					const rcNotAuthorized = version === 5 ? 135 : 5
 					serverClient.connack(
-						version === 5 ? { reasonCode: 135 } : { returnCode: 5 },
+						version === 5
+							? { reasonCode: rcNotAuthorized }
+							: { returnCode: rcNotAuthorized },
 					)
 				},
 			},

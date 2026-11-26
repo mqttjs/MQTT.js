@@ -601,8 +601,8 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 	/**
 	 * Streams that have emitted 'close', which `_cleanUp` must not wait for.
-	 * `destroyed` cannot tell: it is set before 'close' is emitted, and the
-	 * `wx` stream emits 'close' without ever setting it.
+	 * `destroyed` cannot tell: Node streams set it before 'close' is emitted,
+	 * and the `wx` stream only after.
 	 */
 	private _closedStreams = new WeakSet<IStream>()
 
@@ -2292,7 +2292,8 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 		if (done) {
 			this.log('_cleanUp :: done callback provided for on stream close')
-			this.stream.on('close', done)
+			// once: the `wx` stream can emit 'close' twice
+			this.stream.once('close', done)
 		}
 
 		this.log('_cleanUp :: forced? %s', forced)
@@ -2307,9 +2308,14 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			this.stream.destroy()
 		} else if (!this.connected) {
 			// No session to close: `_sendPacket` would only queue the DISCONNECT
-			// and leave the socket and its CONNACK timer alive. A closed stream
-			// is left alone: `wx` would emit 'close' a second time.
-			if (!streamClosed) {
+			// and leave the socket and its CONNACK timer alive.
+			if (streamClosed) {
+				// destroying it again would make `wx` emit a second 'close'
+				this.log(
+					'_cleanUp :: (%s) :: not connected, stream already closed',
+					this.options.clientId,
+				)
+			} else {
 				this.log(
 					'_cleanUp :: (%s) :: not connected, destroying stream',
 					this.options.clientId,
