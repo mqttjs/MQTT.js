@@ -4,7 +4,11 @@ import abstractClientTests from './abstract_client'
 import { MqttServer } from './server'
 import serverBuilder from './server_helpers_for_client_tests'
 import getPorts from './helpers/port_list'
-import mqttPacket, { type IAuthPacket, type IPublishPacket } from 'mqtt-packet'
+import mqttPacket, {
+	type IAuthPacket,
+	type IPublishPacket,
+	type IUnsubackPacket,
+} from 'mqtt-packet'
 import mqtt, { type ErrorWithReasonCode } from '../../src'
 import { EventEmitter } from 'node:events'
 import handlePacket from '../../src/lib/handlers'
@@ -97,7 +101,7 @@ describe('MQTT 5.0', () => {
 						break
 					case 1:
 						assert.strictEqual(topic, 'test1')
-						assert.strictEqual(packet.topic, '')
+						assert.strictEqual(packet.topic, 'test1')
 						assert.strictEqual(packet.properties.topicAlias, 1)
 						break
 					case 2:
@@ -107,7 +111,7 @@ describe('MQTT 5.0', () => {
 						break
 					case 3:
 						assert.strictEqual(topic, 'test2')
-						assert.strictEqual(packet.topic, '')
+						assert.strictEqual(packet.topic, 'test2')
 						assert.strictEqual(packet.properties.topicAlias, 1)
 						client.end(true, (err1) => {
 							server2.close((err2) => {
@@ -119,6 +123,79 @@ describe('MQTT 5.0', () => {
 			})
 		},
 	)
+
+	// QoS 0 is covered by 'topic should be complemented on receive'. QoS 2
+	// emits from the incoming store on PUBREL, so it needs its own case.
+	for (const qos of [1, 2] as const) {
+		it(
+			`aliased QoS ${qos} PUBLISH with an empty topic gets the alias topic`,
+			{
+				timeout: 15000,
+			},
+			function _test(t, done) {
+				const client = mqtt.connect({
+					host: 'localhost',
+					port: ports.PORTAND103,
+					protocolVersion: 5,
+					properties: {
+						topicAliasMaximum: 3,
+					},
+				})
+				let received = 0
+				let finished = false
+				const finish = (err?: Error) => {
+					if (finished) return
+					finished = true
+					client.end(true, (err1) => {
+						server2.close((err2) => {
+							done(err || err1 || err2)
+						})
+					})
+				}
+				const server2 = new MqttServer((serverClient) => {
+					serverClient.on('connect', () => {
+						serverClient.connack({ reasonCode: 0 })
+						// register the alias, then use it with an empty topic
+						serverClient.publish({
+							messageId: 1,
+							topic: 'alias/topic',
+							payload: 'first',
+							qos,
+							properties: { topicAlias: 1 },
+						})
+						serverClient.publish({
+							messageId: 2,
+							topic: '',
+							payload: 'second',
+							qos,
+							properties: { topicAlias: 1 },
+						})
+					})
+					serverClient.on('pubrec', (packet) => {
+						serverClient.pubrel({ messageId: packet.messageId })
+					})
+				}).listen(ports.PORTAND103)
+
+				t.after(() => {
+					if (!finished) {
+						client.end(true)
+						server2.close()
+					}
+				})
+
+				client.on('error', finish)
+				client.on('message', (topic, payload, packet) => {
+					try {
+						assert.strictEqual(topic, 'alias/topic')
+						assert.strictEqual(packet.topic, 'alias/topic')
+					} catch (err) {
+						return finish(err as Error)
+					}
+					if (++received === 2) finish()
+				})
+			},
+		)
+	}
 
 	it(
 		'registered topic alias should automatically used if autoUseTopicAlias is true',
@@ -3745,6 +3822,61 @@ describe('MQTT 5.0', () => {
 				})
 			})
 		})
+	})
+
+	// An UNSUBACK code of 0x80 or more is a failure (MQTT 5 3.11.3)
+	it('unsuback handling error codes', async function _test(t) {
+		const codes: Record<string, number> = { denied: 0x87, gone: 0x11 }
+		const server2 = new MqttServer((serverClient) => {
+			serverClient.on('connect', () => {
+				serverClient.connack({ reasonCode: 0 })
+			})
+			serverClient.on('unsubscribe', (packet) => {
+				serverClient.unsuback({
+					messageId: packet.messageId,
+					granted: packet.unsubscriptions.map(
+						(topic) => codes[topic] ?? 0,
+					),
+				})
+			})
+		})
+		await new Promise<void>((resolve) => {
+			server2.listen(ports.PORTAND351, resolve)
+		})
+		const client = mqtt.connect({
+			protocolVersion: 5,
+			port: ports.PORTAND351,
+			host: 'localhost',
+		})
+		t.after(async () => {
+			await client.endAsync(true)
+			await new Promise((resolve) => {
+				server2.close(resolve)
+			})
+		})
+		await new Promise((resolve) => {
+			client.once('connect', resolve)
+		})
+
+		const [err, packet] = await new Promise<[Error, mqtt.Packet]>(
+			(resolve) => {
+				client.unsubscribe(['ok', 'denied'], (err2, packet2) => {
+					resolve([err2, packet2])
+				})
+			},
+		)
+		assert.strictEqual(err?.message, 'Unsubscribe error: Not authorized')
+		assert.strictEqual((err as ErrorWithReasonCode).code, 0x87)
+		assert.deepStrictEqual((packet as IUnsubackPacket).granted, [0, 0x87])
+
+		const asyncErr = await client.unsubscribeAsync('denied').then(
+			() => null,
+			(err2: ErrorWithReasonCode) => err2,
+		)
+		assert.strictEqual(asyncErr?.code, 0x87)
+		// 0x11 No subscription existed is not a failure
+		const unsuback = await client.unsubscribeAsync(['ok', 'gone'])
+		assert.deepStrictEqual((unsuback as IUnsubackPacket).granted, [0, 0x11])
 	})
 
 	it(
