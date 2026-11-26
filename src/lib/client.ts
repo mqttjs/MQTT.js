@@ -2033,19 +2033,18 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		// would never end
 		if (!force && this.connected && Object.keys(this.outgoing).length > 0) {
 			this.log(
-				'end :: (%s) :: calling finish in 10ms once outgoing is empty',
+				'end :: (%s) :: waiting for %d acks or the connection to close',
 				this.options.clientId,
+				Object.keys(this.outgoing).length,
 			)
+			// whichever fires first cancels the other
 			const onOutgoingEmpty = () => {
 				this.removeListener('close', onClose)
 				// wait 10ms, just to be sure we received all of it
 				setTimeout(finish, 10)
 			}
 			const onClose = () => {
-				this.log(
-					'end :: (%s) :: connection closed before outgoing emptied, calling finish',
-					this.options.clientId,
-				)
+				this.log('end :: connection closed, not waiting for acks')
 				this.removeListener('outgoingEmpty', onOutgoingEmpty)
 				finish()
 			}
@@ -2053,8 +2052,10 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			this.once('close', onClose)
 		} else {
 			this.log(
-				'end :: (%s) :: immediately calling finish',
+				'end :: (%s) :: immediately calling finish (connected: %s, unacked: %d)',
 				this.options.clientId,
+				this.connected,
+				Object.keys(this.outgoing).length,
 			)
 			finish()
 		}

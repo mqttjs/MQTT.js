@@ -16,7 +16,6 @@ import {
 import { type DoneCallback, ErrorWithReasonCode } from 'src/lib/shared'
 import { fail } from 'assert'
 import { describe, it, beforeEach, afterEach, after } from 'node:test'
-import type Connection from 'mqtt-connection'
 import type { AddressInfo } from 'net'
 import Store from '../../src/lib/store'
 import serverBuilderFn from './server_helpers_for_client_tests'
@@ -1612,38 +1611,25 @@ export default function abstractTest(server, config, ports) {
 			client.end(true, done)
 		})
 
-		// A graceful end() waits for in-flight acks, but they only arrive on a
-		// live connection
 		const connackOk = version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
-		const endWithoutAckCases: {
-			name: string
-			onConnect: (
-				serverClient: Connection,
-				client: mqtt.MqttClient,
-			) => void
-			onPublish?: (
-				serverClient: Connection,
-				client: mqtt.MqttClient,
-			) => void
-			reconnectPeriod?: number
-		}[] = [
+		const endWithoutAckCases = [
 			{
 				name: 'when ended before the connack',
-				onConnect: (serverClient, client) => client.end(),
+				onConnect: (serverClient, end) => end(),
 			},
 			{
 				name: 'once the connection closes',
 				onConnect: (serverClient) => serverClient.connack(connackOk),
-				onPublish: (serverClient, client) => {
-					client.end()
+				onPublish: (serverClient, end) => {
+					end()
 					serverClient.destroy()
 				},
 			},
 			{
 				name: 'when ended while offline',
 				onConnect: (serverClient) => serverClient.connack(connackOk),
-				onPublish: (serverClient, client) => {
-					client.once('offline', () => client.end())
+				onPublish: (serverClient, end, client) => {
+					client.once('offline', end)
 					serverClient.destroy()
 				},
 				reconnectPeriod: 1000,
@@ -1655,19 +1641,20 @@ export default function abstractTest(server, config, ports) {
 			onPublish,
 			reconnectPeriod = 0,
 		} of endWithoutAckCases) {
-			it(`does not wait acks ${name}`, function _test(t, done) {
+			it(`does not wait for acks ${name}`, function _test(t, done) {
 				const { finish, deadline } = guardDone(done)
 				let client: mqtt.MqttClient | null = null
+				const end = () => client.end((err) => finish(err))
 
-				// never acks the publish
 				const server2 = serverBuilder(
 					config.protocol,
 					(serverClient) => {
 						serverClient.on('connect', () =>
-							onConnect(serverClient, client),
+							onConnect(serverClient, end),
 						)
+						// never acks the publish
 						serverClient.on('publish', () =>
-							onPublish?.(serverClient, client),
+							onPublish?.(serverClient, end, client),
 						)
 					},
 				)
@@ -1679,7 +1666,6 @@ export default function abstractTest(server, config, ports) {
 						reconnectPeriod,
 					})
 					client.publish('test', 'test', { qos: 1 })
-					client.once('end', () => finish())
 					deadline(3000, 'end() is still waiting for an ack')
 				})
 			})
