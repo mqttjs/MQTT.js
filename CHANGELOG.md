@@ -9,6 +9,10 @@
 
 # [5.16.0](https://github.com/mqttjs/MQTT.js/compare/v5.15.2...v5.16.0) (2026-09-16)
 
+### ⚠ Behaviour change
+
+* a refused CONNACK now always closes the connection, and the client only retries when `reconnectOnConnackError` is `true`. Before, with the default `false`, the socket was left open and the client usually retried anyway once the broker closed it. Set `reconnectOnConnackError: true` to keep retrying after a refusal (GHSA-8phv-jwjm-93rr, [#2064](https://github.com/mqttjs/MQTT.js/issues/2064), [#2072](https://github.com/mqttjs/MQTT.js/issues/2072))
+
 ### Bug Fixes
 
 * bounds-check the suback granted array against subscriptions sent (GHSA-rj8f-4655-cgg2) ([#2061](https://github.com/mqttjs/MQTT.js/issues/2061)) ([46ee23f](https://github.com/mqttjs/MQTT.js/commit/46ee23f3f1d4a8ef21e5c2b26ea24818f1b2dce3)), closes [#2060](https://github.com/mqttjs/MQTT.js/issues/2060)

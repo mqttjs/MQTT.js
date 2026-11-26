@@ -5,7 +5,7 @@ import { build } from 'esbuild/lib/main'
 import { runInNewContext } from 'node:vm'
 import path from 'node:path'
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const { options } = require('../../esbuild.js')
+const { options, esmOptions } = require('../../esbuild.js')
 
 const PINGREQ = [0xc0, 0]
 
@@ -62,6 +62,24 @@ describe('browser bundle', () => {
 			setTimeoutCalls,
 			0,
 			'bundle scheduled a timer: some process import bypassed the shim',
+		)
+	})
+
+	it('exports the same names from the ESM bundle as build/index.js (#2074)', async () => {
+		const esm = esmOptions()
+		const { metafile } = await build({
+			...esm,
+			write: false,
+			metafile: true,
+		})
+
+		const bundleExports = metafile.outputs[esm.outfile].exports
+		// eslint-disable-next-line @typescript-eslint/no-require-imports
+		const cjsExports = Object.keys(require('../../build'))
+		assert.sameMembers(
+			bundleExports,
+			cjsExports,
+			'ESM bundle exports differ from build/index.js: named imports like { connect } break',
 		)
 	})
 })

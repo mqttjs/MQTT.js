@@ -37,7 +37,7 @@ export default function start(args: string[]) {
 			password: 'P',
 			protocol: ['C', 'l'],
 			verbose: 'v',
-			help: '-H',
+			help: 'H',
 			ca: 'cafile',
 		},
 		default: {
