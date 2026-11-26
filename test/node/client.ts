@@ -104,9 +104,27 @@ describe('MqttClient', () => {
 			client.end(true, (err) => done(err))
 		})
 
+		it('should find a free id on the last of the 65535 attempts', function _test(t, done) {
+			client = mqtt.connect(config)
+			for (let id = 1; id <= 65535; id++) {
+				if (id !== 42) {
+					client.outgoing[id] = {
+						volatile: false,
+						cmd: 'publish',
+						cb() {},
+					}
+				}
+			}
+			client.messageIdProvider['nextId'] = 43
+
+			assert.equal(client['_nextId'](), 42)
+			client.end(true, (err) => done(err))
+		})
+
 		it('should queue a publish until an id is free when every id is in flight', function _test(t, done) {
 			client = mqtt.connect(config)
-			// a random start id could land on freeId and hide a regression
+			// pinned: if publish ignored in-flight ids, a random start of 42
+			// would still pass
 			client.messageIdProvider['nextId'] = 1
 			client.on('connect', () => {
 				for (let id = 1; id <= 65535; id++) {
@@ -120,16 +138,11 @@ describe('MqttClient', () => {
 
 				client.on('packetsend', (packet) => {
 					if (packet.cmd === 'publish') {
-						client.end(true, (err) =>
-							done(
-								err ||
-									(packet.messageId === freeId
-										? undefined
-										: new Error(
-												`sent id ${packet.messageId}`,
-											)),
-							),
-						)
+						const wrongId =
+							packet.messageId === freeId
+								? undefined
+								: new Error(`sent id ${packet.messageId}`)
+						client.end(true, (err) => done(err || wrongId))
 					}
 				})
 				client.publish('a', 'b', { qos: 1 })

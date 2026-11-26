@@ -870,8 +870,8 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			}
 			skipped.push(candidate)
 		}
-		// allocate() marked them used in a tracking provider; the store replay
-		// still has to register them
+		// a tracking provider marked them used; left marked, the store replay
+		// cannot register them and drops those packets
 		for (const skippedId of skipped) {
 			this.messageIdProvider.deallocate(skippedId)
 		}
