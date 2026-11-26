@@ -2,7 +2,7 @@ import { assert } from 'chai'
 import { describe, it } from 'node:test'
 import { once } from 'node:events'
 import { setTimeout as delay } from 'node:timers/promises'
-import type { AddressInfo } from 'node:net'
+import net, { type AddressInfo } from 'node:net'
 import type { IPublishPacket } from 'mqtt-packet'
 import { MqttServer } from './server'
 import mqtt, { Store, type MqttClient } from '../../src'
@@ -493,16 +493,125 @@ describe('MQTT 5.0 send quota (server Receive Maximum)', () => {
 				protocolVersion: 5,
 				reconnectPeriod: 0,
 			})
+			const closed = new Promise<void>((resolve) => {
+				client.once('close', () => resolve())
+			})
 			try {
 				const err = await new Promise<Error>((resolve) => {
 					client.once('error', resolve)
 				})
-				assert.match(err.message, /Receive Maximum of 0/)
+				assert.match(err.message, /invalid Receive Maximum 0/)
 				assert.strictEqual((err as mqtt.ErrorWithReasonCode).code, 130)
-				await waitFor(() => !client.connected, 'the close')
+				await closed
 				client.publish('rm/never', 'x', { qos: 1 })
 				await settle()
 				assert.lengthOf(connections[0].publishes, 0)
+			} finally {
+				await teardown(client, server)
+			}
+		},
+	)
+
+	it(
+		'closes the connection when the CONNACK repeats Receive Maximum',
+		testOptions,
+		async () => {
+			// mqtt-packet cannot encode a repeated property: send the bytes.
+			// CONNACK, accepted, properties: Receive Maximum 5, Receive Maximum 1
+			const connack = Buffer.from([
+				0x20, 9, 0, 0, 6, 0x21, 0, 5, 0x21, 0, 1,
+			])
+			const server = net.createServer((socket) => {
+				socket.once('data', () => socket.write(connack))
+				socket.on('error', () => {})
+			})
+			server.listen(0)
+			await once(server, 'listening')
+			const { port } = server.address() as AddressInfo
+			const client = mqtt.connect({
+				port,
+				protocolVersion: 5,
+				reconnectPeriod: 0,
+			})
+			const closed = new Promise<void>((resolve) => {
+				client.once('close', () => resolve())
+			})
+			try {
+				const err = await new Promise<Error>((resolve) => {
+					client.once('error', resolve)
+				})
+				assert.match(err.message, /invalid Receive Maximum \[5,1\]/)
+				assert.strictEqual((err as mqtt.ErrorWithReasonCode).code, 130)
+				await closed
+			} finally {
+				client.end(true)
+				server.close()
+			}
+		},
+	)
+
+	it(
+		'stores a held alias-only publish under the topic a publish held before it sets',
+		testOptions,
+		async () => {
+			const { server, port, connections } = await startServer(
+				[1],
+				undefined,
+				{ topicAliasMaximum: 5 },
+			)
+			const client = mqtt.connect({
+				port,
+				protocolVersion: 5,
+				reconnectPeriod: 0,
+			})
+			try {
+				await connected(client)
+				const conn = connections[0]
+				const errors: (Error | undefined)[] = []
+				const done = (err?: Error) => errors.push(err)
+				client.publish('rm/first', 'x', { qos: 1 }, done)
+				client.publish(
+					'rm/aliased',
+					'x',
+					{ qos: 1, properties: { topicAlias: 1 } },
+					done,
+				)
+				client.publish(
+					'',
+					'x',
+					{ qos: 1, properties: { topicAlias: 1 } },
+					done,
+				)
+				await waitFor(() => conn.publishes.length === 1, 'rm/first')
+				const third = await new Promise<IPublishPacket>(
+					(resolve, reject) => {
+						client.outgoingStore.get(
+							{ messageId: conn.publishes[0].messageId + 2 },
+							(err, packet) =>
+								err
+									? reject(err)
+									: resolve(packet as IPublishPacket),
+						)
+					},
+				)
+				// stored with its topic, so a replay goes to the right place
+				assert.strictEqual(third.topic, 'rm/aliased')
+				for (let i = 0; i < 3; i++) {
+					await waitFor(
+						() => conn.publishes.length > i,
+						`PUBLISH ${i}`,
+					)
+					conn.serverClient.puback({
+						messageId: conn.publishes[i].messageId,
+					})
+				}
+				await waitFor(() => errors.length === 3, 'the callbacks')
+				assert.deepEqual(errors, [null, null, null])
+				assert.deepEqual(topics(conn.publishes), [
+					'rm/first',
+					'rm/aliased',
+					'',
+				])
 			} finally {
 				await teardown(client, server)
 			}

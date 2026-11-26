@@ -4,6 +4,9 @@ import TopicAliasSend from '../topic-alias-send'
 import { ErrorWithReasonCode, type PacketPump } from '../shared'
 import type MqttClient from '../client'
 
+/** MQTT 5 reason code 0x82 */
+const PROTOCOL_ERROR = 130
+
 /**
  * Drops the rest of the chunk, tears the connection down, then emits `err`.
  * The order is load-bearing, see the duplicate CONNACK branch.
@@ -38,7 +41,7 @@ const handleConnack = (
 	if (client['connackReceived']) {
 		const err = new ErrorWithReasonCode(
 			'Protocol error: duplicate CONNACK on the same network connection',
-			130,
+			PROTOCOL_ERROR,
 		)
 		// Drop the rest of the chunk, then tear down, then emit. The order is
 		// load-bearing on every step:
@@ -84,8 +87,7 @@ const handleConnack = (
 				// topicAliasMaximum as a uint16. Without the teardown the
 				// client would wedge here for good -- the connack timer is
 				// already cleared and `connackReceived` latched, so no later
-				// CONNACK and no timeout can move it on. Discard and tear down
-				// first, for the same reasons as the duplicate CONNACK above.
+				// CONNACK and no timeout can move it on.
 				rejectConnack(
 					client,
 					new Error('topicAliasMaximum from broker is out of range'),
@@ -101,14 +103,20 @@ const handleConnack = (
 		}
 	}
 
-	// 3.2.2.3.3: a Receive Maximum of 0 is a Protocol Error. It would leave the
-	// client no send quota, so no QoS 1/2 publish could ever go out.
-	if (rc === 0 && packet.properties?.receiveMaximum === 0) {
+	// 3.2.2.3.3: a Receive Maximum of 0, or one sent twice (mqtt-packet then
+	// parses an array), is a Protocol Error; either would hold every QoS 1/2
+	// publish for good
+	const receiveMaximum = packet.properties?.receiveMaximum
+	if (
+		rc === 0 &&
+		receiveMaximum !== undefined &&
+		!(Number.isInteger(receiveMaximum) && receiveMaximum >= 1)
+	) {
 		rejectConnack(
 			client,
 			new ErrorWithReasonCode(
-				'Protocol error: Receive Maximum of 0 in CONNACK',
-				130,
+				`Protocol error: invalid Receive Maximum ${JSON.stringify(receiveMaximum)} in CONNACK`,
+				PROTOCOL_ERROR,
 			),
 			pump,
 		)

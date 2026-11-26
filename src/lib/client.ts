@@ -2086,6 +2086,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	/**
 	 * removeOutgoingMessage - remove a message in outgoing store
 	 * the outgoing callback will be called withe Error('Message removed') if the message is removed
+	 * A removed QoS 1/2 publish frees its MQTT 5 send quota slot, though the server may still count it.
 	 *
 	 * @param {Number} messageId - messageId to remove message
 	 * @returns {MqttClient} this - for chaining
@@ -2617,9 +2618,37 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			noStore: !!noStore,
 		})
 		if (!noStore) {
-			this._storePacket(packet, cb, cbStorePut)
+			this._storePacket(
+				this._withHeldAliasTopic(packet as IPublishPacket),
+				cb,
+				cbStorePut,
+			)
 		}
 		return true
+	}
+
+	/**
+	 * An alias-only publish held behind the held publish that sets its alias:
+	 * that alias is not registered yet, so the stored copy takes its topic from there.
+	 */
+	private _withHeldAliasTopic(packet: IPublishPacket): IPublishPacket {
+		const alias = packet.properties?.topicAlias
+		if (!alias || packet.topic.length !== 0) {
+			return packet
+		}
+		let topic: string | undefined
+		for (const [messageId, held] of this._publishesAwaitingQuota) {
+			if (messageId === packet.messageId) {
+				break
+			}
+			if (
+				held.packet.properties?.topicAlias === alias &&
+				held.packet.topic.length !== 0
+			) {
+				topic = held.packet.topic.toString()
+			}
+		}
+		return topic === undefined ? packet : { ...packet, topic }
 	}
 
 	/** Writes the held publishes, in order, while the send quota has room. */
@@ -2629,6 +2658,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 				return
 			}
 			this._publishesAwaitingQuota.delete(messageId)
+			// the slot first: `_sendPacket` checks the quota again
 			this._outgoingInFlightIds.add(messageId)
 			this.log(
 				'_sendPublishesAwaitingQuota :: sending held publish %d, %d still held',
@@ -2658,7 +2688,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	/** The send quota restarts with each connection [MQTT-4.9.0-1]. */
 	private _resetSendQuota() {
 		this.log(
-			'_resetSendQuota :: dropping %d in flight and %d held',
+			'_resetSendQuota :: clearing %d in flight and %d held, the store replays them',
 			this._outgoingInFlightIds.size,
 			this._publishesAwaitingQuota.size,
 		)
@@ -2822,8 +2852,8 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		if ((qos === 0 && this.queueQoSZero) || storePacket.cmd !== 'publish') {
 			this.queue.push({ packet: storePacket, cb })
 		} else if (qos > 0) {
-			// a held publish is also in `_publishesAwaitingQuota`: failing it
-			// there too keeps it from being written and called back twice
+			// `_failPublish` calls the publish callback in `outgoing`, and drops a
+			// held publish so it is not written and called back again
 			this.outgoingStore.put(storePacket, (err) => {
 				if (err) {
 					this._failPublish(packet as IPublishPacket, err, this.noop)
