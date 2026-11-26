@@ -2280,8 +2280,16 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	 * @api private
 	 */
 	private _cleanUp(forced: boolean, done?: DoneCallback, opts = {}) {
-		// With manualConnect, the client has no stream before connect()
-		if (done && this.stream) {
+		if (!this.stream) {
+			// manualConnect before connect(): nothing was sent, so fail what is queued
+			this.log('_cleanUp :: no stream, flushing outgoing')
+			this._flush()
+			this._destroyKeepaliveManager()
+			done?.()
+			return
+		}
+
+		if (done) {
 			this.log('_cleanUp :: done callback provided for on stream close')
 			this.stream.on('close', done)
 		}
@@ -2291,14 +2299,12 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			if (this.options.reconnectPeriod === 0 && this.options.clean) {
 				this._flush()
 			}
-			if (this.stream) {
-				this.log(
-					'_cleanUp :: (%s) :: destroying stream',
-					this.options.clientId,
-				)
-				this.stream.destroy()
-			}
-		} else if (this.stream) {
+			this.log(
+				'_cleanUp :: (%s) :: destroying stream',
+				this.options.clientId,
+			)
+			this.stream.destroy()
+		} else {
 			const packet: IDisconnectPacket = { cmd: 'disconnect', ...opts }
 			this.log(
 				'_cleanUp :: (%s) :: call _sendPacket with disconnect packet',
@@ -2337,9 +2343,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 				'_cleanUp :: (%s) :: removing stream `done` callback `close` listener',
 				this.options.clientId,
 			)
-			if (this.stream) {
-				this.stream.removeListener('close', done)
-			}
+			this.stream.removeListener('close', done)
 			done()
 		}
 	}

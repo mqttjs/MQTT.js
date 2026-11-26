@@ -987,7 +987,6 @@ describe('MqttClient', () => {
 				client = mqtt.connect({
 					...config,
 					manualConnect: true,
-					reconnectPeriod: 0,
 				})
 
 				const published = new Promise<Error | undefined>((resolve) => {
@@ -1017,16 +1016,60 @@ describe('MqttClient', () => {
 					manualConnect: true,
 				})
 
-				client.publish('hello', 'world', { qos: 1 })
+				const published = new Promise<Error | undefined>((resolve) => {
+					client.publish('hello', 'world', { qos: 1 }, (err) =>
+						resolve(err),
+					)
+				})
 
 				await new Promise<void>((resolve, reject) => {
 					client.end((err) => (err ? reject(err) : resolve()))
 				})
 
+				const err = await published
+				assert.instanceOf(err, Error)
+				assert.equal(err.message, 'Connection closed')
 				assert.isTrue(
 					client.disconnected,
 					'client should be disconnected',
 				)
+			},
+		)
+
+		it(
+			'should not send a DISCONNECT queued by end() before connect() when option manualConnect=true',
+			{
+				timeout: 10000,
+			},
+			async function _test() {
+				client = mqtt.connect({
+					...config,
+					manualConnect: true,
+				})
+
+				client.publish('hello', 'world', { qos: 1 }, () => {})
+				await new Promise<void>((resolve, reject) => {
+					client.end((err) => (err ? reject(err) : resolve()))
+				})
+				assert.lengthOf(client.queue, 0, 'nothing should be queued')
+
+				const received: string[] = []
+				server.once('client', (serverClient) => {
+					serverClient.on('publish', () => received.push('publish'))
+					serverClient.on('disconnect', () =>
+						received.push('disconnect'),
+					)
+				})
+				await new Promise<void>((resolve) => {
+					client.once('connect', () => resolve())
+					client.connect()
+				})
+				await new Promise<void>((resolve, reject) => {
+					client.end((err) => (err ? reject(err) : resolve()))
+				})
+
+				// the only DISCONNECT is the one of the second end()
+				assert.deepEqual(received, ['disconnect'])
 			},
 		)
 	})
