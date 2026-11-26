@@ -364,6 +364,47 @@ describe('MQTT 5.0 send quota (server Receive Maximum)', () => {
 	)
 
 	it(
+		'frees the slot of a publish whose topic alias is not registered',
+		testOptions,
+		async () => {
+			const { server, port, connections } = await startServer(
+				[1],
+				undefined,
+				{ topicAliasMaximum: 5 },
+			)
+			const client = mqtt.connect({
+				port,
+				protocolVersion: 5,
+				reconnectPeriod: 0,
+			})
+			try {
+				await connected(client)
+				// an empty topic needs a registered alias to recover it from
+				const failed = new Promise<Error | undefined>((resolve) => {
+					client.publish(
+						'',
+						'x',
+						{ qos: 1, properties: { topicAlias: 3 } },
+						(err) => resolve(err),
+					)
+				})
+				client.publish('rm/next', 'x', { qos: 1 })
+				assert.match(
+					(await failed)?.message ?? '',
+					/Unregistered Topic Alias/,
+				)
+				await waitFor(
+					() => connections[0].publishes.length === 1,
+					'rm/next',
+				)
+				assert.deepEqual(topics(connections[0].publishes), ['rm/next'])
+			} finally {
+				await teardown(client, server)
+			}
+		},
+	)
+
+	it(
 		'checks a held publish against the CONNACK limits when it is written, and frees its slot when refused',
 		testOptions,
 		async () => {
@@ -465,8 +506,13 @@ describe('MQTT 5.0 send quota (server Receive Maximum)', () => {
 			try {
 				await connected(client)
 				// never written, so it must not keep the only slot
-				client.publish('rm/unstored', 'x', { qos: 1 })
+				const failed = new Promise<Error | undefined>((resolve) => {
+					client.publish('rm/unstored', 'x', { qos: 1 }, (err) =>
+						resolve(err),
+					)
+				})
 				client.publish('rm/next', 'x', { qos: 1 })
+				assert.match((await failed)?.message ?? '', /put failed/)
 				await waitFor(
 					() => connections[0].publishes.length === 1,
 					'rm/next',

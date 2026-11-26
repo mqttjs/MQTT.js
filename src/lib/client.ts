@@ -2304,14 +2304,16 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 				storePacket as IPublishPacket,
 			)
 			if (err) {
-				return cb && cb(err)
+				// never written, so it must not keep a send quota slot
+				this._failPublish(packet as IPublishPacket, err, cb)
+				return
 			}
 		}
 		this.outgoingStore.put(storePacket, (err2) => {
 			if (err2) {
-				// never written, so it must not keep a send quota slot
 				if (packet.cmd === 'publish') {
-					this._releaseSendQuota(packet.messageId)
+					this._failPublish(packet, err2, cb)
+					return
 				}
 				return cb && cb(err2)
 			}
