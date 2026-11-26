@@ -1673,6 +1673,8 @@ export default function abstractTest(server, config, ports) {
 			})
 
 			client.once('connect', () => {
+				// Without a callback it is dropped as well
+				client.publish('a/+/b', 'b', opts)
 				client.publish('a/+', 'b', opts, (err1) => {
 					client.publish('a/#', 'b', opts, (err2) => {
 						check(() => {
