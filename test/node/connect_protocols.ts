@@ -1,114 +1,35 @@
-import http from 'http'
 import assert from 'assert'
-import { after, before, describe, it } from 'node:test'
-import WebSocket from 'ws'
-import MQTTConnection from 'mqtt-connection'
-import mqtt, { type MqttClient } from '../../src'
+import { afterEach, describe, it } from 'node:test'
+import mqtt, { type IClientOptions, type MqttClient } from '../../src'
+import { BufferedDuplex } from '../../src/lib/BufferedDuplex'
 import getPorts from './helpers/port_list'
-import { MqttServer } from './server'
 
-const ports = getPorts(6)
-const TCP_PORT = ports.PORT
-const WS_PORT = ports.PORTAND40
+// connect() picks the stream builder synchronously, so no broker is needed
+const PORT = getPorts(6).PORT
 
-function waitForConnect(client: MqttClient): Promise<void> {
-	return new Promise((resolve, reject) => {
-		const timer = setTimeout(
-			() => reject(new Error('timed out waiting for connect')),
-			5000,
-		)
-		client.once('connect', () => {
-			clearTimeout(timer)
-			resolve()
-		})
-		client.once('error', (err) => {
-			clearTimeout(timer)
-			reject(err)
-		})
-	})
-}
+describe('connect() picks the protocol builders per client', () => {
+	const clients: MqttClient[] = []
+	const connect = (url: string, opts: IClientOptions = {}) => {
+		const client = mqtt.connect(url, { reconnectPeriod: 0, ...opts })
+		clients.push(client)
+		return client
+	}
 
-describe('connect() protocol builders are picked per client', () => {
-	let tcpServer: MqttServer
-	let httpServer: http.Server
-	let wsServer: WebSocket.Server
-
-	before(async () => {
-		tcpServer = new MqttServer((client) => {
-			client.on('connect', () => client.connack({ returnCode: 0 }))
-			client.on('error', () => {})
-		})
-		await new Promise<void>((resolve) =>
-			tcpServer.listen(TCP_PORT, resolve),
-		)
-
-		httpServer = http.createServer()
-		wsServer = new WebSocket.Server({
-			server: httpServer,
-			handleProtocols: (protocols: Set<string>) => [...protocols][0],
-		})
-		wsServer.on('connection', (ws) => {
-			const connection = new MQTTConnection(
-				WebSocket.createWebSocketStream(ws),
-			)
-			connection.on('connect', () =>
-				connection.connack({ returnCode: 0 }),
-			)
-			connection.on('error', () => {})
-		})
-		await new Promise<void>((resolve) =>
-			httpServer.listen(WS_PORT, resolve),
-		)
+	afterEach(() => {
+		clients.splice(0).forEach((client) => client.end(true))
 	})
 
-	after(async () => {
-		wsServer.close()
-		httpServer.close()
-		await new Promise<void>((resolve) => tcpServer.close(() => resolve()))
+	it('a forceNativeWebSocket client does not change later plain clients', () => {
+		const nativeClient = connect(`ws://127.0.0.1:${PORT}`, {
+			forceNativeWebSocket: true,
+		})
+		// only the native WebSocket builder wraps its socket in a BufferedDuplex
+		assert.ok(nativeClient.stream instanceof BufferedDuplex)
+
+		const tcpClient = connect(`mqtt://127.0.0.1:${PORT}`)
+		assert.strictEqual(tcpClient.options.protocol, 'mqtt')
+
+		const wsClient = connect(`ws://127.0.0.1:${PORT}`)
+		assert.ok(!(wsClient.stream instanceof BufferedDuplex))
 	})
-
-	it(
-		'does not let a forceNativeWebSocket client change the protocol of a later mqtt client',
-		{ timeout: 10000 },
-		async () => {
-			const nativeClient = mqtt.connect(`ws://127.0.0.1:${WS_PORT}`, {
-				forceNativeWebSocket: true,
-				reconnectPeriod: 0,
-			})
-			await waitForConnect(nativeClient)
-			assert.strictEqual(nativeClient.options.protocol, 'ws')
-			await nativeClient.endAsync(true)
-
-			const tcpClient = mqtt.connect(`mqtt://127.0.0.1:${TCP_PORT}`, {
-				reconnectPeriod: 0,
-			})
-			await waitForConnect(tcpClient)
-			assert.strictEqual(tcpClient.options.protocol, 'mqtt')
-			await tcpClient.endAsync(true)
-		},
-	)
-
-	it(
-		'does not let a forceNativeWebSocket client change the builder of a later plain ws client',
-		{ timeout: 10000 },
-		async () => {
-			const nativeClient = mqtt.connect(`ws://127.0.0.1:${WS_PORT}`, {
-				forceNativeWebSocket: true,
-				reconnectPeriod: 0,
-			})
-			await waitForConnect(nativeClient)
-			await nativeClient.endAsync(true)
-
-			const wsClient = mqtt.connect(`ws://127.0.0.1:${WS_PORT}`, {
-				reconnectPeriod: 0,
-			})
-			await waitForConnect(wsClient)
-			// the Node builder returns the `ws` stream, which carries the
-			// url and has no native WebSocket attached to it
-			const stream = wsClient.stream as unknown as Record<string, unknown>
-			assert.strictEqual(stream.url, `ws://127.0.0.1:${WS_PORT}/`)
-			assert.strictEqual(stream.socket, undefined)
-			await wsClient.endAsync(true)
-		},
-	)
 })

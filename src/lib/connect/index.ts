@@ -196,10 +196,7 @@ function connect(
 		}
 	}
 
-	// The stream builders are only loaded once per environment, but the
-	// set is picked for every connect() call: `forceNativeWebSocket` must
-	// only affect the client that sets it, not every other client created
-	// in the same process (#2050).
+	// picked per call so `forceNativeWebSocket` only affects its own client
 	const protocols =
 		isBrowser || opts.forceNativeWebSocket
 			? loadBrowserProtocols()
