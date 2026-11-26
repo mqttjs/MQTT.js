@@ -482,6 +482,33 @@ describe('MQTT 5.0 send quota (server Receive Maximum)', () => {
 	)
 
 	it(
+		'closes the connection when the CONNACK has Receive Maximum 0',
+		testOptions,
+		async () => {
+			const { server, port, connections } = await startServer([0])
+			const client = mqtt.connect({
+				port,
+				protocolVersion: 5,
+				reconnectPeriod: 0,
+			})
+			try {
+				const [err] = (await once(client as any, 'error')) as [
+					mqtt.ErrorWithReasonCode,
+				]
+				assert.match(err.message, /Receive Maximum of 0/)
+				assert.strictEqual(err.code, 130)
+				await waitFor(() => !client.connected, 'the close')
+				assert.isFalse(client.connected)
+				client.publish('rm/never', 'x', { qos: 1 })
+				await settle()
+				assert.lengthOf(connections[0].publishes, 0)
+			} finally {
+				await teardown(client, server)
+			}
+		},
+	)
+
+	it(
 		'frees the slot of a publish the store fails to put',
 		testOptions,
 		async () => {

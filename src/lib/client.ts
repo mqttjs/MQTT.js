@@ -2572,8 +2572,8 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 	/** The server Receive Maximum, the most QoS 1/2 publishes in flight. */
 	private get _sendQuota(): number {
-		// 0 is a Protocol Error in CONNACK; enforcing it would stall every publish
-		return this._serverProperties?.receiveMaximum || MAX_RECEIVE_MAXIMUM
+		// absent means 65535; a 0 never gets here, `handleConnack` rejects it
+		return this._serverProperties?.receiveMaximum ?? MAX_RECEIVE_MAXIMUM
 	}
 
 	/** Frees the send quota slot or held entry of a publish that is done. */

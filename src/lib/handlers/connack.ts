@@ -94,6 +94,22 @@ const handleConnack = (
 		}
 	}
 
+	// 3.2.2.3.3: a Receive Maximum of 0 is a Protocol Error. It would leave the
+	// client no send quota, so no QoS 1/2 publish could ever go out.
+	if (rc === 0 && packet.properties?.receiveMaximum === 0) {
+		// same teardown order as the duplicate CONNACK above
+		pump?.discardParsedPackets()
+		client['_cleanUp'](true)
+		client.emit(
+			'error',
+			new ErrorWithReasonCode(
+				'Protocol error: Receive Maximum of 0 in CONNACK',
+				130,
+			),
+		)
+		return
+	}
+
 	if (rc === 0) {
 		client.reconnecting = false
 		client['_onConnect'](packet)
