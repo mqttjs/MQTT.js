@@ -1416,7 +1416,8 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 				qos,
 				retain,
 				messageId,
-				dup,
+				// [MQTT-3.3.1-2]: the DUP flag must be 0 in a QoS 0 PUBLISH.
+				dup: qos === 1 || qos === 2 ? dup : false,
 			}
 
 			if (options.protocolVersion === 5) {
