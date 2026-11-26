@@ -592,10 +592,8 @@ export default function abstractTest(server, config, ports) {
 
 			const client = connect({ reconnectPeriod: 0 })
 			client.once('connect', () => {
-				// a non-string topic and no callback; the second write hits the
-				// destroyed stream and must not replace the first as the rejected one
+				// a non-string topic, and no callback
 				client.publish(42 as unknown as string, 'payload')
-				client.publish('valid', 'payload')
 			})
 			expectPacketError(client, 'Invalid topic', guard)
 		})
@@ -639,6 +637,35 @@ export default function abstractTest(server, config, ports) {
 					client.end((endErr) => {
 						check(() => assert.strictEqual(calls, 1))
 						finish(endErr)
+					})
+				})
+				// hits the destroyed stream: must not replace the rejected write
+				client.publish('valid', 'payload')
+			})
+		})
+
+		it('should not emit error event for a rejected qos 1 publish with a callback when end(true) runs before close', function _test(t, done) {
+			const { check, finish, deadline } = guardDone(done)
+			deadline(3000, 'the end callback never ran')
+			const client = connect({ reconnectPeriod: 0 })
+			failOnErrorEvent(client, check)
+			const errors: string[] = []
+			client.once('connect', () => {
+				client.publish(
+					42 as unknown as string,
+					'payload',
+					{ qos: 1 },
+					(err) => {
+						errors.push(err?.message)
+					},
+				)
+				// fails the publish with "Connection closed" before the stream closes
+				client.end(true, () => {
+					setImmediate(() => {
+						check(() =>
+							assert.deepEqual(errors, ['Connection closed']),
+						)
+						finish()
 					})
 				})
 			})

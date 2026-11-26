@@ -609,7 +609,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	 */
 	private _rejectedWrites = new WeakMap<
 		IStream,
-		{ error: Error; packet: Packet; cb?: DoneCallback }
+		{ error: Error; packet: Packet; cb?: DoneCallback; emit: boolean }
 	>()
 
 	/**
@@ -2160,9 +2160,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	private _onStreamClose(stream: IStream) {
 		this.log('(%s)stream :: on close', this.options.clientId)
 		const rejected = this._rejectedWrites.get(stream)
-		// the error goes to the caller's callback, or as 'error' when there is none
-		const cb = rejected && this._callerCallback(rejected)
-		const emitRejected = rejected && (!cb || cb === this.noop)
+		const emitRejected = rejected?.emit
 		if (rejected) {
 			this.log(
 				'_onStreamClose :: reporting the rejected %s %s',
@@ -2202,18 +2200,12 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		}
 	}
 
-	/** Returns `wrapper`, marked as calling `callerCb` for `_callerCallback`. */
+	/** Returns `wrapper`, marked as calling `callerCb`, see `_writePacket`. */
 	private _wrapCallback<T extends (...args: any[]) => void>(
 		callerCb: ((...args: any[]) => void) | null | undefined,
 		wrapper: T,
 	): T {
 		return Object.assign(wrapper, { [kCallerCallback]: callerCb })
-	}
-
-	/** The callback of the call that sent a rejected packet, if it gave one. */
-	private _callerCallback(rejected: { packet: Packet; cb?: DoneCallback }) {
-		const cb = this._outgoingEntryOf(rejected.packet)?.cb ?? rejected.cb
-		return cb && kCallerCallback in cb ? cb[kCallerCallback] : cb
 	}
 
 	/** The `outgoing` entry waiting for the ack of this packet, if any. */
@@ -2699,11 +2691,19 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 				(packet as { messageId?: number }).messageId ?? '-',
 				packetError.message,
 			)
-			// no 'drain' will come: `_onStreamClose` calls `cb` with the error
+			// decided now: an `end(true)` before 'close' drops the outgoing entry
+			const entryCb = this._outgoingEntryOf(packet)?.cb ?? cb
+			const callerCb =
+				entryCb && kCallerCallback in entryCb
+					? entryCb[kCallerCallback]
+					: entryCb
+			// no 'drain' will come: `_onStreamClose` calls `cb` with the error,
+			// and emits it when the caller gave no callback (it became `noop`)
 			this._rejectedWrites.set(this.stream, {
 				error: packetError,
 				packet,
 				cb,
+				emit: !callerCb || callerCb === this.noop,
 			})
 			return
 		}
