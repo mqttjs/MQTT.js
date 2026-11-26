@@ -61,6 +61,26 @@ const MAX_RECEIVE_MAXIMUM = 0xffff
 /** MQTT 5 reason code 0x93 */
 const RECEIVE_MAXIMUM_EXCEEDED = 147
 
+/** MQTT 5 reason code 0x81 */
+const MALFORMED_PACKET = 0x81
+
+/** Bytes `packet` takes on the wire, counted without copying the payload. */
+const encodedSize = (packet: Packet, opts: IClientOptions) => {
+	let size = 0
+	const counter = {
+		write(chunk: Buffer | string) {
+			size +=
+				typeof chunk === 'string'
+					? Buffer.byteLength(chunk)
+					: chunk.length
+			return true
+		},
+		destroy() {},
+	}
+	mqttPacket.writeToStream(packet, counter as any, opts)
+	return size
+}
+
 const defaultConnectOptions: IClientOptions = {
 	keepalive: 60,
 	reschedulePings: true,
@@ -855,10 +875,27 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 	/**
 	 * _nextId
-	 * @return unsigned int
+	 * Skips ids that are still in flight [MQTT-2.2.1-3]: a provider such as
+	 * the default one does not track which ids are in use.
+	 * @return unsigned int, or null when every id is in flight
 	 */
-	private _nextId() {
-		return this.messageIdProvider.allocate()
+	private _nextId(): number | null {
+		const skipped: number[] = []
+		let id: number | null = null
+		for (let attempt = 0; attempt < 65535; attempt++) {
+			const candidate = this.messageIdProvider.allocate()
+			if (candidate === null || !this.outgoing[candidate]) {
+				id = candidate
+				break
+			}
+			skipped.push(candidate)
+		}
+		// a tracking provider marked them used; left marked, the store replay
+		// cannot register them and drops those packets
+		for (const skippedId of skipped) {
+			this.messageIdProvider.deallocate(skippedId)
+		}
+		return id
 	}
 
 	/**
@@ -1097,7 +1134,18 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			}
 		}
 
+		// set on a parser error: chunks already buffered behind a pending
+		// handler would otherwise be parsed from a wrong offset
+		let parseFailed = false
+
 		writable._write = (buf, enc, done) => {
+			if (parseFailed) {
+				this.log(
+					'writable stream :: dropping chunk after a parser error',
+				)
+				done()
+				return
+			}
 			completeParse = done
 			this.log('writable stream :: parsing buffer')
 			parser.parse(buf)
@@ -1181,8 +1229,10 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		// avoid message queue
 		this._writePacket(connectPacket)
 
-		// Echo connection errors
-		parser.on('error', this.emit.bind(this, 'error'))
+		parser.on('error', (err) => {
+			parseFailed = true
+			this._onParserError(err, pump)
+		})
 
 		// auth
 		if (this.options.properties) {
@@ -1222,6 +1272,49 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		)
 
 		return this
+	}
+
+	/**
+	 * A malformed packet leaves the parser at an unknown offset: close the
+	 * connection ([MQTT-4.8.0-1], MQTT 5 §4.13.1) in the same order as the
+	 * oversized-packet path in `handlers/index.ts`.
+	 * @api private
+	 */
+	private _onParserError(err: Error, pump: PacketPump) {
+		pump.discardParsedPackets()
+		if (pump.isCurrent()) {
+			this.log(
+				'_onParserError :: malformed packet, closing: %s',
+				err.message,
+			)
+			// not after `end()`: no packet may follow its DISCONNECT, and
+			// `disconnecting` is set before `stream.end()` runs
+			if (
+				this.options.protocolVersion === 5 &&
+				!this.disconnecting &&
+				this.stream.writable
+			) {
+				this._writePacket({
+					cmd: 'disconnect',
+					reasonCode: MALFORMED_PACKET,
+				})
+				// `writeToStream` corks until the next tick, once per packet,
+				// and `_cleanUp` destroys the stream before that: flush now
+				do {
+					this.stream.uncork()
+				} while (this.stream.writableCorked > 0)
+			}
+			this._cleanUp(true)
+		} else {
+			this.log('_onParserError :: stale connection: %s', err.message)
+		}
+		this.emit(
+			'error',
+			new ErrorWithReasonCode(
+				`${ReasonCodes[MALFORMED_PACKET]}: ${err.message}`,
+				MALFORMED_PACKET,
+			),
+		)
 	}
 
 	/**
@@ -1323,7 +1416,8 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 				qos,
 				retain,
 				messageId,
-				dup,
+				// [MQTT-3.3.1-2]: the DUP flag must be 0 in a QoS 0 PUBLISH.
+				dup: qos === 1 || qos === 2 ? dup : false,
 			}
 
 			if (options.protocolVersion === 5) {
@@ -2258,7 +2352,9 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			// The original packet is for sending.
 			// The cloned storePacket is for storing to resend on reconnect.
 			// Topic Alias must not be used after disconnected.
-			storePacket = clone(packet)
+			// The stored copy has DUP 1 because it is sent right after the
+			// put: in the outgoing store, DUP 1 means "sent" (see `_onConnect`).
+			storePacket = { ...clone(packet), dup: true }
 			err = this._removeTopicAliasAndRecoverTopicName(
 				storePacket as IPublishPacket,
 			)
@@ -2283,6 +2379,15 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 					alias = packet.properties.topicAlias
 				}
 				const topic = packet.topic.toString()
+				// [MQTT-3.3.2-8]: Topic Alias 0 is never valid
+				if (alias === 0) {
+					this.log(
+						'applyTopicAlias :: error out of range. topic: %s - alias: %d',
+						topic,
+						alias,
+					)
+					return new Error('Sending Topic Alias out of range')
+				}
 				if (this.topicAliasSend) {
 					if (alias) {
 						if (topic.length !== 0) {
@@ -2358,6 +2463,97 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		}
 	}
 
+	/** Checks an outgoing MQTT 5 PUBLISH against the server CONNACK limits. */
+	private _checkOutgoingPublish(packet: Packet): Error | undefined {
+		if (this.options.protocolVersion !== 5 || packet.cmd !== 'publish') {
+			return undefined
+		}
+		// [MQTT-3.3.4-6]
+		if (packet.properties?.subscriptionIdentifier !== undefined) {
+			return new Error(
+				'Publish refused: a client must not send a Subscription Identifier',
+			)
+		}
+		const server = this._serverProperties
+		// an offline publish is checked when it is sent after the next CONNACK
+		if (!server || !this.connected) {
+			return undefined
+		}
+		// [MQTT-3.2.2-11]
+		if (server.maximumQoS !== undefined && packet.qos > server.maximumQoS) {
+			return new Error(
+				`Publish refused: QoS ${packet.qos} exceeds the server Maximum QoS ${server.maximumQoS}`,
+			)
+		}
+		// [MQTT-3.2.2-14]
+		if (packet.retain && server.retainAvailable === false) {
+			return new Error(
+				'Publish refused: the server does not support retained messages (Retain Available is 0)',
+			)
+		}
+		// [MQTT-3.2.2-15]
+		if (server.maximumPacketSize) {
+			const size = encodedSize(this._publishAsSent(packet), this.options)
+			if (size > server.maximumPacketSize) {
+				return new Error(
+					`Publish refused: packet size ${size} exceeds the server Maximum Packet Size ${server.maximumPacketSize}`,
+				)
+			}
+		}
+		return undefined
+	}
+
+	/** The publish `_applyTopicAlias` will send, without side effects; keep in sync. */
+	private _publishAsSent(packet: IPublishPacket): IPublishPacket {
+		const topic = packet.topic.toString()
+		const { autoAssignTopicAlias, autoUseTopicAlias } = this.options
+		if (
+			!this.topicAliasSend ||
+			topic.length === 0 ||
+			packet.properties?.topicAlias ||
+			!(autoAssignTopicAlias || autoUseTopicAlias)
+		) {
+			return packet
+		}
+		const alias = this.topicAliasSend.getAliasByTopic(topic)
+		if (alias) {
+			return {
+				...packet,
+				topic: '',
+				properties: { ...packet.properties, topicAlias: alias },
+			}
+		}
+		if (!autoAssignTopicAlias) {
+			return packet
+		}
+		// every alias encodes to 2 bytes, so the value does not change the size
+		return {
+			...packet,
+			properties: { ...packet.properties, topicAlias: 1 },
+		}
+	}
+
+	/** Fails a refused publish, freeing its message id and store entry. */
+	private _failPublish(packet: IPublishPacket, err: Error, cb: DoneCallback) {
+		this.log('_failPublish :: %s', err.message)
+		const { messageId } = packet
+		const entry = packet.qos > 0 ? this.outgoing[messageId] : undefined
+		if (!entry) {
+			cb(err)
+			return
+		}
+		delete this.outgoing[messageId]
+		// the store may not hold the packet yet: its error is not the one to report
+		this.outgoingStore.del({ messageId }, () => {
+			this.messageIdProvider.deallocate(messageId)
+			// async: store replay sends its next publish from this callback
+			setImmediate(() => {
+				entry.cb(err)
+				this._invokeStoreProcessingQueue()
+			})
+		})
+	}
+
 	private _noop(err?: Error) {
 		this.log('noop ::', err)
 	}
@@ -2405,9 +2601,11 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		cbStorePut = cbStorePut || this.noop
 		cb = cb || this.noop
 
-		const err = this._applyTopicAlias(packet)
+		// check the limits first: a refused packet must not register an alias
+		const err =
+			this._checkOutgoingPublish(packet) || this._applyTopicAlias(packet)
 		if (err) {
-			cb(err)
+			this._failPublish(packet as IPublishPacket, err, cb)
 			return
 		}
 
@@ -2693,6 +2891,18 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			this._discardIncomingQoS2State()
 		}
 
+		// MQTT-3.2.2-5, MQTT-4.4.0-1: drop the sent, unacked messages of a
+		// lost session. MQTT 3.1.1 resends them whatever Session Present says.
+		const discardOutgoingSession =
+			this.options.protocolVersion === 5 &&
+			!this.options.clean &&
+			!sessionResumed
+		if (discardOutgoingSession) {
+			this.log(
+				'_onConnect :: session not resumed, dropping sent messages from the outgoing store',
+			)
+		}
+
 		this.messageIdProvider.clear()
 
 		// before `_setupKeepaliveManager`: `keepalive` only reports the broker
@@ -2752,6 +2962,15 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 					return
 				}
 
+				// A stored PUBLISH with DUP 0 was never sent (`_storeAndSend`), so
+				// it is not session state; a stored PUBREL was always sent.
+				const neverSent = packet2.cmd === 'publish' && !packet2.dup
+
+				if (discardOutgoingSession && !neverSent) {
+					this._discardOutgoingSessionPacket(packet2, storeDeliver)
+					return
+				}
+
 				// Avoid unnecessary stream read operations when disconnected
 				if (!this.disconnecting && !this.reconnectTimer) {
 					cb = this.outgoing[packet2.messageId]
@@ -2774,7 +2993,16 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 					this._packetIdsDuringStoreProcessing[packet2.messageId] =
 						true
 					if (this.messageIdProvider.register(packet2.messageId)) {
-						this._sendPacket(packet2, undefined, undefined, true)
+						if (neverSent) {
+							this._sendNeverSentPacket(packet2 as IPublishPacket)
+						} else {
+							this._sendPacket(
+								packet2,
+								undefined,
+								undefined,
+								true,
+							)
+						}
 					} else {
 						this.log(
 							'messageId: %d has already used.',
@@ -2834,6 +3062,62 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			if (f.callback) f.callback(new Error('Connection closed'))
 		}
 		this._storeProcessingQueue.splice(0)
+	}
+
+	/**
+	 * Sends a stored PUBLISH that was never sent, after marking its stored
+	 * copy as sent (DUP 1, see `_storeAndSend`).
+	 */
+	private _sendNeverSentPacket(packet: IPublishPacket) {
+		// put first: `_sendPacket` may apply a Topic Alias to `packet`
+		this.outgoingStore.put({ ...packet, dup: true }, (err) => {
+			if (err) {
+				this.log(
+					'_sendNeverSentPacket :: put error for messageId %d, sending anyway: %o',
+					packet.messageId,
+					err,
+				)
+			}
+			this._sendPacket(packet, undefined, undefined, true)
+		})
+	}
+
+	/**
+	 * Drops a stored packet of a session the broker no longer has and fails
+	 * its pending callback, then calls `next`.
+	 */
+	private _discardOutgoingSessionPacket(packet: Packet, next: () => void) {
+		const { messageId } = packet
+		const pending = this.outgoing[messageId]
+		delete this.outgoing[messageId]
+		this._packetIdsDuringStoreProcessing[messageId] = true
+		this.log(
+			'_discardOutgoingSessionPacket :: session not resumed, dropping %s %d (topic %s, %s)',
+			packet.cmd,
+			messageId,
+			(packet as IPublishPacket).topic,
+			pending ? 'callback failed' : 'no pending callback',
+		)
+		this.outgoingStore.del({ messageId }, (err) => {
+			if (err) {
+				this.log(
+					'_discardOutgoingSessionPacket :: del error for messageId %d: %o',
+					messageId,
+					err,
+				)
+			}
+			if (pending) {
+				pending.cb(
+					new Error(
+						packet.cmd === 'pubrel'
+							? 'Session lost (Session Present 0) before PUBCOMP: the delivery outcome of the QoS 2 message is unknown'
+							: 'Session lost (Session Present 0): the message was sent but not acknowledged, and is not sent again',
+					),
+				)
+			}
+			// a synchronous store would otherwise recurse once per packet
+			nextTick(next)
+		})
 	}
 
 	/**
