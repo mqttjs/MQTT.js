@@ -81,25 +81,29 @@ const encodedSize = (packet: Packet, opts: IClientOptions) => {
 	return size
 }
 
-/** Bytes of a topic, payload or property value; Infinity when unknown. */
-const byteSize = (value: unknown) =>
-	typeof value === 'string' ||
-	Buffer.isBuffer(value) ||
-	ArrayBuffer.isView(value)
+/**
+ * Bytes of a string, Buffer or typed array; 0 when absent, Infinity for any
+ * other type so the caller falls back to the exact count.
+ */
+const byteSize = (value: unknown) => {
+	if (value == null) {
+		return 0
+	}
+	return typeof value === 'string' || ArrayBuffer.isView(value)
 		? Buffer.byteLength(value as string | Buffer)
 		: Infinity
+}
 
 /**
- * Bytes `packet` takes on the wire at most, without encoding it. Counts a
- * Topic Alias and the longest Remaining Length, so it is never too small.
+ * Bytes `packet` takes on the wire at most, without encoding it. Must never be
+ * below the size mqtt-packet encodes: it counts a Topic Alias and the longest
+ * Remaining Length and properties length.
  */
 const publishSizeUpperBound = (packet: IPublishPacket) => {
-	// header 1 + remaining length 4 + topic length 2 + message id 2
-	// + properties length 4 + Topic Alias 3
+	const header = 1 + 4 // fixed header + longest Remaining Length
+	const variable = 2 + 2 + 4 + 3 // topic length + id + properties length + alias
 	let size =
-		16 +
-		byteSize(packet.topic) +
-		(packet.payload == null ? 0 : byteSize(packet.payload))
+		header + variable + byteSize(packet.topic) + byteSize(packet.payload)
 	const props = packet.properties
 	if (!props) {
 		return size
@@ -112,12 +116,12 @@ const publishSizeUpperBound = (packet: IPublishPacket) => {
 		} else if (name === 'userProperties') {
 			for (const [key, v] of Object.entries(value)) {
 				for (const item of Array.isArray(v) ? v : [v]) {
-					// id 1 + two lengths of 2
-					size += 5 + byteSize(key) + byteSize(String(item))
+					// id 1 + two lengths of 2; a non-string item is Infinity
+					size += 5 + byteSize(key) + byteSize(item)
 				}
 			}
 		} else {
-			// id 1 + length 2
+			// id 1 + length 2; Infinity unless a string or Buffer
 			size += 3 + byteSize(value)
 		}
 	}
@@ -2534,7 +2538,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 				'Publish refused: the server does not support retained messages (Retain Available is 0)',
 			)
 		}
-		// [MQTT-3.2.2-15]
+		// [MQTT-3.2.2-15]: the exact count runs only when the bound is too close
 		if (
 			server.maximumPacketSize &&
 			publishSizeUpperBound(packet) > server.maximumPacketSize

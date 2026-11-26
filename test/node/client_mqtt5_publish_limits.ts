@@ -497,4 +497,65 @@ describe('MQTT 5.0 outgoing PUBLISH limits from CONNACK', () => {
 			}
 		},
 	)
+
+	it('refuses every packet one byte over the limit, whatever its shape', () => {
+		// seeded so a failure reproduces
+		let seed = 2128
+		const rand = (n: number) => {
+			seed = (seed * 1103515245 + 12345) % 2 ** 31
+			return seed % n
+		}
+		const text = (n: number) =>
+			Array.from(
+				{ length: rand(n) },
+				() => ['a', 'é', '中', '😀'][rand(4)],
+			).join('')
+		// never connects: only the limit check runs
+		const client = mqtt.connect({ protocolVersion: 5, manualConnect: true })
+		client.connected = true
+		for (let i = 0; i < 500; i++) {
+			const properties: IPublishPacket['properties'] = {}
+			if (rand(2)) properties.payloadFormatIndicator = !!rand(2)
+			if (rand(2)) properties.messageExpiryInterval = rand(2 ** 31)
+			if (rand(2)) properties.contentType = text(30)
+			if (rand(2)) properties.responseTopic = text(30)
+			if (rand(2)) properties.correlationData = Buffer.alloc(rand(40))
+			if (rand(2)) properties.topicAlias = 1 + rand(10)
+			if (rand(2)) {
+				properties.userProperties = {}
+				for (let k = rand(4); k > 0; k--) {
+					properties.userProperties[text(8) || 'k'] = rand(2)
+						? text(20)
+						: [text(20), text(5)]
+				}
+			}
+			const payloads = [
+				'',
+				text(200),
+				Buffer.alloc([0, 127, 128, 16383, 16384][rand(5)]),
+				new Uint8Array(rand(300)),
+			]
+			const packet = {
+				cmd: 'publish',
+				topic: text(40) || 't',
+				payload: payloads[rand(payloads.length)],
+				qos: rand(3),
+				messageId: 1 + rand(65000),
+				retain: false,
+				dup: false,
+				properties: rand(4) ? properties : undefined,
+			} as IPublishPacket
+			const size = mqttPacket.generate(packet, {
+				protocolVersion: 5,
+			}).length
+			client['_serverProperties'] = { maximumPacketSize: size }
+			assert.isUndefined(client['_checkOutgoingPublish'](packet))
+			client['_serverProperties'] = { maximumPacketSize: size - 1 }
+			assert.match(
+				client['_checkOutgoingPublish'](packet)?.message,
+				new RegExp(`packet size ${size} exceeds`),
+				`packet ${i}`,
+			)
+		}
+	})
 })
