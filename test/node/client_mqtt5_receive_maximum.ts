@@ -33,6 +33,8 @@ async function startServer(
 				receiveMaximum[Math.min(index, receiveMaximum.length - 1)]
 			serverClient.connack({
 				reasonCode: 0,
+				// what a 3.1.1 CONNACK is encoded from
+				returnCode: 0,
 				sessionPresent: index > 0,
 				properties: {
 					...connackProperties,
@@ -492,13 +494,12 @@ describe('MQTT 5.0 send quota (server Receive Maximum)', () => {
 				reconnectPeriod: 0,
 			})
 			try {
-				const [err] = (await once(client as any, 'error')) as [
-					mqtt.ErrorWithReasonCode,
-				]
+				const err = await new Promise<Error>((resolve) => {
+					client.once('error', resolve)
+				})
 				assert.match(err.message, /Receive Maximum of 0/)
-				assert.strictEqual(err.code, 130)
+				assert.strictEqual((err as mqtt.ErrorWithReasonCode).code, 130)
 				await waitFor(() => !client.connected, 'the close')
-				assert.isFalse(client.connected)
 				client.publish('rm/never', 'x', { qos: 1 })
 				await settle()
 				assert.lengthOf(connections[0].publishes, 0)
@@ -507,6 +508,81 @@ describe('MQTT 5.0 send quota (server Receive Maximum)', () => {
 			}
 		},
 	)
+
+	it(
+		'fails a held publish the store fails to put, once, and never sends it',
+		testOptions,
+		async () => {
+			const { server, port, connections } = await startServer([1])
+			const outgoingStore = new Store()
+			const put = outgoingStore.put.bind(outgoingStore)
+			outgoingStore.put = (packet, cb) => {
+				if ((packet as IPublishPacket).topic === 'rm/unstored') {
+					cb(new Error('put failed'))
+					return outgoingStore
+				}
+				return put(packet, cb)
+			}
+			const client = mqtt.connect({
+				port,
+				protocolVersion: 5,
+				reconnectPeriod: 0,
+				outgoingStore,
+			})
+			try {
+				await connected(client)
+				const conn = connections[0]
+				client.publish('rm/first', 'x', { qos: 1 })
+				const errors: (Error | undefined)[] = []
+				client.publish('rm/unstored', 'x', { qos: 1 }, (err) => {
+					errors.push(err)
+				})
+				const next = new Promise<void>((resolve) => {
+					client.publish('rm/next', 'x', { qos: 1 }, () => resolve())
+				})
+				await waitFor(() => conn.publishes.length === 1, 'rm/first')
+				conn.serverClient.puback({
+					messageId: conn.publishes[0].messageId,
+				})
+				await waitFor(() => conn.publishes.length === 2, 'rm/next')
+				conn.serverClient.puback({
+					messageId: conn.publishes[1].messageId,
+				})
+				await next
+				assert.deepEqual(topics(conn.publishes), [
+					'rm/first',
+					'rm/next',
+				])
+				assert.lengthOf(errors, 1)
+				assert.match(errors[0]?.message ?? '', /put failed/)
+				assert.deepEqual(client.outgoing, {})
+			} finally {
+				await teardown(client, server)
+			}
+		},
+	)
+
+	it('does not limit MQTT 3.1.1 publishes', testOptions, async () => {
+		// a 3.1.1 CONNACK carries no properties, so the server sends no limit
+		const { server, port, connections } = await startServer([1])
+		const client = mqtt.connect({
+			port,
+			protocolVersion: 4,
+			reconnectPeriod: 0,
+		})
+		try {
+			await connected(client)
+			for (let i = 0; i < 5; i++) {
+				client.publish(`rm/${i}`, 'x', { qos: 1 })
+			}
+			await waitFor(
+				() => connections[0].publishes.length === 5,
+				'5 PUBLISH packets',
+			)
+		} finally {
+			await teardown(client, server)
+		}
+	})
 
 	it(
 		'frees the slot of a publish the store fails to put',

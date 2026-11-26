@@ -4,6 +4,16 @@ import TopicAliasSend from '../topic-alias-send'
 import { ErrorWithReasonCode, type PacketPump } from '../shared'
 import type MqttClient from '../client'
 
+/**
+ * Drops the rest of the chunk, tears the connection down, then emits `err`.
+ * The order is load-bearing, see the duplicate CONNACK branch.
+ */
+const rejectConnack = (client: MqttClient, err: Error, pump?: PacketPump) => {
+	pump?.discardParsedPackets()
+	client['_cleanUp'](true)
+	client.emit('error', err)
+}
+
 // The pump callback is not among the arguments on purpose: `handlers/index.ts`
 // calls it once this handler returns, in a `finally`, so every path here is
 // covered including the ones that emit and throw.
@@ -53,9 +63,7 @@ const handleConnack = (
 		// Closing the network connection is safe: the reconnect logic opens a
 		// new one and both stores survive it, so the session is resumed, not
 		// cleared.
-		pump?.discardParsedPackets()
-		client['_cleanUp'](true)
-		client.emit('error', err)
+		rejectConnack(client, err, pump)
 		return
 	}
 	client['connackReceived'] = true
@@ -78,11 +86,10 @@ const handleConnack = (
 				// already cleared and `connackReceived` latched, so no later
 				// CONNACK and no timeout can move it on. Discard and tear down
 				// first, for the same reasons as the duplicate CONNACK above.
-				pump?.discardParsedPackets()
-				client['_cleanUp'](true)
-				client.emit(
-					'error',
+				rejectConnack(
+					client,
 					new Error('topicAliasMaximum from broker is out of range'),
+					pump,
 				)
 				return
 			}
@@ -97,15 +104,13 @@ const handleConnack = (
 	// 3.2.2.3.3: a Receive Maximum of 0 is a Protocol Error. It would leave the
 	// client no send quota, so no QoS 1/2 publish could ever go out.
 	if (rc === 0 && packet.properties?.receiveMaximum === 0) {
-		// same teardown order as the duplicate CONNACK above
-		pump?.discardParsedPackets()
-		client['_cleanUp'](true)
-		client.emit(
-			'error',
+		rejectConnack(
+			client,
 			new ErrorWithReasonCode(
 				'Protocol error: Receive Maximum of 0 in CONNACK',
 				130,
 			),
+			pump,
 		)
 		return
 	}
