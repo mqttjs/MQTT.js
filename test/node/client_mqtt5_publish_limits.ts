@@ -1,4 +1,5 @@
 import { assert } from 'chai'
+import sinon from 'sinon'
 import { describe, it } from 'node:test'
 import { once } from 'node:events'
 import type { AddressInfo } from 'node:net'
@@ -544,14 +545,7 @@ describe('MQTT 5.0 outgoing PUBLISH limits from CONNACK', () => {
 
 		it('does not encode a publish far below the limit', () => {
 			const check = checker(false)
-			const original = mqttPacket.writeToStream
-			let calls = 0
-			mqttPacket.writeToStream = ((
-				...args: Parameters<typeof original>
-			) => {
-				calls++
-				return original(...args)
-			}) as typeof original
+			const spy = sinon.spy(mqttPacket, 'writeToStream')
 			try {
 				assert.isUndefined(
 					check(
@@ -569,9 +563,9 @@ describe('MQTT 5.0 outgoing PUBLISH limits from CONNACK', () => {
 					),
 				)
 			} finally {
-				mqttPacket.writeToStream = original
+				spy.restore()
 			}
-			assert.strictEqual(calls, 0)
+			assert.strictEqual(spy.callCount, 0)
 		})
 	})
 })

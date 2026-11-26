@@ -95,6 +95,15 @@ const byteSize = (value: unknown) => {
 }
 
 /**
+ * Bytes of one user property pair: id 1 + two lengths of 2. Only a string is
+ * sized: mqtt-packet writes any other value as its `toString()`.
+ */
+const userPropertySize = (key: string, value: unknown) =>
+	typeof value === 'string'
+		? 5 + Buffer.byteLength(key) + Buffer.byteLength(value)
+		: Infinity
+
+/**
  * Bytes `packet` takes on the wire at most, without encoding it. Must never be
  * below the size mqtt-packet encodes: it counts a Topic Alias and the longest
  * Remaining Length and properties length.
@@ -118,12 +127,10 @@ const publishSizeUpperBound = (packet: IPublishPacket) => {
 		} else if (name === 'userProperties') {
 			for (const key in value) {
 				const v = value[key]
-				// id 1 + two lengths of 2, per value
-				if (Array.isArray(v)) {
-					for (const item of v)
-						size += 5 + byteSize(key) + byteSize(item)
+				if (!Array.isArray(v)) {
+					size += userPropertySize(key, v)
 				} else {
-					size += 5 + byteSize(key) + byteSize(v)
+					for (const item of v) size += userPropertySize(key, item)
 				}
 			}
 		} else {
