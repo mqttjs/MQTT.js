@@ -1038,6 +1038,171 @@ export default function abstractTest(server, config, ports) {
 		)
 	})
 
+	describe('malformed packet', () => {
+		beforeEach(beforeEachExec)
+		after(afterExec)
+
+		const rawPublish = (topic: string, payload: Buffer, qos: QoS = 0) =>
+			generate(
+				{
+					cmd: 'publish',
+					topic,
+					payload,
+					qos,
+					messageId: qos ? 1 : undefined,
+					dup: false,
+					retain: false,
+				} as IPublishPacket,
+				{ protocolVersion: version },
+			)
+
+		// a PUBREL with header flags 0 instead of 2: malformed in both 3.1.1
+		// and 5.0
+		const malformed = Buffer.from([0x60, 0x02, 0x00, 0x01])
+
+		it(
+			'should close the connection on a malformed packet and reconnect',
+			{ timeout: 5000 },
+			function _test(t, done) {
+				const { check, finish, deadline } = guardDone(done)
+				// a PUBLISH whose payload is itself a whole PUBLISH: a client
+				// that parses on at the wrong offset reads the inner one
+				const inner = rawPublish('forged', Buffer.from('x'))
+				const outer = rawPublish('outer', inner)
+				const innerStart = outer.length - inner.length
+				// Three chunks while the client is still handling `slow`, so
+				// the last two wait in its write buffer: the malformed packet
+				// (behind a publish of the same chunk) and then bytes that
+				// only parse as a packet from the wrong offset.
+				const attack = [
+					rawPublish('slow', Buffer.from('x'), 1),
+					Buffer.concat([
+						rawPublish('before', Buffer.from('x')),
+						malformed,
+						outer.subarray(0, innerStart),
+					]),
+					outer.subarray(innerStart),
+				]
+				let connections = 0
+				let disconnect: { reasonCode?: number } | undefined
+				const server2 = serverBuilder(
+					config.protocol,
+					(serverClient) => {
+						serverClient.on('error', () => {})
+						serverClient.stream.on('error', () => {})
+						serverClient.on('disconnect', (packet) => {
+							disconnect = packet
+						})
+						serverClient.on('connect', () => {
+							connections++
+							if (connections === 1) {
+								serverClient.connack(
+									version === 5
+										? { reasonCode: 0 }
+										: { returnCode: 0 },
+								)
+								attack.forEach((chunk, i) => {
+									setTimeout(
+										() => serverClient.stream.write(chunk),
+										50 * (i + 1),
+									)
+								})
+								return
+							}
+							// reconnect was not disabled by the teardown
+							check(() => {
+								if (version === 5) {
+									assert.strictEqual(
+										disconnect?.reasonCode,
+										0x81,
+									)
+								} else {
+									assert.isUndefined(disconnect)
+								}
+							})
+							client.end(true, (err) => finish(err))
+						})
+					},
+				)
+
+				const errors: Error[] = []
+				let client: mqtt.MqttClient
+				server2.listen(ports.PORTAND352, () => {
+					client = connect({
+						port: ports.PORTAND352,
+						host: 'localhost',
+						reconnectPeriod: 200,
+					})
+					// outlasts the attack writes (50-150ms) so they buffer
+					client.handleMessage = (packet, callback) => {
+						setTimeout(callback, 300)
+					}
+
+					client.on('message', (topic) => {
+						if (topic === 'slow') return
+						check(() => {
+							assert.fail(
+								`a publish was handled after a malformed packet: ${topic}`,
+							)
+						})
+					})
+					client.on('error', (err: ErrorWithReasonCode) => {
+						errors.push(err)
+						check(() => {
+							assert.strictEqual(err.code, 0x81)
+							assert.isTrue(
+								client.stream.destroyed,
+								'error emitted before the teardown',
+							)
+						})
+					})
+					client.once('close', () => {
+						check(() =>
+							assert.lengthOf(
+								errors,
+								1,
+								'a second error before close',
+							),
+						)
+					})
+
+					deadline(
+						3000,
+						'the client did not reconnect after closing on a malformed packet',
+					)
+				})
+			},
+		)
+
+		it(
+			'should not send a DISCONNECT 0x81 on a malformed packet during end()',
+			{ timeout: 5000 },
+			function _test(t, done) {
+				const { check, finish } = guardDone(done)
+				const reasonCodes: (number | undefined)[] = []
+				server.once('client', (serverClient) => {
+					serverClient.on('disconnect', (packet) => {
+						reasonCodes.push(packet.reasonCode)
+					})
+				})
+				const client = connect()
+				client.on('error', () => {})
+				client.once('connect', () => {
+					client.end((err) => {
+						// give the server time to read what was flushed
+						setTimeout(() => {
+							check(() => assert.notInclude(reasonCodes, 0x81))
+							finish(err)
+						}, 100)
+					})
+					// inside the window between end()'s DISCONNECT and its
+					// `stream.end()`
+					client.stream.emit('data', malformed)
+				})
+			},
+		)
+	})
+
 	describe('handling offline states', () => {
 		beforeEach(beforeEachExec)
 		after(afterExec)
