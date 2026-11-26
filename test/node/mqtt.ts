@@ -35,6 +35,24 @@ describe('mqtt', () => {
 			c.end((err) => done(err))
 		})
 
+		it('should split username and password at the first colon of the url auth', () => {
+			const c = mqtt.connect('mqtt://user:pa%3As:s@localhost:1883', {
+				manualConnect: true,
+			})
+
+			c.options.should.have.property('username', 'user')
+			c.options.should.have.property('password', 'pa:s:s')
+		})
+
+		it('should set an empty password when the url auth ends with a colon', () => {
+			const c = mqtt.connect('mqtt://user:@localhost:1883', {
+				manualConnect: true,
+			})
+
+			c.options.should.have.property('username', 'user')
+			c.options.should.have.property('password', '')
+		})
+
 		it('should return an MqttClient with path set when protocol is ws/wss', function _test(t, done) {
 			const c = mqtt.connect('ws://localhost:1883/mqtt')
 
