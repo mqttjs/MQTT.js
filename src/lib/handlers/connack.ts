@@ -107,11 +107,9 @@ const handleConnack = (
 	// parses an array), is a Protocol Error; either would hold every QoS 1/2
 	// publish for good
 	const receiveMaximum = packet.properties?.receiveMaximum
-	if (
-		rc === 0 &&
-		receiveMaximum !== undefined &&
-		!(Number.isInteger(receiveMaximum) && receiveMaximum >= 1)
-	) {
+	const validReceiveMaximum =
+		Number.isInteger(receiveMaximum) && receiveMaximum >= 1
+	if (rc === 0 && receiveMaximum !== undefined && !validReceiveMaximum) {
 		rejectConnack(
 			client,
 			new ErrorWithReasonCode(

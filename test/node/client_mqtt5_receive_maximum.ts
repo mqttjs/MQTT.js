@@ -17,11 +17,18 @@ type ServerConnection = {
  * A scripted MQTT 5 server that sends `receiveMaximum[n]` (none if undefined, plus
  * `connackProperties`) in the CONNACK of its n-th connection (the last value
  * for later ones), records every PUBLISH and acks only what `onPublish` acks.
+ * Session Present is set from the second connection on, unless `sessionPresent` says otherwise.
  */
 async function startServer(
 	receiveMaximum: (number | undefined)[],
 	onPublish?: (conn: ServerConnection, packet: IPublishPacket) => void,
-	connackProperties: Record<string, number> = {},
+	{
+		connackProperties = {},
+		sessionPresent,
+	}: {
+		connackProperties?: Record<string, number>
+		sessionPresent?: boolean
+	} = {},
 ) {
 	const connections: ServerConnection[] = []
 	const server = new MqttServer((serverClient) => {
@@ -35,7 +42,7 @@ async function startServer(
 				reasonCode: 0,
 				// what a 3.1.1 CONNACK is encoded from
 				returnCode: 0,
-				sessionPresent: index > 0,
+				sessionPresent: sessionPresent ?? index > 0,
 				properties: {
 					...connackProperties,
 					// undefined would not encode: leave the property out
@@ -326,6 +333,138 @@ describe('MQTT 5.0 send quota (server Receive Maximum)', () => {
 	)
 
 	it(
+		'with clean: true, sends the sent and the held publishes again on the reconnect, each once',
+		testOptions,
+		async () => {
+			const { server, port, connections } = await startServer(
+				[1, 3],
+				(conn, packet) => {
+					if (conn.index > 0) {
+						conn.serverClient.puback({
+							messageId: packet.messageId,
+						})
+					}
+				},
+				{ sessionPresent: false },
+			)
+			const client = mqtt.connect({
+				port,
+				protocolVersion: 5,
+				clean: true,
+				reconnectPeriod: 50,
+			})
+			try {
+				await connected(client)
+				const results: Record<string, Error | null> = {}
+				for (const topic of ['rm/a', 'rm/b', 'rm/c']) {
+					client.publish(topic, 'x', { qos: 1 }, (err) => {
+						results[topic] = err ?? null
+					})
+				}
+				await waitFor(
+					() => connections[0].publishes.length === 1,
+					'rm/a',
+				)
+				connections[0].serverClient.destroy()
+				await waitFor(
+					() => Object.keys(results).length === 3,
+					'the callbacks',
+				)
+				assert.deepEqual(results, {
+					'rm/a': null,
+					'rm/b': null,
+					'rm/c': null,
+				})
+				assert.deepEqual(topics(connections[1].publishes), [
+					'rm/a',
+					'rm/b',
+					'rm/c',
+				])
+			} finally {
+				await teardown(client, server)
+			}
+		},
+	)
+
+	it(
+		'frees the slot of a QoS 1 publish on a PUBACK >= 0x80',
+		testOptions,
+		async () => {
+			const { server, port, connections } = await startServer([1])
+			const client = mqtt.connect({
+				port,
+				protocolVersion: 5,
+				reconnectPeriod: 0,
+			})
+			try {
+				await connected(client)
+				const conn = connections[0]
+				const refused = new Promise<Error | undefined>((resolve) => {
+					client.publish('rm/refused', 'x', { qos: 1 }, (err) =>
+						resolve(err),
+					)
+				})
+				client.publish('rm/next', 'x', { qos: 1 })
+				await waitFor(() => conn.publishes.length === 1, 'rm/refused')
+				conn.serverClient.puback({
+					messageId: conn.publishes[0].messageId,
+					reasonCode: 0x80,
+				})
+				assert.match(
+					(await refused)?.message ?? '',
+					/Unspecified error/,
+				)
+				await waitFor(() => conn.publishes.length === 2, 'rm/next')
+				assert.deepEqual(topics(conn.publishes), [
+					'rm/refused',
+					'rm/next',
+				])
+			} finally {
+				await teardown(client, server)
+			}
+		},
+	)
+
+	it(
+		'sends a held alias-only publish on the topic its alias had at publish time',
+		testOptions,
+		async () => {
+			const { server, port, connections } = await startServer(
+				[1],
+				undefined,
+				{ connackProperties: { topicAliasMaximum: 5 } },
+			)
+			const client = mqtt.connect({
+				port,
+				protocolVersion: 5,
+				reconnectPeriod: 0,
+			})
+			try {
+				await connected(client)
+				const conn = connections[0]
+				const props = { topicAlias: 1 }
+				// registers alias 1 -> rm/x and takes the only slot
+				client.publish('rm/x', 'first', { qos: 1, properties: props })
+				await waitFor(() => conn.publishes.length === 1, 'rm/x')
+				// held: alias 1 is rm/x now
+				client.publish('', 'held', { qos: 1, properties: props })
+				// written at once, remaps alias 1 to rm/z
+				client.publish('rm/z', 'qos0', { qos: 0, properties: props })
+				await waitFor(() => conn.publishes.length === 2, 'rm/z')
+				conn.serverClient.puback({
+					messageId: conn.publishes[0].messageId,
+				})
+				await waitFor(() => conn.publishes.length === 3, 'the held one')
+				const held = conn.publishes[2]
+				assert.strictEqual(held.payload.toString(), 'held')
+				assert.strictEqual(held.topic.toString(), 'rm/x')
+			} finally {
+				await teardown(client, server)
+			}
+		},
+	)
+
+	it(
 		'frees the slot of a publish that fails after taking it',
 		testOptions,
 		async () => {
@@ -372,7 +511,7 @@ describe('MQTT 5.0 send quota (server Receive Maximum)', () => {
 			const { server, port, connections } = await startServer(
 				[1],
 				undefined,
-				{ topicAliasMaximum: 5 },
+				{ connackProperties: { topicAliasMaximum: 5 } },
 			)
 			const client = mqtt.connect({
 				port,
@@ -414,7 +553,12 @@ describe('MQTT 5.0 send quota (server Receive Maximum)', () => {
 			const { server, port, connections } = await startServer(
 				[1],
 				undefined,
-				{ topicAliasMaximum: 1, maximumPacketSize: 130 },
+				{
+					connackProperties: {
+						topicAliasMaximum: 1,
+						maximumPacketSize: 130,
+					},
+				},
 			)
 			const client = mqtt.connect({
 				port,
@@ -557,7 +701,7 @@ describe('MQTT 5.0 send quota (server Receive Maximum)', () => {
 			const { server, port, connections } = await startServer(
 				[1],
 				undefined,
-				{ topicAliasMaximum: 5 },
+				{ connackProperties: { topicAliasMaximum: 5 } },
 			)
 			const client = mqtt.connect({
 				port,
@@ -607,10 +751,11 @@ describe('MQTT 5.0 send quota (server Receive Maximum)', () => {
 				}
 				await waitFor(() => errors.length === 3, 'the callbacks')
 				assert.deepEqual(errors, [null, null, null])
+				// sent with its topic, resolved when it was held
 				assert.deepEqual(topics(conn.publishes), [
 					'rm/first',
 					'rm/aliased',
-					'',
+					'rm/aliased',
 				])
 			} finally {
 				await teardown(client, server)
@@ -671,6 +816,7 @@ describe('MQTT 5.0 send quota (server Receive Maximum)', () => {
 		},
 	)
 
+	// weak by construction: a 3.1.1 CONNACK has no properties to set a limit
 	it('does not limit MQTT 3.1.1 publishes', testOptions, async () => {
 		// a 3.1.1 CONNACK carries no properties, so the server sends no limit
 		const { server, port, connections } = await startServer([1])
