@@ -2151,6 +2151,11 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	private _onStreamClose(stream: IStream) {
 		this.log('(%s)stream :: on close', this.options.clientId)
 		const rejected = this._rejectedWrites.get(stream)
+		// the error goes to the caller's callback, or as 'error' when there is none
+		const cb =
+			rejected &&
+			(this._outgoingEntryOf(rejected.packet)?.cb ?? rejected.cb)
+		const emitRejected = rejected && (!cb || cb === this.noop)
 		// before `_flushVolatile` fails it with a generic error
 		const failRejectedOutgoing =
 			rejected && this._takeOutgoing(rejected.packet)
@@ -2159,8 +2164,9 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		let threw = false
 		let thrown: unknown
 		try {
-			// not where the write failed: CONNECT is written from the constructor
-			if (rejected) this.emit('error', rejected.error)
+			// emitted here, not in `_writePacket`: CONNECT is written from the
+			// constructor, before the caller can add an 'error' listener
+			if (emitRejected) this.emit('error', rejected.error)
 		} catch (err) {
 			threw = true
 			thrown = err
@@ -2182,19 +2188,27 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		}
 	}
 
+	/** The `outgoing` entry waiting for the ack of this packet, if any. */
+	private _outgoingEntryOf(packet: Packet) {
+		const { messageId } = packet as { messageId?: number }
+		const entry = messageId ? this.outgoing[messageId] : undefined
+		// an ack carries an incoming id, which can match an unrelated entry
+		return entry?.cmd === packet.cmd ? entry : undefined
+	}
+
 	/**
 	 * Take the `outgoing` entry of a packet that can never be sent, and return
 	 * the function that fails its callback. It is also dropped from what a
 	 * reconnect would send again: the outgoing store, or the resubscriptions.
 	 */
 	private _takeOutgoing(packet: Packet): ((err: Error) => void) | undefined {
-		const { messageId } = packet as { messageId?: number }
-		const entry = messageId ? this.outgoing[messageId] : undefined
-		// an ack carries an incoming id, which can match an unrelated entry
-		if (!entry || entry.cmd !== packet.cmd) return undefined
+		const entry = this._outgoingEntryOf(packet)
+		if (!entry) return undefined
+		const { messageId } = packet as { messageId: number }
 
+		// now, so a teardown from an 'error' or 'close' listener can't call it too
+		delete this.outgoing[messageId]
 		if (entry.volatile) {
-			delete this.outgoing[messageId]
 			// as for a refused suback
 			this.messageIdToTopic[messageId]?.forEach((topic) => {
 				delete this._resubscribeTopics[topic]
@@ -2652,7 +2666,12 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		// `errored`: `ws` replaces the error the stream emits.
 		const packetError = !erroredBefore && this.stream.errored
 		if (packetError && !(packetError as Error & { code?: unknown }).code) {
-			this.log('_writePacket :: invalid packet: %s', packetError.message)
+			this.log(
+				'_writePacket :: mqtt-packet rejected %s %s: %s',
+				packet.cmd,
+				(packet as { messageId?: number }).messageId ?? '-',
+				packetError.message,
+			)
 			// no 'drain' will come: `_onStreamClose` calls `cb` with the error
 			this._rejectedWrites.set(this.stream, {
 				error: packetError,

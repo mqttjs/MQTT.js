@@ -590,18 +590,13 @@ export default function abstractTest(server, config, ports) {
 			guard.deadline(3000, 'no close after an invalid publish packet')
 
 			const client = connect({ reconnectPeriod: 0 })
-			let rejectedErr: Error | undefined
 			client.once('connect', () => {
-				// a non-string topic; the second write hits the destroyed stream
-				// and must not replace the first as the rejected one
-				client.publish(42 as unknown as string, 'payload', (err) => {
-					rejectedErr = err
-				})
+				// a non-string topic and no callback; the second write hits the
+				// destroyed stream and must not replace the first as the rejected one
+				client.publish(42 as unknown as string, 'payload')
 				client.publish('valid', 'payload')
 			})
-			expectPacketError(client, 'Invalid topic', guard, () =>
-				assert.strictEqual(rejectedErr?.message, 'Invalid topic'),
-			)
+			expectPacketError(client, 'Invalid topic', guard)
 		})
 
 		it('should emit error event if mqtt-packet rejects a packet just before a reconnect', function _test(t, done) {
@@ -617,18 +612,33 @@ export default function abstractTest(server, config, ports) {
 			expectPacketError(client, 'Invalid topic', guard)
 		})
 
+		// with a callback the error goes there only, as for other refusals
+		function failOnErrorEvent(
+			client: mqtt.MqttClient,
+			check: ReturnType<typeof guardDone>['check'],
+		) {
+			client.on('error', (err) => {
+				check(() => assert.fail(`unexpected 'error': ${err.message}`))
+			})
+		}
+
 		it('should call the callback of a rejected qos 0 publish with the error', function _test(t, done) {
 			const { check, finish, deadline } = guardDone(done)
 			deadline(3000, 'the publish callback never ran')
 			const client = connect({ reconnectPeriod: 0 })
-			client.on('error', () => {})
+			failOnErrorEvent(client, check)
+			let calls = 0
 			client.once('connect', () => {
 				client.publish(42 as unknown as string, 'payload', (err) => {
+					calls++
 					check(() => {
 						assert.strictEqual(err?.message, 'Invalid topic')
 						assert.isFalse(client.connected)
 					})
-					client.end((endErr) => finish(endErr))
+					client.end((endErr) => {
+						check(() => assert.strictEqual(calls, 1))
+						finish(endErr)
+					})
 				})
 			})
 		})
@@ -637,13 +647,16 @@ export default function abstractTest(server, config, ports) {
 			const { check, finish, deadline } = guardDone(done)
 			deadline(3000, 'the publish callback never ran')
 			const client = connect({ reconnectPeriod: 0 })
-			client.on('error', () => {})
+			failOnErrorEvent(client, check)
+			let calls = 0
+			let messageId: number
 			client.once('connect', () => {
 				client.publish(
 					42 as unknown as string,
 					'payload',
 					{ qos: 1 },
 					(err) => {
+						calls++
 						check(() => {
 							assert.strictEqual(err?.message, 'Invalid topic')
 							assert.isEmpty(client.outgoing)
@@ -651,11 +664,86 @@ export default function abstractTest(server, config, ports) {
 						// otherwise every reconnect would resend it
 						client.outgoingStore.get({ messageId }, (storeErr) => {
 							check(() => assert.exists(storeErr))
-							client.end((endErr) => finish(endErr))
+							client.end((endErr) => {
+								check(() => {
+									assert.strictEqual(calls, 1)
+									// freed, so a later publish can take it
+									assert.isTrue(
+										client.messageIdProvider.register(
+											messageId,
+										),
+									)
+								})
+								finish(endErr)
+							})
 						})
 					},
 				)
-				const messageId = client.getLastMessageId()
+				messageId = client.getLastMessageId()
+			})
+		})
+
+		it('should call the callback of a rejected qos 1 publish once when a close listener ends the client', function _test(t, done) {
+			const { check, finish, deadline } = guardDone(done)
+			deadline(3000, 'the publish callback never ran')
+			const client = connect({ reconnectPeriod: 0 })
+			failOnErrorEvent(client, check)
+			const errors: string[] = []
+			client.once('close', () => {
+				client.end(true, () => {
+					// the rejected callback runs after the 'close' listeners
+					setImmediate(() => {
+						check(() => assert.deepEqual(errors, ['Invalid topic']))
+						finish()
+					})
+				})
+			})
+			client.once('connect', () => {
+				client.publish(
+					42 as unknown as string,
+					'payload',
+					{ qos: 1 },
+					(err) => {
+						errors.push(err?.message)
+					},
+				)
+			})
+		})
+
+		it('should fail a stored qos 1 publish rejected on resend and send the next one', function _test(t, done) {
+			const { check, finish, deadline } = guardDone(done)
+			deadline(5000, 'the stored publishes were never delivered')
+			const client = connect({ reconnectPeriod: 100 })
+			failOnErrorEvent(client, check)
+			const events: string[] = []
+			let rejectedId = 0
+
+			// stored offline, sent from the store on connect
+			client.publish(
+				42 as unknown as string,
+				'payload',
+				{ qos: 1 },
+				(err) => {
+					events.push(`rejected: ${err?.message}`)
+					client.outgoingStore.get(
+						{ messageId: rejectedId },
+						(storeErr) => {
+							// otherwise every reconnect would resend it
+							check(() => assert.exists(storeErr))
+						},
+					)
+				},
+			)
+			rejectedId = client.getLastMessageId()
+			client.publish('valid', 'payload', { qos: 1 }, (err) => {
+				events.push(err ? `valid: ${err.message}` : 'valid')
+				check(() =>
+					assert.deepEqual(events, [
+						'rejected: Invalid topic',
+						'valid',
+					]),
+				)
+				client.end((endErr) => finish(endErr))
 			})
 		})
 
@@ -663,7 +751,7 @@ export default function abstractTest(server, config, ports) {
 			const { check, finish, deadline } = guardDone(done)
 			deadline(3000, 'the unsubscribe callback never ran')
 			const client = connect({ reconnectPeriod: 0 })
-			client.on('error', () => {})
+			failOnErrorEvent(client, check)
 			client.once('connect', () => {
 				client.unsubscribe(42 as unknown as string, (err) => {
 					// not the generic error `_flushVolatile` gives on close
@@ -682,7 +770,7 @@ export default function abstractTest(server, config, ports) {
 			const { check, finish, deadline } = guardDone(done)
 			deadline(3000, 'the subscribe callback never ran')
 			const client = connect({ reconnectPeriod: 1000 })
-			client.on('error', () => {})
+			failOnErrorEvent(client, check)
 			client.once('connect', () => {
 				client.subscribe(
 					'rejected',
@@ -709,7 +797,7 @@ export default function abstractTest(server, config, ports) {
 			const { check, finish, deadline } = guardDone(done)
 			deadline(5000, 'the queued publishes were never delivered')
 			const client = connect({ reconnectPeriod: 100 })
-			client.on('error', () => {})
+			failOnErrorEvent(client, check)
 			const events: string[] = []
 			const record = (name: string) => (err?: Error) => {
 				events.push(err ? `${name}: ${err.message}` : name)

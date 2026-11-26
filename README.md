@@ -576,6 +576,13 @@ Any stream error that has an error `code` (Node.js only) is emitted as an
 - `EADDRINUSE`
 - `ENOTFOUND`
 
+When the client cannot encode a packet (for example a password without a
+username, or a topic that is not a string), the connection is closed. The
+error goes to the
+callback of the call that sent the packet. When there is none (CONNECT,
+or `publish()` and `unsubscribe()` without a callback), it is emitted as an
+`error` event, before `close`. Then the client reconnects as usual.
+
 #### Event `'end'`
 
 `function () {}`
