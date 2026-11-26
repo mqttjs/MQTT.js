@@ -106,8 +106,9 @@ describe('MqttClient', () => {
 
 		it('should find a free id on the last of the 65535 attempts', function _test(t, done) {
 			client = mqtt.connect(config)
+			const freeId = 42
 			for (let id = 1; id <= 65535; id++) {
-				if (id !== 42) {
+				if (id !== freeId) {
 					client.outgoing[id] = {
 						volatile: false,
 						cmd: 'publish',
@@ -115,9 +116,10 @@ describe('MqttClient', () => {
 					}
 				}
 			}
-			client.messageIdProvider['nextId'] = 43
+			// one past freeId, so the scan wraps and reaches it last
+			client.messageIdProvider['nextId'] = freeId + 1
 
-			assert.equal(client['_nextId'](), 42)
+			assert.equal(client['_nextId'](), freeId)
 			client.end(true, (err) => done(err))
 		})
 
