@@ -595,7 +595,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	 */
 	private _publishesAwaitingQuota: Map<
 		number,
-		{ packet: IPublishPacket; cb: DoneCallback; noStore: boolean }
+		{ packet: IPublishPacket; cb: DoneCallback }
 	>
 
 	private _deferredReconnect: () => void
@@ -2309,6 +2309,10 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		}
 		this.outgoingStore.put(storePacket, (err2) => {
 			if (err2) {
+				// never written, so it must not keep a send quota slot
+				if (packet.cmd === 'publish') {
+					this._releaseSendQuota(packet.messageId)
+				}
 				return cb && cb(err2)
 			}
 			cbStorePut()
@@ -2493,10 +2497,10 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 	/**
 	 * MQTT 5 flow control (section 4.9): takes a send quota slot for a QoS 1/2
-	 * PUBLISH, or holds it when none is free [MQTT-3.3.4-7]. A held packet is
-	 * put in `outgoingStore` as if it were sent offline, and is written by
-	 * `_sendPublishesAwaitingQuota` when an ack frees a slot. QoS 0 is never
-	 * held [MQTT-4.9.0-3].
+	 * PUBLISH and returns `false`, or holds it when none is free
+	 * [MQTT-3.3.4-7]. A held packet is put in `outgoingStore` as if it were
+	 * sent offline, and is written by `_sendPublishesAwaitingQuota` when an
+	 * ack frees a slot. QoS 0 is never held [MQTT-4.9.0-3].
 	 *
 	 * @returns `true` when the packet is held
 	 */
@@ -2519,9 +2523,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		if (this._outgoingInFlightIds.has(messageId)) {
 			return false
 		}
-		// 0 is a Protocol Error in CONNACK; enforcing it would stall every publish
-		const quota =
-			this._serverProperties?.receiveMaximum || MAX_RECEIVE_MAXIMUM
+		const quota = this._sendQuota
 		// once one packet waits, later ones wait behind it to keep their order
 		if (
 			this._publishesAwaitingQuota.size === 0 &&
@@ -2531,15 +2533,12 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			return false
 		}
 		this.log(
-			'_holdForSendQuota :: send quota %d used, holding publish %d',
+			'_holdForSendQuota :: send quota %d used, holding publish %d behind %d',
 			quota,
 			messageId,
+			this._publishesAwaitingQuota.size,
 		)
-		this._publishesAwaitingQuota.set(messageId, {
-			packet,
-			cb,
-			noStore: !!noStore,
-		})
+		this._publishesAwaitingQuota.set(messageId, { packet, cb })
 		if (!noStore) {
 			this._storePacket(packet, cb, cbStorePut)
 		}
@@ -2548,17 +2547,26 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 	/** Writes the held publishes, in order, while the send quota has room. */
 	private _sendPublishesAwaitingQuota() {
-		const quota =
-			this._serverProperties?.receiveMaximum || MAX_RECEIVE_MAXIMUM
 		for (const [messageId, held] of this._publishesAwaitingQuota) {
-			if (this._outgoingInFlightIds.size >= quota) {
+			if (this._outgoingInFlightIds.size >= this._sendQuota) {
 				return
 			}
 			this._publishesAwaitingQuota.delete(messageId)
 			this._outgoingInFlightIds.add(messageId)
-			// already stored by `_holdForSendQuota`, so no cbStorePut
-			this._sendPacket(held.packet, held.cb, undefined, held.noStore)
+			this.log(
+				'_sendPublishesAwaitingQuota :: sending held publish %d, %d still held',
+				messageId,
+				this._publishesAwaitingQuota.size,
+			)
+			// already in the store (held from a replay or by `_holdForSendQuota`)
+			this._sendPacket(held.packet, held.cb, undefined, true)
 		}
+	}
+
+	/** The server Receive Maximum, the most QoS 1/2 publishes in flight. */
+	private get _sendQuota(): number {
+		// 0 is a Protocol Error in CONNACK; enforcing it would stall every publish
+		return this._serverProperties?.receiveMaximum || MAX_RECEIVE_MAXIMUM
 	}
 
 	/** Frees the send quota slot or held entry of a publish that is done. */

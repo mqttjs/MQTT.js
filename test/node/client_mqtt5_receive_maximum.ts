@@ -5,7 +5,7 @@ import { setTimeout as delay } from 'node:timers/promises'
 import type { AddressInfo } from 'node:net'
 import type { IPublishPacket } from 'mqtt-packet'
 import { MqttServer } from './server'
-import mqtt, { type MqttClient } from '../../src'
+import mqtt, { Store, type MqttClient } from '../../src'
 
 type ServerConnection = {
 	index: number
@@ -14,12 +14,12 @@ type ServerConnection = {
 }
 
 /**
- * A scripted MQTT 5 server that sends `receiveMaximum[n]` (plus
+ * A scripted MQTT 5 server that sends `receiveMaximum[n]` (none if undefined, plus
  * `connackProperties`) in the CONNACK of its n-th connection (the last value
  * for later ones), records every PUBLISH and acks only what `onPublish` acks.
  */
 async function startServer(
-	receiveMaximum: number[],
+	receiveMaximum: (number | undefined)[],
 	onPublish?: (conn: ServerConnection, packet: IPublishPacket) => void,
 	connackProperties: Record<string, number> = {},
 ) {
@@ -29,15 +29,15 @@ async function startServer(
 		const conn: ServerConnection = { index, serverClient, publishes: [] }
 		connections.push(conn)
 		serverClient.on('connect', () => {
+			const max =
+				receiveMaximum[Math.min(index, receiveMaximum.length - 1)]
 			serverClient.connack({
 				reasonCode: 0,
 				sessionPresent: index > 0,
 				properties: {
 					...connackProperties,
-					receiveMaximum:
-						receiveMaximum[
-							Math.min(index, receiveMaximum.length - 1)
-						],
+					// undefined would not encode: leave the property out
+					...(max === undefined ? {} : { receiveMaximum: max }),
 				},
 			})
 		})
@@ -143,6 +143,8 @@ describe('MQTT 5.0 send quota (server Receive Maximum)', () => {
 				await Promise.all(results)
 				assert.deepEqual(done, ['rm/0', 'rm/1', 'rm/2', 'rm/3', 'rm/4'])
 				assert.deepEqual(topics(conn.publishes), done)
+				// held publishes were never sent, so they go out with DUP 0
+				assert.isTrue(conn.publishes.every((p) => !p.dup))
 				assert.deepEqual(client.outgoing, {})
 			} finally {
 				await teardown(client, server)
@@ -365,7 +367,7 @@ describe('MQTT 5.0 send quota (server Receive Maximum)', () => {
 		'checks a held publish against the CONNACK limits when it is written, and frees its slot when refused',
 		testOptions,
 		async () => {
-			// 130 bytes fit `long` with its topic once, or `big` only by alias
+			// 130 bytes fit the first `long` publish with its topic, the second only by alias
 			const { server, port, connections } = await startServer(
 				[1],
 				undefined,
@@ -407,6 +409,69 @@ describe('MQTT 5.0 send quota (server Receive Maximum)', () => {
 					'rm/qos0',
 					'rm/next',
 				])
+			} finally {
+				await teardown(client, server)
+			}
+		},
+	)
+
+	it(
+		'does not limit publishes when the CONNACK has no Receive Maximum',
+		testOptions,
+		async () => {
+			const { server, port, connections } = await startServer([undefined])
+			const client = mqtt.connect({
+				port,
+				protocolVersion: 5,
+				reconnectPeriod: 0,
+			})
+			try {
+				await connected(client)
+				for (let i = 0; i < 20; i++) {
+					client.publish(`rm/${i}`, 'x', { qos: 1 })
+				}
+				await waitFor(
+					() => connections[0].publishes.length === 20,
+					'20 PUBLISH packets',
+				)
+			} finally {
+				await teardown(client, server)
+			}
+		},
+	)
+
+	it(
+		'frees the slot of a publish the store fails to put',
+		testOptions,
+		async () => {
+			const { server, port, connections } = await startServer([1])
+			const outgoingStore = new Store()
+			const put = outgoingStore.put.bind(outgoingStore)
+			let failNext = true
+			outgoingStore.put = (packet, cb) => {
+				if (failNext) {
+					failNext = false
+					cb(new Error('put failed'))
+					return outgoingStore
+				}
+				return put(packet, cb)
+			}
+			const client = mqtt.connect({
+				port,
+				protocolVersion: 5,
+				reconnectPeriod: 0,
+				outgoingStore,
+			})
+			try {
+				await connected(client)
+				// never written, so it must not keep the only slot
+				client.publish('rm/unstored', 'x', { qos: 1 })
+				client.publish('rm/next', 'x', { qos: 1 })
+				await waitFor(
+					() => connections[0].publishes.length === 1,
+					'rm/next',
+				)
+				assert.deepEqual(topics(connections[0].publishes), ['rm/next'])
 			} finally {
 				await teardown(client, server)
 			}
