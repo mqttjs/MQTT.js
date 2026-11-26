@@ -61,6 +61,9 @@ const MAX_RECEIVE_MAXIMUM = 0xffff
 /** MQTT 5 reason code 0x93 */
 const RECEIVE_MAXIMUM_EXCEEDED = 147
 
+/** MQTT 5 reason code 0x81 */
+const MALFORMED_PACKET = 0x81
+
 /** Bytes `packet` takes on the wire, counted without copying the payload. */
 const encodedSize = (packet: Packet, opts: IClientOptions) => {
 	let size = 0
@@ -1145,7 +1148,18 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			}
 		}
 
+		// set on a parser error: chunks already buffered behind a pending
+		// handler would otherwise be parsed from a wrong offset
+		let parseFailed = false
+
 		writable._write = (buf, enc, done) => {
+			if (parseFailed) {
+				this.log(
+					'writable stream :: dropping chunk after a parser error',
+				)
+				done()
+				return
+			}
 			completeParse = done
 			this.log('writable stream :: parsing buffer')
 			parser.parse(buf)
@@ -1229,8 +1243,10 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		// avoid message queue
 		this._writePacket(connectPacket)
 
-		// Echo connection errors
-		parser.on('error', this.emit.bind(this, 'error'))
+		parser.on('error', (err) => {
+			parseFailed = true
+			this._onParserError(err, pump)
+		})
 
 		// auth
 		if (this.options.properties) {
@@ -1270,6 +1286,49 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		)
 
 		return this
+	}
+
+	/**
+	 * A malformed packet leaves the parser at an unknown offset: close the
+	 * connection ([MQTT-4.8.0-1], MQTT 5 §4.13.1) in the same order as the
+	 * oversized-packet path in `handlers/index.ts`.
+	 * @api private
+	 */
+	private _onParserError(err: Error, pump: PacketPump) {
+		pump.discardParsedPackets()
+		if (pump.isCurrent()) {
+			this.log(
+				'_onParserError :: malformed packet, closing: %s',
+				err.message,
+			)
+			// not after `end()`: no packet may follow its DISCONNECT, and
+			// `disconnecting` is set before `stream.end()` runs
+			if (
+				this.options.protocolVersion === 5 &&
+				!this.disconnecting &&
+				this.stream.writable
+			) {
+				this._writePacket({
+					cmd: 'disconnect',
+					reasonCode: MALFORMED_PACKET,
+				})
+				// `writeToStream` corks until the next tick, once per packet,
+				// and `_cleanUp` destroys the stream before that: flush now
+				do {
+					this.stream.uncork()
+				} while (this.stream.writableCorked > 0)
+			}
+			this._cleanUp(true)
+		} else {
+			this.log('_onParserError :: stale connection: %s', err.message)
+		}
+		this.emit(
+			'error',
+			new ErrorWithReasonCode(
+				`${ReasonCodes[MALFORMED_PACKET]}: ${err.message}`,
+				MALFORMED_PACKET,
+			),
+		)
 	}
 
 	/**
@@ -1371,7 +1430,8 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 				qos,
 				retain,
 				messageId,
-				dup,
+				// [MQTT-3.3.1-2]: the DUP flag must be 0 in a QoS 0 PUBLISH.
+				dup: qos === 1 || qos === 2 ? dup : false,
 			}
 
 			if (options.protocolVersion === 5) {
@@ -2339,6 +2399,15 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 					alias = packet.properties.topicAlias
 				}
 				const topic = packet.topic.toString()
+				// [MQTT-3.3.2-8]: Topic Alias 0 is never valid
+				if (alias === 0) {
+					this.log(
+						'applyTopicAlias :: error out of range. topic: %s - alias: %d',
+						topic,
+						alias,
+					)
+					return new Error('Sending Topic Alias out of range')
+				}
 				if (this.topicAliasSend) {
 					if (alias) {
 						if (topic.length !== 0) {
