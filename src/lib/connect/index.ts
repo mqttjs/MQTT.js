@@ -49,6 +49,9 @@ function loadBrowserProtocols(): Record<string, StreamBuilder> {
 	return browserProtocols
 }
 
+// `string[]`: 'tls' is supported but missing from `MqttProtocol`
+const SECURE_PROTOCOLS: string[] = ['mqtts', 'tls', 'ssl', 'wss', 'wxs', 'alis']
+
 function getDefaultWebSocketProtocol(): MqttProtocol {
 	if (typeof location !== 'undefined') {
 		return location.protocol === 'https:' ? 'wss' : 'ws'
@@ -80,9 +83,10 @@ function parseAuthOptions(opts: IClientOptions) {
 	}
 }
 
-// url.parse() style objects carry the protocol as 'mqtts:'
+// url.parse() style objects carry the protocol as 'mqtts:'. Lowercase like
+// url.parse() does, so 'MQTTS' is not mistaken for an unknown, insecure one.
 function stripProtocolColon(protocol: MqttProtocol): MqttProtocol {
-	return protocol?.replace(/:$/, '') as MqttProtocol
+	return protocol?.replace(/:$/, '').toLowerCase() as MqttProtocol
 }
 
 /**
@@ -170,7 +174,7 @@ function connect(
 
 	if (opts.cert && opts.key) {
 		if (opts.protocol) {
-			if (['mqtts', 'wss', 'wxs', 'alis'].indexOf(opts.protocol) === -1) {
+			if (!SECURE_PROTOCOLS.includes(opts.protocol)) {
 				switch (opts.protocol) {
 					case 'mqtt':
 						opts.protocol = 'mqtts'
@@ -203,7 +207,8 @@ function connect(
 			: loadNodeProtocols()
 
 	if (!protocols[opts.protocol]) {
-		const isSecure = ['mqtts', 'wss'].indexOf(opts.protocol) !== -1
+		const requested = opts.protocol
+		const isSecure = SECURE_PROTOCOLS.includes(requested)
 		// returns the first available protocol based on available protocols (that depends on environment)
 		// if no protocol is specified this will return mqtt on node and ws on browser
 		// if secure it will return mqtts on node and wss on browser
@@ -216,13 +221,23 @@ function connect(
 			'wxs',
 			'ali',
 			'alis',
-		].filter((key, index) => {
-			if (isSecure && index % 2 === 0) {
-				// Skip insecure protocols when requesting a secure one.
+		].filter((key) => {
+			if (isSecure && !SECURE_PROTOCOLS.includes(key)) {
 				return false
 			}
 			return typeof protocols[key] === 'function'
 		})[0] as MqttProtocol
+
+		if (isSecure && !opts.protocol) {
+			throw new Error(
+				`No secure transport available for protocol "${requested}"`,
+			)
+		}
+		debug(
+			'no transport for %s, falling back to %s',
+			requested,
+			opts.protocol,
+		)
 	}
 
 	if (opts.clean === false && !opts.clientId) {

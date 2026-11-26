@@ -250,6 +250,41 @@ describe('mqtt', () => {
 			c.end((err) => done(err))
 		})
 
+		for (const [protocol, expected] of [
+			['wxs', 'mqtts'],
+			['alis', 'mqtts'],
+			['wx', 'mqtt'],
+		]) {
+			it(`should fall back from ${protocol} to ${expected}`, () => {
+				const c = mqtt.connect({
+					host: 'localhost',
+					protocol: protocol as any,
+					manualConnect: true,
+				})
+				c.options.should.have.property('protocol', expected)
+			})
+		}
+
+		it('should lowercase the protocol before checking whether it is secure', () => {
+			const c = mqtt.connect({
+				host: 'localhost',
+				protocol: 'MQTTS' as any,
+				manualConnect: true,
+			})
+			c.options.should.have.property('protocol', 'mqtts')
+		})
+
+		for (const protocol of ['tls', 'ssl']) {
+			it(`should keep ${protocol} when connect is called with key and cert set`, () => {
+				const c = mqtt.connect(`${protocol}://localhost`, {
+					key: sslOpts2.key,
+					cert: sslOpts2.cert,
+					manualConnect: true,
+				})
+				c.options.should.have.property('protocol', protocol)
+			})
+		}
+
 		it('should return an MqttClient with the clientid with option of clientId as empty string', function _test(t, done) {
 			const c = mqtt.connect('mqtt://localhost:1883', {
 				clientId: '',
