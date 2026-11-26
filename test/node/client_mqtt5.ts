@@ -3984,13 +3984,14 @@ describe('MQTT 5.0', () => {
 				properties: { sessionExpiryInterval: 300 },
 			})
 
-		it(
-			'should not resend a sent QoS 1 publish, and should send a publish made while offline',
-			{ timeout: 15000 },
+		const storedPackets = (client: mqtt.MqttClient) =>
+			client.outgoingStore.createStream().toArray()
+
+		const dropsSentPublish = (qos: 1 | 2) =>
 			function _test(t, done) {
-				const client = lostSessionClient('session-lost-publish')
-				const secondConnection: IPublishPacket[] = []
-				let sentCallbackError: Error | undefined
+				const client = lostSessionClient(`session-lost-qos${qos}`)
+				const secondConnectionPublishes: IPublishPacket[] = []
+				const sentCallbackErrors: (Error | undefined)[] = []
 				let connections = 0
 				let finished = false
 
@@ -4015,11 +4016,11 @@ describe('MQTT 5.0', () => {
 					})
 					serverClient.on('publish', (packet) => {
 						if (connection === 1) {
-							// Drop the connection before the PUBACK.
+							// Drop the connection before the PUBACK or PUBREC.
 							serverClient.destroy()
 							return
 						}
-						secondConnection.push(packet)
+						secondConnectionPublishes.push(packet)
 						serverClient.puback({ messageId: packet.messageId })
 					})
 				}).listen(ports.PORTAND103)
@@ -4033,32 +4034,182 @@ describe('MQTT 5.0', () => {
 
 				client.on('error', () => {})
 				client.once('connect', () => {
-					client.publish('sent', 'a', { qos: 1 }, (err) => {
-						sentCallbackError = err
+					client.publish('sent', 'a', { qos }, (err) => {
+						sentCallbackErrors.push(err)
 					})
 				})
 				client.once('offline', () => {
-					client.publish('offline', 'b', { qos: 1 }, (err) => {
+					client.publish('offline', 'b', { qos: 1 }, async (err) => {
 						try {
 							assert.ifError(err)
-							assert.instanceOf(
-								sentCallbackError,
-								Error,
-								'the callback of the discarded publish must fail',
+							assert.lengthOf(
+								sentCallbackErrors,
+								1,
+								'the callback of the discarded publish runs once',
 							)
 							assert.match(
-								sentCallbackError.message,
+								sentCallbackErrors[0]?.message,
 								/Session lost/,
 							)
 							assert.deepEqual(
-								secondConnection.map((p) => [p.topic, p.dup]),
+								secondConnectionPublishes.map((p) => [
+									p.topic,
+									p.dup,
+								]),
 								[['offline', false]],
 								'only the never-sent publish goes out, as a first delivery',
+							)
+							assert.deepEqual(
+								await storedPackets(client),
+								[],
+								'the discarded publish is removed from the store',
 							)
 						} catch (assertErr) {
 							return finish(assertErr as Error)
 						}
 						finish()
+					})
+				})
+			}
+
+		it(
+			'should not resend a sent QoS 1 publish, and should send a publish made while offline',
+			{ timeout: 15000 },
+			dropsSentPublish(1),
+		)
+
+		it(
+			'should not resend a sent QoS 2 publish, and should send a publish made while offline',
+			{ timeout: 15000 },
+			dropsSentPublish(2),
+		)
+
+		it(
+			'should resend with DUP 1 a publish made while offline once it was sent',
+			{ timeout: 15000 },
+			function _test(t, done) {
+				const client = lostSessionClient('session-lost-offline-resend')
+				const thirdConnectionPublishes: IPublishPacket[] = []
+				let connections = 0
+				let finished = false
+
+				const finish = (err?: Error) => {
+					if (finished) return
+					finished = true
+					client.end(true, (err1) => {
+						server2.close((err2) => {
+							done(err || err1 || err2)
+						})
+					})
+				}
+
+				const server2 = new MqttServer((serverClient) => {
+					connections++
+					const connection = connections
+					serverClient.on('connect', () => {
+						// Session lost on the second connection, kept on the third.
+						serverClient.connack({
+							reasonCode: 0,
+							sessionPresent: connection === 3,
+						})
+					})
+					serverClient.on('publish', (packet) => {
+						if (connection < 3) {
+							// Drop the connection before the PUBACK.
+							serverClient.destroy()
+							return
+						}
+						thirdConnectionPublishes.push(packet)
+						serverClient.puback({ messageId: packet.messageId })
+					})
+				}).listen(ports.PORTAND103)
+
+				t.after(() => {
+					if (!finished) {
+						client.end(true)
+						server2.close()
+					}
+				})
+
+				client.on('error', () => {})
+				client.once('connect', () => {
+					client.publish('sent', 'a', { qos: 1 }, () => {})
+				})
+				client.once('offline', () => {
+					client.publish('offline', 'b', { qos: 1 }, (err) => {
+						try {
+							assert.ifError(err)
+							assert.strictEqual(connections, 3)
+							assert.deepEqual(
+								thirdConnectionPublishes.map((p) => [
+									p.topic,
+									p.dup,
+								]),
+								[['offline', true]],
+								'a publish sent once is resent with DUP 1',
+							)
+						} catch (assertErr) {
+							return finish(assertErr as Error)
+						}
+						finish()
+					})
+				})
+			},
+		)
+
+		it(
+			'should drop thousands of stored sent publishes without overflowing the stack',
+			{ timeout: 15000 },
+			function _test(t, done) {
+				const count = 5000
+				const outgoingStore = new mqtt.Store()
+				for (let messageId = 1; messageId <= count; messageId++) {
+					outgoingStore.put(
+						{
+							cmd: 'publish',
+							topic: 'sent',
+							payload: Buffer.from('a'),
+							qos: 1,
+							dup: true,
+							retain: false,
+							messageId,
+						},
+						() => {},
+					)
+				}
+				const received: IPublishPacket[] = []
+				const server2 = new MqttServer((serverClient) => {
+					serverClient.on('connect', () => {
+						serverClient.connack({
+							reasonCode: 0,
+							sessionPresent: false,
+						})
+					})
+					serverClient.on('publish', (packet) => {
+						received.push(packet)
+					})
+				}).listen(ports.PORTAND103)
+
+				const client = mqtt.connect({
+					host: 'localhost',
+					port: ports.PORTAND103,
+					protocolVersion: 5,
+					clean: false,
+					clientId: 'session-lost-bulk',
+					reconnectPeriod: 0,
+					outgoingStore,
+				})
+				client.on('error', () => {})
+				client.once('connect', async () => {
+					let err: Error | undefined
+					try {
+						assert.lengthOf(received, 0)
+						assert.deepEqual(await storedPackets(client), [])
+					} catch (assertErr) {
+						err = assertErr as Error
+					}
+					client.end(true, () => {
+						server2.close(() => done(err))
 					})
 				})
 			},

@@ -109,15 +109,13 @@ export default function abstractTest(server, config, ports) {
 		}
 	}
 
-	/**
-	 * CONNACK of a broker that keeps the session: Session Present is 1 from
-	 * the second connection on. With MQTT 5 and `clean: false`, a client only
-	 * resends what it sent before when the session is present (MQTT-4.4.0-1).
-	 */
-	const resumedConnack = (connection: number) =>
-		version === 5
-			? { reasonCode: 0, sessionPresent: connection > 1 }
-			: { returnCode: 0, sessionPresent: connection > 1 }
+	/** CONNACK with Session Present 1 from the second connection on, if `keepsSession`. */
+	const resumedConnack = (connection: number, keepsSession = true) => {
+		const sessionPresent = keepsSession && connection > 1
+		return version === 5
+			? { reasonCode: 0, sessionPresent }
+			: { returnCode: 0, sessionPresent }
+	}
 
 	async function beforeEachExec() {
 		await teardownHelper.runAll()
@@ -5160,17 +5158,7 @@ export default function abstractTest(server, config, ports) {
 				const connection = ++connections
 				serverClient.on('connect', () => {
 					serverClient.connack(
-						version === 5
-							? {
-									reasonCode: 0,
-									sessionPresent:
-										connection > 1 && sessionPresent,
-								}
-							: {
-									returnCode: 0,
-									sessionPresent:
-										connection > 1 && sessionPresent,
-								},
+						resumedConnack(connection, sessionPresent),
 					)
 				})
 				serverClient.on('publish', (packet) => {
@@ -5243,7 +5231,13 @@ export default function abstractTest(server, config, ports) {
 				})
 				serverClient.on('publish', (packet) => {
 					if (reconnect) {
-						done()
+						done(
+							packet.dup
+								? undefined
+								: new Error(
+										'a PUBLISH sent again must have DUP 1',
+									),
+						)
 					} else {
 						client.end(true, () => {
 							client.reconnect({
