@@ -2503,6 +2503,87 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		return undefined
 	}
 
+	/**
+	 * Checks an outgoing MQTT 5 SUBSCRIBE or UNSUBSCRIBE against the server
+	 * Maximum Packet Size [MQTT-3.2.2-15]. The subscriptions of the packet
+	 * cannot be trimmed the way the properties of an ack can, so the whole
+	 * packet is refused: `_failVolatile` fails its callback and nothing goes
+	 * out. A subscription queued offline is checked against the CONNACK of
+	 * the connection it is sent on, the same as a publish.
+	 */
+	private _checkOutgoingSubscription(packet: Packet): Error | undefined {
+		if (
+			this.options.protocolVersion !== 5 ||
+			(packet.cmd !== 'subscribe' && packet.cmd !== 'unsubscribe')
+		) {
+			return undefined
+		}
+		const server = this._serverProperties
+		if (!server?.maximumPacketSize || !this.connected) {
+			return undefined
+		}
+		const size = encodedSize(packet, this.options)
+		if (size > server.maximumPacketSize) {
+			return new Error(
+				`${packet.cmd === 'subscribe' ? 'Subscribe' : 'Unsubscribe'} refused: packet size ${size} exceeds the server Maximum Packet Size ${server.maximumPacketSize}`,
+			)
+		}
+		return undefined
+	}
+
+	/**
+	 * Drops the Reason String and the User Properties of an outgoing ack,
+	 * DISCONNECT or AUTH that would push the packet over the server Maximum
+	 * Packet Size [MQTT-3.2.2-15]: PUBACK [MQTT-3.4.2-2, -3], PUBREC
+	 * [MQTT-3.5.2-2, -3], PUBREL [MQTT-3.6.2-2, -3], PUBCOMP
+	 * [MQTT-3.7.2-2, -3], DISCONNECT [MQTT-3.14.2-2, -3] and AUTH
+	 * [MQTT-3.15.2-2, -3]. The rest of the packet is the protocol flow and
+	 * stays, so the ack still goes out; a trimmed packet that still does not
+	 * fit is sent as it is, the server closes the connection (0x95) instead
+	 * of the client dropping an answer it has no rule to drop.
+	 */
+	private _trimToMaximumPacketSize(packet: Packet): void {
+		if (this.options.protocolVersion !== 5 || !this.connected) {
+			return
+		}
+		const server = this._serverProperties
+		if (!server?.maximumPacketSize) {
+			return
+		}
+		switch (packet.cmd) {
+			case 'puback':
+			case 'pubrec':
+			case 'pubrel':
+			case 'pubcomp':
+			case 'disconnect':
+			case 'auth':
+				break
+			default:
+				return
+		}
+		const { properties } = packet
+		if (
+			!properties ||
+			(properties.reasonString === undefined &&
+				properties.userProperties === undefined)
+		) {
+			return
+		}
+		if (encodedSize(packet, this.options) <= server.maximumPacketSize) {
+			return
+		}
+		this.log(
+			'_trimToMaximumPacketSize :: dropping Reason String and User Properties of a %s over the server Maximum Packet Size',
+			packet.cmd,
+		)
+		// a copy, never the caller's object: `end(opts)` keeps a reference to
+		// the properties it passed
+		const trimmed = { ...packet.properties } as typeof packet.properties
+		delete trimmed.reasonString
+		delete trimmed.userProperties
+		packet.properties = trimmed
+	}
+
 	/** The publish `_applyTopicAlias` will send, without side effects; keep in sync. */
 	private _publishAsSent(packet: IPublishPacket): IPublishPacket {
 		const topic = packet.topic.toString()
@@ -2554,6 +2635,48 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		})
 	}
 
+	/**
+	 * Fails a refused SUBSCRIBE or UNSUBSCRIBE. The packet never went out, so
+	 * the volatile `outgoing` entry and the resubscribe bookkeeping of the
+	 * subscriptions the server never saw go with it, the same as a topic a
+	 * SUBACK refuses is dropped from `_resubscribeTopics`.
+	 */
+	private _failVolatile(
+		packet: ISubscribePacket | IUnsubscribePacket,
+		err: Error,
+		cb: DoneCallback,
+	) {
+		this.log('_failVolatile :: %s', err.message)
+		const { messageId } = packet
+		const entry = this.outgoing[messageId]
+		if (entry?.volatile) {
+			delete this.outgoing[messageId]
+			this.messageIdProvider.deallocate(messageId)
+			const topics = this.messageIdToTopic[messageId]
+			if (topics) {
+				delete this.messageIdToTopic[messageId]
+				// a subscription the server never received must not come back
+				// on a reconnect
+				topics.forEach((topic) => {
+					delete this._resubscribeTopics[topic]
+				})
+			}
+			entry.cb(err)
+		}
+		// the offline queue and the store processing queue drain from this
+		// callback, a refused packet must not stall the packets behind it
+		cb(err)
+	}
+
+	/** Fails a refused packet: a publish frees its store entry, anything else fails its callback. */
+	private _failPacket(packet: Packet, err: Error, cb: DoneCallback) {
+		if (packet.cmd === 'subscribe' || packet.cmd === 'unsubscribe') {
+			this._failVolatile(packet, err, cb)
+			return
+		}
+		this._failPublish(packet as IPublishPacket, err, cb)
+	}
+
 	private _noop(err?: Error) {
 		this.log('noop ::', err)
 	}
@@ -2603,11 +2726,18 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 		// check the limits first: a refused packet must not register an alias
 		const err =
-			this._checkOutgoingPublish(packet) || this._applyTopicAlias(packet)
+			this._checkOutgoingPublish(packet) ||
+			this._checkOutgoingSubscription(packet) ||
+			this._applyTopicAlias(packet)
 		if (err) {
-			this._failPublish(packet as IPublishPacket, err, cb)
+			this._failPacket(packet, err, cb)
 			return
 		}
+
+		// the properties an ack, DISCONNECT or AUTH has to drop to stay within
+		// the Maximum Packet Size are gone before anything below this line
+		// writes the packet
+		this._trimToMaximumPacketSize(packet)
 
 		if (!this.connected) {
 			// allow auth packets to be sent while authenticating with the broker (mqtt5 enhanced auth)
