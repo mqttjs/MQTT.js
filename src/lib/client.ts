@@ -595,7 +595,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	 */
 	private _publishesAwaitingQuota: Map<
 		number,
-		{ packet: IPublishPacket; cb: DoneCallback }
+		{ packet: IPublishPacket; cb: DoneCallback; noStore: boolean }
 	>
 
 	private _deferredReconnect: () => void
@@ -2538,7 +2538,11 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			messageId,
 			this._publishesAwaitingQuota.size,
 		)
-		this._publishesAwaitingQuota.set(messageId, { packet, cb })
+		this._publishesAwaitingQuota.set(messageId, {
+			packet,
+			cb,
+			noStore: !!noStore,
+		})
 		if (!noStore) {
 			this._storePacket(packet, cb, cbStorePut)
 		}
@@ -2558,8 +2562,9 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 				messageId,
 				this._publishesAwaitingQuota.size,
 			)
-			// already in the store (held from a replay or by `_holdForSendQuota`)
-			this._sendPacket(held.packet, held.cb, undefined, true)
+			// stored again once written, so the store knows it was sent; the
+			// hold already called cbStorePut
+			this._sendPacket(held.packet, held.cb, undefined, held.noStore)
 		}
 	}
 
