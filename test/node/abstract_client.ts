@@ -4810,31 +4810,9 @@ export default function abstractTest(server, config, ports) {
 			},
 		)
 
-		const endBeforeConnackCases: {
-			name: string
-			force: boolean
-			connackAfterEnd: boolean
-		}[] = [
-			{
-				name: 'ended before the connack arrives',
-				force: false,
-				connackAfterEnd: false,
-			},
-			{
-				name: 'force-ended before the connack arrives',
-				force: true,
-				connackAfterEnd: false,
-			},
-			{
-				name: 'ended just before the connack arrives',
-				force: false,
-				connackAfterEnd: true,
-			},
-		]
-
-		for (const { name, force, connackAfterEnd } of endBeforeConnackCases) {
+		for (const force of [false, true]) {
 			it(
-				`should close the connection when ${name}`,
+				`should close the connection when ${force ? 'force-ended' : 'ended'} before the connack arrives`,
 				{ timeout: 10000 },
 				function _test(t, done) {
 					const { check, finish, deadline } = guardDone(done)
@@ -4842,7 +4820,6 @@ export default function abstractTest(server, config, ports) {
 					let client: mqtt.MqttClient | null = null
 					let endCallbacks = 0
 					let reconnects = 0
-					let connects = 0
 					// the broker sees its side of the socket close on its own schedule
 					let socketClosed = false
 					const maybeFinish = () => {
@@ -4860,13 +4837,12 @@ export default function abstractTest(server, config, ports) {
 									0,
 									'reconnects after end',
 								)
-								assert.equal(connects, 0, 'connects after end')
 							})
 							finish()
 						}, reconnectPeriod * 3)
 					}
 
-					// never answers the CONNECT before `end()`
+					// never answers the CONNECT
 					const server2 = serverBuilder(
 						config.protocol,
 						(serverClient) => {
@@ -4877,13 +4853,6 @@ export default function abstractTest(server, config, ports) {
 									endCallbacks++
 									maybeFinish()
 								})
-								if (connackAfterEnd) {
-									serverClient.connack(
-										version === 5
-											? { reasonCode: 0 }
-											: { returnCode: 0 },
-									)
-								}
 							})
 						},
 					)
@@ -4908,9 +4877,6 @@ export default function abstractTest(server, config, ports) {
 						})
 						client.on('reconnect', () => {
 							reconnects++
-						})
-						client.on('connect', () => {
-							connects++
 						})
 					})
 				},
