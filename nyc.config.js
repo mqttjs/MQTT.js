@@ -6,8 +6,8 @@ module.exports = {
     exclude: [
         'src/bin/*',
         'src/lib/BufferedDuplex.ts',
-        'src/connect/wx.ts',
-        'src/connect/ali.ts',
+        'src/lib/connect/wx.ts',
+        'src/lib/connect/ali.ts',
     ],
     reporter: [
         'text',

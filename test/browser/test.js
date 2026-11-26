@@ -1,5 +1,5 @@
 import { expect } from '@esm-bundle/chai';
-import mqtt from '../../'; // this will resolve to mqtt/dist/mqtt.esm.js
+import mqtt, { connect } from '../../'; // this will resolve to mqtt/dist/mqtt.esm.js
 
 // needed to test no-esm version /dist/mqtt.js
 /** @type { import('../../src') }*/
@@ -95,6 +95,11 @@ describe('MQTT.js browser tests', () => {
 		done()
 	})
 
+	it('should support named imports from the ESM version', () => {
+		expect(connect).to.be.a('function')
+		expect(connect).to.equal(mqtt.connect)
+	})
+
 	it('should work in a Web Worker', (done) => {
 		const worker = new Worker('test/browser/worker.js')
 		let ready = false
@@ -114,6 +119,22 @@ describe('MQTT.js browser tests', () => {
 		worker.onerror = (e) => {
 			done(Error(e.message))
 		}
+	})
+
+	it('should never fall back to plain WebSocket for a secure protocol', () => {
+		for (const proto of ['mqtts', 'tls', 'ssl']) {
+			const client = mqtt.connect(`${proto}://localhost:${window.wssPort}`, {
+				manualConnect: true,
+			})
+			expect(client.options.protocol, proto).to.equal('wss')
+		}
+	})
+
+	it('should still fall back from mqtt to ws', () => {
+		const client = mqtt.connect(`mqtt://localhost:${window.wsPort}`, {
+			manualConnect: true,
+		})
+		expect(client.options.protocol).to.equal('ws')
 	})
 
 	testProto('ws', window.wsPort, () => {
