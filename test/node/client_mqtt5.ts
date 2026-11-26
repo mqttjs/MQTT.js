@@ -3992,6 +3992,7 @@ describe('MQTT 5.0', () => {
 				const client = lostSessionClient(`session-lost-qos${qos}`)
 				const secondConnectionPublishes: IPublishPacket[] = []
 				const sentCallbackErrors: (Error | undefined)[] = []
+				let sentId: number | undefined
 				let connections = 0
 				let finished = false
 
@@ -4016,6 +4017,7 @@ describe('MQTT 5.0', () => {
 					})
 					serverClient.on('publish', (packet) => {
 						if (connection === 1) {
+							sentId = packet.messageId
 							// Drop the connection before the PUBACK or PUBREC.
 							serverClient.destroy()
 							return
@@ -4063,6 +4065,11 @@ describe('MQTT 5.0', () => {
 								await storedPackets(client),
 								[],
 								'the discarded publish is removed from the store',
+							)
+							assert.notProperty(
+								client['outgoing'],
+								String(sentId),
+								'the discarded publish has no pending callback left',
 							)
 						} catch (assertErr) {
 							return finish(assertErr as Error)
@@ -4221,7 +4228,6 @@ describe('MQTT 5.0', () => {
 			function _test(t, done) {
 				const client = lostSessionClient('session-lost-pubrel')
 				let connections = 0
-				let pubrelsOnSecondConnection = 0
 				let finished = false
 
 				const finish = (err?: Error) => {
@@ -4252,7 +4258,6 @@ describe('MQTT 5.0', () => {
 							serverClient.destroy()
 							return
 						}
-						pubrelsOnSecondConnection++
 						serverClient.pubcomp({ messageId: packet.messageId })
 					})
 				}).listen(ports.PORTAND103)
@@ -4266,25 +4271,34 @@ describe('MQTT 5.0', () => {
 
 				client.on('error', () => {})
 				client.once('connect', () => {
-					client.publish('topic', 'payload', { qos: 2 }, (err) => {
-						try {
-							assert.strictEqual(
-								connections,
-								2,
-								'the callback runs on the second connection',
-							)
-							assert.instanceOf(
-								err,
-								Error,
-								'the callback of the discarded PUBREL must fail',
-							)
-							assert.match(err.message, /outcome .* unknown/)
-							assert.strictEqual(pubrelsOnSecondConnection, 0)
-						} catch (assertErr) {
-							return finish(assertErr as Error)
-						}
-						finish()
-					})
+					client.publish(
+						'topic',
+						'payload',
+						{ qos: 2 },
+						async (err) => {
+							try {
+								assert.strictEqual(
+									connections,
+									2,
+									'the callback runs on the second connection',
+								)
+								assert.instanceOf(
+									err,
+									Error,
+									'the callback of the discarded PUBREL must fail',
+								)
+								assert.match(err.message, /outcome .* unknown/)
+								assert.deepEqual(
+									await storedPackets(client),
+									[],
+									'the discarded PUBREL is removed from the store',
+								)
+							} catch (assertErr) {
+								return finish(assertErr as Error)
+							}
+							finish()
+						},
+					)
 				})
 			},
 		)

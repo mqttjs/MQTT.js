@@ -5144,10 +5144,7 @@ export default function abstractTest(server, config, ports) {
 		// MQTT-3.3.1-1: a PUBLISH sent again has DUP 1 and the same Packet
 		// Identifier. `sessionPresent` is what the broker answers on the
 		// reconnect.
-		const resendsWithDup = (
-			done: DoneCallback,
-			sessionPresent: boolean,
-		) => {
+		const resendsWithDup = (done: DoneCallback, keepsSession: boolean) => {
 			const { check, finish, deadline } = guardDone(done)
 			let connections = 0
 			let firstId: number | undefined
@@ -5158,7 +5155,7 @@ export default function abstractTest(server, config, ports) {
 				const connection = ++connections
 				serverClient.on('connect', () => {
 					serverClient.connack(
-						resumedConnack(connection, sessionPresent),
+						resumedConnack(connection, keepsSession),
 					)
 				})
 				serverClient.on('publish', (packet) => {

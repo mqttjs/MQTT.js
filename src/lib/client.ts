@@ -2258,7 +2258,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			// The original packet is for sending.
 			// The cloned storePacket is for storing to resend on reconnect.
 			// Topic Alias must not be used after disconnected.
-			// The stored copy has DUP 1 because it is written right after the
+			// The stored copy has DUP 1 because it is sent right after the
 			// put: in the outgoing store, DUP 1 means "sent" (see `_onConnect`).
 			storePacket = { ...clone(packet), dup: true }
 			err = this._removeTopicAliasAndRecoverTopicName(
@@ -2703,7 +2703,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			!sessionResumed
 		if (discardOutgoingSession) {
 			this.log(
-				'_onConnect :: session not present, dropping sent messages from the outgoing store',
+				'_onConnect :: session not resumed, dropping sent messages from the outgoing store',
 			)
 		}
 
@@ -2797,31 +2797,15 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 					this._packetIdsDuringStoreProcessing[packet2.messageId] =
 						true
 					if (this.messageIdProvider.register(packet2.messageId)) {
-						const send = () =>
+						if (neverSent) {
+							this._sendNeverSentPacket(packet2 as IPublishPacket)
+						} else {
 							this._sendPacket(
 								packet2,
 								undefined,
 								undefined,
 								true,
 							)
-						if (neverSent) {
-							// Mark it sent before `_sendPacket` can apply a
-							// Topic Alias to `packet2`.
-							this.outgoingStore.put(
-								{ ...packet2, dup: true },
-								(err) => {
-									if (err) {
-										this.log(
-											'storeDeliver :: put error for messageId %d, sending anyway: %o',
-											packet2.messageId,
-											err,
-										)
-									}
-									send()
-								},
-							)
-						} else {
-							send()
 						}
 					} else {
 						this.log(
@@ -2885,6 +2869,24 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	}
 
 	/**
+	 * Sends a stored PUBLISH that was never sent, after marking its stored
+	 * copy as sent (DUP 1, see `_storeAndSend`).
+	 */
+	private _sendNeverSentPacket(packet: IPublishPacket) {
+		// put first: `_sendPacket` may apply a Topic Alias to `packet`
+		this.outgoingStore.put({ ...packet, dup: true }, (err) => {
+			if (err) {
+				this.log(
+					'_sendNeverSentPacket :: put error for messageId %d, sending anyway: %o',
+					packet.messageId,
+					err,
+				)
+			}
+			this._sendPacket(packet, undefined, undefined, true)
+		})
+	}
+
+	/**
 	 * Drops a stored packet of a session the broker no longer has and fails
 	 * its pending callback, then calls `next`.
 	 */
@@ -2894,9 +2896,11 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		delete this.outgoing[messageId]
 		this._packetIdsDuringStoreProcessing[messageId] = true
 		this.log(
-			'_discardOutgoingSessionPacket :: session not resumed, dropping %s %d',
+			'_discardOutgoingSessionPacket :: session not resumed, dropping %s %d (topic %s, %s)',
 			packet.cmd,
 			messageId,
+			(packet as IPublishPacket).topic,
+			pending ? 'callback failed' : 'no pending callback',
 		)
 		this.outgoingStore.del({ messageId }, (err) => {
 			if (err) {
