@@ -15,7 +15,7 @@ import getPorts from './helpers/port_list'
 import serverBuilder from './server_helpers_for_client_tests'
 import { MqttServer } from './server'
 import abstractClientTests from './abstract_client'
-import mqtt, { MQTTJS_VERSION } from '../../src'
+import mqtt, { MQTTJS_VERSION, UniqueMessageIdProvider } from '../../src'
 
 const debug = _debug('mqttjs:client-test')
 
@@ -82,6 +82,76 @@ describe('MqttClient', () => {
 
 			assert.equal(client['_nextId'](), currentId + 1)
 			client.end((err) => done(err))
+		})
+
+		it('should skip an id that is still in flight when the id wraps to 1', function _test(t, done) {
+			client = mqtt.connect(config)
+			client.messageIdProvider['nextId'] = 65535
+			client.outgoing[1] = { volatile: false, cmd: 'publish', cb() {} }
+
+			assert.equal(client['_nextId'](), 65535)
+			assert.equal(client['_nextId'](), 2)
+			client.end(true, (err) => done(err))
+		})
+
+		it('should release the ids it skips in a tracking provider', function _test(t, done) {
+			const messageIdProvider = new UniqueMessageIdProvider()
+			client = mqtt.connect({ ...config, messageIdProvider })
+			client.outgoing[1] = { volatile: false, cmd: 'publish', cb() {} }
+
+			assert.equal(client['_nextId'](), 2)
+			assert.isTrue(messageIdProvider.register(1))
+			client.end(true, (err) => done(err))
+		})
+
+		it('should find a free id on the last of the 65535 attempts', function _test(t, done) {
+			client = mqtt.connect(config)
+			const freeId = 42
+			for (let id = 1; id <= 65535; id++) {
+				if (id !== freeId) {
+					client.outgoing[id] = {
+						volatile: false,
+						cmd: 'publish',
+						cb() {},
+					}
+				}
+			}
+			// one past freeId, so the scan wraps and reaches it last
+			client.messageIdProvider['nextId'] = freeId + 1
+
+			assert.equal(client['_nextId'](), freeId)
+			client.end(true, (err) => done(err))
+		})
+
+		it('should queue a publish until an id is free when every id is in flight', function _test(t, done) {
+			client = mqtt.connect(config)
+			// pinned: if publish ignored in-flight ids, a random start of 42
+			// would still pass
+			client.messageIdProvider['nextId'] = 1
+			client.on('connect', () => {
+				for (let id = 1; id <= 65535; id++) {
+					client.outgoing[id] = {
+						volatile: false,
+						cmd: 'publish',
+						cb() {},
+					}
+				}
+				const freeId = 42
+
+				client.on('packetsend', (packet) => {
+					if (packet.cmd === 'publish') {
+						const wrongId =
+							packet.messageId === freeId
+								? undefined
+								: new Error(`sent id ${packet.messageId}`)
+						client.end(true, (err) => done(err || wrongId))
+					}
+				})
+				client.publish('a', 'b', { qos: 1 })
+				assert.lengthOf(client['_storeProcessingQueue'], 1)
+
+				client.removeOutgoingMessage(freeId)
+			})
 		})
 
 		it("should not throw an error if packet's messageId is not found when receiving a pubrel packet", function _test(t, done) {

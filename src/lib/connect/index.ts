@@ -16,7 +16,41 @@ if (typeof process?.nextTick !== 'function') {
 
 const debug = _debug('mqttjs')
 
-let protocols: Record<string, StreamBuilder> = null
+let nodeProtocols: Record<string, StreamBuilder> = null
+let browserProtocols: Record<string, StreamBuilder> = null
+
+function loadNodeProtocols(): Record<string, StreamBuilder> {
+	if (!nodeProtocols) {
+		nodeProtocols = {}
+		nodeProtocols.ws = require('./ws').streamBuilder
+		nodeProtocols.wss = require('./ws').streamBuilder
+
+		nodeProtocols.mqtt = require('./tcp').default
+		nodeProtocols.tcp = require('./tcp').default
+		nodeProtocols.ssl = require('./tls').default
+		nodeProtocols.tls = nodeProtocols.ssl
+		nodeProtocols.mqtts = require('./tls').default
+	}
+	return nodeProtocols
+}
+
+function loadBrowserProtocols(): Record<string, StreamBuilder> {
+	if (!browserProtocols) {
+		browserProtocols = {}
+		browserProtocols.ws = require('./ws').browserStreamBuilder
+		browserProtocols.wss = require('./ws').browserStreamBuilder
+
+		browserProtocols.wx = require('./wx').default
+		browserProtocols.wxs = require('./wx').default
+
+		browserProtocols.ali = require('./ali').default
+		browserProtocols.alis = require('./ali').default
+	}
+	return browserProtocols
+}
+
+// `string[]`: 'tls' is supported but missing from `MqttProtocol`
+const SECURE_PROTOCOLS: string[] = ['mqtts', 'tls', 'ssl', 'wss', 'wxs', 'alis']
 
 function getDefaultWebSocketProtocol(): MqttProtocol {
 	if (typeof location !== 'undefined') {
@@ -36,22 +70,23 @@ function getDefaultWebSocketProtocol(): MqttProtocol {
  * @param {Object} [opts] option object
  */
 function parseAuthOptions(opts: IClientOptions) {
-	let matches: RegExpMatchArray | null
 	if (opts.auth) {
-		matches = opts.auth.match(/^(.+):(.+)$/)
-		if (matches) {
-			const [, username, password] = matches
-			opts.username = username
-			opts.password = password
+		// The user name ends at the first colon (RFC 3986 section 3.2.1), so a
+		// password may contain colons. `url.parse` has already decoded `%3A`.
+		const separator = opts.auth.indexOf(':')
+		if (separator !== -1) {
+			opts.username = opts.auth.slice(0, separator)
+			opts.password = opts.auth.slice(separator + 1)
 		} else {
 			opts.username = opts.auth
 		}
 	}
 }
 
-// url.parse() style objects carry the protocol as 'mqtts:'
+// url.parse() style objects carry the protocol as 'mqtts:'. Lowercase like
+// url.parse() does, so 'MQTTS' is not mistaken for an unknown, insecure one.
 function stripProtocolColon(protocol: MqttProtocol): MqttProtocol {
-	return protocol?.replace(/:$/, '') as MqttProtocol
+	return protocol?.replace(/:$/, '').toLowerCase() as MqttProtocol
 }
 
 /**
@@ -139,7 +174,7 @@ function connect(
 
 	if (opts.cert && opts.key) {
 		if (opts.protocol) {
-			if (['mqtts', 'wss', 'wxs', 'alis'].indexOf(opts.protocol) === -1) {
+			if (!SECURE_PROTOCOLS.includes(opts.protocol)) {
 				switch (opts.protocol) {
 					case 'mqtt':
 						opts.protocol = 'mqtts'
@@ -165,32 +200,15 @@ function connect(
 		}
 	}
 
-	// only loads the protocols once
-	if (!protocols) {
-		protocols = {}
-		if (!isBrowser && !opts.forceNativeWebSocket) {
-			protocols.ws = require('./ws').streamBuilder
-			protocols.wss = require('./ws').streamBuilder
-
-			protocols.mqtt = require('./tcp').default
-			protocols.tcp = require('./tcp').default
-			protocols.ssl = require('./tls').default
-			protocols.tls = protocols.ssl
-			protocols.mqtts = require('./tls').default
-		} else {
-			protocols.ws = require('./ws').browserStreamBuilder
-			protocols.wss = require('./ws').browserStreamBuilder
-
-			protocols.wx = require('./wx').default
-			protocols.wxs = require('./wx').default
-
-			protocols.ali = require('./ali').default
-			protocols.alis = require('./ali').default
-		}
-	}
+	// picked per call so `forceNativeWebSocket` only affects its own client
+	const protocols =
+		isBrowser || opts.forceNativeWebSocket
+			? loadBrowserProtocols()
+			: loadNodeProtocols()
 
 	if (!protocols[opts.protocol]) {
-		const isSecure = ['mqtts', 'wss'].indexOf(opts.protocol) !== -1
+		const requested = opts.protocol
+		const isSecure = SECURE_PROTOCOLS.includes(requested)
 		// returns the first available protocol based on available protocols (that depends on environment)
 		// if no protocol is specified this will return mqtt on node and ws on browser
 		// if secure it will return mqtts on node and wss on browser
@@ -203,13 +221,23 @@ function connect(
 			'wxs',
 			'ali',
 			'alis',
-		].filter((key, index) => {
-			if (isSecure && index % 2 === 0) {
-				// Skip insecure protocols when requesting a secure one.
+		].filter((key) => {
+			if (isSecure && !SECURE_PROTOCOLS.includes(key)) {
 				return false
 			}
 			return typeof protocols[key] === 'function'
 		})[0] as MqttProtocol
+
+		if (isSecure && !opts.protocol) {
+			throw new Error(
+				`No secure transport available for protocol "${requested}"`,
+			)
+		}
+		debug(
+			'no transport for %s, falling back to %s',
+			requested,
+			opts.protocol,
+		)
 	}
 
 	if (opts.clean === false && !opts.clientId) {

@@ -1,8 +1,10 @@
 import path from 'path'
 import fs from 'fs'
+import dns from 'dns'
+import net from 'net'
 import { assert } from 'chai'
 import { describe, it, after } from 'node:test'
-import mqtt from '../../src'
+import mqtt, { type IClientOptions } from '../../src'
 import abstractClientTests from './abstract_client'
 import { MqttSecureServer, type MqttServerListener } from './server'
 import 'should'
@@ -12,6 +14,7 @@ const ports = getPorts(5)
 
 const port = ports.PORT
 const sniPort = ports.PORTAND40
+const closingPort = ports.PORTAND41
 const KEY = path.join(__dirname, 'helpers', 'tls-key.pem')
 const CERT = path.join(__dirname, 'helpers', 'tls-cert.pem')
 const WRONG_CERT = path.join(__dirname, 'helpers', 'wrong-cert.pem')
@@ -270,6 +273,118 @@ describe('MqttSecureClient', () => {
 				server.on('secureConnection', server.setupConnection) // reset eventHandler
 				client.end((err) => done(err))
 			})
+		})
+
+		// Connects with `servers`: the first host closes each socket, so the
+		// client fails over to the second host, which is sniServer. Checks the
+		// SNI that sniServer receives. Only the expected socket errors of the
+		// first host are ignored: any other error fails the test.
+		function testFailover(
+			opts: {
+				second: string
+				servername?: string
+				rejectUnauthorized: boolean
+				expected: string | false
+			},
+			done: (err?: any) => void,
+		) {
+			let received: string | false | undefined
+			const record = (tlsSocket: any) => {
+				received = tlsSocket.servername
+			}
+			sniServer.on('secureConnection', record)
+
+			const closing = net
+				.createServer((socket) => {
+					socket.destroy()
+				})
+				.listen(closingPort, () => {
+					const client = mqtt.connect({
+						protocol: 'mqtts',
+						servers: [
+							{
+								host: 'mqtt-first.example.test',
+								port: closingPort,
+							},
+							{ host: opts.second, port: sniPort },
+						],
+						servername: opts.servername,
+						ca: [fs.readFileSync(SNI_CERT)],
+						rejectUnauthorized: opts.rejectUnauthorized,
+						reconnectPeriod: 100,
+						// All test hosts resolve to the loopback address, with no DNS
+						lookup: (_hostname, options, callback) =>
+							dns.lookup('127.0.0.1', options, callback),
+					} as IClientOptions)
+
+					let finished = false
+					const finish = (err?: Error) => {
+						if (finished) return
+						finished = true
+						sniServer.removeListener('secureConnection', record)
+						closing.close()
+						client.end(true, () => done(err))
+					}
+
+					client.on('error', (err: NodeJS.ErrnoException) => {
+						if (
+							err.code !== 'ECONNRESET' &&
+							err.code !== 'EPIPE' &&
+							err.code !== 'ECONNREFUSED'
+						) {
+							finish(err)
+						}
+					})
+
+					client.once('connect', () => {
+						try {
+							assert.strictEqual(received, opts.expected)
+							finish()
+						} catch (err) {
+							finish(err)
+						}
+					})
+				})
+		}
+
+		it('should use the servername of each host of servers after a failover', function _test(t, done) {
+			// The certificate of the second host is valid only for SNI_HOSTNAME,
+			// so the SNI of the first host must not stay.
+			testFailover(
+				{
+					second: SNI_HOSTNAME,
+					rejectUnauthorized: true,
+					expected: SNI_HOSTNAME,
+				},
+				done,
+			)
+		})
+
+		it('should send no SNI to an IP host of servers after a DNS host', function _test(t, done) {
+			// An IP is never used as SNI (RFC 6066), also not the name of the
+			// host before it.
+			testFailover(
+				{
+					second: '127.0.0.1',
+					rejectUnauthorized: false,
+					expected: false,
+				},
+				done,
+			)
+		})
+
+		it('should use an explicit servername for each host of servers after a failover', function _test(t, done) {
+			// The second host does not match the certificate, but the explicit
+			// servername does.
+			testFailover(
+				{
+					second: 'mqtt-second.example.test',
+					servername: SNI_HOSTNAME,
+					rejectUnauthorized: true,
+					expected: SNI_HOSTNAME,
+				},
+				done,
+			)
 		})
 
 		it('should validate the certificate against an explicit servername', function _test(t, done) {
