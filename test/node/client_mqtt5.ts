@@ -4,7 +4,11 @@ import abstractClientTests from './abstract_client'
 import { MqttServer } from './server'
 import serverBuilder from './server_helpers_for_client_tests'
 import getPorts from './helpers/port_list'
-import mqttPacket, { type IAuthPacket, type IPublishPacket } from 'mqtt-packet'
+import mqttPacket, {
+	type IAuthPacket,
+	type IPublishPacket,
+	type IUnsubackPacket,
+} from 'mqtt-packet'
 import mqtt, { type ErrorWithReasonCode } from '../../src'
 import { EventEmitter } from 'node:events'
 import handlePacket from '../../src/lib/handlers'
@@ -97,7 +101,7 @@ describe('MQTT 5.0', () => {
 						break
 					case 1:
 						assert.strictEqual(topic, 'test1')
-						assert.strictEqual(packet.topic, '')
+						assert.strictEqual(packet.topic, 'test1')
 						assert.strictEqual(packet.properties.topicAlias, 1)
 						break
 					case 2:
@@ -107,7 +111,7 @@ describe('MQTT 5.0', () => {
 						break
 					case 3:
 						assert.strictEqual(topic, 'test2')
-						assert.strictEqual(packet.topic, '')
+						assert.strictEqual(packet.topic, 'test2')
 						assert.strictEqual(packet.properties.topicAlias, 1)
 						client.end(true, (err1) => {
 							server2.close((err2) => {
@@ -119,6 +123,79 @@ describe('MQTT 5.0', () => {
 			})
 		},
 	)
+
+	// QoS 0 is covered by 'topic should be complemented on receive'. QoS 2
+	// emits from the incoming store on PUBREL, so it needs its own case.
+	for (const qos of [1, 2] as const) {
+		it(
+			`aliased QoS ${qos} PUBLISH with an empty topic gets the alias topic`,
+			{
+				timeout: 15000,
+			},
+			function _test(t, done) {
+				const client = mqtt.connect({
+					host: 'localhost',
+					port: ports.PORTAND103,
+					protocolVersion: 5,
+					properties: {
+						topicAliasMaximum: 3,
+					},
+				})
+				let received = 0
+				let finished = false
+				const finish = (err?: Error) => {
+					if (finished) return
+					finished = true
+					client.end(true, (err1) => {
+						server2.close((err2) => {
+							done(err || err1 || err2)
+						})
+					})
+				}
+				const server2 = new MqttServer((serverClient) => {
+					serverClient.on('connect', () => {
+						serverClient.connack({ reasonCode: 0 })
+						// register the alias, then use it with an empty topic
+						serverClient.publish({
+							messageId: 1,
+							topic: 'alias/topic',
+							payload: 'first',
+							qos,
+							properties: { topicAlias: 1 },
+						})
+						serverClient.publish({
+							messageId: 2,
+							topic: '',
+							payload: 'second',
+							qos,
+							properties: { topicAlias: 1 },
+						})
+					})
+					serverClient.on('pubrec', (packet) => {
+						serverClient.pubrel({ messageId: packet.messageId })
+					})
+				}).listen(ports.PORTAND103)
+
+				t.after(() => {
+					if (!finished) {
+						client.end(true)
+						server2.close()
+					}
+				})
+
+				client.on('error', finish)
+				client.on('message', (topic, payload, packet) => {
+					try {
+						assert.strictEqual(topic, 'alias/topic')
+						assert.strictEqual(packet.topic, 'alias/topic')
+					} catch (err) {
+						return finish(err as Error)
+					}
+					if (++received === 2) finish()
+				})
+			},
+		)
+	}
 
 	it(
 		'registered topic alias should automatically used if autoUseTopicAlias is true',
@@ -3747,6 +3824,61 @@ describe('MQTT 5.0', () => {
 		})
 	})
 
+	// An UNSUBACK code of 0x80 or more is a failure (MQTT 5 3.11.3)
+	it('unsuback handling error codes', async function _test(t) {
+		const codes: Record<string, number> = { denied: 0x87, gone: 0x11 }
+		const server2 = new MqttServer((serverClient) => {
+			serverClient.on('connect', () => {
+				serverClient.connack({ reasonCode: 0 })
+			})
+			serverClient.on('unsubscribe', (packet) => {
+				serverClient.unsuback({
+					messageId: packet.messageId,
+					granted: packet.unsubscriptions.map(
+						(topic) => codes[topic] ?? 0,
+					),
+				})
+			})
+		})
+		await new Promise<void>((resolve) => {
+			server2.listen(ports.PORTAND351, resolve)
+		})
+		const client = mqtt.connect({
+			protocolVersion: 5,
+			port: ports.PORTAND351,
+			host: 'localhost',
+		})
+		t.after(async () => {
+			await client.endAsync(true)
+			await new Promise((resolve) => {
+				server2.close(resolve)
+			})
+		})
+		await new Promise((resolve) => {
+			client.once('connect', resolve)
+		})
+
+		const [err, packet] = await new Promise<[Error, mqtt.Packet]>(
+			(resolve) => {
+				client.unsubscribe(['ok', 'denied'], (err2, packet2) => {
+					resolve([err2, packet2])
+				})
+			},
+		)
+		assert.strictEqual(err?.message, 'Unsubscribe error: Not authorized')
+		assert.strictEqual((err as ErrorWithReasonCode).code, 0x87)
+		assert.deepStrictEqual((packet as IUnsubackPacket).granted, [0, 0x87])
+
+		const asyncErr = await client.unsubscribeAsync('denied').then(
+			() => null,
+			(err2: ErrorWithReasonCode) => err2,
+		)
+		assert.strictEqual(asyncErr?.code, 0x87)
+		// 0x11 No subscription existed is not a failure
+		const unsuback = await client.unsubscribeAsync(['ok', 'gone'])
+		assert.deepStrictEqual((unsuback as IUnsubackPacket).granted, [0, 0x11])
+	})
+
 	it(
 		'server side disconnect',
 		{
@@ -3968,6 +4100,341 @@ describe('MQTT 5.0', () => {
 			})
 		},
 	)
+
+	// MQTT-3.2.2-5: with Clean Start 0 and Session Present 0, the client
+	// discards its session state. Section 4.1 counts the QoS 1/2 messages sent
+	// but not completely acknowledged in it, not the ones never sent.
+	describe('session lost on reconnect (Session Present 0)', () => {
+		const lostSessionClient = (clientId: string) =>
+			mqtt.connect({
+				host: 'localhost',
+				port: ports.PORTAND103,
+				protocolVersion: 5,
+				clean: false,
+				clientId,
+				reconnectPeriod: 100,
+				properties: { sessionExpiryInterval: 300 },
+			})
+
+		const storedPackets = (client: mqtt.MqttClient) =>
+			client.outgoingStore.createStream().toArray()
+
+		const dropsSentPublish = (qos: 1 | 2) =>
+			function _test(t, done) {
+				const client = lostSessionClient(`session-lost-qos${qos}`)
+				const secondConnectionPublishes: IPublishPacket[] = []
+				const sentCallbackErrors: (Error | undefined)[] = []
+				let sentId: number | undefined
+				let connections = 0
+				let finished = false
+
+				const finish = (err?: Error) => {
+					if (finished) return
+					finished = true
+					client.end(true, (err1) => {
+						server2.close((err2) => {
+							done(err || err1 || err2)
+						})
+					})
+				}
+
+				const server2 = new MqttServer((serverClient) => {
+					connections++
+					const connection = connections
+					serverClient.on('connect', () => {
+						serverClient.connack({
+							reasonCode: 0,
+							sessionPresent: false,
+						})
+					})
+					serverClient.on('publish', (packet) => {
+						if (connection === 1) {
+							sentId = packet.messageId
+							// Drop the connection before the PUBACK or PUBREC.
+							serverClient.destroy()
+							return
+						}
+						secondConnectionPublishes.push(packet)
+						serverClient.puback({ messageId: packet.messageId })
+					})
+				}).listen(ports.PORTAND103)
+
+				t.after(() => {
+					if (!finished) {
+						client.end(true)
+						server2.close()
+					}
+				})
+
+				client.on('error', () => {})
+				client.once('connect', () => {
+					client.publish('sent', 'a', { qos }, (err) => {
+						sentCallbackErrors.push(err)
+					})
+				})
+				client.once('offline', () => {
+					client.publish('offline', 'b', { qos: 1 }, async (err) => {
+						try {
+							assert.ifError(err)
+							assert.lengthOf(
+								sentCallbackErrors,
+								1,
+								'the callback of the discarded publish runs once',
+							)
+							assert.match(
+								sentCallbackErrors[0]?.message,
+								/Session lost/,
+							)
+							assert.deepEqual(
+								secondConnectionPublishes.map((p) => [
+									p.topic,
+									p.dup,
+								]),
+								[['offline', false]],
+								'only the never-sent publish goes out, as a first delivery',
+							)
+							assert.deepEqual(
+								await storedPackets(client),
+								[],
+								'the discarded publish is removed from the store',
+							)
+							assert.notProperty(
+								client['outgoing'],
+								String(sentId),
+								'the discarded publish has no pending callback left',
+							)
+						} catch (assertErr) {
+							return finish(assertErr as Error)
+						}
+						finish()
+					})
+				})
+			}
+
+		it(
+			'should not resend a sent QoS 1 publish, and should send a publish made while offline',
+			{ timeout: 15000 },
+			dropsSentPublish(1),
+		)
+
+		it(
+			'should not resend a sent QoS 2 publish, and should send a publish made while offline',
+			{ timeout: 15000 },
+			dropsSentPublish(2),
+		)
+
+		it(
+			'should resend with DUP 1 a publish made while offline once it was sent',
+			{ timeout: 15000 },
+			function _test(t, done) {
+				const client = lostSessionClient('session-lost-offline-resend')
+				const thirdConnectionPublishes: IPublishPacket[] = []
+				let connections = 0
+				let finished = false
+
+				const finish = (err?: Error) => {
+					if (finished) return
+					finished = true
+					client.end(true, (err1) => {
+						server2.close((err2) => {
+							done(err || err1 || err2)
+						})
+					})
+				}
+
+				const server2 = new MqttServer((serverClient) => {
+					connections++
+					const connection = connections
+					serverClient.on('connect', () => {
+						// Session lost on the second connection, kept on the third.
+						serverClient.connack({
+							reasonCode: 0,
+							sessionPresent: connection === 3,
+						})
+					})
+					serverClient.on('publish', (packet) => {
+						if (connection < 3) {
+							// Drop the connection before the PUBACK.
+							serverClient.destroy()
+							return
+						}
+						thirdConnectionPublishes.push(packet)
+						serverClient.puback({ messageId: packet.messageId })
+					})
+				}).listen(ports.PORTAND103)
+
+				t.after(() => {
+					if (!finished) {
+						client.end(true)
+						server2.close()
+					}
+				})
+
+				client.on('error', () => {})
+				client.once('connect', () => {
+					client.publish('sent', 'a', { qos: 1 }, () => {})
+				})
+				client.once('offline', () => {
+					client.publish('offline', 'b', { qos: 1 }, (err) => {
+						try {
+							assert.ifError(err)
+							assert.strictEqual(connections, 3)
+							assert.deepEqual(
+								thirdConnectionPublishes.map((p) => [
+									p.topic,
+									p.dup,
+								]),
+								[['offline', true]],
+								'a publish sent once is resent with DUP 1',
+							)
+						} catch (assertErr) {
+							return finish(assertErr as Error)
+						}
+						finish()
+					})
+				})
+			},
+		)
+
+		it(
+			'should drop thousands of stored sent publishes without overflowing the stack',
+			{ timeout: 15000 },
+			function _test(t, done) {
+				const count = 5000
+				const outgoingStore = new mqtt.Store()
+				for (let messageId = 1; messageId <= count; messageId++) {
+					outgoingStore.put(
+						{
+							cmd: 'publish',
+							topic: 'sent',
+							payload: Buffer.from('a'),
+							qos: 1,
+							dup: true,
+							retain: false,
+							messageId,
+						},
+						() => {},
+					)
+				}
+				const received: IPublishPacket[] = []
+				const server2 = new MqttServer((serverClient) => {
+					serverClient.on('connect', () => {
+						serverClient.connack({
+							reasonCode: 0,
+							sessionPresent: false,
+						})
+					})
+					serverClient.on('publish', (packet) => {
+						received.push(packet)
+					})
+				}).listen(ports.PORTAND103)
+
+				const client = mqtt.connect({
+					host: 'localhost',
+					port: ports.PORTAND103,
+					protocolVersion: 5,
+					clean: false,
+					clientId: 'session-lost-bulk',
+					reconnectPeriod: 0,
+					outgoingStore,
+				})
+				client.on('error', () => {})
+				client.once('connect', async () => {
+					let err: Error | undefined
+					try {
+						assert.lengthOf(received, 0)
+						assert.deepEqual(await storedPackets(client), [])
+					} catch (assertErr) {
+						err = assertErr as Error
+					}
+					client.end(true, () => {
+						server2.close(() => done(err))
+					})
+				})
+			},
+		)
+
+		it(
+			'should not resend a stored PUBREL, and should fail its callback',
+			{ timeout: 15000 },
+			function _test(t, done) {
+				const client = lostSessionClient('session-lost-pubrel')
+				let connections = 0
+				let finished = false
+
+				const finish = (err?: Error) => {
+					if (finished) return
+					finished = true
+					client.end(true, (err1) => {
+						server2.close((err2) => {
+							done(err || err1 || err2)
+						})
+					})
+				}
+
+				const server2 = new MqttServer((serverClient) => {
+					connections++
+					const connection = connections
+					serverClient.on('connect', () => {
+						serverClient.connack({
+							reasonCode: 0,
+							sessionPresent: false,
+						})
+					})
+					serverClient.on('publish', (packet) => {
+						serverClient.pubrec({ messageId: packet.messageId })
+					})
+					serverClient.on('pubrel', (packet) => {
+						if (connection === 1) {
+							// Drop the connection before the PUBCOMP.
+							serverClient.destroy()
+							return
+						}
+						serverClient.pubcomp({ messageId: packet.messageId })
+					})
+				}).listen(ports.PORTAND103)
+
+				t.after(() => {
+					if (!finished) {
+						client.end(true)
+						server2.close()
+					}
+				})
+
+				client.on('error', () => {})
+				client.once('connect', () => {
+					client.publish(
+						'topic',
+						'payload',
+						{ qos: 2 },
+						async (err) => {
+							try {
+								assert.strictEqual(
+									connections,
+									2,
+									'the callback runs on the second connection',
+								)
+								assert.instanceOf(
+									err,
+									Error,
+									'the callback of the discarded PUBREL must fail',
+								)
+								assert.match(err.message, /outcome .* unknown/)
+								assert.deepEqual(
+									await storedPackets(client),
+									[],
+									'the discarded PUBREL is removed from the store',
+								)
+							} catch (assertErr) {
+								return finish(assertErr as Error)
+							}
+							finish()
+						},
+					)
+				})
+			},
+		)
+	})
 
 	// The tests below cover GHSA-h8jm-hm87-fqw3. They are deliberately not the
 	// last tests in this file: the `after` hook calls `process.exit(0)`, which

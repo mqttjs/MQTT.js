@@ -159,6 +159,8 @@ const handlePublish: PacketHandler = (
 					const gotTopic = topicAliasRecv.getTopicByAlias(alias)
 					if (gotTopic) {
 						topic = gotTopic
+						// 3.3.2.3.4: treat the PUBLISH as if it carried the topic
+						packet.topic = topic
 						client.log(
 							'handlePublish :: topic complemented by alias. topic: %s - alias: %d',
 							topic,
