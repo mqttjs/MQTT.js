@@ -34,7 +34,11 @@ const buildStream: StreamBuilder = (client, opts) => {
 
 	opts.rejectUnauthorized = opts.rejectUnauthorized !== false
 
-	delete opts.path
+	// `path` is the socket to connect to with `mqtts+unix`: `tls.connect`
+	// prefers it over host and port, like `net.createConnection` does in tcp.ts
+	if (!opts.unixSocket) {
+		delete opts.path
+	}
 
 	debug(
 		'port %d host %s rejectUnauthorized %b',
