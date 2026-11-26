@@ -1307,6 +1307,18 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			return this
 		}
 
+		if (this.disconnected && (qos === 1 || qos === 2)) {
+			// end() closed the stores; connect() opens new ones. Only QoS 1/2
+			// need the outgoing store: QoS 0 is queued and sent on connect().
+			const err = new Error('client disconnected')
+			if (callback && callback !== this.noop) {
+				callback(err)
+			} else {
+				this.emit('error', err)
+			}
+			return this
+		}
+
 		const publishProc = () => {
 			let messageId = 0
 			if (qos === 1 || qos === 2) {
@@ -2110,23 +2122,14 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	}
 
 	private _checkDisconnecting(callback?: GenericCallback<any>) {
-		// After end() the stores are closed until connect() opens new ones, so a
-		// publish or subscribe then has nowhere to go. With reconnectPeriod 0 or
-		// manualConnect, end() leaves `disconnecting` false, so check
-		// `disconnected` too instead of letting the closed store throw.
-		const reason = this.disconnecting
-			? 'client disconnecting'
-			: this.disconnected
-				? 'client disconnected'
-				: null
-		if (reason) {
+		if (this.disconnecting) {
 			if (callback && callback !== this.noop) {
-				callback(new Error(reason))
+				callback(new Error('client disconnecting'))
 			} else {
-				this.emit('error', new Error(reason))
+				this.emit('error', new Error('client disconnecting'))
 			}
 		}
-		return reason !== null
+		return this.disconnecting
 	}
 
 	/**
