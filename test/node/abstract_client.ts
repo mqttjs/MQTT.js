@@ -551,7 +551,6 @@ export default function abstractTest(server, config, ports) {
 			client: mqtt.MqttClient,
 			message: string,
 			{ check, finish }: ReturnType<typeof guardDone>,
-			alsoCheck?: () => void,
 		) {
 			const events: string[] = []
 			client.on('error', (err) => {
@@ -560,10 +559,12 @@ export default function abstractTest(server, config, ports) {
 			client.once('close', () => {
 				events.push('close')
 				client.end((endErr) => {
-					check(() => {
-						assert.deepEqual(events, [`error: ${message}`, 'close'])
-						alsoCheck?.()
-					})
+					check(() =>
+						assert.deepEqual(events, [
+							`error: ${message}`,
+							'close',
+						]),
+					)
 					finish(endErr)
 				})
 			})
@@ -708,6 +709,26 @@ export default function abstractTest(server, config, ports) {
 					},
 				)
 			})
+		})
+
+		// these are sent again through an internal callback, which must not
+		// hide that the caller gave none
+		it('should emit error event if mqtt-packet rejects a queued qos 0 publish without a callback', function _test(t, done) {
+			const guard = guardDone(done)
+			guard.deadline(3000, 'no close after an invalid queued publish')
+			const client = connect({ reconnectPeriod: 0 })
+			// queued offline, delivered on connect
+			client.publish(42 as unknown as string, 'payload')
+			expectPacketError(client, 'Invalid topic', guard)
+		})
+
+		it('should emit error event if mqtt-packet rejects a stored qos 1 publish without a callback', function _test(t, done) {
+			const guard = guardDone(done)
+			guard.deadline(3000, 'no close after an invalid stored publish')
+			const client = connect({ reconnectPeriod: 0 })
+			// stored offline, sent from the store on connect
+			client.publish(42 as unknown as string, 'payload', { qos: 1 })
+			expectPacketError(client, 'Invalid topic', guard)
 		})
 
 		it('should fail a stored qos 1 publish rejected on resend and send the next one', function _test(t, done) {

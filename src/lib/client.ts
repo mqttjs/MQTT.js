@@ -64,6 +64,9 @@ const RECEIVE_MAXIMUM_EXCEEDED = 147
 /** MQTT 5 reason code 0x81 */
 const MALFORMED_PACKET = 0x81
 
+/** On an internal wrapper callback: the callback the caller gave, if any */
+const kCallerCallback = Symbol('callerCallback')
+
 /** Bytes `packet` takes on the wire, counted without copying the payload. */
 const encodedSize = (packet: Packet, opts: IClientOptions) => {
 	let size = 0
@@ -800,7 +803,10 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			const deliver = () => {
 				// a callback can resume this after the connection closed: the
 				// next connection delivers what is left
-				if (!this.connected) return
+				if (!this.connected) {
+					this.log('deliver :: connection closed, stopping')
+					return
+				}
 
 				const entry = queue.shift()
 				this.log('deliver :: entry %o', entry)
@@ -820,12 +826,15 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 					}
 				}
 				if (send) {
-					this._sendPacket(packet, (err) => {
-						if (entry.cb) {
-							entry.cb(err)
-						}
-						deliver()
-					})
+					this._sendPacket(
+						packet,
+						this._wrapCallback(entry.cb, (err) => {
+							if (entry.cb) {
+								entry.cb(err)
+							}
+							deliver()
+						}),
+					)
 				} else {
 					this.log(
 						'messageId: %d has already used. The message is skipped and removed.',
@@ -2152,10 +2161,15 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		this.log('(%s)stream :: on close', this.options.clientId)
 		const rejected = this._rejectedWrites.get(stream)
 		// the error goes to the caller's callback, or as 'error' when there is none
-		const cb =
-			rejected &&
-			(this._outgoingEntryOf(rejected.packet)?.cb ?? rejected.cb)
+		const cb = rejected && this._callerCallback(rejected)
 		const emitRejected = rejected && (!cb || cb === this.noop)
+		if (rejected) {
+			this.log(
+				'_onStreamClose :: reporting the rejected %s %s',
+				rejected.packet.cmd,
+				emitRejected ? "as 'error'" : 'to its callback',
+			)
+		}
 		// before `_flushVolatile` fails it with a generic error
 		const failRejectedOutgoing =
 			rejected && this._takeOutgoing(rejected.packet)
@@ -2188,6 +2202,20 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		}
 	}
 
+	/** Returns `wrapper`, marked as calling `callerCb` for `_callerCallback`. */
+	private _wrapCallback<T extends (...args: any[]) => void>(
+		callerCb: ((...args: any[]) => void) | null | undefined,
+		wrapper: T,
+	): T {
+		return Object.assign(wrapper, { [kCallerCallback]: callerCb })
+	}
+
+	/** The callback of the call that sent a rejected packet, if it gave one. */
+	private _callerCallback(rejected: { packet: Packet; cb?: DoneCallback }) {
+		const cb = this._outgoingEntryOf(rejected.packet)?.cb ?? rejected.cb
+		return cb && kCallerCallback in cb ? cb[kCallerCallback] : cb
+	}
+
 	/** The `outgoing` entry waiting for the ack of this packet, if any. */
 	private _outgoingEntryOf(packet: Packet) {
 		const { messageId } = packet as { messageId?: number }
@@ -2197,9 +2225,8 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	}
 
 	/**
-	 * Take the `outgoing` entry of a packet that can never be sent, and return
-	 * the function that fails its callback. It is also dropped from what a
-	 * reconnect would send again: the outgoing store, or the resubscriptions.
+	 * Drops a packet that can never be sent from `outgoing` and from what a
+	 * reconnect sends again, and returns the function that fails its callback.
 	 */
 	private _takeOutgoing(packet: Packet): ((err: Error) => void) | undefined {
 		const entry = this._outgoingEntryOf(packet)
@@ -3090,14 +3117,14 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 						// the outgoing store holds publishes and pubrels, and
 						// the two are waiting for different acks
 						cmd: packet2.cmd as PendingCommand,
-						cb(err, status) {
+						cb: this._wrapCallback(cb, (err, status) => {
 							// Ensure that the original callback passed in to publish gets invoked
 							if (cb) {
 								cb(err, status)
 							}
 
 							storeDeliver()
-						},
+						}),
 					}
 					this._packetIdsDuringStoreProcessing[packet2.messageId] =
 						true
