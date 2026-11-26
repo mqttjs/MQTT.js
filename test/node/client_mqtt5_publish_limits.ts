@@ -2,7 +2,10 @@ import { assert } from 'chai'
 import { describe, it } from 'node:test'
 import { once } from 'node:events'
 import type { AddressInfo } from 'node:net'
-import type { IConnackPacket, IPublishPacket } from 'mqtt-packet'
+import mqttPacket, {
+	type IConnackPacket,
+	type IPublishPacket,
+} from 'mqtt-packet'
 import { MqttServer } from './server'
 import mqtt, { UniqueMessageIdProvider, type MqttClient } from '../../src'
 
@@ -429,6 +432,68 @@ describe('MQTT 5.0 outgoing PUBLISH limits from CONNACK', () => {
 				assert.strictEqual(publishes[0].topic.toString(), 'big/t')
 			} finally {
 				await stop(client, server)
+			}
+		},
+	)
+
+	it(
+		'sizes multi-byte text and every property kind exactly at the limit',
+		testOptions,
+		async () => {
+			const topic = 'città/中文/😀'
+			const opts: mqtt.IClientPublishOptions = {
+				qos: 1,
+				properties: {
+					payloadFormatIndicator: true,
+					messageExpiryInterval: 0xffffffff,
+					contentType: 'tèxt/😀',
+					responseTopic: 'rèsp/中',
+					correlationData: Buffer.alloc(9),
+					userProperties: { ké: ['v1', 'vä'], k2: '中文' },
+				},
+			}
+			const payload = 'pàyload 😀'.repeat(3)
+			const size = mqttPacket.generate(
+				{
+					cmd: 'publish',
+					topic,
+					payload,
+					messageId: 1,
+					dup: false,
+					retain: false,
+					...opts,
+				} as IPublishPacket,
+				{ protocolVersion: 5 },
+			).length
+			// at the limit it goes out, one byte over it is refused
+			for (const [max, sent] of [
+				[size, true],
+				[size - 1, false],
+			] as const) {
+				const { server, port, publishes } = await startServer({
+					maximumPacketSize: max,
+				})
+				const client = mqtt.connect({
+					port,
+					protocolVersion: 5,
+					reconnectPeriod: 0,
+				})
+				try {
+					await connected(client)
+					const err = await publish(client, topic, payload, opts)
+					if (sent) {
+						assert.isNotOk(err)
+						assert.strictEqual(publishes.length, 1)
+					} else {
+						assert.match(
+							err?.message,
+							new RegExp(`packet size ${size} exceeds`),
+						)
+						assert.strictEqual(publishes.length, 0)
+					}
+				} finally {
+					await stop(client, server)
+				}
 			}
 		},
 	)

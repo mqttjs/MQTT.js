@@ -81,6 +81,49 @@ const encodedSize = (packet: Packet, opts: IClientOptions) => {
 	return size
 }
 
+/** Bytes of a topic, payload or property value; Infinity when unknown. */
+const byteSize = (value: unknown) =>
+	typeof value === 'string' ||
+	Buffer.isBuffer(value) ||
+	ArrayBuffer.isView(value)
+		? Buffer.byteLength(value as string | Buffer)
+		: Infinity
+
+/**
+ * Bytes `packet` takes on the wire at most, without encoding it. Counts a
+ * Topic Alias and the longest Remaining Length, so it is never too small.
+ */
+const publishSizeUpperBound = (packet: IPublishPacket) => {
+	// header 1 + remaining length 4 + topic length 2 + message id 2
+	// + properties length 4 + Topic Alias 3
+	let size =
+		16 +
+		byteSize(packet.topic) +
+		(packet.payload == null ? 0 : byteSize(packet.payload))
+	const props = packet.properties
+	if (!props) {
+		return size
+	}
+	for (const [name, value] of Object.entries(props)) {
+		if (value == null) continue
+		if (typeof value === 'number' || typeof value === 'boolean') {
+			// id 1 + at most 4 bytes
+			size += 5
+		} else if (name === 'userProperties') {
+			for (const [key, v] of Object.entries(value)) {
+				for (const item of Array.isArray(v) ? v : [v]) {
+					// id 1 + two lengths of 2
+					size += 5 + byteSize(key) + byteSize(String(item))
+				}
+			}
+		} else {
+			// id 1 + length 2
+			size += 3 + byteSize(value)
+		}
+	}
+	return size
+}
+
 const defaultConnectOptions: IClientOptions = {
 	keepalive: 60,
 	reschedulePings: true,
@@ -2492,7 +2535,10 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			)
 		}
 		// [MQTT-3.2.2-15]
-		if (server.maximumPacketSize) {
+		if (
+			server.maximumPacketSize &&
+			publishSizeUpperBound(packet) > server.maximumPacketSize
+		) {
 			const size = encodedSize(this._publishAsSent(packet), this.options)
 			if (size > server.maximumPacketSize) {
 				return new Error(
