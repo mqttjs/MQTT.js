@@ -101,7 +101,7 @@ describe('MQTT 5.0', () => {
 						break
 					case 1:
 						assert.strictEqual(topic, 'test1')
-						assert.strictEqual(packet.topic, '')
+						assert.strictEqual(packet.topic, 'test1')
 						assert.strictEqual(packet.properties.topicAlias, 1)
 						break
 					case 2:
@@ -111,7 +111,7 @@ describe('MQTT 5.0', () => {
 						break
 					case 3:
 						assert.strictEqual(topic, 'test2')
-						assert.strictEqual(packet.topic, '')
+						assert.strictEqual(packet.topic, 'test2')
 						assert.strictEqual(packet.properties.topicAlias, 1)
 						client.end(true, (err1) => {
 							server2.close((err2) => {
@@ -123,6 +123,79 @@ describe('MQTT 5.0', () => {
 			})
 		},
 	)
+
+	// QoS 0 is covered by 'topic should be complemented on receive'. QoS 2
+	// emits from the incoming store on PUBREL, so it needs its own case.
+	for (const qos of [1, 2] as const) {
+		it(
+			`aliased QoS ${qos} PUBLISH with an empty topic gets the alias topic`,
+			{
+				timeout: 15000,
+			},
+			function _test(t, done) {
+				const client = mqtt.connect({
+					host: 'localhost',
+					port: ports.PORTAND103,
+					protocolVersion: 5,
+					properties: {
+						topicAliasMaximum: 3,
+					},
+				})
+				let received = 0
+				let finished = false
+				const finish = (err?: Error) => {
+					if (finished) return
+					finished = true
+					client.end(true, (err1) => {
+						server2.close((err2) => {
+							done(err || err1 || err2)
+						})
+					})
+				}
+				const server2 = new MqttServer((serverClient) => {
+					serverClient.on('connect', () => {
+						serverClient.connack({ reasonCode: 0 })
+						// register the alias, then use it with an empty topic
+						serverClient.publish({
+							messageId: 1,
+							topic: 'alias/topic',
+							payload: 'first',
+							qos,
+							properties: { topicAlias: 1 },
+						})
+						serverClient.publish({
+							messageId: 2,
+							topic: '',
+							payload: 'second',
+							qos,
+							properties: { topicAlias: 1 },
+						})
+					})
+					serverClient.on('pubrec', (packet) => {
+						serverClient.pubrel({ messageId: packet.messageId })
+					})
+				}).listen(ports.PORTAND103)
+
+				t.after(() => {
+					if (!finished) {
+						client.end(true)
+						server2.close()
+					}
+				})
+
+				client.on('error', finish)
+				client.on('message', (topic, payload, packet) => {
+					try {
+						assert.strictEqual(topic, 'alias/topic')
+						assert.strictEqual(packet.topic, 'alias/topic')
+					} catch (err) {
+						return finish(err as Error)
+					}
+					if (++received === 2) finish()
+				})
+			},
+		)
+	}
 
 	it(
 		'registered topic alias should automatically used if autoUseTopicAlias is true',
