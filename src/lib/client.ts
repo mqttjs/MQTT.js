@@ -108,20 +108,26 @@ const publishSizeUpperBound = (packet: IPublishPacket) => {
 	if (!props) {
 		return size
 	}
-	for (const [name, value] of Object.entries(props)) {
+	// for...in: no entry arrays on the hot path
+	for (const name in props) {
+		const value = props[name]
 		if (value == null) continue
 		if (typeof value === 'number' || typeof value === 'boolean') {
 			// id 1 + at most 4 bytes
 			size += 5
 		} else if (name === 'userProperties') {
-			for (const [key, v] of Object.entries(value)) {
-				for (const item of Array.isArray(v) ? v : [v]) {
-					// id 1 + two lengths of 2; a non-string item is Infinity
-					size += 5 + byteSize(key) + byteSize(item)
+			for (const key in value) {
+				const v = value[key]
+				// id 1 + two lengths of 2, per value
+				if (Array.isArray(v)) {
+					for (const item of v)
+						size += 5 + byteSize(key) + byteSize(item)
+				} else {
+					size += 5 + byteSize(key) + byteSize(v)
 				}
 			}
 		} else {
-			// id 1 + length 2; Infinity unless a string or Buffer
+			// id 1 + length 2
 			size += 3 + byteSize(value)
 		}
 	}
@@ -2538,7 +2544,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 				'Publish refused: the server does not support retained messages (Retain Available is 0)',
 			)
 		}
-		// [MQTT-3.2.2-15]: the exact count runs only when the bound is too close
+		// [MQTT-3.2.2-15]: count exactly only when the bound is over the limit
 		if (
 			server.maximumPacketSize &&
 			publishSizeUpperBound(packet) > server.maximumPacketSize
