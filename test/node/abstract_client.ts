@@ -4972,6 +4972,62 @@ export default function abstractTest(server, config, ports) {
 			})
 		})
 
+		// SUBACK codes follow the order of the topic filters [MQTT-3.9.3-1]
+		it('should resubscribe only the granted topics of a partly refused suback', function _test(t, done) {
+			let connections = 0
+			let client: mqtt.MqttClient | null = null
+			const resubscribed: string[] = []
+			const server2 = serverBuilder(config.protocol, (serverClient) => {
+				connections += 1
+				const connection = connections
+				serverClient.on('connect', () => {
+					const connack =
+						version === 5 ? { reasonCode: 0 } : { returnCode: 0 }
+					serverClient.connack(connack)
+				})
+				serverClient.on('subscribe', (packet) => {
+					const topics = packet.subscriptions.map((s) => s.topic)
+					serverClient.suback({
+						messageId: packet.messageId,
+						granted: topics.map((topic) =>
+							topic === 'b' ? 0x80 : 0,
+						),
+					})
+					if (connection === 2) {
+						// 3.1.1 resubscribes in one SUBSCRIBE, MQTT 5 in one per topic
+						resubscribed.push(...topics)
+						if (resubscribed.length >= 2) {
+							assert.deepStrictEqual(resubscribed, ['a', 'c'])
+							client.end(true, done)
+						}
+					}
+				})
+			})
+
+			server2.listen(ports.PORTAND50, () => {
+				client = connect({
+					port: ports.PORTAND50,
+					host: 'localhost',
+					reconnectPeriod: 100,
+				})
+
+				client.once('connect', () => {
+					client.subscribe(['a', 'b', 'c'], (err) => {
+						assert.strictEqual(
+							err?.message,
+							'Subscribe error: Unspecified error',
+						)
+						assert.deepStrictEqual(
+							Object.keys(client['_resubscribeTopics']),
+							['a', 'c'],
+						)
+						// drop the connection to force a reconnect and resubscribe
+						client.stream.end()
+					})
+				})
+			})
+		})
+
 		it('should preserved incomingStore after disconnecting if clean is false', function _test(t, done) {
 			let reconnect = false
 			let client: mqtt.MqttClient | null = null

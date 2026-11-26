@@ -4,7 +4,11 @@ import abstractClientTests from './abstract_client'
 import { MqttServer } from './server'
 import serverBuilder from './server_helpers_for_client_tests'
 import getPorts from './helpers/port_list'
-import mqttPacket, { type IAuthPacket, type IPublishPacket } from 'mqtt-packet'
+import mqttPacket, {
+	type IAuthPacket,
+	type IPublishPacket,
+	type IUnsubackPacket,
+} from 'mqtt-packet'
 import mqtt, { type ErrorWithReasonCode } from '../../src'
 import { EventEmitter } from 'node:events'
 import handlePacket from '../../src/lib/handlers'
@@ -3745,6 +3749,61 @@ describe('MQTT 5.0', () => {
 				})
 			})
 		})
+	})
+
+	// An UNSUBACK code of 0x80 or more is a failure (MQTT 5 3.11.3)
+	it('unsuback handling error codes', async function _test(t) {
+		const codes: Record<string, number> = { denied: 0x87, gone: 0x11 }
+		const server2 = new MqttServer((serverClient) => {
+			serverClient.on('connect', () => {
+				serverClient.connack({ reasonCode: 0 })
+			})
+			serverClient.on('unsubscribe', (packet) => {
+				serverClient.unsuback({
+					messageId: packet.messageId,
+					granted: packet.unsubscriptions.map(
+						(topic) => codes[topic] ?? 0,
+					),
+				})
+			})
+		})
+		await new Promise<void>((resolve) => {
+			server2.listen(ports.PORTAND351, resolve)
+		})
+		const client = mqtt.connect({
+			protocolVersion: 5,
+			port: ports.PORTAND351,
+			host: 'localhost',
+		})
+		t.after(async () => {
+			await client.endAsync(true)
+			await new Promise((resolve) => {
+				server2.close(resolve)
+			})
+		})
+		await new Promise((resolve) => {
+			client.once('connect', resolve)
+		})
+
+		const [err, packet] = await new Promise<[Error, mqtt.Packet]>(
+			(resolve) => {
+				client.unsubscribe(['ok', 'denied'], (err2, packet2) => {
+					resolve([err2, packet2])
+				})
+			},
+		)
+		assert.strictEqual(err?.message, 'Unsubscribe error: Not authorized')
+		assert.strictEqual((err as ErrorWithReasonCode).code, 0x87)
+		assert.deepStrictEqual((packet as IUnsubackPacket).granted, [0, 0x87])
+
+		const asyncErr = await client.unsubscribeAsync('denied').then(
+			() => null,
+			(err2: ErrorWithReasonCode) => err2,
+		)
+		assert.strictEqual(asyncErr?.code, 0x87)
+		// 0x11 No subscription existed is not a failure
+		const unsuback = await client.unsubscribeAsync(['ok', 'gone'])
+		assert.deepStrictEqual((unsuback as IUnsubackPacket).granted, [0, 0x11])
 	})
 
 	it(
