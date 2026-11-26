@@ -1588,6 +1588,7 @@ export default function abstractTest(server, config, ports) {
 		})
 
 		it('should send DUP 0 for a QoS 0 publish even when dup is set', function _test(t, done) {
+			const { check, finish } = guardDone(done)
 			const client = connect()
 
 			client.once('connect', () => {
@@ -1596,20 +1597,14 @@ export default function abstractTest(server, config, ports) {
 
 			server.once('client', (serverClient) => {
 				serverClient.once('publish', (packet) => {
-					let failure: Error | undefined
-					try {
-						assert.strictEqual(packet.qos, 0)
+					check(() => {
 						assert.strictEqual(
 							packet.dup,
 							false,
 							'a QoS 0 PUBLISH must have DUP 0',
 						)
-					} catch (err) {
-						failure = err
-					}
-					client.end(() => {
-						done(failure)
 					})
+					client.end(true, () => finish())
 				})
 			})
 		})
@@ -1680,6 +1675,25 @@ export default function abstractTest(server, config, ports) {
 					)
 					assert.strictEqual(packet.dup, opts.dup, 'incorrect dup')
 					received = true
+				})
+			})
+		})
+
+		it('should keep "dup" on a QoS 2 publish', function _test(t, done) {
+			const { check, finish } = guardDone(done)
+			const client = connect()
+
+			client.once('connect', () => {
+				client.publish('test', 'test', { qos: 2, dup: true }, (err) => {
+					client.end(() => finish(err))
+				})
+			})
+
+			server.once('client', (serverClient) => {
+				serverClient.once('publish', (packet) => {
+					check(() => {
+						assert.strictEqual(packet.dup, true, 'incorrect dup')
+					})
 				})
 			})
 		})
