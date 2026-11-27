@@ -4,6 +4,19 @@ import TopicAliasSend from '../topic-alias-send'
 import { ErrorWithReasonCode, type PacketPump } from '../shared'
 import type MqttClient from '../client'
 
+/** MQTT 5 reason code 0x82 */
+const PROTOCOL_ERROR = 130
+
+/**
+ * Drops the rest of the chunk, tears the connection down, then emits `err`.
+ * The order is load-bearing, see the duplicate CONNACK branch.
+ */
+const rejectConnack = (client: MqttClient, err: Error, pump?: PacketPump) => {
+	pump?.discardParsedPackets()
+	client['_cleanUp'](true)
+	client.emit('error', err)
+}
+
 // The pump callback is not among the arguments on purpose: `handlers/index.ts`
 // calls it once this handler returns, in a `finally`, so every path here is
 // covered including the ones that emit and throw.
@@ -28,7 +41,7 @@ const handleConnack = (
 	if (client['connackReceived']) {
 		const err = new ErrorWithReasonCode(
 			'Protocol error: duplicate CONNACK on the same network connection',
-			130,
+			PROTOCOL_ERROR,
 		)
 		// Drop the rest of the chunk, then tear down, then emit. The order is
 		// load-bearing on every step:
@@ -53,9 +66,7 @@ const handleConnack = (
 		// Closing the network connection is safe: the reconnect logic opens a
 		// new one and both stores survive it, so the session is resumed, not
 		// cleared.
-		pump?.discardParsedPackets()
-		client['_cleanUp'](true)
-		client.emit('error', err)
+		rejectConnack(client, err, pump)
 		return
 	}
 	client['connackReceived'] = true
@@ -76,13 +87,11 @@ const handleConnack = (
 				// topicAliasMaximum as a uint16. Without the teardown the
 				// client would wedge here for good -- the connack timer is
 				// already cleared and `connackReceived` latched, so no later
-				// CONNACK and no timeout can move it on. Discard and tear down
-				// first, for the same reasons as the duplicate CONNACK above.
-				pump?.discardParsedPackets()
-				client['_cleanUp'](true)
-				client.emit(
-					'error',
+				// CONNACK and no timeout can move it on.
+				rejectConnack(
+					client,
 					new Error('topicAliasMaximum from broker is out of range'),
+					pump,
 				)
 				return
 			}
@@ -95,6 +104,29 @@ const handleConnack = (
 	}
 
 	if (rc === 0) {
+		// 3.2.2.3.3: a Receive Maximum of 0, or one sent twice (mqtt-packet then
+		// parses an array), is a Protocol Error; either would hold every QoS 1/2
+		// publish for good
+		const receiveMaximum = packet.properties?.receiveMaximum
+		const validReceiveMaximum =
+			Number.isInteger(receiveMaximum) && receiveMaximum >= 1
+		if (receiveMaximum !== undefined && !validReceiveMaximum) {
+			rejectConnack(
+				client,
+				new ErrorWithReasonCode(
+					`Protocol error: invalid Receive Maximum ${JSON.stringify(receiveMaximum)} in CONNACK`,
+					PROTOCOL_ERROR,
+				),
+				pump,
+			)
+			return
+		}
+		if (version === 5) {
+			client.log(
+				'_handleConnack :: server Receive Maximum %s',
+				receiveMaximum ?? 'absent (65535)',
+			)
+		}
 		client.reconnecting = false
 		client['_onConnect'](packet)
 	} else if (rc > 0) {
