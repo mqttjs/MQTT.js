@@ -465,6 +465,146 @@ describe('MQTT 5.0 send quota (server Receive Maximum)', () => {
 	)
 
 	it(
+		'keeps app-set aliases in publish order when QoS 0 publishes overtake held ones',
+		testOptions,
+		async () => {
+			const { server, port, connections } = await startServer(
+				[1],
+				undefined,
+				{ connackProperties: { topicAliasMaximum: 5 } },
+			)
+			const client = mqtt.connect({
+				port,
+				protocolVersion: 5,
+				reconnectPeriod: 0,
+			})
+			try {
+				await connected(client)
+				const conn = connections[0]
+				const alias = (topicAlias: number) => ({
+					properties: { topicAlias },
+				})
+				client.publish('rm/first', 'first', { qos: 1 })
+				await waitFor(() => conn.publishes.length === 1, 'rm/first')
+				// held, maps alias 1 to rm/a
+				client.publish('rm/a', 'held-a', { qos: 1, ...alias(1) })
+				// written at once, remaps alias 1 to rm/b
+				client.publish('rm/b', 'qos0-b', { qos: 0, ...alias(1) })
+				// held, maps alias 2 to rm/c
+				client.publish('rm/c', 'held-c', { qos: 1, ...alias(2) })
+				// written at once, before the held publish that sets alias 2
+				client.publish('', 'qos0-c', { qos: 0, ...alias(2) })
+				await waitFor(
+					() => conn.publishes.length === 3,
+					'the QoS 0 ones',
+				)
+				const qos1 = () => conn.publishes.filter((p) => p.qos > 0)
+				for (let i = 0; i < 3; i++) {
+					await waitFor(() => qos1().length > i, `QoS 1 publish ${i}`)
+					conn.serverClient.puback({ messageId: qos1()[i].messageId })
+				}
+				await waitFor(
+					() => conn.publishes.length === 5,
+					'the held ones',
+				)
+				// alias 1 was last given rm/b in publish order
+				client.publish('', 'qos0-b-again', { qos: 0, ...alias(1) })
+				await waitFor(() => conn.publishes.length === 6, 'qos0-b-again')
+
+				// the topic each payload reaches, replaying the aliases in wire order
+				const wire = new Map<number, string>()
+				const delivered = conn.publishes.map((p) => {
+					const a = p.properties?.topicAlias
+					const topic = p.topic.toString()
+					if (a && topic) wire.set(a, topic)
+					return [p.payload.toString(), topic || wire.get(a)]
+				})
+				assert.deepEqual(Object.fromEntries(delivered), {
+					first: 'rm/first',
+					'held-a': 'rm/a',
+					'qos0-b': 'rm/b',
+					'held-c': 'rm/c',
+					'qos0-c': 'rm/c',
+					'qos0-b-again': 'rm/b',
+				})
+			} finally {
+				await teardown(client, server)
+			}
+		},
+	)
+
+	it(
+		'never writes a held publish that removeOutgoingMessage removed',
+		testOptions,
+		async () => {
+			const { server, port, connections } = await startServer([1])
+			const client = mqtt.connect({
+				port,
+				protocolVersion: 5,
+				reconnectPeriod: 0,
+			})
+			try {
+				await connected(client)
+				const conn = connections[0]
+				client.publish('rm/a', 'x', { qos: 1 })
+				const removed = new Promise<Error | undefined>((resolve) => {
+					client.publish('rm/removed', 'x', { qos: 1 }, (err) =>
+						resolve(err),
+					)
+				})
+				const removedId = client.getLastMessageId()
+				const next = new Promise<void>((resolve) => {
+					client.publish('rm/next', 'x', { qos: 1 }, () => resolve())
+				})
+				await waitFor(() => conn.publishes.length === 1, 'rm/a')
+				client.removeOutgoingMessage(removedId)
+				assert.match((await removed)?.message ?? '', /Message removed/)
+				conn.serverClient.puback({
+					messageId: conn.publishes[0].messageId,
+				})
+				await waitFor(() => conn.publishes.length === 2, 'rm/next')
+				conn.serverClient.puback({
+					messageId: conn.publishes[1].messageId,
+				})
+				await next
+				assert.deepEqual(topics(conn.publishes), ['rm/a', 'rm/next'])
+			} finally {
+				await teardown(client, server)
+			}
+		},
+	)
+
+	it(
+		'frees the slot of an in-flight publish that removeOutgoingMessage removed',
+		testOptions,
+		async () => {
+			const { server, port, connections } = await startServer([1])
+			const client = mqtt.connect({
+				port,
+				protocolVersion: 5,
+				reconnectPeriod: 0,
+			})
+			try {
+				await connected(client)
+				const conn = connections[0]
+				client.publish('rm/removed', 'x', { qos: 1 })
+				const removedId = client.getLastMessageId()
+				client.publish('rm/next', 'x', { qos: 1 })
+				await waitFor(() => conn.publishes.length === 1, 'rm/removed')
+				client.removeOutgoingMessage(removedId)
+				// no PUBACK: removing it frees its slot
+				await waitFor(() => conn.publishes.length === 2, 'rm/next')
+				assert.deepEqual(topics(conn.publishes), [
+					'rm/removed',
+					'rm/next',
+				])
+			} finally {
+				await teardown(client, server)
+			}
+		},
+	)
+
+	it(
 		'frees the slot of a publish that fails after taking it',
 		testOptions,
 		async () => {
@@ -726,11 +866,12 @@ describe('MQTT 5.0 send quota (server Receive Maximum)', () => {
 					{ qos: 1, properties: { topicAlias: 1 } },
 					done,
 				)
+				const thirdId = client.getLastMessageId()
 				await waitFor(() => conn.publishes.length === 1, 'rm/first')
 				const third = await new Promise<IPublishPacket>(
 					(resolve, reject) => {
 						client.outgoingStore.get(
-							{ messageId: conn.publishes[0].messageId + 2 },
+							{ messageId: thirdId },
 							(err, packet) =>
 								err
 									? reject(err)

@@ -103,25 +103,24 @@ const handleConnack = (
 		}
 	}
 
-	// 3.2.2.3.3: a Receive Maximum of 0, or one sent twice (mqtt-packet then
-	// parses an array), is a Protocol Error; either would hold every QoS 1/2
-	// publish for good
-	const receiveMaximum = packet.properties?.receiveMaximum
-	const validReceiveMaximum =
-		Number.isInteger(receiveMaximum) && receiveMaximum >= 1
-	if (rc === 0 && receiveMaximum !== undefined && !validReceiveMaximum) {
-		rejectConnack(
-			client,
-			new ErrorWithReasonCode(
-				`Protocol error: invalid Receive Maximum ${JSON.stringify(receiveMaximum)} in CONNACK`,
-				PROTOCOL_ERROR,
-			),
-			pump,
-		)
-		return
-	}
-
 	if (rc === 0) {
+		// 3.2.2.3.3: a Receive Maximum of 0, or one sent twice (mqtt-packet then
+		// parses an array), is a Protocol Error; either would hold every QoS 1/2
+		// publish for good
+		const receiveMaximum = packet.properties?.receiveMaximum
+		const validReceiveMaximum =
+			Number.isInteger(receiveMaximum) && receiveMaximum >= 1
+		if (receiveMaximum !== undefined && !validReceiveMaximum) {
+			rejectConnack(
+				client,
+				new ErrorWithReasonCode(
+					`Protocol error: invalid Receive Maximum ${JSON.stringify(receiveMaximum)} in CONNACK`,
+					PROTOCOL_ERROR,
+				),
+				pump,
+			)
+			return
+		}
 		if (version === 5) {
 			client.log(
 				'_handleConnack :: server Receive Maximum %s',

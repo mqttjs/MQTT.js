@@ -591,6 +591,9 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		{ packet: IPublishPacket; cb: DoneCallback; noStore: boolean }
 	>
 
+	/** Topic of each app-set send alias in publish() order; QoS 0 overtakes held publishes, so the wire map can differ */
+	private _aliasTopics: Map<number, string>
+
 	private _deferredReconnect: () => void
 
 	/**
@@ -718,6 +721,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 		this._outgoingInFlightIds = new Set()
 		this._publishesAwaitingQuota = new Map()
+		this._aliasTopics = new Map()
 
 		// Latch the quota now: reading it per packet would let a caller mutating
 		// `options` disable the check, and `receiveMaximum: 0` (rejects every
@@ -2614,39 +2618,54 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			messageId,
 			this._publishesAwaitingQuota.size,
 		)
-		const held = this._withHeldAliasTopic(packet as IPublishPacket)
 		this._publishesAwaitingQuota.set(messageId, {
-			packet: held,
+			packet,
 			cb,
 			noStore: !!noStore,
 		})
 		if (!noStore) {
-			this._storePacket(held, cb, cbStorePut)
+			this._storePacket(packet, cb, cbStorePut)
 		}
 		return true
 	}
 
 	/**
-	 * An alias-only publish with the topic its alias has at publish time: the
-	 * newest held publish setting that alias, else the registered one. Resolved
-	 * at release, a publish written meanwhile could have remapped the alias.
+	 * An alias-only publish with the topic its alias has in publish() order.
+	 * QoS 1/2 always carries it, since it may be held while a QoS 0 publish
+	 * remaps the alias; QoS 0 only when the broker's mapping differs.
 	 */
-	private _withHeldAliasTopic(packet: IPublishPacket): IPublishPacket {
-		const alias = packet.properties?.topicAlias
-		if (!alias || packet.topic.length !== 0) {
+	private _withIntendedAliasTopic(packet: Packet): Packet {
+		const alias = packet.cmd === 'publish' && packet.properties?.topicAlias
+		if (
+			!alias ||
+			packet.topic.length !== 0 ||
+			!this.connected ||
+			this._sendQuota >= MAX_RECEIVE_MAXIMUM
+		) {
 			return packet
 		}
-		let topic: string | undefined
-		for (const held of this._publishesAwaitingQuota.values()) {
-			if (
-				held.packet.properties?.topicAlias === alias &&
-				held.packet.topic.length !== 0
-			) {
-				topic = held.packet.topic.toString()
-			}
+		const registered = this.topicAliasSend?.getTopicByAlias(alias)
+		const topic = this._aliasTopics.get(alias) ?? registered
+		if (topic === undefined || (packet.qos === 0 && topic === registered)) {
+			return packet
 		}
-		topic ??= this.topicAliasSend?.getTopicByAlias(alias)
-		return topic === undefined ? packet : { ...packet, topic }
+		return { ...packet, topic }
+	}
+
+	/** Records the topic an app-set alias is given, in publish() order. */
+	private _recordAliasTopic(packet: Packet) {
+		const alias = packet.cmd === 'publish' && packet.properties?.topicAlias
+		if (
+			!alias ||
+			packet.topic.length === 0 ||
+			!this.connected ||
+			this._sendQuota >= MAX_RECEIVE_MAXIMUM ||
+			// a released held publish was recorded when it was published
+			(packet.qos > 0 && this._outgoingInFlightIds.has(packet.messageId))
+		) {
+			return
+		}
+		this._aliasTopics.set(alias, packet.topic.toString())
 	}
 
 	/** Writes the held publishes, in order, while the send quota has room. */
@@ -2697,6 +2716,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		}
 		this._outgoingInFlightIds.clear()
 		this._publishesAwaitingQuota.clear()
+		this._aliasTopics.clear()
 	}
 
 	private _noop(err?: Error) {
@@ -2746,10 +2766,12 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		cbStorePut = cbStorePut || this.noop
 		cb = cb || this.noop
 
+		packet = this._withIntendedAliasTopic(packet)
 		// limits, then quota, then alias: a refused or held packet must not
 		// register an alias that packets written ahead of it would then use
 		let err = this._checkOutgoingPublish(packet)
 		if (!err) {
+			this._recordAliasTopic(packet)
 			if (this._takeSendQuotaOrHold(packet, cb, cbStorePut, noStore)) {
 				return
 			}
@@ -2840,11 +2862,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 				storePacket as IPublishPacket,
 			)
 			if (err) {
-				this._failPublish(
-					packet as IPublishPacket,
-					err,
-					cb || this.noop,
-				)
+				this._failPublish(packet as IPublishPacket, err, cb)
 				return
 			}
 		}
