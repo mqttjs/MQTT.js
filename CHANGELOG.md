@@ -1,5 +1,9 @@
 # Changelog
 
+### ⚠ Behaviour change
+
+* the ESM bundle (`dist/mqtt.esm.js`) no longer has `mqtt.default.default` or `mqtt.default.__esModule`. Both were tsc's `exports` object showing through and are not in the typings. `import mqtt from 'mqtt'` and `import { connect } from 'mqtt'` are unchanged ([#2084](https://github.com/mqttjs/MQTT.js/issues/2084))
+
 ## [5.16.1](https://github.com/mqttjs/MQTT.js/compare/v5.16.0...v5.16.1) (2026-10-14)
 
 ### Bug Fixes
