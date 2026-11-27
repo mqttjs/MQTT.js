@@ -1350,6 +1350,26 @@ export default function abstractTest(server, config, ports) {
 				})
 			})
 		})
+
+		it('should return an error (via callbacks) and send no SUBSCRIBE for an empty topic filter', function _test(t, done) {
+			// [MQTT-4.7.3-1]: a topic filter is at least one character long
+			const { check, finish } = guardDone(done)
+			const client = connect()
+			let sent = false
+			client.on('packetsend', (packet) => {
+				if (packet.cmd === 'subscribe') sent = true
+			})
+			client.once('connect', () => {
+				client.subscribe(['valid', ''], (subErr) => {
+					check(() => {
+						assert.instanceOf(subErr, Error)
+						assert.isFalse(sent, 'a SUBSCRIBE was sent')
+						assert.notProperty(client['_resubscribeTopics'], '')
+					})
+					client.end(true, (endErr) => finish(endErr))
+				})
+			})
+		})
 	})
 
 	describe('offline messages', () => {
@@ -2643,6 +2663,25 @@ export default function abstractTest(server, config, ports) {
 	describe('unsubscribing', () => {
 		beforeEach(beforeEachExec)
 		after(afterExec)
+
+		it('should return an error (via callbacks) and send no UNSUBSCRIBE for an empty topic filter', function _test(t, done) {
+			// [MQTT-4.7.3-1]: a topic filter is at least one character long
+			const { check, finish } = guardDone(done)
+			const client = connect()
+			let sent = false
+			client.on('packetsend', (packet) => {
+				if (packet.cmd === 'unsubscribe') sent = true
+			})
+			client.once('connect', () => {
+				client.unsubscribe(['valid', ''], (err) => {
+					check(() => {
+						assert.instanceOf(err, Error)
+						assert.isFalse(sent, 'an UNSUBSCRIBE was sent')
+					})
+					client.end(true, (endErr) => finish(endErr))
+				})
+			})
+		})
 
 		it('should send an unsubscribe packet (offline)', function _test(t, done) {
 			const client = connect()

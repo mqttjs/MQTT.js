@@ -3,11 +3,18 @@
  * A topic is valid if it follow below rules:
  * - Rule #1: If any part of the topic is not `+` or `#`, then it must not contain `+` and '#'
  * - Rule #2: Part `#` must be located at the end of the mailbox
+ * - Rule #3: The topic must be at least one character long [MQTT-4.7.3-1]
  *
  * @param {String} topic - A topic
  * @returns {Boolean} If the topic is valid, returns true. Otherwise, returns false.
  */
 export function validateTopic(topic: string): boolean {
+	// for Rule #3: a broker closes the connection on an empty topic filter,
+	// and `subscribe()` would keep it for every resubscribe after that
+	if (topic.length === 0) {
+		return false
+	}
+
 	const parts = topic.split('/')
 
 	for (let i = 0; i < parts.length; i++) {
