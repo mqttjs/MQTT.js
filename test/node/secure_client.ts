@@ -2,6 +2,7 @@ import path from 'path'
 import fs from 'fs'
 import dns from 'dns'
 import net from 'net'
+import os from 'os'
 import { assert } from 'chai'
 import { describe, it, after } from 'node:test'
 import mqtt, { type IClientOptions } from '../../src'
@@ -385,6 +386,46 @@ describe('MqttSecureClient', () => {
 				},
 				done,
 			)
+		})
+
+		it('should connect to the unix socket of mqtts+unix', function _test(t, done) {
+			const socketPath =
+				process.platform === 'win32'
+					? `\\\\.\\pipe\\mqttjs-tls-${process.pid}`
+					: path.join(os.tmpdir(), `mqttjs-tls-${process.pid}.sock`)
+			if (process.platform !== 'win32') {
+				fs.rmSync(socketPath, { force: true })
+			}
+			const unixServer = new MqttSecureServer(
+				{
+					key: fs.readFileSync(KEY),
+					cert: fs.readFileSync(CERT),
+				},
+				(serverClient) => {
+					serverClient.on('connect', () => {
+						serverClient.connack({ returnCode: 0 })
+					})
+				},
+			)
+			const finish = (err?: Error) => {
+				unixServer.close(() => done(err))
+			}
+			unixServer.listen(socketPath, () => {
+				const client = mqtt.connect({
+					protocol: 'mqtts+unix',
+					path: socketPath,
+					rejectUnauthorized: false,
+					reconnectPeriod: 0,
+				})
+
+				client.once('error', (err) => {
+					client.end(true, () => finish(err))
+				})
+
+				client.once('connect', () => {
+					client.end((err) => finish(err))
+				})
+			})
 		})
 
 		it('should validate the certificate against an explicit servername', function _test(t, done) {
