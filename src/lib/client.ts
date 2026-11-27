@@ -1457,6 +1457,18 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 		const { qos, retain, dup, properties, cbStorePut } = opts
 
+		// The Topic Name of a PUBLISH must not contain wildcard characters
+		// [MQTT-3.3.2-2]. A broker may close the connection on one, and a QoS
+		// 1/2 PUBLISH would then stay in the outgoing store and be sent again,
+		// and the connection closed again, on every reconnect.
+		if (typeof topic === 'string' && /[+#]/.test(topic)) {
+			setImmediate(
+				callback || this.noop,
+				new Error(`Invalid topic ${topic}`),
+			)
+			return this
+		}
+
 		if (this._checkDisconnecting(callback)) {
 			return this
 		}

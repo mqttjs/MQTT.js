@@ -1870,6 +1870,45 @@ export default function abstractTest(server, config, ports) {
 			})
 		})
 
+		it('should return an error (via callback) and send nothing for a topic with a wildcard', function _test(t, done) {
+			const { check, finish } = guardDone(done)
+			const client = connect()
+			const opts: IClientPublishOptions = { qos: 1 }
+
+			client.on('packetsend', (packet) => {
+				check(() => {
+					assert.notStrictEqual(
+						packet.cmd,
+						'publish',
+						'a PUBLISH with a wildcard in its topic was sent',
+					)
+				})
+			})
+
+			client.once('connect', () => {
+				// Without a callback it is dropped as well
+				client.publish('a/+/b', 'b', opts)
+				client.publish('a/+', 'b', opts, (err1) => {
+					client.publish('a/#', 'b', opts, (err2) => {
+						check(() => {
+							assert.instanceOf(err1, Error)
+							assert.strictEqual(
+								err1.message,
+								'Invalid topic a/+',
+							)
+							assert.instanceOf(err2, Error)
+							assert.strictEqual(
+								err2.message,
+								'Invalid topic a/#',
+							)
+							assert.isEmpty(client.outgoing)
+						})
+						client.end((err) => finish(err))
+					})
+				})
+			})
+		})
+
 		it('should fire a callback (qos 0)', function _test(t, done) {
 			const client = connect()
 
