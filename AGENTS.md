@@ -1,7 +1,9 @@
 # Agent and review guidelines
 
 These rules apply to every code review and every design decision in this repo,
-whether the reviewer is a person or an agent.
+whether the reviewer is a person or an agent. Build, test and lint commands are
+in [DEVELOPMENT.md](DEVELOPMENT.md); contribution rules in
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Protocol behavior: the spec decides, not the maintainer
 
@@ -13,8 +15,8 @@ Maximum Packet Size) is settled by evidence, in this order:
 1. **The MQTT specification.** Quote the normative statement and its ID.
    - MQTT 5.0: https://docs.oasis-open.org/mqtt/mqtt/v5.0/mqtt-v5.0.html
    - MQTT 3.1.1: https://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html
-   - MQTT.js also supports 3.1 (`protocolVersion: 3`); check that a change
-     does not break it.
+   - MQTT.js also supports 3.1 (`protocolId: 'MQIsdp'` with
+     `protocolVersion: 3`); check that a change does not break it.
    Example: "[MQTT-4.7.3-1] All Topic Names and Topic Filters MUST be at
    least one character long."
 2. **What other mature open-source clients do.** Read their source, not their
@@ -25,7 +27,7 @@ Maximum Packet Size) is settled by evidence, in this order:
    - Eclipse Paho Go (`eclipse-paho/paho.mqtt.golang`, `eclipse-paho/paho.golang`)
    - HiveMQ MQTT Client (`hivemq/hivemq-mqtt-client`)
    - rumqttc (`bytebeamio/rumqtt`)
-   - Mosquitto client library (`eclipse/mosquitto`, `lib/`)
+   - Mosquitto client library (`eclipse-mosquitto/mosquitto`, `lib/`)
 3. **Then decide.** If the spec is clear, follow it. If the spec is silent or
    says MAY/SHOULD and the clients agree, follow the clients. Do not ask the
    maintainer to pick an option that the spec or prior art already settles.
@@ -57,4 +59,5 @@ Shape of the question:
 - Do not grow the scope of a PR across review rounds. Hardening ideas that go
   beyond the reported problem become follow-up issues, not new requests.
 - Changes on the publish path (`publish`, `_sendPacket`, `outgoingStore`)
-  need a benchmark against `main` (see `benchmarks/`).
+  need a throughput comparison against `main`. State how it was measured
+  (QoS level, broker, message count).
