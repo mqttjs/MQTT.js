@@ -147,6 +147,32 @@ describe('Websocket Client', () => {
 		})
 	})
 
+	it('should be able to transform the url using an async function', function _test(t, done) {
+		const baseUrl = 'ws://localhost:9999/mqtt'
+		const sig = '?AUTH=token'
+		const expected = baseUrl + sig
+		let actual: string
+		const opts = makeOptions({
+			path: '/mqtt',
+			async transformWsUrl(url, opt, client) {
+				assert.equal(url, baseUrl)
+				assert.strictEqual(opt, opts)
+				assert.strictEqual(client.options, opts)
+				assert(client instanceof mqtt.MqttClient)
+				actual = url + sig
+				return actual
+			},
+		})
+		const client = mqtt.connect(opts)
+
+		client.on('connect', () => {
+			// `url` is set in `connect/ws.ts` `streamBuilder`
+			assert.equal((client.stream as any).url, expected)
+			assert.equal(actual, expected)
+			client.end(true, (err) => done(err))
+		})
+	})
+
 	it('should be able to create custom Websocket instance', function _test(t, done) {
 		const baseUrl = 'ws://localhost:9999/mqtt'
 		let urlInCallback: string
