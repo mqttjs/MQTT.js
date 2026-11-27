@@ -2929,6 +2929,10 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 				this._packetIdsDuringStoreProcessing = {}
 			}
 
+			// an asynchronous store answers the first read later: new publishes
+			// must queue behind the replay from the start
+			this._storeProcessing = true
+
 			this.once('close', remove)
 			outStore.on('error', (err) => {
 				clearStoreProcessing()
