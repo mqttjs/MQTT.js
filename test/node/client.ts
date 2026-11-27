@@ -987,6 +987,66 @@ describe('MqttClient', () => {
 		)
 
 		it(
+			'QoS 1/2 publish after end() with reconnectPeriod 0 gives an error instead of throwing',
+			{
+				timeout: 5000,
+			},
+			async function _test(t) {
+				client = await mqtt.connectAsync({
+					...config,
+					reconnectPeriod: 0,
+				})
+				await client.endAsync()
+
+				assert.isFalse(client.disconnecting)
+
+				for (const qos of [1, 2] as const) {
+					const err = await new Promise<Error | undefined>(
+						(resolve) => {
+							client.publish('t', 'x', { qos }, (e) => resolve(e))
+						},
+					)
+					assert.equal(
+						err?.message,
+						'client disconnected',
+						`QoS ${qos}`,
+					)
+				}
+
+				let rejected: Error | undefined
+				try {
+					await client.publishAsync('t', 'x', { qos: 1 })
+				} catch (err) {
+					rejected = err
+				}
+				assert.equal(rejected?.message, 'client disconnected')
+
+				// A QoS 0 publish and a subscribe made after end() don't use
+				// the closed stores: they are queued and sent on connect().
+				const queued = Promise.all([
+					new Promise<Error | undefined>((resolve) => {
+						client.publish('t', 'x', { qos: 0 }, (e) => resolve(e))
+					}),
+					new Promise<Error | undefined>((resolve) => {
+						client.subscribe('t', (e) => resolve(e))
+					}),
+				])
+
+				// connect() opens new stores, so QoS 1 works again.
+				await new Promise<void>((resolve, reject) => {
+					client.once('connect', () => resolve())
+					client.once('error', reject)
+					client.connect()
+				})
+				const [publishErr, subscribeErr] = await queued
+				assert.isUndefined(publishErr, 'QoS 0 publish after end()')
+				assert.notOk(subscribeErr, 'subscribe after end()')
+				await client.publishAsync('t', 'x', { qos: 1 })
+				await client.endAsync()
+			},
+		)
+
+		it(
 			'publish should throw error',
 			{
 				timeout: 5000,

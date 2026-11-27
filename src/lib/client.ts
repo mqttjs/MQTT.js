@@ -1461,6 +1461,18 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			return this
 		}
 
+		if (this.disconnected && (qos === 1 || qos === 2)) {
+			// end() closed the stores; connect() opens new ones. Only QoS 1/2
+			// need the outgoing store: QoS 0 is queued and sent on connect().
+			const err = new Error('client disconnected')
+			if (callback && callback !== this.noop) {
+				callback(err)
+			} else {
+				this.emit('error', err)
+			}
+			return this
+		}
+
 		const publishProc = () => {
 			let messageId = 0
 			if (qos === 1 || qos === 2) {
