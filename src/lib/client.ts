@@ -106,7 +106,8 @@ const userPropertySize = (key: string, value: unknown) =>
 /**
  * Bytes `packet` takes on the wire at most, without encoding it. Must never be
  * below the size mqtt-packet encodes: it counts a Topic Alias and the longest
- * Remaining Length and properties length.
+ * Remaining Length and properties length. Reads enumerable keys only, the
+ * ones object literals and JSON make.
  */
 const publishSizeUpperBound = (packet: IPublishPacket) => {
 	const header = 1 + 4 // fixed header + longest Remaining Length

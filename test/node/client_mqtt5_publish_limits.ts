@@ -543,6 +543,34 @@ describe('MQTT 5.0 outgoing PUBLISH limits from CONNACK', () => {
 			})
 		}
 
+		it('sizes a packet whose length fields all take their longest form', () => {
+			// over 2 MiB, Remaining Length and properties length take 4 bytes:
+			// no fixed allowance in the bound is spare
+			const check = checker(true)
+			const packet: IPublishPacket = {
+				cmd: 'publish',
+				topic: 'big',
+				payload: '',
+				qos: 1,
+				messageId: 1,
+				retain: false,
+				dup: false,
+				properties: {
+					messageExpiryInterval: 60,
+					userProperties: { k: Array(40).fill('x'.repeat(60000)) },
+				},
+			}
+			const size = wireSize({
+				...packet,
+				properties: { ...packet.properties, topicAlias: 1 },
+			})
+			assert.isUndefined(check(packet, size))
+			assert.match(
+				check(packet, size - 1)?.message,
+				new RegExp(`packet size ${size} exceeds`),
+			)
+		})
+
 		it('does not encode a publish far below the limit', () => {
 			const check = checker(false)
 			const spy = sinon.spy(mqttPacket, 'writeToStream')
