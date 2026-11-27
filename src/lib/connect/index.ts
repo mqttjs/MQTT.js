@@ -70,13 +70,13 @@ function getDefaultWebSocketProtocol(): MqttProtocol {
  * @param {Object} [opts] option object
  */
 function parseAuthOptions(opts: IClientOptions) {
-	let matches: RegExpMatchArray | null
 	if (opts.auth) {
-		matches = opts.auth.match(/^(.+):(.+)$/)
-		if (matches) {
-			const [, username, password] = matches
-			opts.username = username
-			opts.password = password
+		// The user name ends at the first colon (RFC 3986 section 3.2.1), so a
+		// password may contain colons. `url.parse` has already decoded `%3A`.
+		const separator = opts.auth.indexOf(':')
+		if (separator !== -1) {
+			opts.username = opts.auth.slice(0, separator)
+			opts.password = opts.auth.slice(separator + 1)
 		} else {
 			opts.username = opts.auth
 		}
