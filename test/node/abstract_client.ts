@@ -4,6 +4,7 @@
 import { assert } from 'chai'
 import sinon from 'sinon'
 import fs from 'fs'
+import { Readable } from 'stream'
 import levelStore from 'mqtt-level-store'
 import {
 	generate,
@@ -1542,6 +1543,87 @@ export default function abstractTest(server, config, ports) {
 							client.end(true)
 						},
 					})
+				})
+			})
+		})
+
+		it('should not let a new publish overtake the replay of an asynchronous outgoing store', function _test(t, done) {
+			// the stream answers each read from a later tick, like a store backed by a database
+			class AsyncStore extends Store {
+				private readonly packets: any[] = []
+
+				put(packet: any, cb: DoneCallback) {
+					this.packets.push(packet)
+					return super.put(packet, cb)
+				}
+
+				createStream() {
+					const { packets } = this
+					let i = 0
+					return new Readable({
+						objectMode: true,
+						read() {
+							setImmediate(() => {
+								this.push(
+									i < packets.length ? packets[i++] : null,
+								)
+							})
+						},
+					}) as any
+				}
+			}
+
+			const outgoingStore = new AsyncStore({ clean: false })
+			outgoingStore.put(
+				{
+					cmd: 'publish',
+					topic: 'test',
+					payload: Buffer.from('old'),
+					qos: 1,
+					retain: false,
+					dup: true,
+					messageId: 1,
+				} as any,
+				() => {},
+			)
+
+			const received: string[] = []
+			const server2 = serverBuilder(config.protocol, (serverClient) => {
+				serverClient.on('connect', () => {
+					serverClient.connack(resumedConnack(2))
+				})
+				serverClient.on('publish', (packet) => {
+					serverClient.puback({ messageId: packet.messageId })
+					received.push(packet.payload.toString())
+					if (received.length === 2) {
+						client.end(false, (err) => {
+							try {
+								assert.deepEqual(received, ['old', 'new'])
+								done(err)
+							} catch (e) {
+								done(e)
+							}
+						})
+					}
+				})
+			})
+
+			let client: mqtt.MqttClient | null = null
+			server2.listen(ports.PORTAND114, () => {
+				client = connect({
+					port: ports.PORTAND114,
+					host: 'localhost',
+					clean: false,
+					clientId: 'cid1',
+					reconnectPeriod: 0,
+					outgoingStore,
+				})
+				client.on('packetreceive', (packet) => {
+					if (packet.cmd === 'connack') {
+						setImmediate(() => {
+							client.publish('test', 'new', { qos: 1 })
+						})
+					}
 				})
 			})
 		})
