@@ -2685,11 +2685,16 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 	/** The send quota restarts with each connection [MQTT-4.9.0-1]. */
 	private _resetSendQuota() {
-		this.log(
-			'_resetSendQuota :: clearing %d in flight and %d held, the store replays them',
-			this._outgoingInFlightIds.size,
-			this._publishesAwaitingQuota.size,
-		)
+		if (
+			this._outgoingInFlightIds.size ||
+			this._publishesAwaitingQuota.size
+		) {
+			this.log(
+				'_resetSendQuota :: clearing %d in flight and %d held, the store replays them',
+				this._outgoingInFlightIds.size,
+				this._publishesAwaitingQuota.size,
+			)
+		}
 		this._outgoingInFlightIds.clear()
 		this._publishesAwaitingQuota.clear()
 	}

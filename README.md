@@ -649,6 +649,8 @@ Publish a message to a topic
 - `callback` - `function (err, packet)`, fired when the QoS handling completes,
   or at the next tick if QoS 0. An error occurs if client is disconnecting.
 
+With MQTT 5, the client keeps no more QoS 1/2 publishes waiting for an ack than the Receive Maximum the server sends in its CONNACK. Later QoS 1/2 publishes wait in the client, in order, and are sent as acks come in, so their callbacks fire later. If the server never acks, they wait until the connection closes and are sent again on the next one. QoS 0 publishes never wait. Run with `DEBUG=mqttjs:client` to see the held publishes.
+
 <a name="publish-async"></a>
 
 ### mqtt.Client#publishAsync(topic, message, [options])

@@ -122,6 +122,12 @@ const handleConnack = (
 	}
 
 	if (rc === 0) {
+		if (version === 5) {
+			client.log(
+				'_handleConnack :: server Receive Maximum %s',
+				receiveMaximum ?? 'absent (65535)',
+			)
+		}
 		client.reconnecting = false
 		client['_onConnect'](packet)
 	} else if (rc > 0) {
