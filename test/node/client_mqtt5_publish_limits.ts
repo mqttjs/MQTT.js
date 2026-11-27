@@ -1,10 +1,15 @@
 import { assert } from 'chai'
+import sinon from 'sinon'
 import { describe, it } from 'node:test'
 import { once } from 'node:events'
 import type { AddressInfo } from 'node:net'
-import type { IConnackPacket, IPublishPacket } from 'mqtt-packet'
+import mqttPacket, {
+	type IConnackPacket,
+	type IPublishPacket,
+} from 'mqtt-packet'
 import { MqttServer } from './server'
 import mqtt, { UniqueMessageIdProvider, type MqttClient } from '../../src'
+import TopicAliasSend from '../../src/lib/topic-alias-send'
 
 /**
  * A scripted MQTT 5 server that answers CONNECT with `properties` and records
@@ -432,4 +437,163 @@ describe('MQTT 5.0 outgoing PUBLISH limits from CONNACK', () => {
 			}
 		},
 	)
+
+	describe('size bound', () => {
+		// mulberry32: seeded so a failure reproduces
+		let seed = 2128
+		const rand = (n: number) => {
+			seed = (seed + 0x6d2b79f5) | 0
+			let t = Math.imul(seed ^ (seed >>> 15), 1 | seed)
+			t ^= t + Math.imul(t ^ (t >>> 7), 61 | t)
+			return Math.floor((((t ^ (t >>> 14)) >>> 0) / 2 ** 32) * n)
+		}
+		const text = (n: number) =>
+			Array.from(
+				{ length: rand(n) },
+				() => ['a', 'é', '中', '😀'][rand(4)],
+			).join('')
+
+		function randomPublish(): IPublishPacket {
+			const properties: IPublishPacket['properties'] = {}
+			if (rand(2)) properties.payloadFormatIndicator = !!rand(2)
+			if (rand(2)) properties.messageExpiryInterval = rand(2 ** 31)
+			if (rand(2)) properties.contentType = text(30)
+			// an unset property is skipped
+			if (rand(2))
+				properties.responseTopic = rand(2) ? text(30) : undefined
+			if (rand(2)) properties.correlationData = Buffer.alloc(rand(40))
+			if (rand(4) === 0) properties.topicAlias = 1 + rand(10)
+			if (rand(2)) {
+				properties.userProperties = {}
+				for (let k = 1 + rand(3); k > 0; k--) {
+					// a number (plain JS) has no cheap size: the exact count decides
+					properties.userProperties[text(8) || 'k'] = [
+						text(20),
+						[text(20), text(5)],
+						rand(1000) as unknown as string,
+					][rand(3)]
+				}
+			}
+			const payloads = [
+				undefined,
+				text(200),
+				Buffer.alloc([0, 127, 128, 16383, 16384][rand(5)]),
+			]
+			return {
+				cmd: 'publish',
+				topic: text(40) || 't',
+				payload: payloads[rand(payloads.length)],
+				qos: rand(3) as 0 | 1 | 2,
+				messageId: 1 + rand(65000),
+				retain: false,
+				dup: false,
+				properties: rand(4) ? properties : undefined,
+			}
+		}
+
+		// never connects: only the limit check runs
+		function checker(autoAssignTopicAlias: boolean) {
+			const client = mqtt.connect({
+				protocolVersion: 5,
+				manualConnect: true,
+				autoAssignTopicAlias,
+			})
+			client.connected = true
+			if (autoAssignTopicAlias) {
+				client['topicAliasSend'] = new TopicAliasSend(10)
+			}
+			return (packet: IPublishPacket, maximumPacketSize: number) => {
+				client['_serverProperties'] = { maximumPacketSize }
+				return client['_checkOutgoingPublish'](packet) as
+					| Error
+					| undefined
+			}
+		}
+
+		const wireSize = (packet: IPublishPacket) =>
+			mqttPacket.generate(packet, { protocolVersion: 5 }).length
+
+		for (const alias of [false, true]) {
+			it(`refuses every packet one byte over the limit${alias ? ', with an auto-assigned alias' : ''}`, () => {
+				const check = checker(alias)
+				let withProperties = 0
+				for (let i = 0; i < 500; i++) {
+					const packet = randomPublish()
+					// auto-assign adds a 2-byte alias to a packet without one
+					const sent =
+						alias && !packet.properties?.topicAlias
+							? {
+									...packet,
+									properties: {
+										...packet.properties,
+										topicAlias: 1,
+									},
+								}
+							: packet
+					const size = wireSize(sent)
+					if (packet.properties) withProperties++
+					assert.isUndefined(check(packet, size), `packet ${i}`)
+					assert.match(
+						check(packet, size - 1)?.message,
+						new RegExp(`packet size ${size} exceeds`),
+						`packet ${i}`,
+					)
+				}
+				assert.isAbove(withProperties, 300, 'the generator varies')
+			})
+		}
+
+		it('sizes a packet whose length fields all take their longest form', () => {
+			// over 2 MiB, Remaining Length and properties length take 4 bytes:
+			// no fixed allowance in the bound is spare
+			const check = checker(true)
+			const packet: IPublishPacket = {
+				cmd: 'publish',
+				topic: 'big',
+				payload: '',
+				qos: 1,
+				messageId: 1,
+				retain: false,
+				dup: false,
+				properties: {
+					messageExpiryInterval: 60,
+					userProperties: { k: Array(40).fill('x'.repeat(60000)) },
+				},
+			}
+			const size = wireSize({
+				...packet,
+				properties: { ...packet.properties, topicAlias: 1 },
+			})
+			assert.isUndefined(check(packet, size))
+			assert.match(
+				check(packet, size - 1)?.message,
+				new RegExp(`packet size ${size} exceeds`),
+			)
+		})
+
+		it('does not encode a publish far below the limit', () => {
+			const check = checker(false)
+			const spy = sinon.spy(mqttPacket, 'writeToStream')
+			try {
+				assert.isUndefined(
+					check(
+						{
+							cmd: 'publish',
+							topic: 'sensors/t',
+							payload: Buffer.alloc(64),
+							qos: 1,
+							messageId: 1,
+							retain: false,
+							dup: false,
+							properties: { contentType: 'text/plain' },
+						},
+						1_000_000,
+					),
+				)
+			} finally {
+				spy.restore()
+			}
+			assert.strictEqual(spy.callCount, 0)
+		})
+	})
 })

@@ -81,6 +81,67 @@ const encodedSize = (packet: Packet, opts: IClientOptions) => {
 	return size
 }
 
+/**
+ * Bytes of a string, Buffer or typed array; 0 when absent, Infinity for any
+ * other type so the caller falls back to the exact count.
+ */
+const byteSize = (value: unknown) => {
+	if (value == null) {
+		return 0
+	}
+	return typeof value === 'string' || ArrayBuffer.isView(value)
+		? Buffer.byteLength(value as string | Buffer)
+		: Infinity
+}
+
+/**
+ * Bytes of one user property pair: id 1 + two lengths of 2. Only a string is
+ * sized: mqtt-packet writes any other value as its `toString()`.
+ */
+const userPropertySize = (key: string, value: unknown) =>
+	typeof value === 'string'
+		? 5 + Buffer.byteLength(key) + Buffer.byteLength(value)
+		: Infinity
+
+/**
+ * Bytes `packet` takes on the wire at most, without encoding it. Must never be
+ * below the size mqtt-packet encodes: it counts a Topic Alias and the longest
+ * Remaining Length and properties length. Reads enumerable keys only, the
+ * ones object literals and JSON make.
+ */
+const publishSizeUpperBound = (packet: IPublishPacket) => {
+	const header = 1 + 4 // fixed header + longest Remaining Length
+	const variable = 2 + 2 + 4 + 3 // topic length + id + properties length + alias
+	let size =
+		header + variable + byteSize(packet.topic) + byteSize(packet.payload)
+	const props = packet.properties
+	if (!props) {
+		return size
+	}
+	// for...in: no entry arrays on the hot path
+	for (const name in props) {
+		const value = props[name]
+		if (value == null) continue
+		if (typeof value === 'number' || typeof value === 'boolean') {
+			// id 1 + at most 4 bytes
+			size += 5
+		} else if (name === 'userProperties') {
+			for (const key in value) {
+				const v = value[key]
+				if (!Array.isArray(v)) {
+					size += userPropertySize(key, v)
+				} else {
+					for (const item of v) size += userPropertySize(key, item)
+				}
+			}
+		} else {
+			// id 1 + length 2
+			size += 3 + byteSize(value)
+		}
+	}
+	return size
+}
+
 const defaultConnectOptions: IClientOptions = {
 	keepalive: 60,
 	reschedulePings: true,
@@ -1428,7 +1489,8 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 				qos,
 				retain,
 				messageId,
-				dup,
+				// [MQTT-3.3.1-2]: the DUP flag must be 0 in a QoS 0 PUBLISH.
+				dup: qos === 1 || qos === 2 ? dup : false,
 			}
 
 			if (options.protocolVersion === 5) {
@@ -2390,6 +2452,15 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 					alias = packet.properties.topicAlias
 				}
 				const topic = packet.topic.toString()
+				// [MQTT-3.3.2-8]: Topic Alias 0 is never valid
+				if (alias === 0) {
+					this.log(
+						'applyTopicAlias :: error out of range. topic: %s - alias: %d',
+						topic,
+						alias,
+					)
+					return new Error('Sending Topic Alias out of range')
+				}
 				if (this.topicAliasSend) {
 					if (alias) {
 						if (topic.length !== 0) {
@@ -2493,8 +2564,11 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 				'Publish refused: the server does not support retained messages (Retain Available is 0)',
 			)
 		}
-		// [MQTT-3.2.2-15]
-		if (server.maximumPacketSize) {
+		// [MQTT-3.2.2-15]: count exactly only when the bound is over the limit
+		if (
+			server.maximumPacketSize &&
+			publishSizeUpperBound(packet) > server.maximumPacketSize
+		) {
 			const size = encodedSize(this._publishAsSent(packet), this.options)
 			if (size > server.maximumPacketSize) {
 				return new Error(
