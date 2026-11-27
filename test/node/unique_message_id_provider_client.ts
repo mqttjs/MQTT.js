@@ -20,8 +20,6 @@ describe('UniqueMessageIdProviderMqttClient', () => {
 		if (server.listening) {
 			server.close()
 		}
-
-		process.exit(0)
 	})
 
 	abstractClientTests(server, config, ports)

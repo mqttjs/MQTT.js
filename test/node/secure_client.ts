@@ -108,8 +108,6 @@ describe('MqttSecureClient', () => {
 		if (sniServer.listening) {
 			sniServer.close()
 		}
-
-		process.exit(0)
 	})
 
 	abstractClientTests(server, config, ports)
