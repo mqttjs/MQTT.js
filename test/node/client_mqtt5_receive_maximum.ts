@@ -534,6 +534,36 @@ describe('MQTT 5.0 send quota (server Receive Maximum)', () => {
 	)
 
 	it(
+		'sends an alias-only QoS 1 publish that is not held without its topic',
+		testOptions,
+		async () => {
+			const { server, port, connections } = await startServer(
+				[2],
+				undefined,
+				{ connackProperties: { topicAliasMaximum: 5 } },
+			)
+			const client = mqtt.connect({
+				port,
+				protocolVersion: 5,
+				reconnectPeriod: 0,
+			})
+			try {
+				await connected(client)
+				const conn = connections[0]
+				const props = { properties: { topicAlias: 1 } }
+				client.publish('rm/x', 'set', { qos: 1, ...props })
+				// takes the second slot at once: the alias saves the topic bytes
+				client.publish('', 'use', { qos: 1, ...props })
+				await waitFor(() => conn.publishes.length === 2, '2 PUBLISH')
+				assert.deepEqual(topics(conn.publishes), ['rm/x', ''])
+				assert.strictEqual(conn.publishes[1].properties?.topicAlias, 1)
+			} finally {
+				await teardown(client, server)
+			}
+		},
+	)
+
+	it(
 		'never writes a held publish that removeOutgoingMessage removed',
 		testOptions,
 		async () => {

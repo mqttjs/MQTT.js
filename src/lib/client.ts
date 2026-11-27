@@ -2450,6 +2450,8 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 							} else {
 								alias = this.topicAliasSend.getLruAlias()
 								this.topicAliasSend.put(topic, alias)
+								// the app-set topic of this alias is gone now
+								this._aliasTopics.delete(alias)
 								packet.properties = {
 									...packet.properties,
 									topicAlias: alias,
@@ -2589,11 +2591,9 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	): boolean {
 		if (
 			this.options.protocolVersion !== 5 ||
-			!this.connected ||
 			packet.cmd !== 'publish' ||
 			packet.qos === 0 ||
-			// 65535, also the default, cannot bind: it is every packet id
-			this._sendQuota >= MAX_RECEIVE_MAXIMUM
+			!this._sendQuotaBinds
 		) {
 			return false
 		}
@@ -2618,35 +2618,31 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 			messageId,
 			this._publishesAwaitingQuota.size,
 		)
-		this._publishesAwaitingQuota.set(messageId, {
+		// written later: the alias may be remapped by then
+		const held = this._withIntendedAliasTopic(
 			packet,
+			true,
+		) as IPublishPacket
+		this._publishesAwaitingQuota.set(messageId, {
+			packet: held,
 			cb,
 			noStore: !!noStore,
 		})
 		if (!noStore) {
-			this._storePacket(packet, cb, cbStorePut)
+			this._storePacket(held, cb, cbStorePut)
 		}
 		return true
 	}
 
-	/**
-	 * An alias-only publish with the topic its alias has in publish() order.
-	 * QoS 1/2 always carries it, since it may be held while a QoS 0 publish
-	 * remaps the alias; QoS 0 only when the broker's mapping differs.
-	 */
-	private _withIntendedAliasTopic(packet: Packet): Packet {
+	/** An alias-only publish with its alias's topic in publish() order, when the broker's differs or it is `held`. */
+	private _withIntendedAliasTopic(packet: Packet, held: boolean): Packet {
 		const alias = packet.cmd === 'publish' && packet.properties?.topicAlias
-		if (
-			!alias ||
-			packet.topic.length !== 0 ||
-			!this.connected ||
-			this._sendQuota >= MAX_RECEIVE_MAXIMUM
-		) {
+		if (!alias || packet.topic.length !== 0 || !this._sendQuotaBinds) {
 			return packet
 		}
 		const registered = this.topicAliasSend?.getTopicByAlias(alias)
 		const topic = this._aliasTopics.get(alias) ?? registered
-		if (topic === undefined || (packet.qos === 0 && topic === registered)) {
+		if (topic === undefined || (!held && topic === registered)) {
 			return packet
 		}
 		return { ...packet, topic }
@@ -2658,8 +2654,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		if (
 			!alias ||
 			packet.topic.length === 0 ||
-			!this.connected ||
-			this._sendQuota >= MAX_RECEIVE_MAXIMUM ||
+			!this._sendQuotaBinds ||
 			// a released held publish was recorded when it was published
 			(packet.qos > 0 && this._outgoingInFlightIds.has(packet.messageId))
 		) {
@@ -2692,6 +2687,11 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	private get _sendQuota(): number {
 		// absent means 65535; a 0 never gets here, `handleConnack` rejects it
 		return this._serverProperties?.receiveMaximum ?? MAX_RECEIVE_MAXIMUM
+	}
+
+	/** Whether publishes can be held; 65535, also the default, cannot bind: it is every packet id. */
+	private get _sendQuotaBinds(): boolean {
+		return this.connected && this._sendQuota < MAX_RECEIVE_MAXIMUM
 	}
 
 	/** Frees the send quota slot or held entry of a publish that is done. */
@@ -2766,7 +2766,7 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		cbStorePut = cbStorePut || this.noop
 		cb = cb || this.noop
 
-		packet = this._withIntendedAliasTopic(packet)
+		packet = this._withIntendedAliasTopic(packet, false)
 		// limits, then quota, then alias: a refused or held packet must not
 		// register an alias that packets written ahead of it would then use
 		let err = this._checkOutgoingPublish(packet)
