@@ -2090,7 +2090,9 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 		this.disconnecting = true
 
-		if (!force && Object.keys(this.outgoing).length > 0) {
+		// With no stream (manualConnect before connect()), nothing can empty
+		// outgoing, so do not wait for it
+		if (!force && this.stream && Object.keys(this.outgoing).length > 0) {
 			// wait 10ms, just to be sure we received all of it
 			this.log(
 				'end :: (%s) :: calling finish in 10ms once outgoing is empty',
@@ -2339,6 +2341,15 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	 * @api private
 	 */
 	private _cleanUp(forced: boolean, done?: DoneCallback, opts = {}) {
+		if (!this.stream) {
+			// manualConnect before connect(): nothing was sent, so fail what is queued
+			this.log('_cleanUp :: no stream, flushing outgoing')
+			this._flush()
+			this._destroyKeepaliveManager()
+			done?.()
+			return
+		}
+
 		if (done) {
 			this.log('_cleanUp :: done callback provided for on stream close')
 			this.stream.on('close', done)
