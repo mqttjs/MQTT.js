@@ -1,63 +1,48 @@
-# Agent and review guidelines
+# Agent guidelines
 
-These rules apply to every code review and every design decision in this repo,
-whether the reviewer is a person or an agent. Build, test and lint commands are
-in [DEVELOPMENT.md](DEVELOPMENT.md); contribution rules in
-[CONTRIBUTING.md](CONTRIBUTING.md).
+Applies to all code changes and reviews. Commands: [DEVELOPMENT.md](DEVELOPMENT.md).
+Contribution rules: [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## Protocol behavior: the spec decides, not the maintainer
+## Protocol behavior: evidence decides
 
-Any question about how the client should behave on the wire (packet handling,
-CONNACK/DISCONNECT reason codes, session state, QoS flows, flow control, topic
-aliases, keepalive, reconnect and resubscribe, limits like Receive Maximum or
-Maximum Packet Size) is settled by evidence, in this order:
+Decide wire behavior (packet handling, reason codes, session state, QoS flows,
+flow control, topic aliases, keepalive, reconnect, packet size limits) in this
+order. Do not ask the maintainer when it settles the question.
 
-1. **The MQTT specification.** Quote the normative statement and its ID.
-   - MQTT 5.0: https://docs.oasis-open.org/mqtt/mqtt/v5.0/mqtt-v5.0.html
-   - MQTT 3.1.1: https://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html
-   - MQTT.js also supports 3.1 (`protocolId: 'MQIsdp'` with
-     `protocolVersion: 3`); check that a change does not break it.
-   Example: "[MQTT-4.7.3-1] All Topic Names and Topic Filters MUST be at
-   least one character long."
-2. **What other mature open-source clients do.** Read their source, not their
-   README. Link the file and line. Check at least two or three of:
-   - Eclipse Paho Java (`eclipse-paho/paho.mqtt.java`)
-   - Eclipse Paho Python (`eclipse-paho/paho.mqtt.python`)
-   - Eclipse Paho C (`eclipse-paho/paho.mqtt.c`)
-   - Eclipse Paho Go (`eclipse-paho/paho.mqtt.golang`, `eclipse-paho/paho.golang`)
-   - HiveMQ MQTT Client (`hivemq/hivemq-mqtt-client`)
-   - rumqttc (`bytebeamio/rumqtt`)
-   - Mosquitto client library (`eclipse-mosquitto/mosquitto`, `lib/`)
-3. **Then decide.** If the spec is clear, follow it. If the spec is silent or
-   says MAY/SHOULD and the clients agree, follow the clients. Do not ask the
-   maintainer to pick an option that the spec or prior art already settles.
+1. **Spec.** Quote the normative statement and its ID, e.g.
+   `[MQTT-4.7.3-1] All Topic Names and Topic Filters MUST be at least one character long.`
+   - [MQTT 5.0](https://docs.oasis-open.org/mqtt/mqtt/v5.0/mqtt-v5.0.html)
+   - [MQTT 3.1.1](https://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html)
+   - 3.1 (`protocolId: 'MQIsdp'`, `protocolVersion: 3`) must keep working.
+2. **Other clients.** Read the source, link the file and line. Check at least two:
+   `eclipse-paho/paho.mqtt.java`, `eclipse-paho/paho.mqtt.python`,
+   `eclipse-paho/paho.mqtt.c`, `eclipse-paho/paho.mqtt.golang`,
+   `hivemq/hivemq-mqtt-client`, `bytebeamio/rumqtt`,
+   `eclipse-mosquitto/mosquitto` (`lib/`).
+3. **Decide.** Clear spec → follow it. Spec silent or MAY/SHOULD and clients
+   agree → follow the clients.
 
-### When to ask the maintainer
+Ask the maintainer only when the spec is ambiguous **and** clients disagree.
+Use this shape:
 
-Only when the evidence leaves a real choice:
+> Spec: [ID] says X, silent on Y.
+> - Client A: P (link). Client B: Q (link). Client C: P (link).
+> - Recommend: P, because ...
 
-- the spec is ambiguous or silent, **and**
-- the other clients disagree with each other (or with the spec).
+## Performance: hot paths must be benchmarked
 
-When you do ask, show the evidence: the spec text, what each client does with
-links, and the option you recommend. One line per client is enough.
+Any change to the publish or receive path MUST include a benchmark against
+`main`. That covers `publish`, `_sendPacket`, `outgoingStore`, the
+`parser.on('packet')` loop in `src/lib/client.ts`, and `src/lib/handlers/`.
 
-Shape of the question:
+- Same machine, same local broker (`npx aedes start`), branch vs `main`.
+- Measure messages/s for publish and receive at QoS 0, 1 and 2.
+- Put both numbers and the method (message count, payload size) in the PR.
+- A drop is a finding unless the PR explains why it is worth it.
 
-> Spec: [section / statement ID] says X, but is silent on Y.
-> - Client A: does P (link to source line).
-> - Client B: does Q (link).
-> - Client C: does P (link).
-> Recommend: P, because ...
+## Reviews
 
-## Review findings
-
-- A finding about protocol behavior must cite the spec section or statement
-  ID. "Probably not allowed" without a citation is not a finding.
-- If the change departs from the spec or from what other clients do, the
-  review must say so, even when tests pass.
-- Do not grow the scope of a PR across review rounds. Hardening ideas that go
-  beyond the reported problem become follow-up issues, not new requests.
-- Changes on the publish path (`publish`, `_sendPacket`, `outgoingStore`)
-  need a throughput comparison against `main`. State how it was measured
-  (QoS level, broker, message count).
+- A protocol finding cites the spec ID. No citation, no finding.
+- Flag any departure from the spec or from other clients, even if tests pass.
+- A hot-path change with no benchmark is a finding.
+- Don't grow scope across review rounds. Extra hardening goes in a follow-up issue.
