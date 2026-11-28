@@ -2629,6 +2629,11 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 
 		this.emit('packetsend', packet)
 
+		if (this.stream.destroyed) {
+			cb?.(new Error('Connection closed'))
+			return
+		}
+
 		this.log('_writePacket :: writing to stream')
 		const result = mqttPacket.writeToStream(
 			packet,
