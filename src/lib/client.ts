@@ -2282,6 +2282,9 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 	private _reconnect() {
 		this.log('_reconnect: emitting reconnect to client')
 		this.emit('reconnect')
+		if (this.disconnecting) {
+			return
+		}
 		// a destroyed stream can still report `connected` until its async 'close'
 		if (this.connected && !this.stream.destroyed) {
 			this.end(() => {
