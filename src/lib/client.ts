@@ -1287,8 +1287,26 @@ export default class MqttClient extends TypedEventEmitter<MqttClientEventCallbac
 		this._authenticationMethod =
 			connectPacket.properties?.authenticationMethod
 
-		// avoid message queue
-		this._writePacket(connectPacket)
+		// Validate separately from transport writes: encoder rejection is permanent,
+		// while a network failure or backpressure must still allow reconnection.
+		let encodingError: Error | undefined
+		mqttPacket.writeToStream(
+			connectPacket,
+			{
+				write: () => true,
+				destroy: (err: Error) => {
+					encodingError = err
+				},
+			} as any,
+			this.options,
+		)
+		if (encodingError) {
+			this.reconnectSuppressed = true
+			this.stream.destroy(encodingError)
+		} else {
+			// avoid message queue
+			this._writePacket(connectPacket)
+		}
 
 		parser.on('error', (err) => {
 			parseFailed = true
